@@ -72,11 +72,11 @@ function renderBlock(block: BodyBlock, i: number) {
 function faqJsonLd(page: SeoPublicPage): string | null {
   if (!page.faq || page.faq.length === 0) return null;
   const entities = page.faq
-    .filter((f) => f.question && f.answer)
+    .filter((f) => f.q && f.a)
     .map((f) => ({
       "@type": "Question",
-      name: f.question,
-      acceptedAnswer: { "@type": "Answer", text: f.answer },
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
     }));
   if (entities.length === 0) return null;
   return JSON.stringify({
@@ -114,10 +114,10 @@ export default async function Page({ params }: PageProps) {
         <section>
           <h2>Sıkça Sorulan Sorular</h2>
           {page.faq.map((f, i) =>
-            f.question && f.answer ? (
+            f.q && f.a ? (
               <div key={i}>
-                <h3>{f.question}</h3>
-                <p>{f.answer}</p>
+                <h3>{f.q}</h3>
+                <p>{f.a}</p>
               </div>
             ) : null
           )}
