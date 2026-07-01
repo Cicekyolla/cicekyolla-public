@@ -20,8 +20,8 @@ export interface BodyBlock {
 
 // FAQ öğesi — şu an boş dizi ([]); M9.6'da dolacak. Şimdiden hazır.
 export interface FaqItem {
-  question?: string;
-  answer?: string;
+  q?: string;
+  a?: string;
   [key: string]: unknown;
 }
 
