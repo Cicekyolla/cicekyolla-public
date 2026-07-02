@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
+import { Manifesto } from "../components/home/Manifesto";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -109,6 +110,7 @@ export default function HomePage() {
 
       <HomeHero />
       <TrustBar />
+      <Manifesto />
     </>
   );
 }
