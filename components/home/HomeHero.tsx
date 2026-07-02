@@ -18,7 +18,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Star } from "lucide-react";
-import { whatsappUrl } from "@/lib/site";
+import { whatsappUrl } from "../../lib/site";
 
 export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
