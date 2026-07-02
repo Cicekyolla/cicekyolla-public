@@ -1,23 +1,23 @@
 "use client";
 
 /**
- * §1 CINEMATIC HERO + §2 Floating Koleksiyonlar — ZIP Homepage.tsx birebir port.
+ * §Hero (banner) — ZIP Homepage.tsx görseli birebir.
  *
- * Adaptasyonlar (handover kuralı: react-router → next/link, interaktif kısımlar "use client"):
- * - `react-router` <Link to=…>  →  `next/link` <Link href=…>
- * - CTA butonu: <Link><motion.button> (ZIP) → geçerli HTML için <Link><motion.span> (görsel birebir aynı)
- * - Görsel, katmanlar, parallax (useScroll/useTransform), Ken Burns keyframe, glass kart AYNEN korundu.
- * - overflow:visible KORUNDU → FloatingCategoryRail (bottom:-118px) hero sınırının altına taşar.
- *   Rail'in taşmasını bir sonraki section TrustBar (paddingTop:142px) yakalar (ZIP §2). Placeholder YOK.
+ * SECTION ORDER FIX (8B-2.2): Koleksiyon slider artık Hero'nun İÇİNDE DEĞİL.
+ * - FloatingCategoryRail buradan ÇIKARILDI; Hero'ya absolute/floating bağlantı YOK.
+ * - Hero yalnızca kendi içeriğini barındırır (badge, H1, açıklama, CTA, sağ kart).
+ * - Hero padding'i sadece kendi içeriğine göre; taşma/overlap rezervi YOK.
+ * - Koleksiyon slider Header'dan sonra, Hero'dan önce bağımsız section olarak page.tsx'te render edilir.
  *
- * Tasarım token'ları globals.css'ten okunur (var(--font-display) = Fraunces). Yeni token üretilmedi.
+ * Adaptasyon (ZIP kuralı): react-router <Link to=…> → next/link <Link href=…>;
+ * CTA <Link><motion.button> → <Link><motion.span> (görsel birebir). SEO/SSR'a dokunulmadı.
+ * Token: var(--font-display)=Fraunces (globals.css). Yeni token/mock/placeholder YOK.
  */
 
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Star } from "lucide-react";
-import { FloatingCategoryRail } from "./FloatingCategoryRail";
 
 export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -33,8 +33,7 @@ export function HomeHero() {
   return (
     <section
       ref={heroRef}
-      className="relative bg-[#0A0118]"
-      style={{ minHeight: "min(100svh, 920px)", height: "100svh", overflow: "visible" }}
+      className="relative bg-[#0A0118] overflow-hidden"
     >
       {/* Parallax image — clipped inside its own container */}
       <motion.div style={{ y: heroImgY }} className="absolute inset-0 overflow-hidden">
@@ -81,10 +80,10 @@ export function HomeHero() {
         }}
       />
 
-      {/* Hero content */}
+      {/* Hero content — akışta, min viewport yüksekliği; sadece kendi içeriğine göre. */}
       <motion.div
-        style={{ y: heroTextY, opacity: heroOpacity }}
-        className="absolute inset-0 flex items-center"
+        style={{ y: heroTextY, opacity: heroOpacity, minHeight: "88svh" }}
+        className="relative z-10 flex items-center py-20 lg:py-24"
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14 w-full">
           <div className="max-w-[660px]">
@@ -191,12 +190,12 @@ export function HomeHero() {
         </div>
       </motion.div>
 
-      {/* Floating glass card — bottom right */}
+      {/* Sağ cam kart — hero'nun kendi alt-sağ köşesi (ZIP). Artık banner olmadığı için taşma yok. */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.1, duration: 0.8 }}
-        className="absolute bottom-10 right-6 lg:right-14 hidden md:block"
+        className="absolute bottom-10 right-6 lg:right-14 z-20 hidden md:block"
         style={{
           background: "rgba(255,255,255,0.08)",
           backdropFilter: "blur(24px) saturate(180%)",
@@ -224,19 +223,6 @@ export function HomeHero() {
           ))}
           <span className="text-white/50 text-xs ml-1.5">4.9 · 2.400+ yorum</span>
         </div>
-      </motion.div>
-
-      {/* ── §2 CATEGORY CAROUSEL — hero içinde, absolute bottom ──
-          overflow:visible section sayesinde hero görselinin altına taşar.
-          Taşma, bir sonraki section TrustBar'ın paddingTop:142px'i tarafından yakalanır → gerçek %40-50 overlap. */}
-      <motion.div
-        initial={{ opacity: 0, y: 28 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.05, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute left-0 right-0 z-30"
-        style={{ bottom: "-118px" }}
-      >
-        <FloatingCategoryRail />
       </motion.div>
     </section>
   );
