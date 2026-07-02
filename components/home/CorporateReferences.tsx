@@ -10,7 +10,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
-import { whatsappUrl } from "@/lib/site";
+import { whatsappUrl } from "../../lib/site";
 
 const stats = [
   { num: "500+", label: "Kurumsal Müşteri", color: "#8B5CF6" },
