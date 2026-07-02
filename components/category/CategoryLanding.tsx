@@ -1,21 +1,26 @@
 import Link from "next/link";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import type { SeoPublicPage, BodyBlock } from "@/lib/api";
+import { premiumCategories } from "../home/homeData";
 
 /**
- * §Category Landing (Yol A — SEO-Content) — İSKELET (parça 1).
+ * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
  * Kaynak: fetchSeoPage(path) → SeoPublicPage (h1, intro_html, body_blocks, faq).
  * ÜRÜN GRID YOK, SAHTE VERİ YOK, BACKEND'E DOKUNULMAZ. Server component (SEO-first SSR).
  *
- * Bu parça: breadcrumb + premium hero + SEO body + FAQ accordion + additive BreadcrumbList JSON-LD.
- * Sonraki parça: iç-linkleme kategori kartları + ilgili koleksiyonlar + WhatsApp/Sipariş CTA.
+ * İç-linkleme (SEO Internal Linking) için repo'da CANLI olan gerçek premiumCategories yeniden kullanılır
+ * (DRY/reusable — yeni/sahte veri üretilmez). WhatsApp: sabit doğru link (905074413474 + ön-dolgu).
  *
- * Not: Backend FAQ JSON-LD'i route (faqJsonLd) + schema_jsonld route'ta basıyor → burada TEKRAR ÜRETİLMEZ.
- *      Yalnızca yeni/additive BreadcrumbList JSON-LD eklenir (mevcut schema ile çakışmaz).
+ * JSON-LD: backend schema_jsonld + FAQPage route'ta basılır → burada TEKRAR ÜRETİLMEZ.
+ *          Yalnızca additive BreadcrumbList JSON-LD eklenir (mevcut schema ile çakışmaz).
  */
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app"
 ).replace(/\/$/, "");
+
+const WHATSAPP_URL =
+  "https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum";
 
 /** body_blocks → premium tipografi (route'daki renderBlock ile aynı mantık, stilli). */
 function renderBlock(block: BodyBlock, i: number) {
@@ -51,6 +56,8 @@ function breadcrumbJsonLd(h1: string, path: string): string {
 
 export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: string }) {
   const faqItems = (page.faq ?? []).filter((f) => f.q && f.a);
+  // İç-linkleme: mevcut kategoriyi çıkar, diğer küratörlü koleksiyonları göster (gerçek veri).
+  const otherCategories = premiumCategories.filter((c) => c.href !== path).slice(0, 12);
 
   return (
     <>
@@ -61,7 +68,6 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
           style={{ background: "linear-gradient(180deg, #FAFAFA 0%, #F5F3FF 100%)" }}
         >
           <div className="max-w-[1100px] mx-auto px-6 lg:px-8 pt-10 pb-14 lg:pt-14 lg:pb-20">
-            {/* Breadcrumb (2 seviye — JSON-LD ile tutarlı) */}
             <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#9CA3AF] mb-8">
               <Link href="/" className="hover:text-[#8B5CF6] transition-colors">Ana Sayfa</Link>
               <span aria-hidden="true">/</span>
@@ -92,9 +98,9 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
           </section>
         ) : null}
 
-        {/* ── FAQ (görsel accordion; JSON-LD route'ta zaten üretiliyor → burada tekrar YOK) ── */}
+        {/* ── FAQ (görsel accordion; JSON-LD route'ta üretiliyor → burada tekrar YOK) ── */}
         {faqItems.length > 0 ? (
-          <section className="max-w-[820px] mx-auto px-6 lg:px-8 pb-16 lg:pb-24">
+          <section className="max-w-[820px] mx-auto px-6 lg:px-8 pb-16 lg:pb-20">
             <h2
               style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
               className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
@@ -117,6 +123,83 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
             </div>
           </section>
         ) : null}
+
+        {/* ── İç-linkleme: Diğer Koleksiyonlar (SEO Internal Linking — gerçek küratörlü veri) ── */}
+        {otherCategories.length > 0 ? (
+          <section className="border-t border-black/[0.04] bg-[#FAFAFA]">
+            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
+              <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Keşfet</p>
+              <h2
+                style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+                className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
+              >
+                Diğer Koleksiyonlar
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {otherCategories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={cat.href}
+                    className="group block rounded-2xl overflow-hidden bg-white border border-black/[0.05] transition-all hover:border-[#DDD6FE] hover:shadow-[0_8px_28px_rgba(139,92,246,0.10)]"
+                  >
+                    <div className="aspect-square overflow-hidden">
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors">{cat.name}</p>
+                      {cat.count ? <p className="text-xs text-[#9CA3AF] mt-0.5">{cat.count} ürün</p> : null}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ── WhatsApp / Sipariş CTA ── */}
+        <section className="bg-white">
+          <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
+            <div
+              className="relative overflow-hidden rounded-[28px] px-8 py-14 lg:px-16 text-center"
+              style={{
+                background: "linear-gradient(135deg, #1E0845 0%, #4C1D95 30%, #7C3AED 65%, #9333EA 100%)",
+                boxShadow: "0 30px 90px rgba(139,92,246,0.28)",
+              }}
+            >
+              <p className="text-[10px] tracking-[0.28em] text-[#DDD6FE]/70 uppercase font-bold mb-5">Kişiye Özel Hizmet</p>
+              <h2
+                style={{ fontFamily: "var(--font-display)", lineHeight: 1.1, letterSpacing: "-0.02em" }}
+                className="text-3xl lg:text-[42px] font-semibold text-white max-w-[640px] mx-auto mb-5"
+              >
+                Aradığınız aranjmanı bulamadınız mı?
+              </h2>
+              <p className="text-white/60 text-base max-w-[520px] mx-auto mb-10 leading-relaxed">
+                Uzman tasarımcılarımız size özel aranjman hazırlasın. WhatsApp&apos;tan yazın, gerisini biz halledelim.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a
+                  href={WHATSAPP_URL}
+                  className="flex items-center gap-3 bg-white text-[#7C3AED] px-9 py-4 rounded-full text-sm font-bold"
+                  style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.22)" }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp&apos;tan Sipariş Ver
+                </a>
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 px-9 py-4 rounded-full text-white/90 text-sm font-semibold transition-colors"
+                  style={{ border: "1.5px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)" }}
+                >
+                  Tüm Koleksiyonlar <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* ── Breadcrumb JSON-LD (additive; mevcut schema ile çakışmaz) ── */}
