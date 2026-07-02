@@ -12,9 +12,11 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
-import { premiumCategories, categoryBadges } from "./homeData";
+import { premiumCategories, categoryBadges, type CategoryItem } from "./homeData";
 
-export function FloatingCategoryRail() {
+export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
+  // TEK KAYNAK: canlı ağaçtan gelen items; verilmezse mevcut catalog (UI birebir aynı).
+  const cats = items ?? premiumCategories;
   const [emblaRef] = useEmblaCarousel({ loop: false, dragFree: true, align: "start" });
 
   return (
@@ -50,7 +52,7 @@ export function FloatingCategoryRail() {
         {/* Embla carousel */}
         <div ref={emblaRef} className="overflow-hidden" style={{ cursor: "grab" }}>
           <div className="flex gap-4 sm:gap-5 lg:gap-6">
-            {premiumCategories.map((cat) => {
+            {cats.map((cat) => {
               const badge = categoryBadges[cat.id];
               return (
                 <Link
