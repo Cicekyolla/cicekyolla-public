@@ -8,14 +8,13 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { whatsappUrl } from "../lib/site";
 
 export function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
 
   return (
     <motion.a
-      href={whatsappUrl()}
+      href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
       target="_blank"
       rel="noopener noreferrer"
       initial={{ scale: 0, opacity: 0, y: 20 }}
