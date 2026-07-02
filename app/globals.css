@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   CICEKYOLLA DESIGN TOKENS — Figma SSOT (ZIP theme.css + fonts.css'ten birebir)
+   Anayasa: renkler/tipografi/spacing/radius korunur. Uygulanır, değiştirilmez.
+   ============================================================================ */
+
+/* Fonts — Fraunces (display) + Manrope (body) */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: #FAFAFA;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+  --primary: #8B5CF6;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F5F3FF;
+  --secondary-foreground: #6D28D9;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  --accent: #EDE9FE;
+  --accent-foreground: #7C3AED;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(0, 0, 0, 0.07);
+  --input: transparent;
+  --input-background: #F9F8FF;
+  --switch-background: #DDD6FE;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #8B5CF6;
+  --chart-1: #8B5CF6;
+  --chart-2: #A855F7;
+  --chart-3: #C084FC;
+  --chart-4: #DDD6FE;
+  --chart-5: #7C3AED;
+  --radius: 1rem;
+  /* Typography families */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    min-width: 0;
+  }
+
+  html {
+    font-size: var(--font-size);
+    overflow-x: hidden;
+    max-width: 100vw;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    max-width: 100vw;
+    position: relative;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
