@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { HomeHero } from "../components/home/HomeHero";
+import { TrustBar } from "../components/home/TrustBar";
 
 /**
- * Ana sayfa (/) — 8B-2.2 Homepage, Adım 1: Hero.
+ * Ana sayfa (/) — 8B-2.2 Homepage.
+ * Hiyerarşi (ZIP birebir): Header (layout) → Hero + Floating Koleksiyonlar (taşan) → TrustBar (§2, rail'i yakalar) → …
  *
  * Mimari:
- * - Bu dosya SERVER component'tir → SEO metadata + JSON-LD server-side üretilir (SSR, SEO First).
- * - Header/Footer BURADA render EDİLMEZ; app/layout.tsx zaten sarmalıyor (8B-2.1, LOCKED).
- * - İnteraktif Hero (parallax / Ken Burns / motion) → ayrı client component: components/home/HomeHero.
- *
- * Not: Homepage SEO API'den beslenmez (mahalle/kategori değil). Tanıtım sayfasıdır.
+ * - Bu dosya SERVER component → SEO metadata + JSON-LD SSR (SEO First).
+ * - Header/Footer BURADA render EDİLMEZ; app/layout.tsx sarıyor (8B-2.1, LOCKED).
+ * - İnteraktif kısımlar ayrı client component'lerde (HomeHero, FloatingCategoryRail, TrustBar).
  */
 
 const SITE_URL = (
@@ -18,7 +18,6 @@ const SITE_URL = (
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  // absolute → layout'ta bir title template varsa dahi ana sayfa başlığını override eder.
   title: { absolute: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat" },
   description:
     "Türkiye'nin en prestijli çiçek markası. Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat ve 81 ile ücretsiz kargo.",
@@ -40,7 +39,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-/** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, fakat SSR edilir. */
+/** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir. */
 function HomeJsonLd() {
   const schema = [
     {
@@ -93,6 +92,7 @@ export default function HomePage() {
     <>
       <HomeJsonLd />
       <HomeHero />
+      <TrustBar />
     </>
   );
 }
