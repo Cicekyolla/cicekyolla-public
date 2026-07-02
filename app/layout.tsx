@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Header />
         {children}
         <Footer />
+        <WhatsAppButton />
       </body>
     </html>
   );
