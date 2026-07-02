@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import type { SeoPublicPage, BodyBlock } from "@/lib/api";
+import { fetchCategoryTree, type SeoPublicPage, type BodyBlock } from "@/lib/api";
+import {
+  mapTreeToItems,
+  getBreadcrumbTrailFromTree,
+  premiumCategories,
+} from "@/lib/catalog";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -42,20 +47,49 @@ function renderBlock(block: BodyBlock, i: number) {
   ) : null;
 }
 
-/** BreadcrumbList JSON-LD — ADDITIVE. Backend schema_jsonld'a DOKUNMAZ; ayrı <script>. */
-function breadcrumbJsonLd(h1: string, path: string): string {
+/** BreadcrumbList JSON-LD — ADDITIVE. Backend schema_jsonld'a DOKUNMAZ; ayrı <script>.
+ *  trail (canlı ağaç ata zinciri) varsa çok seviyeli; yoksa 2 seviyeli fallback. */
+function breadcrumbJsonLd(
+  h1: string,
+  path: string,
+  trail: { name: string; slug: string }[]
+): string {
+  const itemListElement = trail.length
+    ? [
+        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: SITE_URL + "/" },
+        ...trail.map((t, i) => ({
+          "@type": "ListItem",
+          position: i + 2,
+          name: t.name,
+          item: `${SITE_URL}/kategori/${t.slug}`,
+        })),
+      ]
+    : [
+        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: SITE_URL + "/" },
+        { "@type": "ListItem", position: 2, name: h1, item: SITE_URL + path },
+      ];
   return JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: SITE_URL + "/" },
-      { "@type": "ListItem", position: 2, name: h1, item: SITE_URL + path },
-    ],
+    itemListElement,
   });
 }
 
-export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: string }) {
+export async function CategoryLanding({ page, path }: { page: SeoPublicPage; path: string }) {
   const faqItems = (page.faq ?? []).filter((f) => f.q && f.a);
+
+  // TEK KAYNAK = canlı Category Center ağacı (fetchCategoryTree). Env path yoksa
+  // veya okuma başarısızsa → mevcut catalog'a güvenli fallback (UI birebir aynı).
+  const tree = await fetchCategoryTree();
+  const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
+
+  // İç-linkleme (Related): canlı ağaçtan; yetersizse catalog.
+  const liveItems = tree ? mapTreeToItems(tree) : [];
+  const pool = liveItems.length >= 4 ? liveItems : premiumCategories;
+  const related = pool.filter((c) => c.href !== path).slice(0, 8);
+
+  // Breadcrumb: parent-child ağaçtan türetilir; yoksa 2 seviyeli fallback.
+  const trail = tree ? getBreadcrumbTrailFromTree(tree, slug) : [];
 
   return (
     <>
@@ -69,8 +103,25 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
           <div className="max-w-[1100px] mx-auto px-6 lg:px-8 pt-10 pb-14 lg:pt-14 lg:pb-20">
             <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#9CA3AF] mb-8">
               <Link href="/" className="hover:text-[#8B5CF6] transition-colors">Ana Sayfa</Link>
-              <span aria-hidden="true">/</span>
-              <span className="text-[#374151] font-medium">{page.h1}</span>
+              {trail.length ? (
+                trail.map((t, i) => (
+                  <span key={t.slug} className="flex items-center gap-2">
+                    <span aria-hidden="true">/</span>
+                    {i === trail.length - 1 ? (
+                      <span className="text-[#374151] font-medium">{t.name}</span>
+                    ) : (
+                      <Link href={`/kategori/${t.slug}`} className="hover:text-[#8B5CF6] transition-colors">
+                        {t.name}
+                      </Link>
+                    )}
+                  </span>
+                ))
+              ) : (
+                <>
+                  <span aria-hidden="true">/</span>
+                  <span className="text-[#374151] font-medium">{page.h1}</span>
+                </>
+              )}
             </nav>
 
             <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-4">Koleksiyon</p>
@@ -123,6 +174,43 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
           </section>
         ) : null}
 
+        {/* ── İlgili Koleksiyonlar (İç-linkleme — TEK kaynak: @/lib/catalog) ── */}
+        {related.length > 0 ? (
+          <section aria-label="İlgili koleksiyonlar" className="border-t border-black/[0.04] bg-[#FAFAFA]">
+            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
+              <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Keşfet</p>
+              <h2
+                style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+                className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
+              >
+                İlgili Koleksiyonlar
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {related.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={cat.href}
+                    className="group block rounded-2xl overflow-hidden bg-white border border-black/[0.05] transition-all hover:border-[#DDD6FE] hover:shadow-[0_8px_28px_rgba(139,92,246,0.10)]"
+                  >
+                    <div className="aspect-square overflow-hidden">
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors">{cat.name}</p>
+                      {cat.count ? <p className="text-xs text-[#9CA3AF] mt-0.5">{cat.count} ürün</p> : null}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {/* ── WhatsApp / Sipariş CTA ── */}
         <section aria-label="Sipariş çağrısı" className="bg-white">
           <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
@@ -171,7 +259,7 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
       {/* ── Breadcrumb JSON-LD (additive; mevcut schema ile çakışmaz) ── */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd(page.h1, path) }}
+        dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd(page.h1, path, trail) }}
       />
     </>
   );
