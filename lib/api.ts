@@ -74,3 +74,68 @@ export async function fetchSeoPage(
 
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// CATEGORY TREE — canlı Category Center okuması
+// ---------------------------------------------------------------------------
+// MEVCUT okuma mekanizmasının BİREBİR aynısını kullanır (aynı API_ORIGIN, aynı
+// { data } zarfı, aynı revalidate). YENİ endpoint ÜRETİLMEZ; admin panelin
+// okuduğu canlı yol tüketilir. Okuma yolu env ile verilir (tıpkı API_ORIGIN
+// gibi) → kod değişmeden canlıya bağlanır, kategori verisi frontend'de TUTULMAZ.
+//
+// Kurulum: Vercel env → NEXT_PUBLIC_CATEGORIES_PATH = <admin'in kategori okuma path'i>
+//   (ör. admin Network sekmesinde 266 kategoriyi döndüren istek yolu).
+// Env set edilmezse fetchCategoryTree() null döner → çağıranlar mevcut
+// davranışa güvenle geri düşer (production bozulmaz).
+
+const CATEGORIES_PATH = process.env.NEXT_PUBLIC_CATEGORIES_PATH ?? "";
+
+// Category Center düğümü — ekranda DOĞRULANMIŞ alanlar (name, slug) zorunlu;
+// hiyerarşi/SEO/görsel/durum alanları opsiyonel ve şemaya göre esnektir.
+// Backend kategori ağacını DEĞİŞTİRMEZ; yalnızca olduğu gibi okur.
+export interface CategoryNode {
+  name: string;
+  slug: string;
+  parent_slug?: string | null;
+  children?: CategoryNode[];
+  status?: string;
+  [key: string]: unknown;
+}
+
+// Canlı kategori ağacını çeker. Env path yoksa veya backend not_found/hata
+// dönerse null → çağıran taraf mevcut kaynağa güvenle geri düşer.
+export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
+  if (!CATEGORIES_PATH) return null;
+
+  const url = `${API_ORIGIN}${CATEGORIES_PATH}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { next: { revalidate: 300 } });
+  } catch {
+    return null;
+  }
+
+  if (!res.ok) return null;
+
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    return null;
+  }
+
+  // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
+  const payload =
+    (json as { data?: unknown } | null)?.data ?? (json as unknown);
+  if (!Array.isArray(payload)) return null;
+
+  // Yalnız geçerli düğümleri (name + slug) al; şema-dışı alanlar korunur.
+  const nodes = payload.filter(
+    (n): n is CategoryNode =>
+      !!n &&
+      typeof (n as CategoryNode).name === "string" &&
+      typeof (n as CategoryNode).slug === "string"
+  );
+  return nodes.length > 0 ? nodes : null;
+}
