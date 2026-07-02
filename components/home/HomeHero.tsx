@@ -80,10 +80,11 @@ export function HomeHero() {
         }}
       />
 
-      {/* Hero content — akışta, min viewport yüksekliği; sadece kendi içeriğine göre. */}
+      {/* Hero content — akışta; TOP SPACING OPT: items-start + küçültülmüş üst padding ile
+          H1 ~100-120px yukarı taşınır, slider ile arasındaki koyu boşluk azalır (section sırası aynı). */}
       <motion.div
-        style={{ y: heroTextY, opacity: heroOpacity, minHeight: "88svh" }}
-        className="relative z-10 flex items-center py-20 lg:py-24"
+        style={{ y: heroTextY, opacity: heroOpacity, minHeight: "82svh" }}
+        className="relative z-10 flex items-start pt-12 lg:pt-16 pb-16"
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14 w-full">
           <div className="max-w-[660px]">
