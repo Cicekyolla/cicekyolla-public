@@ -8,13 +8,14 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
+import { whatsappUrl } from "@/lib/site";
 
 export function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
 
   return (
     <motion.a
-      href="https://wa.me/905551234567"
+      href={whatsappUrl()}
       target="_blank"
       rel="noopener noreferrer"
       initial={{ scale: 0, opacity: 0, y: 20 }}
