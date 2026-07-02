@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
+import { fetchCategoryTree } from "@/lib/api";
+import { mapTreeToItems } from "@/lib/catalog";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
 import { Manifesto } from "../components/home/Manifesto";
@@ -109,7 +111,12 @@ function HomeJsonLd() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Homepage Collections TEK KAYNAK: canlı Category Center ağacı; yetersizse fallback.
+  const tree = await fetchCategoryTree();
+  const liveItems = tree ? mapTreeToItems(tree) : [];
+  const collections = liveItems.length >= 4 ? liveItems : undefined;
+
   return (
     <>
       <HomeJsonLd />
@@ -119,7 +126,7 @@ export default function HomePage() {
           SPACING FIX: alt boşluk (pb) sıfırlandı → dark Hero slider'ın HEMEN altında başlar,
           aradaki beyaz gap kalkar, geçiş tek akış görünür. Üstte pt-5 (header'dan hafif nefes). */}
       <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
-        <FloatingCategoryRail />
+        <FloatingCategoryRail items={collections} />
       </section>
 
       <HomeHero />
