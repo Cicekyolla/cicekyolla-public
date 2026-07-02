@@ -11,7 +11,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
-import { whatsappUrl } from "@/lib/site";
+import { whatsappUrl } from "../../lib/site";
 
 const collections = [
   { id: 1, name: "Kırmızı Güller", sub: "En Çok Sevilen", price: "₺449'dan", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=1400&h=1600&fit=crop&auto=format&q=90", href: "/kategori/guller" },
