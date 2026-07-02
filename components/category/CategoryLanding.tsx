@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import type { SeoPublicPage, BodyBlock } from "@/lib/api";
-import { premiumCategories } from "../home/homeData";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
  * Kaynak: fetchSeoPage(path) → SeoPublicPage (h1, intro_html, body_blocks, faq).
  * ÜRÜN GRID YOK, SAHTE VERİ YOK, BACKEND'E DOKUNULMAZ. Server component (SEO-first SSR).
  *
- * İç-linkleme (SEO Internal Linking) için repo'da CANLI olan gerçek premiumCategories yeniden kullanılır
- * (DRY/reusable — yeni/sahte veri üretilmez). WhatsApp: sabit doğru link (905074413474 + ön-dolgu).
+ * İç-linkleme (SEO Internal Linking) YALNIZCA backend'in Category Center'dan ürettiği SEO içeriğinden
+ * gelir (intro_html / body_blocks içindeki anchor linkler). Hardcoded kategori listesi YOK, seed YOK,
+ * ağaç çoğaltılmaz — Category Center tek gerçek kaynaktır. WhatsApp: sabit doğru link (905074413474).
  *
  * JSON-LD: backend schema_jsonld + FAQPage route'ta basılır → burada TEKRAR ÜRETİLMEZ.
  *          Yalnızca additive BreadcrumbList JSON-LD eklenir (mevcut schema ile çakışmaz).
@@ -56,10 +56,6 @@ function breadcrumbJsonLd(h1: string, path: string): string {
 
 export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: string }) {
   const faqItems = (page.faq ?? []).filter((f) => f.q && f.a);
-  // İç-linkleme: mevcut kategoriyi çıkar, diğer küratörlü koleksiyonları göster (gerçek veri).
-  const related = premiumCategories.filter((c) => c.href !== path);
-  const relatedPills = related.slice(0, 6); // hero'da hızlı ilgili koleksiyon linkleri
-  const otherCategories = related.slice(0, 12); // altta görsel keşif grid'i
 
   return (
     <>
@@ -89,24 +85,6 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
                 className="mt-6 max-w-[720px] text-[#4B5563] text-[17px] leading-[1.8] [&_p]:mb-4 [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_strong]:text-[#111827] [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{ __html: page.intro_html }}
               />
-            ) : null}
-
-            {/* İlgili koleksiyon hızlı linkleri (pills) — sayfa üstünde erken iç-linkleme */}
-            {relatedPills.length > 0 ? (
-              <div className="mt-8">
-                <p className="text-[11px] text-[#9CA3AF] font-medium mb-3">İlgili koleksiyonlar</p>
-                <div className="flex flex-wrap gap-2">
-                  {relatedPills.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      href={cat.href}
-                      className="rounded-full border border-[#DDD6FE] bg-white/70 px-4 py-2 text-[13px] font-medium text-[#6B21A8] transition-colors hover:bg-[#F5F3FF] hover:border-[#8B5CF6]"
-                    >
-                      {cat.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
             ) : null}
           </div>
         </section>
@@ -140,42 +118,6 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
                   <p className="mt-3 text-[#6B7280] text-[15px] leading-[1.8]">{f.a}</p>
                 </details>
               ))}
-            </div>
-          </section>
-        ) : null}
-
-        {/* ── İç-linkleme: Diğer Koleksiyonlar (SEO Internal Linking — gerçek küratörlü veri) ── */}
-        {otherCategories.length > 0 ? (
-          <section className="border-t border-black/[0.04] bg-[#FAFAFA]">
-            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
-              <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Keşfet</p>
-              <h2
-                style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
-                className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
-              >
-                Diğer Koleksiyonlar
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {otherCategories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={cat.href}
-                    className="group block rounded-2xl overflow-hidden bg-white border border-black/[0.05] transition-all hover:border-[#DDD6FE] hover:shadow-[0_8px_28px_rgba(139,92,246,0.10)]"
-                  >
-                    <div className="aspect-square overflow-hidden">
-                      <img
-                        src={cat.image}
-                        alt={cat.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors">{cat.name}</p>
-                      {cat.count ? <p className="text-xs text-[#9CA3AF] mt-0.5">{cat.count} ürün</p> : null}
-                    </div>
-                  </Link>
-                ))}
-              </div>
             </div>
           </section>
         ) : null}
