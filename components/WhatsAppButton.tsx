@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { whatsappUrl } from "@/lib/site";
+import { whatsappUrl } from "../lib/site";
 
 export function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
