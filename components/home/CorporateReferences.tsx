@@ -10,6 +10,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
+import { whatsappUrl } from "@/lib/site";
 
 const stats = [
   { num: "500+", label: "Kurumsal Müşteri", color: "#8B5CF6" },
@@ -96,7 +97,7 @@ export function CorporateReferences() {
           <p className="text-[#6B7280] text-sm mb-5">Kurumsal çözümler için teklif alın</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="https://wa.me/905551234567"
+              href={whatsappUrl("Merhaba, kurumsal çiçek teklifi almak istiyorum")}
               className="inline-flex items-center gap-3 px-9 py-4 rounded-full text-white text-sm font-bold"
               style={{ background: "linear-gradient(135deg, #25D366, #128C7E)", boxShadow: "0 8px 24px rgba(37,211,102,0.3)" }}
             >
