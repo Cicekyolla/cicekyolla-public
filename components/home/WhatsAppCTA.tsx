@@ -9,7 +9,6 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Gift, ArrowRight } from "lucide-react";
-import { whatsappUrl } from "../../lib/site";
 
 export function WhatsAppCTA() {
   return (
@@ -80,7 +79,7 @@ export function WhatsAppCTA() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <motion.a
-                href={whatsappUrl()}
+                href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
                 whileHover={{ scale: 1.05, y: -3 }}
                 whileTap={{ scale: 0.97 }}
                 className="flex items-center gap-3 bg-white text-[#7C3AED] px-10 py-4 rounded-full text-sm font-bold shadow-2xl"
