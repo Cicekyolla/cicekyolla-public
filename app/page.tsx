@@ -10,6 +10,7 @@ import { SameDayDelivery } from "../components/home/SameDayDelivery";
 import { OccasionShopping } from "../components/home/OccasionShopping";
 import { BestSellers } from "../components/home/BestSellers";
 import { EditorsPicks } from "../components/home/EditorsPicks";
+import { BrandStory } from "../components/home/BrandStory";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -125,6 +126,7 @@ export default function HomePage() {
       <OccasionShopping />
       <BestSellers />
       <EditorsPicks />
+      <BrandStory />
     </>
   );
 }
