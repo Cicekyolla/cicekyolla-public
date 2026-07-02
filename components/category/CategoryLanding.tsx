@@ -57,7 +57,9 @@ function breadcrumbJsonLd(h1: string, path: string): string {
 export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: string }) {
   const faqItems = (page.faq ?? []).filter((f) => f.q && f.a);
   // İç-linkleme: mevcut kategoriyi çıkar, diğer küratörlü koleksiyonları göster (gerçek veri).
-  const otherCategories = premiumCategories.filter((c) => c.href !== path).slice(0, 12);
+  const related = premiumCategories.filter((c) => c.href !== path);
+  const relatedPills = related.slice(0, 6); // hero'da hızlı ilgili koleksiyon linkleri
+  const otherCategories = related.slice(0, 12); // altta görsel keşif grid'i
 
   return (
     <>
@@ -87,6 +89,24 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
                 className="mt-6 max-w-[720px] text-[#4B5563] text-[17px] leading-[1.8] [&_p]:mb-4 [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_strong]:text-[#111827] [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{ __html: page.intro_html }}
               />
+            ) : null}
+
+            {/* İlgili koleksiyon hızlı linkleri (pills) — sayfa üstünde erken iç-linkleme */}
+            {relatedPills.length > 0 ? (
+              <div className="mt-8">
+                <p className="text-[11px] text-[#9CA3AF] font-medium mb-3">İlgili koleksiyonlar</p>
+                <div className="flex flex-wrap gap-2">
+                  {relatedPills.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      href={cat.href}
+                      className="rounded-full border border-[#DDD6FE] bg-white/70 px-4 py-2 text-[13px] font-medium text-[#6B21A8] transition-colors hover:bg-[#F5F3FF] hover:border-[#8B5CF6]"
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ) : null}
           </div>
         </section>
