@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Gift, ArrowRight } from "lucide-react";
-import { whatsappUrl } from "@/lib/site";
+import { whatsappUrl } from "../../lib/site";
 
 export function WhatsAppCTA() {
   return (
