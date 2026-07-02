@@ -1,0 +1,17 @@
+/**
+ * Merkezi site sabitleri — tek gerçek kaynak (single source of truth).
+ * WhatsApp numarası/mesajı burada; tüm bileşenler bunu kullanır.
+ * Numara değişince SADECE bu dosya düzenlenir (scalable / DRY).
+ *
+ * Not: WhatsApp linki uluslararası format ister (baştaki 0 atılır, 90 eklenir, boşluk/tire olmaz).
+ * 0507 441 34 74  →  905074413474
+ */
+
+export const WHATSAPP_NUMBER = "905074413474";
+
+export const WHATSAPP_DEFAULT_MESSAGE = "Merhaba, sipariş vermek istiyorum";
+
+/** wa.me linki üretir; opsiyonel özel mesajla (ör. kurumsal teklif). */
+export function whatsappUrl(message: string = WHATSAPP_DEFAULT_MESSAGE): string {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
