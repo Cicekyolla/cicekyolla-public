@@ -4,6 +4,8 @@ import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
 import { Manifesto } from "../components/home/Manifesto";
 import { FeaturedCollections } from "../components/home/FeaturedCollections";
+import { UrgencyStrip } from "../components/home/UrgencyStrip";
+import { FeatureSplit } from "../components/home/FeatureSplit";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -113,6 +115,8 @@ export default function HomePage() {
       <TrustBar />
       <Manifesto />
       <FeaturedCollections />
+      <UrgencyStrip />
+      <FeatureSplit />
     </>
   );
 }
