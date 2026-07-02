@@ -12,6 +12,7 @@ import { BestSellers } from "../components/home/BestSellers";
 import { EditorsPicks } from "../components/home/EditorsPicks";
 import { BrandStory } from "../components/home/BrandStory";
 import { Testimonials } from "../components/home/Testimonials";
+import { InstagramGallery } from "../components/home/InstagramGallery";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -129,6 +130,7 @@ export default function HomePage() {
       <EditorsPicks />
       <BrandStory />
       <Testimonials />
+      <InstagramGallery />
     </>
   );
 }
