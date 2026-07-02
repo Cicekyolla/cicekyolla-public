@@ -3,6 +3,7 @@ import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
 import { Manifesto } from "../components/home/Manifesto";
+import { FeaturedCollections } from "../components/home/FeaturedCollections";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -111,6 +112,7 @@ export default function HomePage() {
       <HomeHero />
       <TrustBar />
       <Manifesto />
+      <FeaturedCollections />
     </>
   );
 }
