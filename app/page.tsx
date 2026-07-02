@@ -8,6 +8,7 @@ import { UrgencyStrip } from "../components/home/UrgencyStrip";
 import { FeatureSplit } from "../components/home/FeatureSplit";
 import { SameDayDelivery } from "../components/home/SameDayDelivery";
 import { OccasionShopping } from "../components/home/OccasionShopping";
+import { BestSellers } from "../components/home/BestSellers";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -121,6 +122,7 @@ export default function HomePage() {
       <FeatureSplit />
       <SameDayDelivery />
       <OccasionShopping />
+      <BestSellers />
     </>
   );
 }
