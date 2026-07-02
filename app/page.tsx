@@ -100,8 +100,10 @@ export default function HomePage() {
       <HomeJsonLd />
 
       {/* §Koleksiyonlar — bağımsız section: Header'dan sonra, Hero'dan önce (TazeÇiçek düzeni).
-          Hero'ya absolute/floating bağlı DEĞİL; normal akışta yatay slider. */}
-      <section aria-label="Koleksiyonlar" className="bg-white pt-6 pb-7">
+          Hero'ya absolute/floating bağlı DEĞİL; normal akışta yatay slider.
+          SPACING FIX: alt boşluk (pb) sıfırlandı → dark Hero slider'ın HEMEN altında başlar,
+          aradaki beyaz gap kalkar, geçiş tek akış görünür. Üstte pt-5 (header'dan hafif nefes). */}
+      <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
         <FloatingCategoryRail />
       </section>
 
