@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchSeoPage, type BodyBlock, type SeoPublicPage } from "@/lib/api";
+import { CategoryLanding } from "@/components/category/CategoryLanding";
 
 // Kanonik/mutlak URL için site kökü. Şimdilik Vercel domaini; sonra cicekyolla.com.
 // Tek yerden değişir (env → build). canonical_url path döndüğü için burada tamamlanır.
@@ -25,7 +26,7 @@ function absoluteUrl(path: string): string {
 
 type PageProps = { params: { slug?: string[] } };
 
-// ---- SEO META (title / description / canonical / robots) ----
+// ---- SEO META (title / description / canonical / robots) ---- (DEĞİŞMEDİ)
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -55,7 +56,7 @@ export async function generateMetadata({
   };
 }
 
-// ---- body_blocks -> HTML eşlemesi (additive; şimdilik paragraph) ----
+// ---- body_blocks -> HTML eşlemesi (additive; şimdilik paragraph) ---- (DEĞİŞMEDİ)
 function renderBlock(block: BodyBlock, i: number) {
   switch (block.type) {
     case "paragraph":
@@ -68,7 +69,7 @@ function renderBlock(block: BodyBlock, i: number) {
   }
 }
 
-// ---- FAQPage JSON-LD (faq doluysa) — M9.6 gelince otomatik devreye girer ----
+// ---- FAQPage JSON-LD (faq doluysa) — M9.6 gelince otomatik devreye girer ---- (DEĞİŞMEDİ)
 function faqJsonLd(page: SeoPublicPage): string | null {
   if (!page.faq || page.faq.length === 0) return null;
   const entities = page.faq
@@ -100,6 +101,35 @@ export default async function Page({ params }: PageProps) {
       ? JSON.stringify(page.schema_jsonld)
       : null;
 
+  // Paylaşımlı JSON-LD (backend schema + faq) — her iki şablonda TEK KEZ basılır. (DEĞİŞMEDİ)
+  const jsonLd = (
+    <>
+      {rawSchema ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: rawSchema }}
+        />
+      ) : null}
+      {faqLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: faqLd }}
+        />
+      ) : null}
+    </>
+  );
+
+  // ── Kategori path'leri: premium SEO Category Landing (ADDITIVE; district akışı değişmez) ──
+  if (path.startsWith("/kategori/")) {
+    return (
+      <>
+        <CategoryLanding page={page} path={path} />
+        {jsonLd}
+      </>
+    );
+  }
+
+  // ── Varsayılan / District şablonu (AYNEN korunur) ──
   return (
     <main>
       <h1>{page.h1}</h1>
@@ -124,19 +154,7 @@ export default async function Page({ params }: PageProps) {
         </section>
       ) : null}
 
-      {/* JSON-LD structured data */}
-      {rawSchema ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: rawSchema }}
-        />
-      ) : null}
-      {faqLd ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: faqLd }}
-        />
-      ) : null}
+      {jsonLd}
     </main>
   );
 }
