@@ -80,11 +80,11 @@ export function HomeHero() {
         }}
       />
 
-      {/* Hero content — akışta; TOP SPACING OPT: items-start + küçültülmüş üst padding ile
-          H1 ~100-120px yukarı taşınır, slider ile arasındaki koyu boşluk azalır (section sırası aynı). */}
+      {/* Hero content — akışta; OPTİK DENGE: üst padding minimuma indirildi (pt-3/4),
+          H1 yukarı çekildi, slider→Hero geçişi kompakt. Hero yüksekliği (82svh) + mor zemin korunur. */}
       <motion.div
         style={{ y: heroTextY, opacity: heroOpacity, minHeight: "82svh" }}
-        className="relative z-10 flex items-start pt-12 lg:pt-16 pb-16"
+        className="relative z-10 flex items-start pt-3 lg:pt-4 pb-16"
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14 w-full">
           <div className="max-w-[660px]">
@@ -93,7 +93,7 @@ export function HomeHero() {
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="inline-flex items-center gap-2.5 mb-9"
+              className="inline-flex items-center gap-2.5 mb-6"
               style={{
                 background: "rgba(255,255,255,0.06)",
                 backdropFilter: "blur(20px)",
