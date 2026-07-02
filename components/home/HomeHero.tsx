@@ -18,7 +18,6 @@ import { useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Star } from "lucide-react";
-import { whatsappUrl } from "../../lib/site";
 
 export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -176,7 +175,7 @@ export function HomeHero() {
               </Link>
               <motion.a
                 whileHover={{ scale: 1.03 }}
-                href={whatsappUrl()}
+                href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
                 className="flex items-center justify-center gap-3 px-9 py-4 rounded-full text-white/90 text-sm font-semibold transition-colors"
                 style={{
                   background: "rgba(255,255,255,0.07)",
