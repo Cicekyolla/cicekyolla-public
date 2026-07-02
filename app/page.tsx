@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
+import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
- * Hiyerarşi (ZIP birebir): Header (layout) → Hero + Floating Koleksiyonlar (taşan) → TrustBar (§2, rail'i yakalar) → …
+ *
+ * SAYFA SIRASI (spec section-order fix):
+ *   Announcement Bar + Header (layout, LOCKED)
+ *   → §Koleksiyon Slider (bağımsız section, Header'dan sonra / Hero'dan önce — TazeÇiçek düzeni)
+ *   → §Hero Banner
+ *   → §USP / Güven (TrustBar)
+ *   → … (§Kampanyalar, vitrinler, sıradaki adımlar)
  *
  * Mimari:
- * - Bu dosya SERVER component → SEO metadata + JSON-LD SSR (SEO First).
+ * - Bu dosya SERVER component → SEO metadata + JSON-LD SSR (SEO First, dokunulmadı).
  * - Header/Footer BURADA render EDİLMEZ; app/layout.tsx sarıyor (8B-2.1, LOCKED).
- * - İnteraktif kısımlar ayrı client component'lerde (HomeHero, FloatingCategoryRail, TrustBar).
+ * - Koleksiyon slider artık Hero'ya bağlı DEĞİL; kendi section'ında bağımsız akışta.
  */
 
 const SITE_URL = (
@@ -91,6 +98,13 @@ export default function HomePage() {
   return (
     <>
       <HomeJsonLd />
+
+      {/* §Koleksiyonlar — bağımsız section: Header'dan sonra, Hero'dan önce (TazeÇiçek düzeni).
+          Hero'ya absolute/floating bağlı DEĞİL; normal akışta yatay slider. */}
+      <section aria-label="Koleksiyonlar" className="bg-white pt-6 pb-7">
+        <FloatingCategoryRail />
+      </section>
+
       <HomeHero />
       <TrustBar />
     </>
