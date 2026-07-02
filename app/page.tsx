@@ -15,6 +15,7 @@ import { Testimonials } from "../components/home/Testimonials";
 import { InstagramGallery } from "../components/home/InstagramGallery";
 import { CorporateReferences } from "../components/home/CorporateReferences";
 import { DistrictDelivery } from "../components/home/DistrictDelivery";
+import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -135,6 +136,7 @@ export default function HomePage() {
       <InstagramGallery />
       <CorporateReferences />
       <DistrictDelivery />
+      <WhatsAppCTA />
     </>
   );
 }
