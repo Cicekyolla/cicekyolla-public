@@ -1,12 +1,11 @@
 "use client";
 
 /**
- * §2 TRUST BAR — ZIP Homepage.tsx birebir port.
- * KRİTİK ROL: paddingTop:142px ile FloatingCategoryRail'in bottom:-118px taşmasını YAKALAR
- * (ZIP yorumu: "padding-top clears the carousel overlap"). Rail bunun beyaz üst boşluğuna oturur,
- * güven rozetleri (badges) rail'in altında görünür. Bu, önceki geçici beyaz placeholder'ın yerini alır.
+ * §USP / Güven Bandı — ZIP Homepage.tsx §2 birebir içerik.
  *
- * Dokunulmadı: yeniden tasarım yok, mock yok, placeholder yok — ZIP konumu birebir.
+ * SECTION ORDER FIX: Koleksiyon slider artık Hero'nun altına TAŞMIYOR (bağımsız üst section oldu),
+ * bu yüzden eski `paddingTop:142px` (overlap payı) KALDIRILDI. Normal `py-6` boşluk.
+ * Hero'dan hemen sonra, normal sırada gelir.
  */
 
 import { motion } from "motion/react";
@@ -23,14 +22,15 @@ const items = [
 
 export function TrustBar() {
   return (
-    <section className="bg-white border-b border-black/[0.04]" style={{ paddingTop: "142px" }}>
+    <section className="bg-white border-b border-black/[0.04]">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
-        <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 py-4">
+        <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 py-6">
           {items.map(({ icon: Icon, text }, i) => (
             <motion.div
               key={text}
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
               transition={{ delay: i * 0.05 + 0.1 }}
               className="flex items-center gap-2 text-[#374151]"
             >
