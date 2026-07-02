@@ -11,6 +11,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
+import { whatsappUrl } from "@/lib/site";
 
 const collections = [
   { id: 1, name: "Kırmızı Güller", sub: "En Çok Sevilen", price: "₺449'dan", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=1400&h=1600&fit=crop&auto=format&q=90", href: "/kategori/guller" },
@@ -138,7 +139,7 @@ export function FeaturedCollections() {
                 </p>
               </div>
               <a
-                href="https://wa.me/905551234567"
+                href={whatsappUrl()}
                 className="mt-8 flex items-center gap-2 py-3.5 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition-colors border border-white/15"
               >
                 <MessageCircle className="w-4 h-4" />
