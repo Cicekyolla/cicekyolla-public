@@ -62,6 +62,7 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
       <main className="bg-white">
         {/* ── Premium hero band (lilac) ── */}
         <section
+          aria-label="Koleksiyon başlığı"
           className="border-b border-black/[0.04]"
           style={{ background: "linear-gradient(180deg, #FAFAFA 0%, #F5F3FF 100%)" }}
         >
@@ -91,14 +92,14 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
 
         {/* ── SEO body ── */}
         {page.body_blocks && page.body_blocks.length > 0 ? (
-          <section className="max-w-[820px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
+          <section aria-label="Koleksiyon içeriği" className="max-w-[820px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
             {page.body_blocks.map((b, i) => renderBlock(b, i))}
           </section>
         ) : null}
 
         {/* ── FAQ (görsel accordion; JSON-LD route'ta üretiliyor → burada tekrar YOK) ── */}
         {faqItems.length > 0 ? (
-          <section className="max-w-[820px] mx-auto px-6 lg:px-8 pb-16 lg:pb-20">
+          <section aria-label="Sıkça sorulan sorular" className="max-w-[820px] mx-auto px-6 lg:px-8 pb-16 lg:pb-20">
             <h2
               style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
               className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
@@ -123,7 +124,7 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
         ) : null}
 
         {/* ── WhatsApp / Sipariş CTA ── */}
-        <section className="bg-white">
+        <section aria-label="Sipariş çağrısı" className="bg-white">
           <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
             <div
               className="relative overflow-hidden rounded-[28px] px-8 py-14 lg:px-16 text-center"
@@ -145,6 +146,9 @@ export function CategoryLanding({ page, path }: { page: SeoPublicPage; path: str
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
                   href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="WhatsApp'tan sipariş ver (yeni sekmede açılır)"
                   className="flex items-center gap-3 bg-white text-[#7C3AED] px-9 py-4 rounded-full text-sm font-bold"
                   style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.22)" }}
                 >
