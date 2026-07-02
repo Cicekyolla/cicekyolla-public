@@ -6,6 +6,7 @@ import { Manifesto } from "../components/home/Manifesto";
 import { FeaturedCollections } from "../components/home/FeaturedCollections";
 import { UrgencyStrip } from "../components/home/UrgencyStrip";
 import { FeatureSplit } from "../components/home/FeatureSplit";
+import { SameDayDelivery } from "../components/home/SameDayDelivery";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -117,6 +118,7 @@ export default function HomePage() {
       <FeaturedCollections />
       <UrgencyStrip />
       <FeatureSplit />
+      <SameDayDelivery />
     </>
   );
 }
