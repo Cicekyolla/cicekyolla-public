@@ -97,6 +97,9 @@ export interface CategoryNode {
   name: string;
   slug: string;
   parent_slug?: string | null;
+  parent_id?: number | null;
+  path?: string;
+  banner_image?: string | null;
   children?: CategoryNode[];
   status?: string;
   [key: string]: unknown;
