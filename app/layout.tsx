@@ -3,27 +3,32 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { fetchCategoryTree } from "@/lib/api";
+import { getCategoryTree, getCategoryNav } from "@/lib/categories";
 import { mapTreeToMegaMenu } from "@/lib/catalog";
 
-// TEK KAYNAK: Header Mega Menu canlı kategori ağacından beslenir (admin Category
-// Center → /api/categories → BURASI). Ağaç yoksa Header hardcoded fallback'e düşer.
+// TEK KAYNAK: layout kategori ağacını getCategoryTree (React cache) ile bir kez çeker;
+// Header (mega menu + mobil) ve Footer aynı canlı veriden beslenir. İkinci liste YOK.
+// Ağaç yoksa/boşsa bileşenler kendi hardcoded fallback'ine düşer (site ayakta kalır).
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  let menuOrUndef: Awaited<ReturnType<typeof mapTreeToMegaMenu>> | undefined;
+  let menu: Awaited<ReturnType<typeof mapTreeToMegaMenu>> | undefined;
+  let nav: ReturnType<typeof getCategoryNav> = [];
   try {
-    const tree = await fetchCategoryTree();
-    const menu = tree ? mapTreeToMegaMenu(tree) : undefined;
-    menuOrUndef = menu && Object.keys(menu).length > 0 ? menu : undefined;
+    const tree = await getCategoryTree();
+    const m = tree ? mapTreeToMegaMenu(tree) : undefined;
+    menu = m && Object.keys(m).length > 0 ? m : undefined;
+    nav = getCategoryNav(tree);
   } catch {
-    menuOrUndef = undefined; // hata → Header hardcoded fallback (site ayakta kalır)
+    menu = undefined;
+    nav = [];
   }
+  const navOrUndef = nav.length > 0 ? nav : undefined;
 
   return (
     <html lang="tr">
       <body>
-        <Header menu={menuOrUndef} />
+        <Header menu={menu} nav={navOrUndef} />
         {children}
-        <Footer />
+        <Footer categories={navOrUndef} />
         <WhatsAppButton />
       </body>
     </html>

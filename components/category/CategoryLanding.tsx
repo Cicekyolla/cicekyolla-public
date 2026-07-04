@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { fetchCategoryTree, fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock } from "@/lib/api";
+import { fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock } from "@/lib/api";
+import { getCategoryTree } from "@/lib/categories";
 import {
   mapTreeToItems,
   getBreadcrumbTrailFromTree,
@@ -82,7 +83,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
 
   // TEK KAYNAK = canlı Category Center ağacı (fetchCategoryTree). Env path yoksa
   // veya okuma başarısızsa → mevcut catalog'a güvenli fallback (UI birebir aynı).
-  const tree = await fetchCategoryTree();
+  const tree = await getCategoryTree();
   const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
 
   // İç-linkleme (Related): canlı ağaçtan; yetersizse catalog.

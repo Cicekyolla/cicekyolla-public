@@ -117,11 +117,17 @@ type MegaGroup = {
 };
 
 /* ─── Header ─── */
-export function Header({ menu }: { menu?: Record<string, MegaGroup> }) {
+export function Header({ menu, nav }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[] }) {
   // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
   const menuData: Record<string, MegaGroup> = menu && Object.keys(menu).length > 0 ? menu : (megaMenuData as unknown as Record<string, MegaGroup>);
   const navItems: string[] = Object.keys(menuData);
+
+  // Mobil menü kategori kısmı: canlı nav (fallback: menü anahtarları / hardcoded).
+  const mobileCats: { label: string; href: string }[] =
+    nav && nav.length > 0
+      ? nav.map((c) => ({ label: c.name, href: c.href }))
+      : navItems.map((k) => ({ label: k, href: menuData[k].href ?? menuData[k].categories[0]?.href ?? "/" }));
 
   const [cartCount] = useState(2);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -308,18 +314,8 @@ export function Header({ menu }: { menu?: Record<string, MegaGroup> }) {
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
                       {[
                         { label: "Ana Sayfa", href: "/" },
-                        { label: "Güller", href: "/kategori/guller" },
-                        { label: "Buketler", href: "/kategori/buketler" },
-                        { label: "Orkideler", href: "/kategori/orkideler" },
-                        { label: "Özel Günler", href: "/kategori/ozel-gunler" },
-                        { label: "Yapay Çiçekler", href: "/kategori/yapay-cicek" },
-                        { label: "Yapay Ağaçlar", href: "/kategori/yapay-agac" },
-                        { label: "Şimşir", href: "/kategori/simsir" },
-                        { label: "Çim Duvar", href: "/kategori/cim-duvar" },
-                        { label: "Çim Çit", href: "/kategori/cim-cit" },
-                        { label: "Peyzaj", href: "/kategori/peyzaj" },
+                        ...mobileCats,
                         { label: "🌿 Dekorasyon & Peyzaj", href: "/dekorasyon" },
-                        { label: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
                         { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
                         { label: "Hakkımızda", href: "/hakkimizda" },
                         { label: "Blog", href: "/blog" },

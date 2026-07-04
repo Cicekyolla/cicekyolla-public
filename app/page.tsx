@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchCategoryTree, fetchProducts, toCardProduct } from "@/lib/api";
+import { fetchProducts, toCardProduct } from "@/lib/api";
+import { getCategoryTree } from "@/lib/categories";
 import { mapTreeToItems } from "@/lib/catalog";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
@@ -113,7 +114,7 @@ function HomeJsonLd() {
 
 export default async function HomePage() {
   // Homepage Collections TEK KAYNAK: canlı Category Center ağacı; yetersizse fallback.
-  const tree = await fetchCategoryTree();
+  const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
   const collections = liveItems.length >= 4 ? liveItems : undefined;
 
