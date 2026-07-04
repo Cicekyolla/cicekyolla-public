@@ -272,3 +272,21 @@ export function getBreadcrumbTrailFromTree(
   }
   return trail;
 }
+
+/** Canlı ağaçta slug eşleşen kategorinin numerik id'sini bulur (ürün filtresi için).
+ *  id BIGINT olabilir → Number() ile normalize edilir. Bulunamazsa null. */
+export function findCategoryIdBySlug(nodes: CategoryNode[], slug: string): number | null {
+  let found: number | null = null;
+  const walk = (list: CategoryNode[]): void => {
+    for (const n of list) {
+      if (found !== null) return;
+      if (n?.slug === slug) {
+        const num = Number((n as { id?: unknown }).id);
+        if (Number.isFinite(num) && num > 0) { found = num; return; }
+      }
+      if (Array.isArray(n?.children)) walk(n.children as CategoryNode[]);
+    }
+  };
+  walk(nodes);
+  return found;
+}

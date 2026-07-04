@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { fetchCategoryTree, type SeoPublicPage, type BodyBlock } from "@/lib/api";
+import { fetchCategoryTree, fetchProducts, toCardProduct, type SeoPublicPage, type BodyBlock } from "@/lib/api";
 import {
   mapTreeToItems,
   getBreadcrumbTrailFromTree,
+  findCategoryIdBySlug,
   premiumCategories,
 } from "@/lib/catalog";
+import { ProductCard } from "@/components/home/ProductCard";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -91,6 +93,16 @@ export async function CategoryLanding({ page, path }: { page: SeoPublicPage; pat
   // Breadcrumb: parent-child ağaçtan türetilir; yoksa 2 seviyeli fallback.
   const trail = tree ? getBreadcrumbTrailFromTree(tree, slug) : [];
 
+  // ── KATEGORİ ÜRÜNLERİ (canlı katalog) ──
+  // Admin Ürün Merkezi > Kapsam/Kategori → API → DB → BURASI → müşteri.
+  // slug → category_id (canlı ağaçtan) → /api/products?category_id=&status=active.
+  // Kayıt yoksa/kategori id çözülmezse grid gizlenir (mock YOK, regresyon YOK).
+  const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
+  const productRows = categoryId
+    ? await fetchProducts({ category_id: categoryId, page_size: 12, sort: "created_at_desc" })
+    : [];
+  const products = productRows.filter((p) => p.cover_image_url).map(toCardProduct);
+
   return (
     <>
       <main className="bg-white">
@@ -140,6 +152,24 @@ export async function CategoryLanding({ page, path }: { page: SeoPublicPage; pat
             ) : null}
           </div>
         </section>
+
+        {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
+        {products.length > 0 ? (
+          <section aria-label="Bu kategorideki ürünler" className="max-w-[1440px] mx-auto px-6 lg:px-14 py-14 lg:py-20">
+            <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Ürünler</p>
+            <h2
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+              className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
+            >
+              Bu Koleksiyondaki Ürünler
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
+              {products.map((product, idx) => (
+                <ProductCard key={product.id} product={product} idx={idx} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* ── SEO body ── */}
         {page.body_blocks && page.body_blocks.length > 0 ? (

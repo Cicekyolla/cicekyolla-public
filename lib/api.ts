@@ -242,3 +242,25 @@ export async function fetchProducts(params: PublicProductListParams = {}): Promi
   const json = (await res.json()) as { data?: PublicProductListItem[] };
   return Array.isArray(json?.data) ? json.data : [];
 }
+
+// ---------------------------------------------------------------------------
+// PAYLAŞILAN MAPPER — TEK KAYNAK. Homepage rail'leri + kategori grid'i AYNI
+// mapper'ı kullanır (duplicate logic YOK). API list item → ProductCard shape.
+// Rating/reviews UYDURULMAZ (yorum sistemi yok → alan yok → kart yıldızı gizler).
+// ---------------------------------------------------------------------------
+export interface CardProduct {
+  id: number; name: string; slug: string; price: number;
+  originalPrice?: number; image: string; badge?: string;
+}
+export function toCardProduct(p: PublicProductListItem): CardProduct {
+  const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    price: Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100),
+    originalPrice: hasSale ? Math.round(Number(p.price_minor) / 100) : undefined,
+    image: p.cover_image_url ?? "",
+    badge: hasSale ? "İndirim" : p.is_new ? "Yeni" : p.is_bestseller ? "Çok Satan" : undefined,
+  };
+}

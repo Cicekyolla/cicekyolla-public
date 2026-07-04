@@ -1,24 +1,6 @@
 import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchCategoryTree, fetchProducts, type PublicProductListItem } from "@/lib/api";
-
-/** API liste item'ını ProductCard shape'ine çevirir. Rating/reviews UYDURULMAZ
- *  (yorum sistemi yok → alan boş bırakılır, kart yıldız bloğunu gizler). */
-function mapToCardProduct(p: PublicProductListItem) {
-  const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
-  const price = Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100);
-  const originalPrice = hasSale ? Math.round(Number(p.price_minor) / 100) : undefined;
-  const badge = hasSale ? "İndirim" : p.is_new ? "Yeni" : p.is_bestseller ? "Çok Satan" : undefined;
-  return {
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price,
-    originalPrice,
-    image: p.cover_image_url ?? "",
-    badge,
-  };
-}
+import { fetchCategoryTree, fetchProducts, toCardProduct } from "@/lib/api";
 import { mapTreeToItems } from "@/lib/catalog";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
@@ -140,7 +122,7 @@ export default async function HomePage() {
   const bestSellerRows = await fetchProducts({ is_bestseller: true, page_size: 8 });
   const bestSellers = bestSellerRows
     .filter((p) => p.cover_image_url) // görselsiz ürün ana sayfada öne çıkmaz
-    .map(mapToCardProduct);
+    .map(toCardProduct);
 
   // Editör Seçimi rail'i: canlı katalogdan (admin > Öne Çıkan). Yetersizse mevcut
   // editorial korunur (regresyon YOK). Layout 3 kart → görselli öne çıkanları al.
