@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchProductBySlug, formatMinorTRY } from "@/lib/api";
+import { fetchProductBySlug, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
 import { ProductDetail } from "@/components/product/ProductDetail";
+import { ProductCard } from "@/components/home/ProductCard";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -46,6 +47,17 @@ export default async function ProductPage({ params }: PageProps) {
     ? data.product.sale_price_minor
     : data.product.price_minor;
 
+  // ── İLGİLİ ÜRÜNLER (Cross-Sell) — aynı kategoriden, canlı katalog ──
+  // Admin: ürünün kategorisi → /api/products?category_id= → BURASI. Mock YOK.
+  const primaryCat = data.categories.find((c) => c.is_primary) ?? data.categories[0];
+  const relatedRows = primaryCat
+    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 8, sort: "created_at_desc" })
+    : [];
+  const related = relatedRows
+    .filter((p) => p.slug !== product.slug && p.cover_image_url)
+    .slice(0, 4)
+    .map(toCardProduct);
+
   // Product JSON-LD (schema) — gerçek üründen.
   const jsonLd = {
     "@context": "https://schema.org",
@@ -66,6 +78,21 @@ export default async function ProductPage({ params }: PageProps) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ProductDetail data={data} />
+      {related.length > 0 ? (
+        <section aria-label="İlgili ürünler" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-20">
+          <div className="border-t border-black/[0.06] pt-14">
+            <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Keşfet</p>
+            <h2 style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }} className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8">
+              Bunları da Beğenebilirsiniz
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
+              {related.map((p, idx) => (
+                <ProductCard key={p.id} product={p} idx={idx} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
       {/* Fiyat özeti (SSR erişilebilirlik / no-JS fallback) */}
       <span className="sr-only">{formatMinorTRY(price)}</span>
     </>
