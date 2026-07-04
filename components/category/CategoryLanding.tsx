@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { fetchCategoryTree, fetchProducts, toCardProduct, type SeoPublicPage, type BodyBlock } from "@/lib/api";
+import { fetchCategoryTree, fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock } from "@/lib/api";
 import {
   mapTreeToItems,
   getBreadcrumbTrailFromTree,
@@ -77,7 +77,7 @@ function breadcrumbJsonLd(
   });
 }
 
-export async function CategoryLanding({ page, path }: { page: SeoPublicPage; path: string }) {
+export async function CategoryLanding({ page, path, searchParams }: { page: SeoPublicPage; path: string; searchParams?: { [k: string]: string | string[] | undefined } }) {
   const faqItems = (page.faq ?? []).filter((f) => f.q && f.a);
 
   // TEK KAYNAK = canlı Category Center ağacı (fetchCategoryTree). Env path yoksa
@@ -93,15 +93,36 @@ export async function CategoryLanding({ page, path }: { page: SeoPublicPage; pat
   // Breadcrumb: parent-child ağaçtan türetilir; yoksa 2 seviyeli fallback.
   const trail = tree ? getBreadcrumbTrailFromTree(tree, slug) : [];
 
-  // ── KATEGORİ ÜRÜNLERİ (canlı katalog) ──
+  // ── KATEGORİ ÜRÜNLERİ (canlı katalog + sıralama + sayfalama) ──
   // Admin Ürün Merkezi > Kapsam/Kategori → API → DB → BURASI → müşteri.
-  // slug → category_id (canlı ağaçtan) → /api/products?category_id=&status=active.
+  // slug → category_id → /api/products?category_id=&status=active&sort=&page=.
   // Kayıt yoksa/kategori id çözülmezse grid gizlenir (mock YOK, regresyon YOK).
+  const SORTS = [
+    { key: "created_at_desc", label: "En Yeni" },
+    { key: "price_asc", label: "Artan Fiyat" },
+    { key: "price_desc", label: "Azalan Fiyat" },
+    { key: "name_asc", label: "A → Z" },
+  ] as const;
+  const sortParam = typeof searchParams?.sort === "string" ? searchParams.sort : "created_at_desc";
+  const sort = (SORTS.find((s) => s.key === sortParam)?.key ?? "created_at_desc") as typeof SORTS[number]["key"];
+  const pageNum = Math.max(1, Number(typeof searchParams?.page === "string" ? searchParams.page : 1) || 1);
+
   const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
-  const productRows = categoryId
-    ? await fetchProducts({ category_id: categoryId, page_size: 12, sort: "created_at_desc" })
-    : [];
-  const products = productRows.filter((p) => p.cover_image_url).map(toCardProduct);
+  const productPage = categoryId
+    ? await fetchProductsPaged({ category_id: categoryId, page_size: 12, page: pageNum, sort })
+    : null;
+  const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
+  const totalPages = productPage?.pagination.total_pages ?? 1;
+  const totalProducts = productPage?.pagination.total ?? 0;
+  const buildHref = (p: { sort?: string; page?: number }) => {
+    const sp = new URLSearchParams();
+    const s = p.sort ?? sort;
+    const pg = p.page ?? 1;
+    if (s !== "created_at_desc") sp.set("sort", s);
+    if (pg > 1) sp.set("page", String(pg));
+    const qs = sp.toString();
+    return qs ? `${path}?${qs}` : path;
+  };
 
   return (
     <>
@@ -156,18 +177,65 @@ export async function CategoryLanding({ page, path }: { page: SeoPublicPage; pat
         {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
         {products.length > 0 ? (
           <section aria-label="Bu kategorideki ürünler" className="max-w-[1440px] mx-auto px-6 lg:px-14 py-14 lg:py-20">
-            <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Ürünler</p>
-            <h2
-              style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
-              className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
-            >
-              Bu Koleksiyondaki Ürünler
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+              <div>
+                <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Ürünler</p>
+                <h2
+                  style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+                  className="text-2xl lg:text-3xl font-semibold text-[#111827]"
+                >
+                  Bu Koleksiyondaki Ürünler
+                  {totalProducts > 0 ? <span className="ml-2 text-base font-normal text-[#9CA3AF]">({totalProducts})</span> : null}
+                </h2>
+              </div>
+              {/* Sıralama */}
+              <div className="flex flex-wrap items-center gap-2">
+                {SORTS.map((s) => (
+                  <Link
+                    key={s.key}
+                    href={buildHref({ sort: s.key, page: 1 })}
+                    scroll={false}
+                    className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-colors ${sort === s.key ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] border border-[#E5E7EB] hover:border-[#DDD6FE]"}`}
+                  >
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
               {products.map((product, idx) => (
                 <ProductCard key={product.id} product={product} idx={idx} />
               ))}
             </div>
+            {/* Sayfalama */}
+            {totalPages > 1 ? (
+              <nav aria-label="Sayfalama" className="flex items-center justify-center gap-2 mt-12">
+                {pageNum > 1 ? (
+                  <Link href={buildHref({ page: pageNum - 1 })} className="px-4 py-2.5 rounded-xl text-[13px] font-semibold text-[#374151] bg-white border border-[#E5E7EB] hover:border-[#DDD6FE] transition-colors">
+                    ← Önceki
+                  </Link>
+                ) : null}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((n) => n === 1 || n === totalPages || Math.abs(n - pageNum) <= 1)
+                  .map((n, i, arr) => (
+                    <span key={n} className="flex items-center gap-2">
+                      {i > 0 && arr[i - 1] !== n - 1 ? <span className="text-[#C4B5FD]">…</span> : null}
+                      <Link
+                        href={buildHref({ page: n })}
+                        aria-current={n === pageNum ? "page" : undefined}
+                        className={`min-w-[40px] text-center px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-colors ${n === pageNum ? "bg-[#7C3AED] text-white" : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#DDD6FE]"}`}
+                      >
+                        {n}
+                      </Link>
+                    </span>
+                  ))}
+                {pageNum < totalPages ? (
+                  <Link href={buildHref({ page: pageNum + 1 })} className="px-4 py-2.5 rounded-xl text-[13px] font-semibold text-[#374151] bg-white border border-[#E5E7EB] hover:border-[#DDD6FE] transition-colors">
+                    Sonraki →
+                  </Link>
+                ) : null}
+              </nav>
+            ) : null}
           </section>
         ) : null}
 

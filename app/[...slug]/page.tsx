@@ -24,7 +24,7 @@ function absoluteUrl(path: string): string {
   return SITE_URL + (path.startsWith("/") ? path : "/" + path);
 }
 
-type PageProps = { params: { slug?: string[] } };
+type PageProps = { params: { slug?: string[] }; searchParams?: { [k: string]: string | string[] | undefined } };
 
 // ---- SEO META (title / description / canonical / robots) ---- (DEĞİŞMEDİ)
 export async function generateMetadata({
@@ -88,7 +88,7 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 }
 
 // ---- Sayfa ----
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params, searchParams }: PageProps) {
   const path = slugToPath(params.slug);
   const page = await fetchSeoPage(path);
 
@@ -123,7 +123,7 @@ export default async function Page({ params }: PageProps) {
   if (path.startsWith("/kategori/")) {
     return (
       <>
-        <CategoryLanding page={page} path={path} />
+        <CategoryLanding page={page} path={path} searchParams={searchParams} />
         {jsonLd}
       </>
     );

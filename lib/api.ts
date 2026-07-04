@@ -223,9 +223,21 @@ export interface PublicProductListParams {
 }
 
 export async function fetchProducts(params: PublicProductListParams = {}): Promise<PublicProductListItem[]> {
+  return (await fetchProductsPaged(params)).items;
+}
+
+export interface ProductPage {
+  items: PublicProductListItem[];
+  pagination: { page: number; page_size: number; total: number; total_pages: number };
+}
+
+/** Sayfalı ürün listesi (kategori grid'i sıralama + sayfalama için). */
+export async function fetchProductsPaged(params: PublicProductListParams & { page?: number } = {}): Promise<ProductPage> {
+  const empty: ProductPage = { items: [], pagination: { page: 1, page_size: params.page_size ?? 8, total: 0, total_pages: 1 } };
   const q = new URLSearchParams();
   q.set("status", "active");
   q.set("page_size", String(params.page_size ?? 8));
+  if (params.page && params.page > 1) q.set("page", String(params.page));
   if (params.is_bestseller) q.set("is_bestseller", "true");
   if (params.is_featured) q.set("is_featured", "true");
   if (params.is_new) q.set("is_new", "true");
@@ -236,11 +248,14 @@ export async function fetchProducts(params: PublicProductListParams = {}): Promi
   try {
     res = await fetch(url, { next: { revalidate: 120 } });
   } catch {
-    return [];
+    return empty;
   }
-  if (!res.ok) return [];
-  const json = (await res.json()) as { data?: PublicProductListItem[] };
-  return Array.isArray(json?.data) ? json.data : [];
+  if (!res.ok) return empty;
+  const json = (await res.json()) as ProductPage;
+  return {
+    items: Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [],
+    pagination: json?.pagination ?? empty.pagination,
+  };
 }
 
 // ---------------------------------------------------------------------------
