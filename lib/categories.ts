@@ -20,7 +20,7 @@ const isActive = (n: CategoryNode) =>
 export interface NavCategory { name: string; href: string; slug: string }
 
 /** Üst-seviye active kategoriler → düz nav listesi (Header mobil + Footer). */
-export function getCategoryNav(tree: CategoryNode[] | null, limit = 14): NavCategory[] {
+export function getCategoryNav(tree: CategoryNode[] | null, limit = 50): NavCategory[] {
   if (!tree) return [];
   return tree.filter(isActive).slice(0, limit).map((n) => ({
     name: n.name, slug: n.slug, href: `/kategori/${n.slug}`,

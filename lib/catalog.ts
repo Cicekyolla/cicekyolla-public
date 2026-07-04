@@ -307,7 +307,7 @@ export interface MegaGroup {
   featured?: { label: string; title: string; href: string; image: string };
   categories: { name: string; sub?: string; href: string }[];
 }
-export function mapTreeToMegaMenu(nodes: CategoryNode[], maxGroups = 8, maxLinks = 10): Record<string, MegaGroup> {
+export function mapTreeToMegaMenu(nodes: CategoryNode[], maxGroups = 50, maxLinks = 24): Record<string, MegaGroup> {
   const out: Record<string, MegaGroup> = {};
   const isActive = (n: CategoryNode) =>
     n && typeof n.name === "string" && typeof n.slug === "string" &&
