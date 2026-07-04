@@ -10,16 +10,11 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 
-const occasions = [
-  { name: "Doğum Günü", image: "https://images.unsplash.com/photo-1468327768560-75b778cbb551?w=600&h=750&fit=crop&auto=format&q=85", href: "/kategori/dogum-gunu" },
-  { name: "Sevgililer Günü", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=600&h=750&fit=crop&auto=format&q=85", href: "/kategori/sevgililer-gunu" },
-  { name: "Anneler Günü", image: "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=600&h=750&fit=crop&auto=format&q=85", href: "/kategori/anneler-gunu" },
-  { name: "Düğün & Nişan", image: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=600&h=750&fit=crop&auto=format&q=85", href: "/kategori/dugun" },
-  { name: "Geçmiş Olsun", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=750&fit=crop&auto=format&q=85", href: "/kategori/gecmis-olsun" },
-  { name: "Mezuniyet", image: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600&h=750&fit=crop&auto=format&q=85", href: "/kategori/mezuniyet" },
-];
-
-export function OccasionShopping() {
+// TEK KAYNAK: canlı kategori ağacından gelen kategoriler (hardcoded YOK).
+type OccItem = { id: string; name: string; href: string; image: string };
+export function OccasionShopping({ items }: { items?: OccItem[] }) {
+  const occasions = (items ?? []).slice(0, 6);
+  if (occasions.length < 6) return null; // yeterli görselli kategori yoksa bölüm gizli
   return (
     <section className="py-24 bg-white">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
@@ -34,7 +29,7 @@ export function OccasionShopping() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
           {occasions.map((occ, idx) => (
             <motion.div
-              key={occ.name}
+              key={occ.id ?? occ.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

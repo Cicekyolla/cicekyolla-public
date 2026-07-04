@@ -1,7 +1,46 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchSeoPage, type BodyBlock, type SeoPublicPage } from "@/lib/api";
+import { getCategoryTree } from "@/lib/categories";
+import { findCategoryNodeBySlug } from "@/lib/catalog";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
+
+// Kategori tree'sinde var olan ama yayında SEO sayfası OLMAYAN kategoriler için
+// sentetik SeoPublicPage üretir → 404 yerine landing render eder (hiçbir kategori
+// boş/404 sayfa vermez). Alanlar kategori düğümünün gerçek verisinden gelir.
+function syntheticCategoryPage(path: string, node: Record<string, unknown>): SeoPublicPage {
+  const name = typeof node.name === "string" ? node.name : "Koleksiyon";
+  const desc = typeof node.description === "string" ? node.description : "";
+  const str = (k: string): string | undefined => (typeof node[k] === "string" ? (node[k] as string) : undefined);
+  return {
+    url_path: path,
+    page_type: "category",
+    lang: "tr",
+    index_state: node.is_indexable === false ? "noindex" : "index",
+    canonical_url: str("canonical_url") || path,
+    title_tag: str("seo_title") || `${name} — Cicekyolla`,
+    meta_description: str("seo_description") || desc || `${name} koleksiyonu — aynı gün teslimat.`,
+    h1: str("h1_title") || name,
+    intro_html: desc ? `<p>${desc}</p>` : null,
+    body_blocks: [],
+    faq: Array.isArray(node.faq_json) ? (node.faq_json as SeoPublicPage["faq"]) : [],
+    schema_jsonld: {},
+  };
+}
+
+/** Path için sayfayı çözer: önce yayında SEO sayfası; kategori path'i ise SEO sayfası
+ *  yoksa canlı tree'den sentetik üretir. Kategori değilse/tree'de yoksa null. */
+async function resolvePage(path: string): Promise<SeoPublicPage | null> {
+  const seo = await fetchSeoPage(path);
+  if (seo) return seo;
+  if (path.startsWith("/kategori/")) {
+    const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
+    const tree = await getCategoryTree();
+    const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
+    if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
+  }
+  return null;
+}
 
 // Kanonik/mutlak URL için site kökü. Şimdilik Vercel domaini; sonra cicekyolla.com.
 // Tek yerden değişir (env → build). canonical_url path döndüğü için burada tamamlanır.
@@ -31,7 +70,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const path = slugToPath(params.slug);
-  const page = await fetchSeoPage(path);
+  const page = await resolvePage(path);
 
   if (!page) {
     return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
@@ -90,7 +129,7 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 // ---- Sayfa ----
 export default async function Page({ params, searchParams }: PageProps) {
   const path = slugToPath(params.slug);
-  const page = await fetchSeoPage(path);
+  const page = await resolvePage(path);
 
   if (!page) notFound();
 

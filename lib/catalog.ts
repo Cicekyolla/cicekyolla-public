@@ -30,28 +30,6 @@ export interface CategoryItem {
   tag?: string;
 }
 
-export const premiumCategories: CategoryItem[] = [
-  /* ── Taze Çiçekler ── */
-  { id: "c1",  name: "Buket Çiçekler",     href: "/kategori/buketler",              image: "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=400&h=400&fit=crop&auto=format&q=85", count: 78, tag: "Çok Satan" },
-  { id: "c2",  name: "Gül Buketleri",      href: "/kategori/guller",                image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400&h=400&fit=crop&auto=format&q=85", count: 45 },
-  { id: "c3",  name: "Orkideler",           href: "/kategori/orkideler",             image: "https://images.unsplash.com/photo-1612968550885-5d1cf8a0c39f?w=400&h=400&fit=crop&auto=format&q=85", count: 24, tag: "Premium" },
-  { id: "c4",  name: "Aranjman Çiçekler",  href: "/kategori/aranjman",              image: "https://images.unsplash.com/photo-1468327768560-75b778cbb551?w=400&h=400&fit=crop&auto=format&q=85", count: 38 },
-  { id: "c5",  name: "Saksı Bitkileri",    href: "/kategori/bitkiler",              image: "https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=400&h=400&fit=crop&auto=format&q=85", count: 56 },
-  { id: "c6",  name: "Sevgiliye Çiçek",    href: "/kategori/sevgililer-gunu",       image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=400&h=400&fit=crop&auto=format&q=85", count: 89, tag: "Trend" },
-  { id: "c7",  name: "Doğum Günü",         href: "/kategori/dogum-gunu",            image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=400&h=400&fit=crop&auto=format&q=85", count: 64 },
-  { id: "c8",  name: "Anneler Günü",       href: "/kategori/anneler-gunu",          image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop&auto=format&q=85", count: 42 },
-  /* ── Yapay & Peyzaj ── */
-  { id: "c9",  name: "Yapay Çiçekler",     href: "/kategori/yapay-cicek",           image: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400&h=400&fit=crop&auto=format&q=85", count: 124, tag: "Yeni" },
-  { id: "c10", name: "Yapay Ağaçlar",      href: "/kategori/yapay-agac",            image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&auto=format&q=85", count: 48 },
-  { id: "c11", name: "Yapay Çim Duvar",    href: "/kategori/cim-duvar",             image: "https://images.unsplash.com/photo-1487530811015-780f2f5a3f48?w=400&h=400&fit=crop&auto=format&q=85", count: 36, tag: "Proje" },
-  /* ── Dekorasyon Projeleri ── */
-  { id: "c12", name: "Kafe Dekorasyon",    href: "/dekorasyon/projeler?tur=kafe",   image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop&auto=format&q=85", count: 62, tag: "Editör" },
-  { id: "c13", name: "Otel Dekorasyon",    href: "/dekorasyon/projeler?tur=otel",   image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop&auto=format&q=85", count: 47 },
-  { id: "c14", name: "Ofis Dekorasyon",    href: "/dekorasyon/projeler?tur=ofis",   image: "https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=400&h=400&fit=crop&auto=format&q=85", count: 94 },
-  { id: "c15", name: "Proje Uygulamaları", href: "/dekorasyon",                     image: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=400&h=400&fit=crop&auto=format&q=85", count: 500, tag: "Özel" },
-  /* ── Türkiye Kargo ── */
-  { id: "c16", name: "Türkiye'ye Kargo",   href: "/kategori/turkiye-geneli-kargo",  image: "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=400&h=400&fit=crop&auto=format&q=85", count: 200, tag: "81 İl" },
-];
 
 export const categoryBadges: Record<string, { emoji: string; label: string; color: string }> = {
   c1:  { emoji: "🔥", label: "Çok Satan",  color: "#EF4444" },
@@ -83,104 +61,7 @@ export interface MegaMenuGroup {
   categories: MegaMenuLink[];
 }
 
-export const megaMenuData: Record<string, MegaMenuGroup> = {
-  Güller: {
-    featured: {
-      image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=600&h=700&fit=crop&auto=format",
-      label: "Editör Seçimi",
-      title: "El Seçimi\nPremium Güller",
-      href: "/urun/premium-kirmizi-guller",
-    },
-    categories: [
-      { name: "Kırmızı Güller", sub: "En çok satılan", href: "/kategori/guller?renk=kirmizi" },
-      { name: "Beyaz Güller", sub: "Zarafet simgesi", href: "/kategori/guller?renk=beyaz" },
-      { name: "Pembe Güller", sub: "Sevgi ve nezaket", href: "/kategori/guller?renk=pembe" },
-      { name: "Karma Güller", sub: "Renk dolu buketler", href: "/kategori/guller?renk=karma" },
-      { name: "Siyah Kutu Güller", sub: "Premium hediye", href: "/kategori/guller?ambalaj=kutu" },
-    ],
-  },
-  Buketler: {
-    featured: {
-      image: "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=600&h=700&fit=crop&auto=format",
-      label: "Mevsimlik",
-      title: "Şakayık\nKoleksiyonu",
-      href: "/urun/pembe-sakayik-buketi",
-    },
-    categories: [
-      { name: "Mevsimlik Buketler", sub: "Taptaze sezon çiçekleri", href: "/kategori/buketler?tur=mevsimlik" },
-      { name: "Premium Buketler", sub: "El seçimi aranjmanlar", href: "/kategori/buketler?tur=premium" },
-      { name: "Doğum Günü", sub: "Kutlama aranjmanları", href: "/kategori/buketler?tur=dogum-gunu" },
-      { name: "Romantik Buketler", sub: "Sevgililer için", href: "/kategori/buketler?tur=romantik" },
-      { name: "Mini Buketler", sub: "Küçük ama özel", href: "/kategori/buketler?tur=mini" },
-    ],
-  },
-  Orkideler: {
-    featured: {
-      image: "https://images.unsplash.com/photo-1612968550885-5d1cf8a0c39f?w=600&h=700&fit=crop&auto=format",
-      label: "Uzun Ömürlü",
-      title: "Orkide\nKoleksiyonu",
-      href: "/kategori/orkideler",
-    },
-    categories: [
-      { name: "Beyaz Orkide", sub: "Klasik zarafet", href: "/kategori/orkideler?renk=beyaz" },
-      { name: "Pembe Orkide", sub: "Yumuşak tonlar", href: "/kategori/orkideler?renk=pembe" },
-      { name: "Mor Orkide", sub: "Asil görünüm", href: "/kategori/orkideler?renk=mor" },
-      { name: "Çift Dallı Orkide", sub: "Bol çiçekli", href: "/kategori/orkideler?tur=cift-dalh" },
-      { name: "Saksı Aranjman", sub: "Ev hediyesi", href: "/kategori/orkideler?tur=saksi" },
-    ],
-  },
-  "Özel Günler": {
-    featured: {
-      image: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=600&h=700&fit=crop&auto=format",
-      label: "Özel Koleksiyon",
-      title: "Düğün &\nNişan",
-      href: "/kategori/dugun",
-    },
-    categories: [
-      { name: "Doğum Günü", sub: "Kutlama aranjmanları", href: "/kategori/dogum-gunu" },
-      { name: "Sevgililer Günü", sub: "Aşk mesajları", href: "/kategori/sevgililer-gunu" },
-      { name: "Anneler Günü", sub: "Anneye özel", href: "/kategori/anneler-gunu" },
-      { name: "Düğün & Nişan", sub: "Özel gün koleksiyonu", href: "/kategori/dugun" },
-      { name: "Mezuniyet", sub: "Başarı kutlaması", href: "/kategori/mezuniyet" },
-    ],
-  },
-  "Kargo Gönderim": {
-    featured: {
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=700&fit=crop&auto=format",
-      label: "81 İle Teslimat",
-      title: "Tüm Türkiye\nKargo Gönderim",
-      href: "/kategori/turkiye-geneli-kargo",
-    },
-    categories: [
-      { name: "Kuru Çiçekler", sub: "Sonsuz güzellik, kargoda güvenli", href: "/kategori/turkiye-geneli-kargo" },
-      { name: "Sukulentler", sub: "Bakım gerektirmez, uzun ömürlü", href: "/kategori/turkiye-geneli-kargo" },
-      { name: "Saksı Bitkileri", sub: "Özel korumalı paketleme", href: "/kategori/turkiye-geneli-kargo" },
-      { name: "Yapay Çiçekler", sub: "Solmaz, kargoda mükemmel", href: "/kategori/turkiye-geneli-kargo" },
-      { name: "Hediye Kutuları", sub: "Hazır paket, hızlı gönderim", href: "/kategori/turkiye-geneli-kargo" },
-      { name: "Kurumsal Hediyeler", sub: "Logo baskılı, faturalı", href: "/kategori/turkiye-geneli-kargo" },
-    ],
-  },
-  "Yapay & Peyzaj": {
-    featured: {
-      image: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600&h=700&fit=crop&auto=format",
-      label: "Solmayan Güzellik",
-      title: "Yapay Çiçek\nKoleksiyonu",
-      href: "/kategori/yapay-cicek",
-    },
-    categories: [
-      { name: "Yapay Çiçekler", sub: "Solmaz, bakım gerektirmez", href: "/kategori/yapay-cicek" },
-      { name: "Yapay Ağaçlar", sub: "İç & dış mekan", href: "/kategori/yapay-agac" },
-      { name: "Şimşir Bitkisi", sub: "Top, konik, küp formlar", href: "/kategori/simsir" },
-      { name: "Çim Duvar", sub: "Doğal görünüm, kolay bakım", href: "/kategori/cim-duvar" },
-      { name: "Çim Çit", sub: "Bahçe sınırlandırma", href: "/kategori/cim-cit" },
-      { name: "Peyzaj Hizmetleri", sub: "Proje bazlı bahçe düzenleme", href: "/kategori/peyzaj" },
-    ],
-  },
-};
 
-/** Mega menü başlık anahtarları (desktop nav sırası — verbatim). */
-export type MenuKey = keyof typeof megaMenuData;
-export const navItems: MenuKey[] = ["Güller", "Buketler", "Orkideler", "Özel Günler", "Kargo Gönderim", "Yapay & Peyzaj"];
 
 /* ═══════════════════════════════════════════════════════════════
    3) MOBİL MENU (drawer nav — verbatim, kategori + statik sayfalar)
@@ -190,38 +71,12 @@ export interface NavLink {
   href: string;
 }
 
-export const mobileNavItems: NavLink[] = [
-  { label: "Ana Sayfa", href: "/" },
-  { label: "Güller", href: "/kategori/guller" },
-  { label: "Buketler", href: "/kategori/buketler" },
-  { label: "Orkideler", href: "/kategori/orkideler" },
-  { label: "Özel Günler", href: "/kategori/ozel-gunler" },
-  { label: "Yapay Çiçekler", href: "/kategori/yapay-cicek" },
-  { label: "Yapay Ağaçlar", href: "/kategori/yapay-agac" },
-  { label: "Şimşir", href: "/kategori/simsir" },
-  { label: "Çim Duvar", href: "/kategori/cim-duvar" },
-  { label: "Çim Çit", href: "/kategori/cim-cit" },
-  { label: "Peyzaj", href: "/kategori/peyzaj" },
-  { label: "🌿 Dekorasyon & Peyzaj", href: "/dekorasyon" },
-  { label: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
-  { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
-  { label: "Hakkımızda", href: "/hakkimizda" },
-  { label: "Blog", href: "/blog" },
-  { label: "Kurumsal", href: "/kurumsal" },
-  { label: "SSS", href: "/sss" },
-  { label: "İletişim", href: "/iletisim" },
-  { label: "Sepetim", href: "/sepet" },
-];
 
 /* ═══════════════════════════════════════════════════════════════
    4) TÜRETME YARDIMCILARI (Related / Internal Linking)
    Tek kaynaktan üretir — bileşenlerde kategori HARDCODE edilmez.
    ═══════════════════════════════════════════════════════════════ */
 
-/** Verilen href hariç, koleksiyon vitrininden ilgili kategorileri döndürür. */
-export function getRelatedCategories(currentHref: string, limit = 8): CategoryItem[] {
-  return premiumCategories.filter((c) => c.href !== currentHref).slice(0, limit);
-}
 
 /* ═══════════════════════════════════════════════════════════════
    5) CANLI CATEGORY CENTER AĞACI → mevcut UI şekline eşleme
@@ -233,21 +88,19 @@ export function getRelatedCategories(currentHref: string, limit = 8): CategoryIt
  *  Görsel: düğümün kendi görseli → yoksa slug eşleşen mevcut catalog görseli →
  *  hiçbiri yoksa öğe atlanır (kartı görselsiz bozmamak için). */
 export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
-  const byHref = new Map(premiumCategories.map((c) => [c.href, c] as const));
   const items: CategoryItem[] = [];
   for (const n of nodes) {
     if (!n || typeof n.name !== "string" || typeof n.slug !== "string") continue;
     // Public yalnız yayında (active) kategoriyi vitrinde gösterir; draft/passive atlanır.
     if (typeof n.status === "string" && n.status !== "active") continue;
     const href = `/kategori/${n.slug}`;
-    // Backend görsel alanı: banner_image (veya icon). Eski hardcoded eşleşmesi son çare.
+    // TEK KAYNAK: yalnız node'un kendi görseli (banner_image/icon). Hardcoded eşleşme YOK.
     const raw = n as { banner_image?: unknown; icon?: unknown; image?: unknown };
-    const nodeImage =
+    const image =
       (typeof raw.banner_image === "string" && raw.banner_image) ||
       (typeof raw.icon === "string" && raw.icon) ||
       (typeof raw.image === "string" && raw.image) ||
       "";
-    const image = nodeImage || byHref.get(href)?.image || "";
     if (!image) continue; // vitrin kartı görselsiz olamaz (rail = görselli vitrin kategorileri)
     items.push({ id: n.slug, name: n.name, href, image });
   }
@@ -327,4 +180,19 @@ export function mapTreeToMegaMenu(nodes: CategoryNode[], maxGroups = 50, maxLink
     };
   }
   return out;
+}
+
+/** Canlı ağaçta slug eşleşen kategori DÜĞÜMÜNÜ bulur (sentetik sayfa üretimi için).
+ *  Böylece SEO sayfası olmayan kategoriler de 404 yerine landing render eder. */
+export function findCategoryNodeBySlug(nodes: CategoryNode[], slug: string): CategoryNode | null {
+  let found: CategoryNode | null = null;
+  const walk = (list: CategoryNode[]): void => {
+    for (const n of list) {
+      if (found) return;
+      if (n?.slug === slug) { found = n; return; }
+      if (Array.isArray(n?.children)) walk(n.children as CategoryNode[]);
+    }
+  };
+  walk(nodes);
+  return found;
 }

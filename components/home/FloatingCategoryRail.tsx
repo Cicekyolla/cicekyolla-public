@@ -12,12 +12,13 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
-import { premiumCategories, categoryBadges, type CategoryItem } from "./homeData";
+import { categoryBadges, type CategoryItem } from "./homeData";
 
 export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
-  // TEK KAYNAK: canlı ağaçtan gelen items; verilmezse mevcut catalog (UI birebir aynı).
-  const cats = items ?? premiumCategories;
+  // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
+  const cats = items ?? [];
   const [emblaRef] = useEmblaCarousel({ loop: false, dragFree: true, align: "start" });
+  if (cats.length === 0) return null;
 
   return (
     <div className="w-full overflow-x-hidden">

@@ -116,7 +116,7 @@ export default async function HomePage() {
   // Homepage Collections TEK KAYNAK: canlı Category Center ağacı; yetersizse fallback.
   const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
-  const collections = liveItems.length >= 4 ? liveItems : undefined;
+  const collections = liveItems; // TEK KAYNAK: canlı; boşsa bileşenler kendini gizler
 
   // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).
   // Kayıt yoksa boş → BestSellers bölümü kendini gizler (mock YOK).
@@ -159,11 +159,11 @@ export default async function HomePage() {
       <HomeHero />
       <TrustBar />
       <Manifesto />
-      <FeaturedCollections />
+      <FeaturedCollections items={collections} />
       <UrgencyStrip />
       <FeatureSplit />
       <SameDayDelivery />
-      <OccasionShopping />
+      <OccasionShopping items={collections} />
       <BestSellers products={bestSellers} />
       <EditorsPicks products={editorPicks} />
       <BrandStory />

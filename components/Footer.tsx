@@ -76,25 +76,11 @@ export function Footer({ categories }: { categories?: { name: string; href: stri
           <div>
             <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-6">Koleksiyonlar</h4>
             <ul className="space-y-3">
-              {(categories && categories.length > 0
-                ? categories.map((c) => ({ label: c.name, href: c.href }))
-                : [
-                { label: "Güller", href: "/kategori/guller" },
-                { label: "Buketler", href: "/kategori/buketler" },
-                { label: "Orkideler", href: "/kategori/orkideler" },
-                { label: "Özel Günler", href: "/kategori/ozel-gunler" },
-                { label: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
-                { label: "Yapay Çiçekler", href: "/kategori/yapay-cicek" },
-                { label: "Yapay Ağaçlar", href: "/kategori/yapay-agac" },
-                { label: "Şimşir", href: "/kategori/simsir" },
-                { label: "Çim Duvar", href: "/kategori/cim-duvar" },
-                { label: "Çim Çit", href: "/kategori/cim-cit" },
-                { label: "Peyzaj", href: "/kategori/peyzaj" },
-              ]).map((item) => (
+              {(categories ?? []).map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                    {item.label}
+                    {item.name}
                   </Link>
                 </li>
               ))}

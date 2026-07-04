@@ -12,13 +12,11 @@ import { motion } from "motion/react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 
-const collections = [
-  { id: 1, name: "Kırmızı Güller", sub: "En Çok Sevilen", price: "₺449'dan", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=1400&h=1600&fit=crop&auto=format&q=90", href: "/kategori/guller" },
-  { id: 2, name: "Şakayık Koleksiyonu", sub: "Mevsimlik Seçim", price: "₺599'dan", image: "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=900&h=1100&fit=crop&auto=format&q=90", href: "/kategori/buketler" },
-  { id: 3, name: "Orkide Bahçesi", sub: "Uzun Ömürlü Hediye", price: "₺529'dan", image: "https://images.unsplash.com/photo-1612968550885-5d1cf8a0c39f?w=900&h=1100&fit=crop&auto=format&q=90", href: "/kategori/orkideler" },
-];
-
-export function FeaturedCollections() {
+// TEK KAYNAK: canlı kategori ağacından gelen vitrin kategorileri (hardcoded YOK).
+type FCItem = { id: string; name: string; href: string; image: string };
+export function FeaturedCollections({ items }: { items?: FCItem[] }) {
+  const collections = (items ?? []).slice(0, 3);
+  if (collections.length < 3) return null; // yeterli görselli kategori yoksa bölüm gizli
   return (
     <section className="py-20">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
@@ -64,11 +62,10 @@ export function FeaturedCollections() {
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.08) 50%, transparent 100%)" }}
               />
               <div className="absolute bottom-0 left-0 p-8">
-                <p className="text-[10px] tracking-[0.3em] text-[#C084FC] uppercase font-bold mb-2">{collections[0].sub}</p>
+                <p className="text-[10px] tracking-[0.3em] text-[#C084FC] uppercase font-bold mb-2">"Koleksiyon"</p>
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", lineHeight: 1.1 }} className="text-white font-semibold mb-2">
                   {collections[0].name}
                 </h3>
-                <p className="text-white/55 text-sm mb-6">{collections[0].price} başlıyor</p>
                 <span
                   className="inline-flex items-center gap-2 text-white text-xs font-semibold py-2.5 px-5 rounded-full transition-all duration-300 group-hover:bg-white group-hover:text-[#7C3AED]"
                   style={{ border: "1.5px solid rgba(255,255,255,0.35)" }}
@@ -102,11 +99,10 @@ export function FeaturedCollections() {
                     style={{ background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)" }}
                   />
                   <div className="absolute bottom-0 left-0 p-6">
-                    <p className="text-[10px] tracking-[0.25em] text-[#C084FC] uppercase font-bold mb-1">{col.sub}</p>
+                    <p className="text-[10px] tracking-[0.25em] text-[#C084FC] uppercase font-bold mb-1">"Koleksiyon"</p>
                     <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem" }} className="text-white font-semibold">
                       {col.name}
                     </h3>
-                    <p className="text-white/50 text-xs mt-1">{col.price} başlıyor</p>
                   </div>
                 </Link>
               </motion.div>

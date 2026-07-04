@@ -6,7 +6,6 @@ import {
   mapTreeToItems,
   getBreadcrumbTrailFromTree,
   findCategoryIdBySlug,
-  premiumCategories,
 } from "@/lib/catalog";
 import { ProductCard } from "@/components/home/ProductCard";
 
@@ -88,7 +87,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
 
   // İç-linkleme (Related): canlı ağaçtan; yetersizse catalog.
   const liveItems = tree ? mapTreeToItems(tree) : [];
-  const pool = liveItems.length >= 4 ? liveItems : premiumCategories;
+  const pool = liveItems; // TEK KAYNAK: yalnız canlı ağaç; hardcoded/fallback YOK
   const related = pool.filter((c) => c.href !== path).slice(0, 8);
 
   // Breadcrumb: parent-child ağaçtan türetilir; yoksa 2 seviyeli fallback.

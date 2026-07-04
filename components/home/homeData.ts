@@ -6,4 +6,4 @@
  * TUTULMAZ → çoğaltma yok, tek kaynak.
  */
 export type { CategoryItem } from "@/lib/catalog";
-export { premiumCategories, categoryBadges } from "@/lib/catalog";
+export { categoryBadges } from "@/lib/catalog";
