@@ -113,10 +113,11 @@ function HomeJsonLd() {
 }
 
 export default async function HomePage() {
-  // Homepage Collections TEK KAYNAK: canlı Category Center ağacı; yetersizse fallback.
+  // Homepage Collections TEK KAYNAK: canlı Category Center ağacı (getCategoryTree).
   const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
-  const collections = liveItems; // TEK KAYNAK: canlı; boşsa bileşenler kendini gizler
+  const collections = liveItems; // Rail: TÜM active root (görselsizler placeholder ile)
+  const imagedCollections = liveItems.filter((c) => c.image); // Featured/Occasion görsel ister
 
   // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).
   // Kayıt yoksa boş → BestSellers bölümü kendini gizler (mock YOK).
@@ -159,11 +160,11 @@ export default async function HomePage() {
       <HomeHero />
       <TrustBar />
       <Manifesto />
-      <FeaturedCollections items={collections} />
+      <FeaturedCollections items={imagedCollections} />
       <UrgencyStrip />
       <FeatureSplit />
       <SameDayDelivery />
-      <OccasionShopping items={collections} />
+      <OccasionShopping items={imagedCollections} />
       <BestSellers products={bestSellers} />
       <EditorsPicks products={editorPicks} />
       <BrandStory />

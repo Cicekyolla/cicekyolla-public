@@ -101,7 +101,8 @@ export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
       (typeof raw.icon === "string" && raw.icon) ||
       (typeof raw.image === "string" && raw.image) ||
       "";
-    if (!image) continue; // vitrin kartı görselsiz olamaz (rail = görselli vitrin kategorileri)
+    // Görsel YOKSA bile kategori vitrine girer (placeholder ile) → hiçbir active
+    // kategori kaybolmaz. Kabul kriteri: "no missing images" = zarif placeholder.
     items.push({ id: n.slug, name: n.name, href, image });
   }
   return items;

@@ -11,6 +11,20 @@
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
 
+// Sunucu-tarafı okuma auth'u. Backend production'da authenticate + requireRole('viewer')
+// istiyor → token'sız 401 → kategori/ürün ağacı boş kalır. Token SUNUCU-ONLY env'de
+// tutulur (NEXT_PUBLIC değil → tarayıcıya sızmaz; tüm fetch'ler Server Component'te).
+// API_READ_TOKEN set edilmezse header gönderilmez (auth kapalıysa yine çalışır).
+function apiHeaders(): Record<string, string> {
+  const h: Record<string, string> = {};
+  const token = process.env.API_READ_TOKEN;
+  if (token) {
+    h["Authorization"] = `Bearer ${token}`;
+    h["x-user-role"] = "viewer";
+  }
+  return h;
+}
+
 // Body bloğu — şu an yalnız "paragraph" tipi geliyor; ileride additive genişler.
 export interface BodyBlock {
   type: string;
@@ -52,6 +66,7 @@ export async function fetchSeoPage(
   let res: Response;
   try {
     res = await fetch(url, {
+      headers: apiHeaders(),
       // ISR: sayfayı belirli aralıkla yeniden üret (public site tazeliği).
       next: { revalidate: 300 },
     });
@@ -113,7 +128,7 @@ export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
 
   let res: Response;
   try {
-    res = await fetch(url, { next: { revalidate: 300 } });
+    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 300 } });
   } catch {
     return null;
   }
@@ -183,7 +198,7 @@ export async function fetchProductBySlug(slug: string): Promise<PublicProductDet
   const url = `${API_ORIGIN}/api/products/slug/${encodeURIComponent(slug)}`;
   let res: Response;
   try {
-    res = await fetch(url, { next: { revalidate: 120 } });
+    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 120 } });
   } catch {
     return null;
   }
@@ -248,7 +263,7 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   const url = `${API_ORIGIN}/api/products?${q.toString()}`;
   let res: Response;
   try {
-    res = await fetch(url, { next: { revalidate: 120 } });
+    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 120 } });
   } catch {
     return empty;
   }
