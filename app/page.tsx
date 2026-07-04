@@ -1,6 +1,24 @@
 import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchCategoryTree } from "@/lib/api";
+import { fetchCategoryTree, fetchProducts, type PublicProductListItem } from "@/lib/api";
+
+/** API liste item'ını ProductCard shape'ine çevirir. Rating/reviews UYDURULMAZ
+ *  (yorum sistemi yok → alan boş bırakılır, kart yıldız bloğunu gizler). */
+function mapToCardProduct(p: PublicProductListItem) {
+  const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
+  const price = Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100);
+  const originalPrice = hasSale ? Math.round(Number(p.price_minor) / 100) : undefined;
+  const badge = hasSale ? "İndirim" : p.is_new ? "Yeni" : p.is_bestseller ? "Çok Satan" : undefined;
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    price,
+    originalPrice,
+    image: p.cover_image_url ?? "",
+    badge,
+  };
+}
 import { mapTreeToItems } from "@/lib/catalog";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
@@ -11,7 +29,7 @@ import { FeatureSplit } from "../components/home/FeatureSplit";
 import { SameDayDelivery } from "../components/home/SameDayDelivery";
 import { OccasionShopping } from "../components/home/OccasionShopping";
 import { BestSellers } from "../components/home/BestSellers";
-import { EditorsPicks } from "../components/home/EditorsPicks";
+import { EditorsPicks, type EditorPick } from "../components/home/EditorsPicks";
 import { BrandStory } from "../components/home/BrandStory";
 import { Testimonials } from "../components/home/Testimonials";
 import { InstagramGallery } from "../components/home/InstagramGallery";
@@ -117,6 +135,32 @@ export default async function HomePage() {
   const liveItems = tree ? mapTreeToItems(tree) : [];
   const collections = liveItems.length >= 4 ? liveItems : undefined;
 
+  // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).
+  // Kayıt yoksa boş → BestSellers bölümü kendini gizler (mock YOK).
+  const bestSellerRows = await fetchProducts({ is_bestseller: true, page_size: 8 });
+  const bestSellers = bestSellerRows
+    .filter((p) => p.cover_image_url) // görselsiz ürün ana sayfada öne çıkmaz
+    .map(mapToCardProduct);
+
+  // Editör Seçimi rail'i: canlı katalogdan (admin > Öne Çıkan). Yetersizse mevcut
+  // editorial korunur (regresyon YOK). Layout 3 kart → görselli öne çıkanları al.
+  const featuredRows = await fetchProducts({ is_featured: true, page_size: 6 });
+  const editorPicks: EditorPick[] = featuredRows
+    .filter((p) => p.cover_image_url)
+    .slice(0, 3)
+    .map((p, i) => {
+      const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        subtitle: `Editör No. 0${i + 1}`,
+        price: Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100),
+        badge: p.is_new ? "Yeni" : "Editör Seçimi",
+        image: p.cover_image_url as string,
+      };
+    });
+
   return (
     <>
       <HomeJsonLd />
@@ -137,8 +181,8 @@ export default async function HomePage() {
       <FeatureSplit />
       <SameDayDelivery />
       <OccasionShopping />
-      <BestSellers />
-      <EditorsPicks />
+      <BestSellers products={bestSellers} />
+      <EditorsPicks products={editorPicks} />
       <BrandStory />
       <Testimonials />
       <InstagramGallery />

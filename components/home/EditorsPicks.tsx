@@ -11,13 +11,21 @@ import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 
-const editors = [
+export interface EditorPick {
+  id: number; name: string; subtitle: string; price: number;
+  badge: string; image: string; slug: string;
+}
+
+const editors: EditorPick[] = [
   { id: 1, name: "Siyah Kutuda Kırmızı Güller", subtitle: "Editör No. 01", price: 849, badge: "Editör Seçimi", image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=900&h=1100&fit=crop&auto=format&q=90", slug: "premium-kirmizi-guller" },
   { id: 2, name: "Peony & Ranunculus Mix", subtitle: "Editör No. 02", price: 999, badge: "Limited Edition", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=900&h=1100&fit=crop&auto=format&q=90", slug: "pembe-sakayik-buketi" },
   { id: 3, name: "Beyaz Zarafet Aranjmanı", subtitle: "Editör No. 03", price: 749, badge: "Premium", image: "https://images.unsplash.com/photo-1487530811015-780f2f5a3f48?w=900&h=1100&fit=crop&auto=format&q=90", slug: "beyaz-lale-aranjmani" },
 ];
 
-export function EditorsPicks() {
+export function EditorsPicks({ products }: { products?: EditorPick[] }) {
+  // TEK KAYNAK: canlı katalogdan (admin Ürün Merkezi > Öne Çıkan). Verilmezse/boşsa
+  // mevcut editorial içerik korunur (UI birebir aynı → görsel regresyon YOK).
+  const picks = products && products.length > 0 ? products : editors;
   return (
     <section className="py-24" style={{ background: "linear-gradient(180deg, #0D0520 0%, #150832 100%)" }}>
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
@@ -40,7 +48,7 @@ export function EditorsPicks() {
           </SectionTitle>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-          {editors.map((product, idx) => (
+          {picks.map((product, idx) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 28 }}

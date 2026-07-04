@@ -14,14 +14,14 @@ import { Heart, Star } from "lucide-react";
 export type Product = {
   id: number;
   name: string;
-  subtitle: string;
+  subtitle?: string;
   price: number;
   originalPrice?: number;
   image: string;
-  rating: number;
-  reviews: number;
+  rating?: number;
+  reviews?: number;
   slug: string;
-  badge: string;
+  badge?: string;
 };
 
 export function ProductCard({ product, idx }: { product: Product; idx: number }) {
@@ -57,6 +57,7 @@ export function ProductCard({ product, idx }: { product: Product; idx: number })
           />
 
           {/* Badge — glassmorphism */}
+          {product.badge ? (
           <div
             className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-white text-[10px] font-bold tracking-wider"
             style={{
@@ -68,6 +69,7 @@ export function ProductCard({ product, idx }: { product: Product; idx: number })
           >
             {product.badge}
           </div>
+          ) : null}
 
           {/* Wishlist */}
           <button
@@ -107,7 +109,9 @@ export function ProductCard({ product, idx }: { product: Product; idx: number })
 
         {/* Info */}
         <div className="mt-5 px-1">
-          <p className="text-[10px] text-[#A855F7] font-bold tracking-[0.18em] uppercase mb-1.5">{product.subtitle}</p>
+          {product.subtitle ? (
+            <p className="text-[10px] text-[#A855F7] font-bold tracking-[0.18em] uppercase mb-1.5">{product.subtitle}</p>
+          ) : null}
           <h3 className="text-[#111827] font-semibold leading-snug transition-colors duration-200" style={{ fontSize: "15px" }}>
             {product.name}
           </h3>
@@ -120,11 +124,13 @@ export function ProductCard({ product, idx }: { product: Product; idx: number })
                 <span className="text-sm text-[#C4B5FD] line-through font-medium">₺{product.originalPrice}</span>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-              <span className="text-xs font-semibold text-[#374151]">{product.rating}</span>
-              <span className="text-xs text-[#9CA3AF]">({product.reviews})</span>
-            </div>
+            {product.reviews ? (
+              <div className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
+                <span className="text-xs font-semibold text-[#374151]">{product.rating}</span>
+                <span className="text-xs text-[#9CA3AF]">({product.reviews})</span>
+              </div>
+            ) : null}
           </div>
         </div>
       </Link>

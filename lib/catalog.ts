@@ -238,10 +238,7 @@ export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
   for (const n of nodes) {
     if (!n || typeof n.name !== "string" || typeof n.slug !== "string") continue;
     const href = `/kategori/${n.slug}`;
-    const nodeImage =
-      (typeof n.image === "string" && n.image) ||
-      (typeof n.banner_image === "string" && n.banner_image) ||
-      "";
+    const nodeImage = typeof n.image === "string" ? n.image : "";
     const image = nodeImage || byHref.get(href)?.image || "";
     if (!image) continue;
     items.push({ id: n.slug, name: n.name, href, image });
@@ -255,22 +252,23 @@ export function getBreadcrumbTrailFromTree(
   nodes: CategoryNode[],
   slug: string
 ): { name: string; slug: string }[] {
-  // Nested ağaçta kök→hedef ata zincirini DFS ile bul. Admin API children
-  // yapısıyla uyumlu (parent_slug gerekmez); çok-seviyeli breadcrumb üretir.
-  const dfs = (
-    list: CategoryNode[],
-    chain: { name: string; slug: string }[]
-  ): { name: string; slug: string }[] | null => {
+  const bySlug = new Map<string, CategoryNode>();
+  const walk = (list: CategoryNode[]): void => {
     for (const n of list) {
-      if (!n || typeof n.slug !== "string" || typeof n.name !== "string") continue;
-      const next = [...chain, { name: n.name, slug: n.slug }];
-      if (n.slug === slug) return next;
-      if (Array.isArray(n.children)) {
-        const found = dfs(n.children as CategoryNode[], next);
-        if (found) return found;
-      }
+      if (n && typeof n.slug === "string") bySlug.set(n.slug, n);
+      if (Array.isArray(n?.children)) walk(n.children as CategoryNode[]);
     }
-    return null;
   };
-  return dfs(nodes, []) ?? [];
+  walk(nodes);
+
+  const trail: { name: string; slug: string }[] = [];
+  const guard = new Set<string>();
+  let cur = bySlug.get(slug);
+  while (cur && typeof cur.name === "string" && !guard.has(cur.slug)) {
+    guard.add(cur.slug);
+    trail.unshift({ name: cur.name, slug: cur.slug });
+    const parent = typeof cur.parent_slug === "string" ? cur.parent_slug : "";
+    cur = parent ? bySlug.get(parent) : undefined;
+  }
+  return trail;
 }
