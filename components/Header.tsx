@@ -423,7 +423,7 @@ export function Header({ menu }: { menu?: Record<string, MegaGroup> }) {
                       ))}
                     </div>
                     <Link
-                      href={menuData[activeMenu].href}
+                      href={menuData[activeMenu].href ?? menuData[activeMenu].categories[0]?.href ?? "/"}
                       onClick={() => setActiveMenu(null)}
                       className="inline-flex items-center gap-2 mt-6 text-xs font-bold text-[#8B5CF6] uppercase tracking-widest hover:gap-3 transition-all"
                     >

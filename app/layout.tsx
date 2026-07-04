@@ -9,9 +9,14 @@ import { mapTreeToMegaMenu } from "@/lib/catalog";
 // TEK KAYNAK: Header Mega Menu canlı kategori ağacından beslenir (admin Category
 // Center → /api/categories → BURASI). Ağaç yoksa Header hardcoded fallback'e düşer.
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const tree = await fetchCategoryTree();
-  const menu = tree ? mapTreeToMegaMenu(tree) : undefined;
-  const menuOrUndef = menu && Object.keys(menu).length > 0 ? menu : undefined;
+  let menuOrUndef: Awaited<ReturnType<typeof mapTreeToMegaMenu>> | undefined;
+  try {
+    const tree = await fetchCategoryTree();
+    const menu = tree ? mapTreeToMegaMenu(tree) : undefined;
+    menuOrUndef = menu && Object.keys(menu).length > 0 ? menu : undefined;
+  } catch {
+    menuOrUndef = undefined; // hata → Header hardcoded fallback (site ayakta kalır)
+  }
 
   return (
     <html lang="tr">
