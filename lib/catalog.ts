@@ -237,10 +237,18 @@ export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
   const items: CategoryItem[] = [];
   for (const n of nodes) {
     if (!n || typeof n.name !== "string" || typeof n.slug !== "string") continue;
+    // Public yalnız yayında (active) kategoriyi vitrinde gösterir; draft/passive atlanır.
+    if (typeof n.status === "string" && n.status !== "active") continue;
     const href = `/kategori/${n.slug}`;
-    const nodeImage = typeof n.image === "string" ? n.image : "";
+    // Backend görsel alanı: banner_image (veya icon). Eski hardcoded eşleşmesi son çare.
+    const raw = n as { banner_image?: unknown; icon?: unknown; image?: unknown };
+    const nodeImage =
+      (typeof raw.banner_image === "string" && raw.banner_image) ||
+      (typeof raw.icon === "string" && raw.icon) ||
+      (typeof raw.image === "string" && raw.image) ||
+      "";
     const image = nodeImage || byHref.get(href)?.image || "";
-    if (!image) continue;
+    if (!image) continue; // vitrin kartı görselsiz olamaz (rail = görselli vitrin kategorileri)
     items.push({ id: n.slug, name: n.name, href, image });
   }
   return items;
@@ -289,4 +297,34 @@ export function findCategoryIdBySlug(nodes: CategoryNode[], slug: string): numbe
   };
   walk(nodes);
   return found;
+}
+
+/** Header Mega Menu'yü CANLI kategori ağacından türetir (TEK KAYNAK).
+ *  Üst-seviye active kategoriler → nav grupları; çocukları → alt-linkler (gerçek slug).
+ *  banner_image varsa featured kart; yoksa yalnız linkler. Hardcoded YOK. */
+export interface MegaGroup {
+  href: string;
+  featured?: { label: string; title: string; href: string; image: string };
+  categories: { name: string; sub?: string; href: string }[];
+}
+export function mapTreeToMegaMenu(nodes: CategoryNode[], maxGroups = 8, maxLinks = 10): Record<string, MegaGroup> {
+  const out: Record<string, MegaGroup> = {};
+  const isActive = (n: CategoryNode) =>
+    n && typeof n.name === "string" && typeof n.slug === "string" &&
+    (typeof n.status !== "string" || n.status === "active");
+  for (const n of nodes.filter(isActive).slice(0, maxGroups)) {
+    const href = `/kategori/${n.slug}`;
+    const kids = Array.isArray(n.children) ? (n.children as CategoryNode[]) : [];
+    const links = kids.filter(isActive).slice(0, maxLinks).map((c) => {
+      const desc = (c as { description?: unknown }).description;
+      return { name: c.name, href: `/kategori/${c.slug}`, sub: typeof desc === "string" && desc ? desc.slice(0, 42) : undefined };
+    });
+    const banner = (n as { banner_image?: unknown }).banner_image;
+    out[n.name] = {
+      href,
+      categories: links.length > 0 ? links : [{ name: `Tüm ${n.name}`, href }],
+      featured: typeof banner === "string" && banner ? { label: "Koleksiyon", title: n.name, href, image: banner } : undefined,
+    };
+  }
+  return out;
 }

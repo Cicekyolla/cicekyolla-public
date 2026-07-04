@@ -88,7 +88,11 @@ export async function fetchSeoPage(
 // Env set edilmezse fetchCategoryTree() null döner → çağıranlar mevcut
 // davranışa güvenle geri düşer (production bozulmaz).
 
-const CATEGORIES_PATH = process.env.NEXT_PUBLIC_CATEGORIES_PATH ?? "";
+// Kategori ağacı TEK KAYNAK: backend public REST → GET /api/categories (nested tree).
+// Env-gate KALDIRILDI — bu uç kesin mevcut (server.ts: app.use('/api/categories',
+// publicCategoriesRouter)). Env yalnız override için; varsayılan gerçek uçtur.
+// Böylece public ağaç HER ZAMAN admin Category Center ile aynı kaynaktan beslenir.
+const CATEGORIES_PATH = process.env.NEXT_PUBLIC_CATEGORIES_PATH ?? "/api/categories";
 
 // Category Center düğümü — ekranda DOĞRULANMIŞ alanlar (name, slug) zorunlu;
 // hiyerarşi/SEO/görsel/durum alanları opsiyonel ve şemaya göre esnektir.
@@ -105,8 +109,6 @@ export interface CategoryNode {
 // Canlı kategori ağacını çeker. Env path yoksa veya backend not_found/hata
 // dönerse null → çağıran taraf mevcut kaynağa güvenle geri düşer.
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
-  if (!CATEGORIES_PATH) return null;
-
   const url = `${API_ORIGIN}${CATEGORIES_PATH}`;
 
   let res: Response;

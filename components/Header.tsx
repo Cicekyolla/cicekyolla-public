@@ -110,13 +110,22 @@ const megaMenuData = {
   },
 };
 
-type MenuKey = keyof typeof megaMenuData;
+type MegaGroup = {
+  href: string;
+  featured?: { label: string; title: string; href: string; image: string };
+  categories: { name: string; sub?: string; href: string }[];
+};
 
 /* ─── Header ─── */
-export function Header() {
+export function Header({ menu }: { menu?: Record<string, MegaGroup> }) {
+  // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
+  // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
+  const menuData: Record<string, MegaGroup> = menu && Object.keys(menu).length > 0 ? menu : (megaMenuData as unknown as Record<string, MegaGroup>);
+  const navItems: string[] = Object.keys(menuData);
+
   const [cartCount] = useState(2);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState<MenuKey | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -126,15 +135,13 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleMouseEnter = (key: MenuKey) => {
+  const handleMouseEnter = (key: string) => {
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
     setActiveMenu(key);
   };
   const handleMouseLeave = () => {
     menuTimeout.current = setTimeout(() => setActiveMenu(null), 180);
   };
-
-  const navItems: MenuKey[] = ["Güller", "Buketler", "Orkideler", "Özel Günler", "Kargo Gönderim", "Yapay & Peyzaj"];
 
   return (
     <>
@@ -373,7 +380,7 @@ export function Header() {
 
         {/* ── Mega menu dropdown ── */}
         <AnimatePresence>
-          {activeMenu && (
+          {activeMenu && menuData[activeMenu] && (
             <motion.div
               key={activeMenu}
               initial={{ opacity: 0, y: -8 }}
@@ -398,7 +405,7 @@ export function Header() {
                       {activeMenu} Koleksiyonu
                     </p>
                     <div className="grid grid-cols-2 gap-x-12 gap-y-1">
-                      {megaMenuData[activeMenu].categories.map((cat) => (
+                      {menuData[activeMenu].categories.map((cat) => (
                         <Link
                           key={cat.name}
                           href={cat.href}
@@ -409,14 +416,14 @@ export function Header() {
                             <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors">
                               {cat.name}
                             </p>
-                            <p className="text-xs text-[#9CA3AF] mt-0.5">{cat.sub}</p>
+                            {cat.sub ? <p className="text-xs text-[#9CA3AF] mt-0.5">{cat.sub}</p> : null}
                           </div>
                           <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB] group-hover:text-[#8B5CF6] group-hover:translate-x-0.5 transition-all" />
                         </Link>
                       ))}
                     </div>
                     <Link
-                      href={`/kategori/${activeMenu.toLowerCase().replace(/\s/g, "-").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ş/g, "s").replace(/ı/g, "i").replace(/ç/g, "c").replace(/ğ/g, "g")}`}
+                      href={menuData[activeMenu].href}
                       onClick={() => setActiveMenu(null)}
                       className="inline-flex items-center gap-2 mt-6 text-xs font-bold text-[#8B5CF6] uppercase tracking-widest hover:gap-3 transition-all"
                     >
@@ -424,33 +431,35 @@ export function Header() {
                     </Link>
                   </div>
 
-                  {/* Featured card */}
+                  {/* Featured card (kategori banner_image varsa) */}
+                  {menuData[activeMenu].featured ? (
                   <Link
-                    href={megaMenuData[activeMenu].featured.href}
+                    href={menuData[activeMenu].featured!.href}
                     onClick={() => setActiveMenu(null)}
                     className="group relative overflow-hidden rounded-2xl aspect-[4/5]"
                   >
                     <img
-                      src={megaMenuData[activeMenu].featured.image}
-                      alt={megaMenuData[activeMenu].featured.title}
+                      src={menuData[activeMenu].featured!.image}
+                      alt={menuData[activeMenu].featured!.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     <div className="absolute bottom-0 left-0 p-5">
                       <p className="text-[10px] tracking-widest text-[#C084FC] uppercase font-semibold mb-1">
-                        {megaMenuData[activeMenu].featured.label}
+                        {menuData[activeMenu].featured!.label}
                       </p>
                       <h3
                         style={{ fontFamily: "var(--font-display)", lineHeight: 1.1, whiteSpace: "pre-line" }}
                         className="text-white text-xl font-semibold mb-3"
                       >
-                        {megaMenuData[activeMenu].featured.title}
+                        {menuData[activeMenu].featured!.title}
                       </h3>
                       <span className="inline-flex items-center gap-1.5 text-white/80 text-xs font-medium group-hover:text-white transition-colors">
                         İncele <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
                   </Link>
+                  ) : null}
                 </div>
               </div>
             </motion.div>
