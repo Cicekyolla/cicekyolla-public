@@ -17,7 +17,7 @@ import { categoryBadges, type CategoryItem } from "./homeData";
 export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
   const cats = items ?? [];
-  const [emblaRef] = useEmblaCarousel({ loop: false, dragFree: true, align: "start" });
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start" });
   if (cats.length === 0) return null;
 
   return (
@@ -50,9 +50,28 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
           </span>
         </div>
 
-        {/* Embla carousel */}
-        <div ref={emblaRef} className="overflow-hidden" style={{ cursor: "grab" }}>
-          <div className="flex gap-4 sm:gap-5 lg:gap-6">
+        {/* Embla carousel + ileri/geri ok butonları (drag/scroll da çalışır) */}
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="Geri kaydır"
+            onClick={() => emblaApi?.scrollPrev()}
+            className="hidden sm:flex absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center text-white/90 hover:text-white transition-all"
+            style={{ background: "rgba(20,10,40,0.85)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <button
+            type="button"
+            aria-label="İleri kaydır"
+            onClick={() => emblaApi?.scrollNext()}
+            className="hidden sm:flex absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center text-white/90 hover:text-white transition-all"
+            style={{ background: "rgba(20,10,40,0.85)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <div ref={emblaRef} className="overflow-hidden" style={{ cursor: "grab" }}>
+            <div className="flex gap-4 sm:gap-5 lg:gap-6">
             {cats.map((cat) => {
               const badge = categoryBadges[cat.id];
               return (
@@ -144,6 +163,7 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     </div>
