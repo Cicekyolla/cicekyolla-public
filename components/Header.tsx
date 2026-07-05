@@ -8,12 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 /* ─── Mega menu data ─── */
 /* ── Extra nav links ── */
-const utilityLinks = [
-  { label: "Hakkımızda", href: "/hakkimizda" },
-  { label: "Blog", href: "/blog" },
-  { label: "Kurumsal", href: "/kurumsal" },
-  { label: "İletişim", href: "/iletisim" },
-];
+
 
 
 type MegaGroup = {
@@ -118,11 +113,11 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
             </Link>
 
             {/* ── Desktop mega nav ── */}
-            <nav className="hidden lg:flex items-center flex-1 justify-center" style={{ gap: "clamp(0px, 0.5vw, 4px)" }}>
-              {navItems.map((key) => (
+            <nav className="hidden lg:flex items-center flex-1 min-w-0 justify-center overflow-hidden" style={{ gap: "clamp(0px, 0.5vw, 4px)" }}>
+              {navItems.map((key, i) => (
                 <div
                   key={key}
-                  className="relative flex-shrink-0"
+                  className={`relative ${i < 5 ? "flex" : i < 7 ? "hidden xl:flex" : "hidden 2xl:flex"}`}
                   onMouseEnter={() => handleMouseEnter(key)}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -137,6 +132,9 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                       fontSize: "clamp(10px, 1.1vw, 12px)",
                       letterSpacing: "clamp(0.04em, 0.05em, 0.06em)",
                       textTransform: "uppercase",
+                      maxWidth: "clamp(90px, 12vw, 200px)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {key}
@@ -145,7 +143,7 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
               ))}
               <Link
                 href="/teslimat-bolgeleri"
-                className="flex-shrink-0 whitespace-nowrap font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] rounded-lg transition-colors duration-150"
+                className="hidden 2xl:block flex-shrink-0 whitespace-nowrap font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] rounded-lg transition-colors duration-150"
                 style={{
                   padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.2vw, 16px)",
                   fontSize: "clamp(10px, 1.1vw, 12px)",
@@ -155,26 +153,10 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
               >
                 Teslimat
               </Link>
-              {/* Utility links only on xl+ screens */}
-              {utilityLinks.slice(0, 2).map(ul => (
-                <Link
-                  key={ul.href}
-                  href={ul.href}
-                  className="hidden xl:block flex-shrink-0 whitespace-nowrap font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] rounded-lg transition-colors duration-150"
-                  style={{
-                    padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.2vw, 16px)",
-                    fontSize: "clamp(10px, 1.1vw, 12px)",
-                    letterSpacing: "clamp(0.04em, 0.05em, 0.06em)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {ul.label}
-                </Link>
-              ))}
             </nav>
 
             {/* ── Actions ── */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
                 className="w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
