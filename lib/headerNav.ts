@@ -1,13 +1,5 @@
 import { isCategoryVisible, type CategoryNode } from "./api";
-
-/* ============================================================================
-   CICEKYOLLA — HEADER CURATION (Sales First)
-   Header, ham DB root'larını değil, satış niyetini artıran CURATED bir seti gösterir.
-   Bu config yalnız "hangi kategori header'da + sıra + kısa etiket" belirler.
-   VERİ (isim/çocuk/link/görsel/mega menü) CANLI CategoryTree'den gelir → tek kaynak.
-   `match`: canlı ağaçta aranacak kategori adı (normalize). `label`: header'da gösterilen kısa ad.
-   Admin'de kategori adı/slug değişirse tree değişir, header uyum sağlar (bulunamayan atlanır).
-   ============================================================================ */
+import { CATEGORY_PLACEHOLDER_IMAGE } from "./catalog";
 
 export interface HeaderNavItem { match: string; label: string }
 
@@ -31,15 +23,18 @@ export interface MegaGroup {
 }
 
 const norm = (s: string) => s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
+const visible = (n: CategoryNode) => !!n?.name && !!n?.slug && isCategoryVisible(n);
 
-/** Canlı ağaçta (her derinlik) adı eşleşen ilk görünür düğümü bulur. */
 function findByName(nodes: CategoryNode[], name: string): CategoryNode | null {
   const target = norm(name);
   let found: CategoryNode | null = null;
   const walk = (list: CategoryNode[]): void => {
     for (const n of list) {
       if (found) return;
-      if (n?.name && norm(n.name) === target && isCategoryVisible(n)) { found = n; return; }
+      if (visible(n) && norm(n.name) === target) {
+        found = n;
+        return;
+      }
       if (Array.isArray(n?.children)) walk(n.children as CategoryNode[]);
     }
   };
@@ -47,7 +42,37 @@ function findByName(nodes: CategoryNode[], name: string): CategoryNode | null {
   return found;
 }
 
-/** Curated header menüsünü canlı ağaçtan üretir. Bulunamayan config öğeleri `missing`. */
+function nodeImage(node: CategoryNode): string {
+  const raw = node as { banner_image?: unknown; image_url?: unknown; image?: unknown; icon?: unknown };
+  return (
+    (typeof raw.banner_image === "string" && raw.banner_image) ||
+    (typeof raw.image_url === "string" && raw.image_url) ||
+    (typeof raw.image === "string" && raw.image) ||
+    (typeof raw.icon === "string" && raw.icon) ||
+    CATEGORY_PLACEHOLDER_IMAGE
+  );
+}
+
+function flattenDescendants(nodes: CategoryNode[], max = 32): { name: string; sub?: string; href: string }[] {
+  const out: { name: string; sub?: string; href: string }[] = [];
+  const walk = (list: CategoryNode[], depth: number): void => {
+    for (const n of list) {
+      if (out.length >= max) return;
+      if (visible(n)) {
+        const description = (n as { description?: unknown }).description;
+        out.push({
+          name: depth > 1 ? `— ${n.name}` : n.name,
+          href: `/kategori/${n.slug}`,
+          sub: typeof description === "string" && description ? description.slice(0, 42) : undefined,
+        });
+      }
+      if (Array.isArray(n?.children)) walk(n.children as CategoryNode[], depth + 1);
+    }
+  };
+  walk(nodes, 1);
+  return out;
+}
+
 export function buildHeaderMenu(
   tree: CategoryNode[] | null,
   config: HeaderNavItem[] = HEADER_NAV_CONFIG,
@@ -55,23 +80,24 @@ export function buildHeaderMenu(
   const menu: Record<string, MegaGroup> = {};
   const missing: string[] = [];
   if (!tree) return { menu, missing: config.map((c) => c.label) };
+
   for (const item of config) {
     const node = findByName(tree, item.match);
-    if (!node) { missing.push(item.label); continue; }
+    if (!node) {
+      missing.push(item.label);
+      continue;
+    }
+
     const href = `/kategori/${node.slug}`;
     const kids = Array.isArray(node.children) ? (node.children as CategoryNode[]) : [];
-    const cats = kids
-      .filter((c) => c?.name && c?.slug && isCategoryVisible(c))
-      .map((c) => {
-        const d = (c as { description?: unknown }).description;
-        return { name: c.name, href: `/kategori/${c.slug}`, sub: typeof d === "string" && d ? d.slice(0, 42) : undefined };
-      });
-    const banner = (node as { banner_image?: unknown }).banner_image;
+    const links = flattenDescendants(kids, 32);
+
     menu[item.label] = {
       href,
-      categories: cats.length > 0 ? cats : [{ name: `Tüm ${item.label}`, href }],
-      featured: typeof banner === "string" && banner ? { label: "Koleksiyon", title: item.label, href, image: banner } : undefined,
+      categories: links.length > 0 ? links : [{ name: `Tüm ${item.label}`, href }],
+      featured: { label: "Koleksiyon", title: item.label, href, image: nodeImage(node) },
     };
   }
+
   return { menu, missing };
 }
