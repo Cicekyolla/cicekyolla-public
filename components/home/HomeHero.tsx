@@ -1,45 +1,26 @@
 "use client";
 
 /**
- * §Hero (banner) — Admin data aware, fallback safe.
+ * §Hero (banner) — ZIP Homepage.tsx görseli birebir.
  *
  * SECTION ORDER FIX (8B-2.2): Koleksiyon slider artık Hero'nun İÇİNDE DEĞİL.
  * - FloatingCategoryRail buradan ÇIKARILDI; Hero'ya absolute/floating bağlantı YOK.
  * - Hero yalnızca kendi içeriğini barındırır (badge, H1, açıklama, CTA, sağ kart).
- * - Admin slider verisi varsa görsel/başlık/CTA oradan gelir; yoksa eski hero aynen kalır.
- * - Backend/API/DB sözleşmesine dokunulmaz. Public sadece CategoryTree'den gelen veriyi okur.
+ * - Hero padding'i sadece kendi içeriğine göre; taşma/overlap rezervi YOK.
+ * - Koleksiyon slider Header'dan sonra, Hero'dan önce bağımsız section olarak page.tsx'te render edilir.
+ *
+ * Adaptasyon (ZIP kuralı): react-router <Link to=…> → next/link <Link href=…>;
+ * CTA <Link><motion.button> → <Link><motion.span> (görsel birebir). SEO/SSR'a dokunulmadı.
+ * Token: var(--font-display)=Fraunces (globals.css). Yeni token/mock/placeholder YOK.
  */
 
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Star } from "lucide-react";
-import type { CategoryItem } from "@/lib/catalog";
 
-const FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92";
-
-function splitHeroTitle(name: string): { top: string; accent: string; bottom: string } {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return { top: "Premium", accent: name || "Çiçek", bottom: "Koleksiyonu" };
-  if (words.length === 2) return { top: words[0], accent: words[1], bottom: "Koleksiyonu" };
-  return {
-    top: words.slice(0, Math.ceil(words.length / 3)).join(" "),
-    accent: words.slice(Math.ceil(words.length / 3), Math.ceil((words.length * 2) / 3)).join(" "),
-    bottom: words.slice(Math.ceil((words.length * 2) / 3)).join(" "),
-  };
-}
-
-export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
+export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const hasAdminHero = !!heroItem?.name;
-  const heroTitle = hasAdminHero ? splitHeroTitle(heroItem.name) : null;
-  const heroImage = heroItem?.image || FALLBACK_IMAGE;
-  const heroHref = heroItem?.href || "/kategori/buketler";
-  const heroBadge = heroItem?.tag || "Aynı Gün Teslimat Aktif";
-  const heroDescription = hasAdminHero
-    ? `${heroItem.name} koleksiyonunu keşfedin. Özenle seçilmiş premium aranjmanlar, zarif paketleme ve hızlı teslimat deneyimi.`
-    : "Türkiye'nin en prestijli çiçek markası. Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat.";
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -57,8 +38,8 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
       {/* Parallax image — clipped inside its own container */}
       <motion.div style={{ y: heroImgY }} className="absolute inset-0 overflow-hidden">
         <img
-          src={heroImage}
-          alt={hasAdminHero ? `${heroItem?.name} koleksiyonu` : "Cinematic luxury flowers"}
+          src="https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92"
+          alt="Cinematic luxury flowers"
           className="w-full h-full object-cover"
           style={{
             transform: "scale(1.12)",
@@ -99,7 +80,8 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
         }}
       />
 
-      {/* Hero content */}
+      {/* Hero content — akışta; OPTİK DENGE: üst padding minimuma indirildi (pt-3/4),
+          H1 yukarı çekildi, slider→Hero geçişi kompakt. Hero yüksekliği (82svh) + mor zemin korunur. */}
       <motion.div
         style={{ y: heroTextY, opacity: heroOpacity, minHeight: "82svh" }}
         className="relative z-10 flex items-start pt-3 lg:pt-4 pb-16"
@@ -125,7 +107,7 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
               </span>
               <span className="text-white/80 text-[11px] tracking-[0.18em] uppercase font-medium">
-                {heroBadge}
+                Aynı Gün Teslimat Aktif
               </span>
             </motion.div>
 
@@ -141,7 +123,7 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
               }}
               className="text-[3.8rem] sm:text-[5rem] lg:text-[6.5rem] font-semibold text-white mb-7"
             >
-              {heroTitle ? heroTitle.top : "Her Duygu"}
+              Her Duygu
               <br />
               <em
                 className="not-italic"
@@ -153,19 +135,20 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
                   backgroundClip: "text",
                 }}
               >
-                {heroTitle ? heroTitle.accent : "Bir Çiçekle"}
+                Bir Çiçekle
               </em>
               <br />
-              {heroTitle ? heroTitle.bottom : "Anlam Kazanır"}
+              Anlam Kazanır
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.55, duration: 0.7 }}
-              className="text-white/60 text-lg leading-relaxed mb-10 max-w-[520px]"
+              className="text-white/60 text-lg leading-relaxed mb-10 max-w-[460px]"
             >
-              {heroDescription}
+              Türkiye&apos;nin en prestijli çiçek markası. Özenle seçilmiş premium
+              aranjmanlar, zarif paketleme, aynı gün teslimat.
             </motion.p>
 
             <motion.div
@@ -174,7 +157,7 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
               transition={{ delay: 0.7, duration: 0.6 }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <Link href={heroHref} className="inline-block">
+              <Link href="/kategori/buketler" className="inline-block">
                 <motion.span
                   whileHover={{ scale: 1.04, y: -3 }}
                   whileTap={{ scale: 0.97 }}
@@ -186,7 +169,7 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
                       "0 12px 40px rgba(139,92,246,0.55), 0 0 0 1px rgba(255,255,255,0.08)",
                   }}
                 >
-                  {hasAdminHero ? "Koleksiyonu İncele" : "Koleksiyonu Keşfet"}
+                  Koleksiyonu Keşfet
                   <ArrowRight className="w-4 h-4" />
                 </motion.span>
               </Link>
@@ -208,7 +191,7 @@ export function HomeHero({ heroItem }: { heroItem?: CategoryItem | null }) {
         </div>
       </motion.div>
 
-      {/* Sağ cam kart — hero'nun kendi alt-sağ köşesi. */}
+      {/* Sağ cam kart — hero'nun kendi alt-sağ köşesi (ZIP). Artık banner olmadığı için taşma yok. */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

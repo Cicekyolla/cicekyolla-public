@@ -243,7 +243,6 @@ export interface PublicProductListItem {
   stock_quantity: number; cover_image_url: string | null; primary_category_id: number | null;
 }
 export interface PublicProductListParams {
-  q?: string;
   is_bestseller?: boolean; is_featured?: boolean; is_new?: boolean;
   category_id?: number; page_size?: number;
   sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
@@ -265,7 +264,6 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   q.set("status", "active");
   q.set("page_size", String(params.page_size ?? 8));
   if (params.page && params.page > 1) q.set("page", String(params.page));
-  if (params.q?.trim()) q.set("q", params.q.trim());
   if (params.is_bestseller) q.set("is_bestseller", "true");
   if (params.is_featured) q.set("is_featured", "true");
   if (params.is_new) q.set("is_new", "true");

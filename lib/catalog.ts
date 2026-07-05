@@ -1,6 +1,27 @@
 import { isCategoryVisible } from "@/lib/api";
+/**
+ * CICEKYOLLA OS — CATALOG (tek kanonik frontend kaynağı)
+ * ------------------------------------------------------------------
+ * Category Center = TEK GERÇEK KAYNAK. Bu dosya, bugün canlıda dağınık olan
+ * kategori/navigasyon verisini TEK yere konsolide eder (verbatim taşındı —
+ * yeni kategori/slug/isim/sıra ÜRETİLMEZ, mevcut çalışan yapı korunur).
+ *
+ * Tüketiciler:
+ *   - Mega Menu + Mobil Menu   → Header.tsx
+ *   - Homepage Collections     → home/FloatingCategoryRail.tsx (via home/homeData.ts)
+ *   - Related / Internal Links → category/CategoryLanding.tsx (getRelatedCategories)
+ *
+ * GELECEK: salt-okunur bir kategori endpoint'i geldiğinde YALNIZCA bu dosyanın
+ * içi (export'ların kaynağı) fetch/transform ile değişir; export imzaları,
+ * tüketici bileşenler ve UI/davranış AYNEN kalır. Bu, "yalnızca veri kaynağı
+ * değişecek" sözleşmesini garanti eder.
+ */
+
 import type { CategoryNode } from "./api";
 
+/* ═══════════════════════════════════════════════════════════════
+   1) KOLEKSİYON VİTRİNİ (Homepage Collections / Featured)
+   ═══════════════════════════════════════════════════════════════ */
 export interface CategoryItem {
   id: string;
   name: string;
@@ -10,145 +31,86 @@ export interface CategoryItem {
   tag?: string;
 }
 
+
 export const categoryBadges: Record<string, { emoji: string; label: string; color: string }> = {
-  c1: { emoji: "🔥", label: "Çok Satan", color: "#EF4444" },
-  c3: { emoji: "💎", label: "Premium", color: "#8B5CF6" },
-  c6: { emoji: "❤️", label: "Trend", color: "#EC4899" },
-  c9: { emoji: "🆕", label: "Yeni", color: "#3B82F6" },
-  c11: { emoji: "🏗️", label: "Proje", color: "#7C3AED" },
-  c12: { emoji: "⭐", label: "Editör", color: "#F59E0B" },
-  c15: { emoji: "✨", label: "Özel", color: "#6D28D9" },
-  c16: { emoji: "🚚", label: "81 İl", color: "#10B981" },
+  c1:  { emoji: "🔥", label: "Çok Satan",  color: "#EF4444" },
+  c3:  { emoji: "💎", label: "Premium",    color: "#8B5CF6" },
+  c6:  { emoji: "❤️",  label: "Trend",      color: "#EC4899" },
+  c9:  { emoji: "🆕", label: "Yeni",       color: "#3B82F6" },
+  c11: { emoji: "🏗️", label: "Proje",      color: "#7C3AED" },
+  c12: { emoji: "⭐", label: "Editör",     color: "#F59E0B" },
+  c15: { emoji: "✨", label: "Özel",       color: "#6D28D9" },
+  c16: { emoji: "🚚", label: "81 İl",      color: "#10B981" },
 };
 
-export interface MegaMenuLink { name: string; sub: string; href: string }
-export interface MegaMenuFeatured { image: string; label: string; title: string; href: string }
-export interface MegaMenuGroup { featured: MegaMenuFeatured; categories: MegaMenuLink[] }
-export interface NavLink { label: string; href: string }
-
-const salesPriorityWords = [
-  "anneler günü", "öğretmenler günü", "sevgili", "doğum günü", "özel gün",
-  "orkide", "gül", "buket", "kampanya", "koleksiyon", "saksı",
-  "yapay dekorasyon", "yapay çiçek", "kutuda", "vazoda", "bonsai", "kaktüs",
-  "sukulent", "teraryum", "lilyum", "papatya", "lale", "krizantem", "gerbera",
-  "mevsim", "çelenk", "açılış", "düğün", "nişan", "kurumsal", "geçmiş olsun",
-  "tebrik", "yeni iş", "yeni bebek", "özür", "aşk", "romantik", "hediye",
-  "premium", "dekorasyon",
-];
-
-const badgeLabels: Record<string, string> = {
-  new: "Yeni",
-  bestseller: "Çok Satan",
-  premium: "Premium",
-  campaign: "Kampanya",
-  trend: "Trend",
-};
-
-const norm = (s: string) => s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
-
-function numberValue(value: unknown, fallback = 0): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
+/* ═══════════════════════════════════════════════════════════════
+   2) MEGA MENU (Desktop) — küratörlü başlıklar
+   ═══════════════════════════════════════════════════════════════ */
+export interface MegaMenuLink {
+  name: string;
+  sub: string;
+  href: string;
+}
+export interface MegaMenuFeatured {
+  image: string;
+  label: string;
+  title: string;
+  href: string;
+}
+export interface MegaMenuGroup {
+  featured: MegaMenuFeatured;
+  categories: MegaMenuLink[];
 }
 
-function readImage(n: CategoryNode): string {
-  const raw = n as {
-    homepage_slider_image?: unknown;
-    homepage_slider_mobile_image?: unknown;
-    banner_image?: unknown;
-    icon?: unknown;
-    image?: unknown;
-    image_url?: unknown;
-  };
-  return (
-    (typeof raw.homepage_slider_image === "string" && raw.homepage_slider_image) ||
-    (typeof raw.homepage_slider_mobile_image === "string" && raw.homepage_slider_mobile_image) ||
-    (typeof raw.banner_image === "string" && raw.banner_image) ||
-    (typeof raw.image_url === "string" && raw.image_url) ||
-    (typeof raw.icon === "string" && raw.icon) ||
-    (typeof raw.image === "string" && raw.image) ||
-    ""
-  );
+
+
+/* ═══════════════════════════════════════════════════════════════
+   3) MOBİL MENU (drawer nav — verbatim, kategori + statik sayfalar)
+   ═══════════════════════════════════════════════════════════════ */
+export interface NavLink {
+  label: string;
+  href: string;
 }
 
-function readTag(n: CategoryNode): string | undefined {
-  const raw = n as Record<string, unknown>;
-  if (typeof raw.homepage_slider_badge === "string" && badgeLabels[raw.homepage_slider_badge]) {
-    return badgeLabels[raw.homepage_slider_badge];
-  }
-  if (raw.is_bestseller === true) return "Çok Satan";
-  if (raw.is_featured === true || raw.featured === true) return "Öne Çıkan";
-  if (raw.is_new === true) return "Yeni";
-  return undefined;
-}
 
-function readCount(n: CategoryNode): number | undefined {
-  const raw = n as Record<string, unknown>;
-  const productCount = numberValue(raw.product_count, 0);
-  if (productCount > 0) return productCount;
-  const directChildren = numberValue(raw.child_count, 0);
-  const descendants = numberValue(raw.descendant_count, 0);
-  const total = Math.max(descendants, directChildren);
-  return total > 0 ? total : undefined;
-}
+/* ═══════════════════════════════════════════════════════════════
+   4) TÜRETME YARDIMCILARI (Related / Internal Linking)
+   Tek kaynaktan üretir — bileşenlerde kategori HARDCODE edilmez.
+   ═══════════════════════════════════════════════════════════════ */
 
-function toItem(n: CategoryNode): CategoryItem {
-  return {
-    id: n.slug,
-    name: n.name,
-    href: `/kategori/${n.slug}`,
-    image: readImage(n),
-    count: readCount(n),
-    tag: readTag(n),
-  };
-}
 
-function walkVisible(nodes: CategoryNode[], out: CategoryNode[]): void {
+/* ═══════════════════════════════════════════════════════════════
+   5) CANLI CATEGORY CENTER AĞACI → mevcut UI şekline eşleme
+   fetchCategoryTree() düğümlerini, tasarımı bozmadan tüketici
+   şekillerine çevirir. Slug/isim AYNEN korunur; uydurma/rename YOK.
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Ağaç düğümlerini koleksiyon kartı şekline çevirir (image-güvenli).
+ *  Görsel: düğümün kendi görseli → yoksa slug eşleşen mevcut catalog görseli →
+ *  hiçbiri yoksa öğe atlanır (kartı görselsiz bozmamak için). */
+export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
+  const items: CategoryItem[] = [];
   for (const n of nodes) {
     if (!n || typeof n.name !== "string" || typeof n.slug !== "string") continue;
-    if (isCategoryVisible(n)) out.push(n);
-    if (Array.isArray(n.children)) walkVisible(n.children as CategoryNode[], out);
+    // Public yalnız yayında (active) kategoriyi vitrinde gösterir; draft/passive atlanır.
+    if (!isCategoryVisible(n)) continue;
+    const href = `/kategori/${n.slug}`;
+    // TEK KAYNAK: yalnız node'un kendi görseli (banner_image/icon). Hardcoded eşleşme YOK.
+    const raw = n as { banner_image?: unknown; icon?: unknown; image?: unknown };
+    const image =
+      (typeof raw.banner_image === "string" && raw.banner_image) ||
+      (typeof raw.icon === "string" && raw.icon) ||
+      (typeof raw.image === "string" && raw.image) ||
+      "";
+    // Görsel YOKSA da root kategori rail'e girer (yuvarlak mor gradient placeholder ile)
+    // → 10 root'un tamamı görünür, hiçbiri kaybolmaz. Placeholder FloatingCategoryRail'de.
+    items.push({ id: n.slug, name: n.name, href, image });
   }
+  return items;
 }
 
-function scoreNodes(nodes: CategoryNode[]): CategoryNode[] {
-  const bySlug = new Map<string, CategoryNode>();
-  for (const n of nodes) bySlug.set(n.slug, n);
-  const scored = [...bySlug.values()].map((n, index) => {
-    const raw = n as Record<string, unknown>;
-    const name = norm(n.name);
-    const priority = salesPriorityWords.findIndex((word) => name.includes(word));
-    const adminPriority = numberValue(raw.homepage_slider_priority, 0);
-    const adminOrder = raw.homepage_slider_order == null ? Number.POSITIVE_INFINITY : numberValue(raw.homepage_slider_order, Number.POSITIVE_INFINITY);
-    return {
-      node: n,
-      index,
-      adminPriority,
-      adminOrder,
-      score: priority === -1 ? 999 + index : priority,
-    };
-  });
-  scored.sort((a, b) => {
-    if (a.adminPriority !== b.adminPriority) return b.adminPriority - a.adminPriority;
-    if (a.adminOrder !== b.adminOrder) return a.adminOrder - b.adminOrder;
-    return a.score - b.score || a.index - b.index;
-  });
-  return scored.map(({ node }) => node);
-}
-
-export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
-  const all: CategoryNode[] = [];
-  walkVisible(nodes, all);
-  return scoreNodes(all).map(toItem);
-}
-
-export function mapCategoryChildrenToItems(node: CategoryNode | null, limit = 50): CategoryItem[] {
-  if (!node || !Array.isArray(node.children)) return [];
-  const all: CategoryNode[] = [];
-  walkVisible(node.children as CategoryNode[], all);
-  return scoreNodes(all).slice(0, limit).map(toItem);
-}
-
+/** Verilen slug'ın kök→mevcut ata zincirini ağaçtan türetir (Breadcrumb için).
+ *  Parent-child ilişkisi ağaçtan okunur; DEĞİŞTİRİLMEZ. */
 export function getBreadcrumbTrailFromTree(
   nodes: CategoryNode[],
   slug: string
@@ -174,6 +136,8 @@ export function getBreadcrumbTrailFromTree(
   return trail;
 }
 
+/** Canlı ağaçta slug eşleşen kategorinin numerik id'sini bulur (ürün filtresi için).
+ *  id BIGINT olabilir → Number() ile normalize edilir. Bulunamazsa null. */
 export function findCategoryIdBySlug(nodes: CategoryNode[], slug: string): number | null {
   let found: number | null = null;
   const walk = (list: CategoryNode[]): void => {
@@ -190,6 +154,9 @@ export function findCategoryIdBySlug(nodes: CategoryNode[], slug: string): numbe
   return found;
 }
 
+/** Header Mega Menu'yü CANLI kategori ağacından türetir (TEK KAYNAK).
+ *  Üst-seviye active kategoriler → nav grupları; çocukları → alt-linkler (gerçek slug).
+ *  banner_image varsa featured kart; yoksa yalnız linkler. Hardcoded YOK. */
 export interface MegaGroup {
   href: string;
   featured?: { label: string; title: string; href: string; image: string };
@@ -217,6 +184,8 @@ export function mapTreeToMegaMenu(nodes: CategoryNode[], maxGroups = 50, maxLink
   return out;
 }
 
+/** Canlı ağaçta slug eşleşen kategori DÜĞÜMÜNÜ bulur (sentetik sayfa üretimi için).
+ *  Böylece SEO sayfası olmayan kategoriler de 404 yerine landing render eder. */
 export function findCategoryNodeBySlug(nodes: CategoryNode[], slug: string): CategoryNode | null {
   let found: CategoryNode | null = null;
   const walk = (list: CategoryNode[]): void => {
