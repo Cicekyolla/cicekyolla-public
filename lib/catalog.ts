@@ -102,7 +102,8 @@ export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
       (typeof raw.icon === "string" && raw.icon) ||
       (typeof raw.image === "string" && raw.image) ||
       "";
-    if (!image) continue; // Rail = yalnız banner_image'ı olan root kategoriler (görselli vitrin)
+    // Görsel YOKSA da root kategori rail'e girer (yuvarlak mor gradient placeholder ile)
+    // → 10 root'un tamamı görünür, hiçbiri kaybolmaz. Placeholder FloatingCategoryRail'de.
     items.push({ id: n.slug, name: n.name, href, image });
   }
   return items;

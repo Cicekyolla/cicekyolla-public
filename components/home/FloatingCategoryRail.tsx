@@ -75,12 +75,24 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
                       boxShadow: "0 8px 28px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.12)",
                     }}
                   >
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
-                      draggable={false}
-                    />
+                    {cat.image ? (
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
+                        draggable={false}
+                      />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="w-full h-full flex items-center justify-center text-white text-[18px] font-semibold"
+                        style={{
+                          background: "radial-gradient(120% 120% at 30% 20%, #A855F7 0%, #7C3AED 55%, #5B21B6 100%)",
+                        }}
+                      >
+                        {(cat.name?.trim()?.[0] ?? "•").toLocaleUpperCase("tr")}
+                      </span>
+                    )}
                     {/* Hover purple sheen */}
                     <span
                       className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-350"
@@ -107,7 +119,7 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
                         lineHeight: 1.35,
                         overflow: "hidden",
                         display: "-webkit-box",
-                        WebkitLineClamp: 2,
+                        WebkitLineClamp: 3,
                         WebkitBoxOrient: "vertical",
                       } as CSSProperties}
                     >
