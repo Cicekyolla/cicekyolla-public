@@ -112,12 +112,12 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
               </div>
             </Link>
 
-            {/* ── Desktop mega nav ── */}
-            <nav className="hidden lg:flex items-center flex-1 min-w-0 justify-center overflow-hidden" style={{ gap: "clamp(0px, 0.5vw, 4px)" }}>
-              {navItems.map((key, i) => (
+            {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
+            <nav className="hidden lg:flex items-center flex-1 justify-center" style={{ gap: "clamp(0px, 0.5vw, 4px)" }}>
+              {navItems.map((key) => (
                 <div
                   key={key}
-                  className={`relative ${i < 5 ? "flex" : i < 7 ? "hidden xl:flex" : "hidden 2xl:flex"}`}
+                  className="relative flex-shrink-0"
                   onMouseEnter={() => handleMouseEnter(key)}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -128,31 +128,16 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                         : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
                     style={{
-                      padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.2vw, 16px)",
-                      fontSize: "clamp(10px, 1.1vw, 12px)",
-                      letterSpacing: "clamp(0.04em, 0.05em, 0.06em)",
+                      padding: "clamp(6px, 0.9vw, 8px) clamp(7px, 1vw, 14px)",
+                      fontSize: "clamp(10px, 1.05vw, 12px)",
+                      letterSpacing: "clamp(0.03em, 0.05em, 0.06em)",
                       textTransform: "uppercase",
-                      maxWidth: "clamp(90px, 12vw, 200px)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
                     }}
                   >
                     {key}
                   </button>
                 </div>
               ))}
-              <Link
-                href="/teslimat-bolgeleri"
-                className="hidden 2xl:block flex-shrink-0 whitespace-nowrap font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] rounded-lg transition-colors duration-150"
-                style={{
-                  padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.2vw, 16px)",
-                  fontSize: "clamp(10px, 1.1vw, 12px)",
-                  letterSpacing: "clamp(0.04em, 0.05em, 0.06em)",
-                  textTransform: "uppercase",
-                }}
-              >
-                Teslimat
-              </Link>
             </nav>
 
             {/* ── Actions ── */}

@@ -75,22 +75,12 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
                       boxShadow: "0 8px 28px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.12)",
                     }}
                   >
-                    {cat.image ? (
-                      <img
-                        src={cat.image}
-                        alt={cat.name}
-                        className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
-                        draggable={false}
-                      />
-                    ) : (
-                      <span
-                        aria-hidden
-                        className="w-full h-full flex items-center justify-center text-white/90 text-[11px] font-bold text-center px-1 leading-tight"
-                        style={{ background: "linear-gradient(140deg, #7C3AED, #A855F7)" }}
-                      >
-                        {cat.name}
-                      </span>
-                    )}
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
+                      draggable={false}
+                    />
                     {/* Hover purple sheen */}
                     <span
                       className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-350"
