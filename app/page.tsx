@@ -3,6 +3,7 @@ import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchProducts, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { mapTreeToItems } from "@/lib/catalog";
+import { buildCollectionSlider } from "@/lib/collectionSlider";
 import { HomeHero } from "../components/home/HomeHero";
 import { TrustBar } from "../components/home/TrustBar";
 import { Manifesto } from "../components/home/Manifesto";
@@ -116,7 +117,8 @@ export default async function HomePage() {
   // Homepage Collections TEK KAYNAK: canlı Category Center ağacı (getCategoryTree).
   const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
-  const collections = liveItems; // Rail: TÜM active root (görselsizler placeholder ile)
+  // Rail: Hero'dan bağımsız SATIŞ-ODAKLI slider (root+child+grandchild, ≤50).
+  const collections = buildCollectionSlider(tree, 50);
   const imagedCollections = liveItems.filter((c) => c.image); // Featured/Occasion görsel ister
 
   // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).

@@ -85,12 +85,18 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
                     ) : (
                       <span
                         aria-hidden
-                        className="w-full h-full flex items-center justify-center text-white text-[18px] font-semibold"
+                        className="w-full h-full flex items-center justify-center text-center text-white font-semibold px-1.5"
                         style={{
                           background: "radial-gradient(120% 120% at 30% 20%, #A855F7 0%, #7C3AED 55%, #5B21B6 100%)",
+                          fontSize: "clamp(8px, 0.95vw, 10.5px)",
+                          lineHeight: 1.2,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
                         }}
                       >
-                        {(cat.name?.trim()?.[0] ?? "•").toLocaleUpperCase("tr")}
+                        {cat.name}
                       </span>
                     )}
                     {/* Hover purple sheen */}
