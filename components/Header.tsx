@@ -7,11 +7,14 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import type { MegaGroup } from "@/lib/headerNav";
 
-/* ─── Mega menu data ─── */
-/* ── Extra nav links ── */
-
-
-
+interface HeaderSearchProduct {
+  id: number;
+  name: string;
+  href: string;
+  image: string;
+  price: string;
+  badge?: string;
+}
 
 /* ─── Header ─── */
 export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[]; search?: { name: string; href: string }[] }) {
@@ -29,10 +32,14 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
   const [cartCount] = useState(2);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [productResults, setProductResults] = useState<HeaderSearchProduct[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   // TEK KAYNAK: search de canlı kategori ağacından çözer (gerçek slug route'ları).
-  const searchResults = query.trim().length >= 1
-    ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(query.trim().toLocaleLowerCase("tr"))).slice(0, 8)
+  const trimmedQuery = query.trim();
+  const searchResults = trimmedQuery.length >= 1
+    ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(trimmedQuery.toLocaleLowerCase("tr"))).slice(0, 6)
     : [];
+  const hasSearchPanel = trimmedQuery.length >= 1 && (searchResults.length > 0 || productResults.length > 0 || searchLoading || trimmedQuery.length >= 2);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,6 +49,41 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setProductResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error("search failed");
+        const json = (await res.json()) as { products?: HeaderSearchProduct[] };
+        if (!cancelled) setProductResults(Array.isArray(json.products) ? json.products : []);
+      } catch {
+        if (!cancelled) setProductResults([]);
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQuery("");
+    setProductResults([]);
+  };
 
   const handleMouseEnter = (key: string) => {
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
@@ -234,7 +276,7 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                 className="overflow-hidden pb-4"
               >
-                <div className="relative max-w-xl mx-auto">
+                <div className="relative max-w-2xl mx-auto">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
                   <input
                     autoFocus
@@ -244,20 +286,62 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                     placeholder="Gül, orkide, buket, özel gün ara..."
                     className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
                   />
-                  {/* Canlı kategori önerileri — gerçek /kategori/{slug} route'ları */}
-                  {searchResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-10">
-                      {searchResults.map((r) => (
-                        <Link
-                          key={r.href}
-                          href={r.href}
-                          onClick={() => { setSearchOpen(false); setQuery(""); }}
-                          className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0"
-                        >
-                          {r.name}
-                          <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
-                        </Link>
-                      ))}
+                  {/* Enterprise Search: canlı kategori + ürün önerileri */}
+                  {hasSearchPanel && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-3xl shadow-[0_20px_64px_rgba(17,24,39,0.13)] overflow-hidden z-20">
+                      <div className="max-h-[70vh] overflow-y-auto p-2">
+                        {searchResults.length > 0 && (
+                          <div className="py-2">
+                            <p className="px-3 pb-2 text-[10px] tracking-[0.22em] uppercase font-bold text-[#8B5CF6]">Kategoriler</p>
+                            {searchResults.map((r) => (
+                              <Link
+                                key={r.href}
+                                href={r.href}
+                                onClick={closeSearch}
+                                className="flex items-center justify-between px-3 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors rounded-2xl"
+                              >
+                                <span className="font-semibold">{r.name}</span>
+                                <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+
+                        {(productResults.length > 0 || searchLoading) && (
+                          <div className="py-2 border-t border-black/[0.05]">
+                            <p className="px-3 pb-2 text-[10px] tracking-[0.22em] uppercase font-bold text-[#8B5CF6]">Ürünler</p>
+                            {searchLoading && productResults.length === 0 ? (
+                              <div className="px-3 py-4 text-sm text-[#9CA3AF]">Ürünler aranıyor…</div>
+                            ) : productResults.map((p) => (
+                              <Link
+                                key={p.id}
+                                href={p.href}
+                                onClick={closeSearch}
+                                className="flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-[#F5F3FF] transition-colors group"
+                              >
+                                <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#F5F3FF] border border-[#EDE9FE] flex-shrink-0">
+                                  {p.image ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" /> : null}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold text-[#111827] truncate group-hover:text-[#7C3AED]">{p.name}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {p.price ? <span className="text-xs font-bold text-[#7C3AED]">{p.price}</span> : null}
+                                    {p.badge ? <span className="text-[10px] font-bold text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded-full">{p.badge}</span> : null}
+                                  </div>
+                                </div>
+                                <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB] flex-shrink-0" />
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+
+                        {!searchLoading && trimmedQuery.length >= 2 && searchResults.length === 0 && productResults.length === 0 && (
+                          <div className="px-4 py-7 text-center">
+                            <p className="text-sm font-semibold text-[#374151]">Sonuç bulunamadı</p>
+                            <p className="text-xs text-[#9CA3AF] mt-1">Daha kısa bir kelime deneyin veya WhatsApp'tan bize yazın.</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
