@@ -2,14 +2,9 @@
 
 import Link from "next/link";
 import { ShoppingCart, Search, X, ArrowRight } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
-
-/* ─── Mega menu data ─── */
-/* ── Extra nav links ── */
-
-
 
 type MegaGroup = {
   href: string;
@@ -17,29 +12,27 @@ type MegaGroup = {
   categories: { name: string; sub?: string; href: string }[];
 };
 
-/* ─── Header ─── */
-export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[]; search?: { name: string; href: string }[] }) {
-  // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
-  // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
-  const menuData: Record<string, MegaGroup> = menu ?? {}; // TEK KAYNAK: yalnız canlı kategori ağacı; hardcoded/fallback YOK
-  const navItems: string[] = Object.keys(menuData);
+type SimpleLink = { name: string; href: string };
 
-  // Mobil menü kategori kısmı: canlı nav (fallback: menü anahtarları / hardcoded).
-  const mobileCats: { label: string; href: string }[] =
-    nav && nav.length > 0
-      ? nav.map((c) => ({ label: c.name, href: c.href }))
-      : navItems.map((k) => ({ label: k, href: menuData[k].href ?? menuData[k].categories[0]?.href ?? "/" }));
+export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>; nav?: SimpleLink[]; search?: SimpleLink[] }) {
+  const menuData: Record<string, MegaGroup> = menu ?? {};
+  const navItems = Object.keys(menuData);
+  const mobileCats = nav && nav.length > 0
+    ? nav.map((c) => ({ label: c.name, href: c.href }))
+    : navItems.map((key) => ({ label: key, href: menuData[key]?.href ?? "/" }));
 
   const [cartCount] = useState(2);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
-  // TEK KAYNAK: search de canlı kategori ağacından çözer (gerçek slug route'ları).
-  const searchResults = query.trim().length >= 1
-    ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(query.trim().toLocaleLowerCase("tr"))).slice(0, 8)
-    : [];
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchResults = query.trim().length >= 1
+    ? (search ?? [])
+        .filter((c) => c.name.toLocaleLowerCase("tr").includes(query.trim().toLocaleLowerCase("tr")))
+        .slice(0, 8)
+    : [];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -51,88 +44,61 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
     setActiveMenu(key);
   };
+
   const handleMouseLeave = () => {
-    menuTimeout.current = setTimeout(() => setActiveMenu(null), 180);
+    menuTimeout.current = setTimeout(() => setActiveMenu(null), 160);
   };
 
   return (
     <>
-      {/* ── Live ticker ── */}
       <div
         style={{ background: "linear-gradient(90deg, #5B21B6 0%, #7C3AED 40%, #9333EA 70%, #8B5CF6 100%)" }}
         className="text-white py-2.5 text-center text-[11px] tracking-[0.18em] uppercase font-medium"
       >
-        <span className="hidden sm:inline">
-          Bugün 14:00'a kadar sipariş verin &nbsp;—&nbsp; Aynı Gün Teslimat &nbsp;·&nbsp; Türkiye Geneli Ücretsiz Kargo
-        </span>
+        <span className="hidden sm:inline">Bugün 14:00&apos;a kadar sipariş verin — Aynı Gün Teslimat · Türkiye Geneli Ücretsiz Kargo</span>
         <span className="sm:hidden">Aynı Gün Teslimat · Ücretsiz Kargo</span>
       </div>
 
-      {/* ── Main header ── */}
       <header
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
-          background: scrolled
-            ? "rgba(255,255,255,0.92)"
-            : "rgba(255,255,255,1)",
+          background: scrolled ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,1)",
           backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
           boxShadow: scrolled
             ? "0 1px 0 rgba(0,0,0,0.06), 0 8px 32px rgba(139,92,246,0.06)"
             : "0 1px 0 rgba(0,0,0,0.05)",
         }}
       >
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
-          <div className="flex items-center justify-between h-[68px] lg:h-[72px] gap-4 lg:gap-6 xl:gap-8">
-
-            {/* ── Logo ── */}
-            <Link href="/" className="flex-shrink-0 flex items-center gap-2 xl:gap-3 group">
-              {/* Monogram icon */}
+        <div className="max-w-[1440px] mx-auto px-4 md:px-6 xl:px-10 2xl:px-14">
+          <div className="flex items-center justify-between h-[68px] lg:h-[72px] gap-3 xl:gap-5 min-w-0">
+            <Link href="/" className="flex-shrink-0 flex items-center gap-2 xl:gap-3 group min-w-0">
               <div
                 className="w-9 h-9 xl:w-10 xl:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-105"
-                style={{
-                  background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)",
-                  boxShadow: "0 4px 16px rgba(139,92,246,0.35)",
-                }}
+                style={{ background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)", boxShadow: "0 4px 16px rgba(139,92,246,0.35)" }}
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
-                  <path strokeLinecap="round" d="M9 8c0-1.7 1.3-3 3-3s3 1.3 3 3"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z" />
+                  <path strokeLinecap="round" d="M9 8c0-1.7 1.3-3 3-3s3 1.3 3 3" />
                 </svg>
               </div>
-              <div className="flex flex-col">
-                <span
-                  style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em", lineHeight: 1 }}
-                  className="text-[18px] xl:text-[22px] font-semibold text-[#111827] uppercase"
-                >
+              <div className="flex flex-col min-w-0">
+                <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em", lineHeight: 1 }} className="text-[17px] xl:text-[21px] font-semibold text-[#111827] uppercase whitespace-nowrap">
                   Çiçekyolla
                 </span>
-                <span className="text-[9px] tracking-[0.35em] text-[#8B5CF6] uppercase font-semibold" style={{ letterSpacing: "0.32em" }}>
+                <span className="hidden sm:block text-[8px] xl:text-[9px] text-[#8B5CF6] uppercase font-semibold whitespace-nowrap" style={{ letterSpacing: "0.28em" }}>
                   Premium Florist
                 </span>
               </div>
             </Link>
 
-            {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
-            <nav className="hidden lg:flex items-center flex-1 justify-center" style={{ gap: "clamp(0px, 0.5vw, 4px)" }}>
+            <nav className="hidden xl:flex items-center justify-center flex-1 min-w-0 overflow-visible gap-0.5 2xl:gap-1">
               {navItems.map((key) => (
-                <div
-                  key={key}
-                  className="relative flex-shrink-0"
-                  onMouseEnter={() => handleMouseEnter(key)}
-                  onMouseLeave={handleMouseLeave}
-                >
+                <div key={key} className="relative flex-shrink-0" onMouseEnter={() => handleMouseEnter(key)} onMouseLeave={handleMouseLeave}>
                   <button
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
-                      activeMenu === key
-                        ? "text-[#8B5CF6] bg-[#F5F3FF]"
-                        : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
+                      activeMenu === key ? "text-[#8B5CF6] bg-[#F5F3FF]" : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
-                    style={{
-                      padding: "clamp(6px, 0.9vw, 8px) clamp(7px, 1vw, 14px)",
-                      fontSize: "clamp(10px, 1.05vw, 12px)",
-                      letterSpacing: "clamp(0.03em, 0.05em, 0.06em)",
-                      textTransform: "uppercase",
-                    }}
+                    style={{ padding: "7px 9px", fontSize: "11px", letterSpacing: "0.045em", textTransform: "uppercase" }}
                   >
                     {key}
                   </button>
@@ -140,33 +106,25 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
               ))}
             </nav>
 
-            {/* ── Actions ── */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => setSearchOpen(!searchOpen)}
-                className="w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
-              >
+              <button onClick={() => setSearchOpen(!searchOpen)} className="w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all" aria-label="Ara">
                 {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
               </button>
 
-              <Link href="/sepet">
+              <Link href="/sepet" aria-label="Sepet">
                 <button className="relative w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all">
                   <ShoppingCart className="w-4.5 h-4.5" />
                   {cartCount > 0 && (
-                    <span
-                      className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center"
-                      style={{ background: "linear-gradient(135deg, #8B5CF6, #A855F7)" }}
-                    >
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center" style={{ background: "linear-gradient(135deg, #8B5CF6, #A855F7)" }}>
                       {cartCount}
                     </span>
                   )}
                 </button>
               </Link>
 
-              {/* Mobile menu */}
               <Sheet>
                 <SheetTrigger asChild>
-                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F5F3FF] transition-all">
+                  <button className="xl:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F5F3FF] transition-all" aria-label="Menü">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" d="M4 7h16M4 12h10M4 17h16" />
                     </svg>
@@ -176,88 +134,38 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                   <div className="flex flex-col h-full">
                     <div className="p-7 border-b border-black/[0.05]">
                       <div className="flex items-center gap-3">
-                        <div
-                          className="w-9 h-9 rounded-full flex items-center justify-center"
-                          style={{ background: "linear-gradient(135deg, #7C3AED, #A855F7)" }}
-                        >
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #7C3AED, #A855F7)" }}>
                           <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z" />
                           </svg>
                         </div>
-                        <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em" }} className="text-lg font-semibold text-[#111827] uppercase">
-                          Çiçekyolla
-                        </span>
+                        <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em" }} className="text-lg font-semibold text-[#111827] uppercase">Çiçekyolla</span>
                       </div>
                     </div>
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
-                      {[
-                        { label: "Ana Sayfa", href: "/" },
-                        ...mobileCats,
-                        { label: "🌿 Dekorasyon & Peyzaj", href: "/dekorasyon" },
-                        { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
-                        { label: "Hakkımızda", href: "/hakkimizda" },
-                        { label: "Blog", href: "/blog" },
-                        { label: "Kurumsal", href: "/kurumsal" },
-                        { label: "SSS", href: "/sss" },
-                        { label: "İletişim", href: "/iletisim" },
-                        { label: "Sepetim", href: "/sepet" },
-                      ].map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
-                        >
+                      {[{ label: "Ana Sayfa", href: "/" }, ...mobileCats, { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" }, { label: "Blog", href: "/blog" }, { label: "SSS", href: "/sss" }, { label: "İletişim", href: "/iletisim" }, { label: "Sepetim", href: "/sepet" }].map((item) => (
+                        <Link key={item.href} href={item.href} className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide">
                           {item.label}
                           <ArrowRight className="w-3.5 h-3.5 opacity-40" />
                         </Link>
                       ))}
                     </nav>
-                    <div className="p-5 border-t border-black/[0.05]">
-                      <a
-                        href="https://wa.me/905551234567"
-                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white text-sm font-semibold"
-                        style={{ background: "linear-gradient(135deg, #25D366, #128C7E)", boxShadow: "0 6px 20px rgba(37,211,102,0.3)" }}
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-                        WhatsApp ile Sipariş Ver
-                      </a>
-                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
             </div>
           </div>
 
-          {/* ── Search bar ── */}
           <AnimatePresence>
             {searchOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden pb-4"
-              >
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }} className="overflow-visible pb-4">
                 <div className="relative max-w-xl mx-auto">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
-                  <input
-                    autoFocus
-                    type="search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Gül, orkide, buket, özel gün ara..."
-                    className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
-                  />
-                  {/* Canlı kategori önerileri — gerçek /kategori/{slug} route'ları */}
+                  <input autoFocus type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Gül, orkide, buket, özel gün ara..." className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all" />
                   {searchResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-10">
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-20">
                       {searchResults.map((r) => (
-                        <Link
-                          key={r.href}
-                          href={r.href}
-                          onClick={() => { setSearchOpen(false); setQuery(""); }}
-                          className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0"
-                        >
+                        <Link key={r.href} href={r.href} onClick={() => { setSearchOpen(false); setQuery(""); }} className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0">
                           {r.name}
                           <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
                         </Link>
@@ -270,7 +178,6 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
           </AnimatePresence>
         </div>
 
-        {/* ── Mega menu dropdown ── */}
         <AnimatePresence>
           {activeMenu && menuData[activeMenu] && (
             <motion.div
@@ -282,75 +189,38 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
               className="absolute left-0 right-0 top-full overflow-x-hidden"
               onMouseEnter={() => { if (menuTimeout.current) clearTimeout(menuTimeout.current); }}
               onMouseLeave={handleMouseLeave}
-              style={{
-                background: "rgba(255,255,255,0.98)",
-                backdropFilter: "blur(24px) saturate(180%)",
-                borderTop: "1px solid rgba(0,0,0,0.05)",
-                boxShadow: "0 24px 64px rgba(0,0,0,0.10), 0 4px 16px rgba(139,92,246,0.06)",
-              }}
+              style={{ background: "rgba(255,255,255,0.98)", backdropFilter: "blur(24px) saturate(180%)", borderTop: "1px solid rgba(0,0,0,0.05)", boxShadow: "0 24px 64px rgba(0,0,0,0.10), 0 4px 16px rgba(139,92,246,0.06)" }}
             >
-              <div className="max-w-[1440px] mx-auto px-8 xl:px-14 py-8 xl:py-10">
-                <div className="grid grid-cols-[1fr_220px] xl:grid-cols-[1fr_280px] gap-8 xl:gap-12">
-                  {/* Categories list */}
-                  <div>
-                    <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-6">
-                      {activeMenu} Koleksiyonu
-                    </p>
-                    <div className="grid grid-cols-2 gap-x-12 gap-y-1">
+              <div className="max-w-[1440px] mx-auto px-8 xl:px-12 py-8 xl:py-10">
+                <div className="grid grid-cols-[minmax(0,1fr)_240px] 2xl:grid-cols-[minmax(0,1fr)_280px] gap-8 xl:gap-12">
+                  <div className="min-w-0">
+                    <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-6">{activeMenu} Koleksiyonu</p>
+                    <div className="grid grid-cols-2 2xl:grid-cols-3 gap-x-8 2xl:gap-x-10 gap-y-1 max-h-[460px] overflow-y-auto pr-2">
                       {menuData[activeMenu].categories.map((cat) => (
-                        <Link
-                          key={cat.name}
-                          href={cat.href}
-                          onClick={() => setActiveMenu(null)}
-                          className="group flex items-center justify-between py-3 border-b border-black/[0.04] hover:border-[#DDD6FE] transition-colors"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors">
-                              {cat.name}
-                            </p>
-                            {cat.sub ? <p className="text-xs text-[#9CA3AF] mt-0.5">{cat.sub}</p> : null}
+                        <Link key={`${activeMenu}-${cat.href}-${cat.name}`} href={cat.href} onClick={() => setActiveMenu(null)} className="group flex items-center justify-between py-3 border-b border-black/[0.04] hover:border-[#DDD6FE] transition-colors min-w-0">
+                          <div className="min-w-0 pr-3">
+                            <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors truncate">{cat.name}</p>
+                            {cat.sub ? <p className="text-xs text-[#9CA3AF] mt-0.5 truncate">{cat.sub}</p> : null}
                           </div>
-                          <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB] group-hover:text-[#8B5CF6] group-hover:translate-x-0.5 transition-all" />
+                          <ArrowRight className="w-3.5 h-3.5 flex-shrink-0 text-[#D1D5DB] group-hover:text-[#8B5CF6] group-hover:translate-x-0.5 transition-all" />
                         </Link>
                       ))}
                     </div>
-                    <Link
-                      href={menuData[activeMenu].href ?? menuData[activeMenu].categories[0]?.href ?? "/"}
-                      onClick={() => setActiveMenu(null)}
-                      className="inline-flex items-center gap-2 mt-6 text-xs font-bold text-[#8B5CF6] uppercase tracking-widest hover:gap-3 transition-all"
-                    >
-                      Tüm {activeMenu}'i Gör <ArrowRight className="w-3.5 h-3.5" />
+                    <Link href={menuData[activeMenu].href} onClick={() => setActiveMenu(null)} className="inline-flex items-center gap-2 mt-6 text-xs font-bold text-[#8B5CF6] uppercase tracking-widest hover:gap-3 transition-all">
+                      Tüm {activeMenu}&apos;i Gör <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
 
-                  {/* Featured card (kategori banner_image varsa) */}
                   {menuData[activeMenu].featured ? (
-                  <Link
-                    href={menuData[activeMenu].featured!.href}
-                    onClick={() => setActiveMenu(null)}
-                    className="group relative overflow-hidden rounded-2xl aspect-[4/5]"
-                  >
-                    <img
-                      src={menuData[activeMenu].featured!.image}
-                      alt={menuData[activeMenu].featured!.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                    <div className="absolute bottom-0 left-0 p-5">
-                      <p className="text-[10px] tracking-widest text-[#C084FC] uppercase font-semibold mb-1">
-                        {menuData[activeMenu].featured!.label}
-                      </p>
-                      <h3
-                        style={{ fontFamily: "var(--font-display)", lineHeight: 1.1, whiteSpace: "pre-line" }}
-                        className="text-white text-xl font-semibold mb-3"
-                      >
-                        {menuData[activeMenu].featured!.title}
-                      </h3>
-                      <span className="inline-flex items-center gap-1.5 text-white/80 text-xs font-medium group-hover:text-white transition-colors">
-                        İncele <ArrowRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </Link>
+                    <Link href={menuData[activeMenu].featured.href} onClick={() => setActiveMenu(null)} className="group relative overflow-hidden rounded-2xl aspect-[4/5]">
+                      <img src={menuData[activeMenu].featured.image} alt={menuData[activeMenu].featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                      <div className="absolute bottom-0 left-0 p-5">
+                        <p className="text-[10px] tracking-widest text-[#C084FC] uppercase font-semibold mb-1">{menuData[activeMenu].featured.label}</p>
+                        <h3 style={{ fontFamily: "var(--font-display)", lineHeight: 1.1, whiteSpace: "pre-line" }} className="text-white text-xl font-semibold mb-3">{menuData[activeMenu].featured.title}</h3>
+                        <span className="inline-flex items-center gap-1.5 text-white/80 text-xs font-medium group-hover:text-white transition-colors">İncele <ArrowRight className="w-3 h-3" /></span>
+                      </div>
+                    </Link>
                   ) : null}
                 </div>
               </div>
