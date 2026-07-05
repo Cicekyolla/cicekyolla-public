@@ -61,24 +61,29 @@ function walkVisible(nodes: CategoryNode[], out: CategoryNode[]): void {
   }
 }
 
-export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
-  const all: CategoryNode[] = [];
-  walkVisible(nodes, all);
-
+function scoreNodes(nodes: CategoryNode[]): CategoryNode[] {
   const bySlug = new Map<string, CategoryNode>();
-  for (const n of all) bySlug.set(n.slug, n);
-
+  for (const n of nodes) bySlug.set(n.slug, n);
   const scored = [...bySlug.values()].map((n, index) => {
     const name = norm(n.name);
     const priority = salesPriorityWords.findIndex((word) => name.includes(word));
     return { node: n, index, score: priority === -1 ? 999 + index : priority };
   });
-
   scored.sort((a, b) => a.score - b.score || a.index - b.index);
+  return scored.map(({ node }) => node);
+}
 
-  // Homepage rail artık 50 ile sınırlı değil: tüm active kategori havuzu görünür.
-  // Satış odaklı olanlar öne gelir, kalan active kategoriler de 5'li kaydırma içinde devam eder.
-  return scored.map(({ node }) => toItem(node));
+export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
+  const all: CategoryNode[] = [];
+  walkVisible(nodes, all);
+  return scoreNodes(all).map(toItem);
+}
+
+export function mapCategoryChildrenToItems(node: CategoryNode | null, limit = 50): CategoryItem[] {
+  if (!node || !Array.isArray(node.children)) return [];
+  const all: CategoryNode[] = [];
+  walkVisible(node.children as CategoryNode[], all);
+  return scoreNodes(all).slice(0, limit).map(toItem);
 }
 
 export function getBreadcrumbTrailFromTree(
