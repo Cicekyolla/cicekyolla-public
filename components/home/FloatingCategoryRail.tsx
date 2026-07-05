@@ -6,22 +6,26 @@ import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
 
+const STEP = 5;
+
 export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
   const cats = items ?? [];
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: false, align: "start", containScroll: "trimSnaps", slidesToScroll: 5 });
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: cats.length > 12,
+    dragFree: false,
+    align: "start",
+    slidesToScroll: STEP,
+  });
   if (cats.length === 0) return null;
 
   const scrollPrevFast = () => {
     if (!emblaApi) return;
-    const target = Math.max(0, emblaApi.selectedScrollSnap() - 5);
-    emblaApi.scrollTo(target);
+    emblaApi.scrollPrev();
   };
 
   const scrollNextFast = () => {
     if (!emblaApi) return;
-    const max = emblaApi.scrollSnapList().length - 1;
-    const target = Math.min(max, emblaApi.selectedScrollSnap() + 5);
-    emblaApi.scrollTo(target);
+    emblaApi.scrollNext();
   };
 
   return (
