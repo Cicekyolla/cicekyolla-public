@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, WheelEvent } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
@@ -15,17 +15,21 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
     dragFree: false,
     align: "start",
     slidesToScroll: STEP,
+    duration: 18,
   });
   if (cats.length === 0) return null;
 
-  const scrollPrevFast = () => {
-    if (!emblaApi) return;
-    emblaApi.scrollPrev();
-  };
+  const scrollPrevFast = () => emblaApi?.scrollPrev();
+  const scrollNextFast = () => emblaApi?.scrollNext();
 
-  const scrollNextFast = () => {
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
     if (!emblaApi) return;
-    emblaApi.scrollNext();
+    const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY) || event.shiftKey;
+    if (!horizontalIntent) return;
+    event.preventDefault();
+    const delta = event.deltaX || event.deltaY;
+    if (delta > 0) emblaApi.scrollNext();
+    if (delta < 0) emblaApi.scrollPrev();
   };
 
   return (
@@ -61,7 +65,7 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
           </button>
         </div>
 
-        <div className="relative">
+        <div className="relative" onWheel={handleWheel}>
           <button
             type="button"
             aria-label="Geri hızlı kaydır"
@@ -81,7 +85,7 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
             <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
 
-          <div ref={emblaRef} className="overflow-hidden" style={{ cursor: "grab" }}>
+          <div ref={emblaRef} className="overflow-hidden touch-pan-y" style={{ cursor: "grab" }}>
             <div className="flex gap-4 sm:gap-5 lg:gap-6">
               {cats.map((cat) => {
                 const badge = categoryBadges[cat.id];
