@@ -36,11 +36,33 @@ const salesPriorityWords = [
   "premium", "dekorasyon",
 ];
 
+const badgeLabels: Record<string, string> = {
+  new: "Yeni",
+  bestseller: "Çok Satan",
+  premium: "Premium",
+  campaign: "Kampanya",
+  trend: "Trend",
+};
+
 const norm = (s: string) => s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
 
+function numberValue(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function readImage(n: CategoryNode): string {
-  const raw = n as { banner_image?: unknown; icon?: unknown; image?: unknown; image_url?: unknown };
+  const raw = n as {
+    homepage_slider_image?: unknown;
+    homepage_slider_mobile_image?: unknown;
+    banner_image?: unknown;
+    icon?: unknown;
+    image?: unknown;
+    image_url?: unknown;
+  };
   return (
+    (typeof raw.homepage_slider_image === "string" && raw.homepage_slider_image) ||
+    (typeof raw.homepage_slider_mobile_image === "string" && raw.homepage_slider_mobile_image) ||
     (typeof raw.banner_image === "string" && raw.banner_image) ||
     (typeof raw.image_url === "string" && raw.image_url) ||
     (typeof raw.icon === "string" && raw.icon) ||
@@ -49,8 +71,36 @@ function readImage(n: CategoryNode): string {
   );
 }
 
+function readTag(n: CategoryNode): string | undefined {
+  const raw = n as Record<string, unknown>;
+  if (typeof raw.homepage_slider_badge === "string" && badgeLabels[raw.homepage_slider_badge]) {
+    return badgeLabels[raw.homepage_slider_badge];
+  }
+  if (raw.is_bestseller === true) return "Çok Satan";
+  if (raw.is_featured === true || raw.featured === true) return "Öne Çıkan";
+  if (raw.is_new === true) return "Yeni";
+  return undefined;
+}
+
+function readCount(n: CategoryNode): number | undefined {
+  const raw = n as Record<string, unknown>;
+  const productCount = numberValue(raw.product_count, 0);
+  if (productCount > 0) return productCount;
+  const directChildren = numberValue(raw.child_count, 0);
+  const descendants = numberValue(raw.descendant_count, 0);
+  const total = Math.max(descendants, directChildren);
+  return total > 0 ? total : undefined;
+}
+
 function toItem(n: CategoryNode): CategoryItem {
-  return { id: n.slug, name: n.name, href: `/kategori/${n.slug}`, image: readImage(n) };
+  return {
+    id: n.slug,
+    name: n.name,
+    href: `/kategori/${n.slug}`,
+    image: readImage(n),
+    count: readCount(n),
+    tag: readTag(n),
+  };
 }
 
 function walkVisible(nodes: CategoryNode[], out: CategoryNode[]): void {
@@ -65,11 +115,24 @@ function scoreNodes(nodes: CategoryNode[]): CategoryNode[] {
   const bySlug = new Map<string, CategoryNode>();
   for (const n of nodes) bySlug.set(n.slug, n);
   const scored = [...bySlug.values()].map((n, index) => {
+    const raw = n as Record<string, unknown>;
     const name = norm(n.name);
     const priority = salesPriorityWords.findIndex((word) => name.includes(word));
-    return { node: n, index, score: priority === -1 ? 999 + index : priority };
+    const adminPriority = numberValue(raw.homepage_slider_priority, 0);
+    const adminOrder = raw.homepage_slider_order == null ? Number.POSITIVE_INFINITY : numberValue(raw.homepage_slider_order, Number.POSITIVE_INFINITY);
+    return {
+      node: n,
+      index,
+      adminPriority,
+      adminOrder,
+      score: priority === -1 ? 999 + index : priority,
+    };
   });
-  scored.sort((a, b) => a.score - b.score || a.index - b.index);
+  scored.sort((a, b) => {
+    if (a.adminPriority !== b.adminPriority) return b.adminPriority - a.adminPriority;
+    if (a.adminOrder !== b.adminOrder) return a.adminOrder - b.adminOrder;
+    return a.score - b.score || a.index - b.index;
+  });
   return scored.map(({ node }) => node);
 }
 
