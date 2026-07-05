@@ -1,5 +1,6 @@
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
-import { mapTreeToItems, mapTreeToMegaMenu, getBreadcrumbTrailFromTree } from "@/lib/catalog";
+import { mapTreeToItems, getBreadcrumbTrailFromTree } from "@/lib/catalog";
+import { buildHeaderMenu, HEADER_NAV_CONFIG } from "@/lib/headerNav";
 import { isCategoryVisible, type CategoryNode } from "@/lib/api";
 
 /* ============================================================================
@@ -30,8 +31,9 @@ export default async function CategoryAuditPage() {
   const inactiveAll = all.filter((n) => !isActive(n));
   const activeRoots = roots.filter(isActive);
 
-  const mega = tree ? mapTreeToMegaMenu(tree) : {};
-  const megaRoots = Object.keys(mega).length;
+  const built = buildHeaderMenu(tree);
+  const megaRoots = Object.keys(built.menu).length;
+  const headerMissing = built.missing;
   const railItems = tree ? mapTreeToItems(tree) : [];
   const nav = getCategoryNav(tree);
   const sitemapCats = flattenCategories(tree);
@@ -46,8 +48,8 @@ export default async function CategoryAuditPage() {
     { n: 3, label: "Provider normalize (root, name+slug geçen)", count: roots.length, note: "children nested korunur; kayıp = name/slug'ı bozuk root" },
     { n: 4, label: "Active node (flatten)", count: activeAll.length, note: "status='active'" },
     { n: 5, label: "Inactive node (flatten)", count: inactiveAll.length, note: "draft/passive/archived — public'te GİZLİ (kasıtlı)" },
-    { n: 6, label: "Header root kategori", count: megaRoots, note: "active root (cap 50)" },
-    { n: 7, label: "Mega Menu root kategori", count: megaRoots, note: "= Header (aynı türetme)" },
+    { n: 6, label: "Header curated kategori", count: `${megaRoots}/${HEADER_NAV_CONFIG.length}`, note: headerMissing.length ? `Bulunamayan: ${headerMissing.join(", ")}` : "Tüm curated öğeler çözüldü ✓" },
+    { n: 7, label: "Mega Menu (curated + alt kat.)", count: megaRoots, note: "= Header; her biri canlı alt kategorilerini gösterir" },
     { n: 8, label: "Homepage Rail kategori", count: railItems.length, note: "active root + banner_image (görselsiz vitrine giremez)" },
     { n: 9, label: "Mobile Menu kategori", count: nav.length, note: "active root (cap 50) = Footer" },
     { n: 10, label: "Sitemap.xml kategori URL", count: sitemapCats.length, note: "TÜM active (roots+children) — SEO tam kapsam" },
