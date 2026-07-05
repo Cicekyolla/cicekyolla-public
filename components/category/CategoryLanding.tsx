@@ -4,10 +4,13 @@ import { fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock }
 import { getCategoryTree } from "@/lib/categories";
 import {
   mapTreeToItems,
+  mapCategoryChildrenToItems,
   getBreadcrumbTrailFromTree,
   findCategoryIdBySlug,
+  findCategoryNodeBySlug,
 } from "@/lib/catalog";
 import { ProductCard } from "@/components/home/ProductCard";
+import { CategorySubcategoryRail } from "@/components/category/CategorySubcategoryRail";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -93,6 +96,11 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // Breadcrumb: parent-child ağaçtan türetilir; yoksa 2 seviyeli fallback.
   const trail = tree ? getBreadcrumbTrailFromTree(tree, slug) : [];
 
+  // Alt koleksiyon sliderı: yalnız bu kategori node'unun active child + grandchild havuzu.
+  // Header/Homepage slider ile karışmaz; her landing kendi alt koleksiyonunu üretir.
+  const currentCategory = tree ? findCategoryNodeBySlug(tree, slug) : null;
+  const childCollections = mapCategoryChildrenToItems(currentCategory, 50);
+
   // ── KATEGORİ ÜRÜNLERİ (canlı katalog + sıralama + sayfalama) ──
   // Admin Ürün Merkezi > Kapsam/Kategori → API → DB → BURASI → müşteri.
   // slug → category_id → /api/products?category_id=&status=active&sort=&page=.
@@ -173,6 +181,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
             ) : null}
           </div>
         </section>
+
+        <CategorySubcategoryRail title={page.h1} items={childCollections} />
 
         {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
         {products.length > 0 ? (
