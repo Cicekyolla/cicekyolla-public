@@ -6,8 +6,10 @@ import {
   mapTreeToItems,
   getBreadcrumbTrailFromTree,
   findCategoryIdBySlug,
+  findCategoryNodeBySlug,
 } from "@/lib/catalog";
 import { ProductCard } from "@/components/home/ProductCard";
+import { FloatingCategoryRail } from "@/components/home/FloatingCategoryRail";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -108,6 +110,12 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   const pageNum = Math.max(1, Number(typeof searchParams?.page === "string" ? searchParams.page : 1) || 1);
 
   const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
+  // Kategori-içi alt kategori slider'ı (Çiçeksepeti deseni): mevcut kategorinin
+  // DOĞRUDAN children'ı → yuvarlak koleksiyon kartları (≤50). Canlı ağaç, uydurma yok.
+  const currentNode = tree ? findCategoryNodeBySlug(tree, slug) : null;
+  const subItems = currentNode?.children
+    ? mapTreeToItems(currentNode.children as Parameters<typeof mapTreeToItems>[0]).slice(0, 50)
+    : [];
   const productPage = categoryId
     ? await fetchProductsPaged({ category_id: categoryId, page_size: 12, page: pageNum, sort })
     : null;
@@ -173,6 +181,13 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
             ) : null}
           </div>
         </section>
+
+        {/* ── Alt Kategori Slider (Çiçeksepeti deseni): mevcut kategorinin children'ı ── */}
+        {subItems.length > 0 ? (
+          <section aria-label="Alt kategoriler" className="max-w-[1440px] mx-auto pt-8 lg:pt-10">
+            <FloatingCategoryRail items={subItems} variant="light" label={`${page.h1} Kategorileri`} />
+          </section>
+        ) : null}
 
         {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
         {products.length > 0 ? (

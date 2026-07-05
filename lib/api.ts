@@ -245,6 +245,7 @@ export interface PublicProductListItem {
 export interface PublicProductListParams {
   is_bestseller?: boolean; is_featured?: boolean; is_new?: boolean;
   category_id?: number; page_size?: number;
+  q?: string; // metin arama (backend /api/products?q= destekler)
   sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
 }
 
@@ -268,6 +269,7 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.is_featured) q.set("is_featured", "true");
   if (params.is_new) q.set("is_new", "true");
   if (params.category_id) q.set("category_id", String(params.category_id));
+  if (params.q && params.q.trim()) q.set("q", params.q.trim());
   if (params.sort) q.set("sort", params.sort);
   const url = `${API_ORIGIN}/api/products?${q.toString()}`;
   let res: Response;

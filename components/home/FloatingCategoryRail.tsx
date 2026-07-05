@@ -14,7 +14,32 @@ import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
 
-export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
+export function FloatingCategoryRail({
+  items,
+  variant = "dark",
+  label = "Koleksiyonlar",
+}: {
+  items?: CategoryItem[];
+  variant?: "dark" | "light";
+  label?: string;
+}) {
+  const light = variant === "light";
+  const t = {
+    container: light
+      ? "rgba(250,248,255,0.92)"
+      : "rgba(6, 2, 18, 0.82)",
+    border: light ? "1px solid rgba(124,58,237,0.14)" : "1px solid rgba(255,255,255,0.13)",
+    shadow: light
+      ? "0 12px 40px rgba(124,58,237,0.08), 0 2px 8px rgba(0,0,0,0.04)"
+      : ["0 40px 120px rgba(0,0,0,0.65)", "0 8px 32px rgba(0,0,0,0.4)", "0 1px 0 rgba(255,255,255,0.12) inset", "0 -1px 0 rgba(255,255,255,0.03) inset"].join(", "),
+    labelText: light ? "text-[#7C3AED]" : "text-white/45",
+    hintText: light ? "text-[#9CA3AF]" : "text-white/22",
+    arrowBg: light ? "rgba(255,255,255,0.95)" : "rgba(20,10,40,0.85)",
+    arrowBorder: light ? "1px solid rgba(124,58,237,0.2)" : "1px solid rgba(255,255,255,0.18)",
+    arrowText: light ? "text-[#7C3AED]" : "text-white/90 hover:text-white",
+    nameText: light ? "text-[#374151] group-hover:text-[#7C3AED]" : "text-white/72 group-hover:text-white",
+    countText: light ? "text-[#9CA3AF]" : "text-white/25",
+  };
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
   const cats = items ?? [];
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start" });
@@ -26,23 +51,18 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
       <div
         className="mx-4 sm:mx-6 lg:mx-14 rounded-[32px] px-5 sm:px-7 pt-5 pb-6"
         style={{
-          background: "rgba(6, 2, 18, 0.82)",
+          background: t.container,
           backdropFilter: "blur(48px) saturate(220%) brightness(1.05)",
           WebkitBackdropFilter: "blur(48px) saturate(220%) brightness(1.05)",
-          border: "1px solid rgba(255,255,255,0.13)",
-          boxShadow: [
-            "0 40px 120px rgba(0,0,0,0.65)",
-            "0 8px 32px rgba(0,0,0,0.4)",
-            "0 1px 0 rgba(255,255,255,0.12) inset",
-            "0 -1px 0 rgba(255,255,255,0.03) inset",
-          ].join(", "),
+          border: t.border,
+          boxShadow: t.shadow,
         }}
       >
         {/* Label row */}
         <div className="flex items-center gap-2.5 mb-4">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C084FC] flex-shrink-0" />
-          <span className="text-white/45 text-[10px] tracking-[0.3em] uppercase font-semibold">Koleksiyonlar</span>
-          <span className="ml-auto flex items-center gap-1 text-white/22 text-[9px] tracking-wide">
+          <span className={`${t.labelText} text-[10px] tracking-[0.3em] uppercase font-semibold`}>{label}</span>
+          <span className={`ml-auto flex items-center gap-1 ${t.hintText} text-[9px] tracking-wide`}>
             Kaydır
             <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
               <path d="M1.5 5h7M5.5 1.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -56,8 +76,8 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
             type="button"
             aria-label="Geri kaydır"
             onClick={() => emblaApi?.scrollPrev()}
-            className="hidden sm:flex absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center text-white/90 hover:text-white transition-all"
-            style={{ background: "rgba(20,10,40,0.85)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}
+            className={`hidden sm:flex absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center ${t.arrowText} transition-all`}
+            style={{ background: t.arrowBg, border: t.arrowBorder, backdropFilter: "blur(8px)" }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
@@ -65,8 +85,8 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
             type="button"
             aria-label="İleri kaydır"
             onClick={() => emblaApi?.scrollNext()}
-            className="hidden sm:flex absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center text-white/90 hover:text-white transition-all"
-            style={{ background: "rgba(20,10,40,0.85)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}
+            className={`hidden sm:flex absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center ${t.arrowText} transition-all`}
+            style={{ background: t.arrowBg, border: t.arrowBorder, backdropFilter: "blur(8px)" }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
@@ -138,7 +158,7 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
                   {/* Name + count */}
                   <div className="text-center w-full min-w-0">
                     <p
-                      className="text-white/72 group-hover:text-white transition-colors duration-200 font-semibold"
+                      className={`${t.nameText} transition-colors duration-200 font-semibold`}
                       style={{
                         fontSize: "clamp(9px, 1vw, 11px)",
                         lineHeight: 1.35,
@@ -152,7 +172,7 @@ export function FloatingCategoryRail({ items }: { items?: CategoryItem[] }) {
                     </p>
                     {cat.count && (
                       <p
-                        className="text-white/25 mt-0.5"
+                        className={`${t.countText} mt-0.5`}
                         style={{ fontSize: "clamp(7px, 0.82vw, 9px)" }}
                       >
                         {cat.count}
