@@ -16,6 +16,8 @@ interface HeaderSearchProduct {
   badge?: string;
 }
 
+type SearchOption = { type: "category" | "product"; name: string; href: string };
+
 /* ─── Header ─── */
 export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[]; search?: { name: string; href: string }[] }) {
   // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
@@ -34,11 +36,16 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
   const [query, setQuery] = useState("");
   const [productResults, setProductResults] = useState<HeaderSearchProduct[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
   // TEK KAYNAK: search de canlı kategori ağacından çözer (gerçek slug route'ları).
   const trimmedQuery = query.trim();
   const searchResults = trimmedQuery.length >= 1
     ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(trimmedQuery.toLocaleLowerCase("tr"))).slice(0, 6)
     : [];
+  const searchOptions: SearchOption[] = [
+    ...searchResults.map((r) => ({ type: "category" as const, name: r.name, href: r.href })),
+    ...productResults.map((p) => ({ type: "product" as const, name: p.name, href: p.href })),
+  ];
   const hasSearchPanel = trimmedQuery.length >= 1 && (searchResults.length > 0 || productResults.length > 0 || searchLoading || trimmedQuery.length >= 2);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -52,6 +59,7 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
 
   useEffect(() => {
     const q = query.trim();
+    setActiveSearchIndex(-1);
     if (q.length < 2) {
       setProductResults([]);
       setSearchLoading(false);
@@ -83,6 +91,34 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
     setSearchOpen(false);
     setQuery("");
     setProductResults([]);
+    setActiveSearchIndex(-1);
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSearch();
+      return;
+    }
+    if (!hasSearchPanel || searchOptions.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSearchIndex((i) => (i + 1) % searchOptions.length);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSearchIndex((i) => (i <= 0 ? searchOptions.length - 1 : i - 1));
+      return;
+    }
+    if (event.key === "Enter" && activeSearchIndex >= 0) {
+      event.preventDefault();
+      const target = searchOptions[activeSearchIndex];
+      if (target?.href) {
+        closeSearch();
+        window.location.href = target.href;
+      }
+    }
   };
 
   const handleMouseEnter = (key: string) => {
@@ -283,22 +319,30 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                     placeholder="Gül, orkide, buket, özel gün ara..."
+                    aria-expanded={hasSearchPanel}
+                    aria-controls="enterprise-search-results"
+                    aria-activedescendant={activeSearchIndex >= 0 ? `search-option-${activeSearchIndex}` : undefined}
                     className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
                   />
                   {/* Enterprise Search: canlı kategori + ürün önerileri */}
                   {hasSearchPanel && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-3xl shadow-[0_20px_64px_rgba(17,24,39,0.13)] overflow-hidden z-20">
+                    <div id="enterprise-search-results" role="listbox" className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-3xl shadow-[0_20px_64px_rgba(17,24,39,0.13)] overflow-hidden z-20">
                       <div className="max-h-[70vh] overflow-y-auto p-2">
                         {searchResults.length > 0 && (
                           <div className="py-2">
                             <p className="px-3 pb-2 text-[10px] tracking-[0.22em] uppercase font-bold text-[#8B5CF6]">Kategoriler</p>
-                            {searchResults.map((r) => (
+                            {searchResults.map((r, index) => (
                               <Link
+                                id={`search-option-${index}`}
+                                role="option"
+                                aria-selected={activeSearchIndex === index}
                                 key={r.href}
                                 href={r.href}
                                 onClick={closeSearch}
-                                className="flex items-center justify-between px-3 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors rounded-2xl"
+                                onMouseEnter={() => setActiveSearchIndex(index)}
+                                className={`flex items-center justify-between px-3 py-3 text-sm transition-colors rounded-2xl ${activeSearchIndex === index ? "bg-[#F5F3FF] text-[#8B5CF6]" : "text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6]"}`}
                               >
                                 <span className="font-semibold">{r.name}</span>
                                 <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
@@ -312,26 +356,33 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                             <p className="px-3 pb-2 text-[10px] tracking-[0.22em] uppercase font-bold text-[#8B5CF6]">Ürünler</p>
                             {searchLoading && productResults.length === 0 ? (
                               <div className="px-3 py-4 text-sm text-[#9CA3AF]">Ürünler aranıyor…</div>
-                            ) : productResults.map((p) => (
-                              <Link
-                                key={p.id}
-                                href={p.href}
-                                onClick={closeSearch}
-                                className="flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-[#F5F3FF] transition-colors group"
-                              >
-                                <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#F5F3FF] border border-[#EDE9FE] flex-shrink-0">
-                                  {p.image ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" /> : null}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-semibold text-[#111827] truncate group-hover:text-[#7C3AED]">{p.name}</p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    {p.price ? <span className="text-xs font-bold text-[#7C3AED]">{p.price}</span> : null}
-                                    {p.badge ? <span className="text-[10px] font-bold text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded-full">{p.badge}</span> : null}
+                            ) : productResults.map((p, productIndex) => {
+                              const index = searchResults.length + productIndex;
+                              return (
+                                <Link
+                                  id={`search-option-${index}`}
+                                  role="option"
+                                  aria-selected={activeSearchIndex === index}
+                                  key={p.id}
+                                  href={p.href}
+                                  onClick={closeSearch}
+                                  onMouseEnter={() => setActiveSearchIndex(index)}
+                                  className={`flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors group ${activeSearchIndex === index ? "bg-[#F5F3FF]" : "hover:bg-[#F5F3FF]"}`}
+                                >
+                                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#F5F3FF] border border-[#EDE9FE] flex-shrink-0">
+                                    {p.image ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" /> : null}
                                   </div>
-                                </div>
-                                <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB] flex-shrink-0" />
-                              </Link>
-                            ))}
+                                  <div className="min-w-0 flex-1">
+                                    <p className={`text-sm font-semibold truncate ${activeSearchIndex === index ? "text-[#7C3AED]" : "text-[#111827] group-hover:text-[#7C3AED]"}`}>{p.name}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {p.price ? <span className="text-xs font-bold text-[#7C3AED]">{p.price}</span> : null}
+                                      {p.badge ? <span className="text-[10px] font-bold text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded-full">{p.badge}</span> : null}
+                                    </div>
+                                  </div>
+                                  <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB] flex-shrink-0" />
+                                </Link>
+                              );
+                            })}
                           </div>
                         )}
 
