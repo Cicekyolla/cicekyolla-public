@@ -119,6 +119,7 @@ export default async function HomePage() {
   const liveItems = tree ? mapTreeToItems(tree) : [];
   // Rail: Hero'dan bağımsız SATIŞ-ODAKLI slider (root+child+grandchild, ≤50).
   const collections = buildCollectionSlider(tree, 50);
+  const heroItem = collections.find((c) => c.image) ?? collections[0] ?? null;
   const imagedCollections = liveItems.filter((c) => c.image); // Featured/Occasion görsel ister
 
   // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).
@@ -159,7 +160,7 @@ export default async function HomePage() {
         <FloatingCategoryRail items={collections} />
       </section>
 
-      <HomeHero />
+      <HomeHero heroItem={heroItem} />
       <TrustBar />
       <Manifesto />
       <FeaturedCollections items={imagedCollections} />
