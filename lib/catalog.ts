@@ -21,67 +21,19 @@ export const categoryBadges: Record<string, { emoji: string; label: string; colo
   c16: { emoji: "🚚", label: "81 İl", color: "#10B981" },
 };
 
-export interface MegaMenuLink {
-  name: string;
-  sub: string;
-  href: string;
-}
-export interface MegaMenuFeatured {
-  image: string;
-  label: string;
-  title: string;
-  href: string;
-}
-export interface MegaMenuGroup {
-  featured: MegaMenuFeatured;
-  categories: MegaMenuLink[];
-}
-export interface NavLink {
-  label: string;
-  href: string;
-}
+export interface MegaMenuLink { name: string; sub: string; href: string }
+export interface MegaMenuFeatured { image: string; label: string; title: string; href: string }
+export interface MegaMenuGroup { featured: MegaMenuFeatured; categories: MegaMenuLink[] }
+export interface NavLink { label: string; href: string }
 
 const salesPriorityWords = [
-  "anneler günü",
-  "öğretmenler günü",
-  "sevgili",
-  "doğum günü",
-  "özel gün",
-  "orkide",
-  "gül",
-  "buket",
-  "kampanya",
-  "koleksiyon",
-  "saksı",
-  "yapay dekorasyon",
-  "yapay çiçek",
-  "kutuda",
-  "vazoda",
-  "bonsai",
-  "kaktüs",
-  "sukulent",
-  "teraryum",
-  "lilyum",
-  "papatya",
-  "lale",
-  "krizantem",
-  "gerbera",
-  "mevsim",
-  "çelenk",
-  "açılış",
-  "düğün",
-  "nişan",
-  "kurumsal",
-  "geçmiş olsun",
-  "tebrik",
-  "yeni iş",
-  "yeni bebek",
-  "özür",
-  "aşk",
-  "romantik",
-  "hediye",
-  "premium",
-  "dekorasyon",
+  "anneler günü", "öğretmenler günü", "sevgili", "doğum günü", "özel gün",
+  "orkide", "gül", "buket", "kampanya", "koleksiyon", "saksı",
+  "yapay dekorasyon", "yapay çiçek", "kutuda", "vazoda", "bonsai", "kaktüs",
+  "sukulent", "teraryum", "lilyum", "papatya", "lale", "krizantem", "gerbera",
+  "mevsim", "çelenk", "açılış", "düğün", "nişan", "kurumsal", "geçmiş olsun",
+  "tebrik", "yeni iş", "yeni bebek", "özür", "aşk", "romantik", "hediye",
+  "premium", "dekorasyon",
 ];
 
 const norm = (s: string) => s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
@@ -124,7 +76,9 @@ export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
 
   scored.sort((a, b) => a.score - b.score || a.index - b.index);
 
-  return scored.slice(0, 50).map(({ node }) => toItem(node));
+  // Homepage rail artık 50 ile sınırlı değil: tüm active kategori havuzu görünür.
+  // Satış odaklı olanlar öne gelir, kalan active kategoriler de 5'li kaydırma içinde devam eder.
+  return scored.map(({ node }) => toItem(node));
 }
 
 export function getBreadcrumbTrailFromTree(
