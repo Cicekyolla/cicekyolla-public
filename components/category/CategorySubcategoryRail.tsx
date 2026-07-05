@@ -8,6 +8,17 @@ import type { CategoryItem } from "@/lib/catalog";
 
 const STEP = 5;
 
+function badgeClass(tag?: string): string {
+  if (!tag) return "";
+  const t = tag.toLocaleLowerCase("tr");
+  if (t.includes("kampanya")) return "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]";
+  if (t.includes("premium")) return "bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]";
+  if (t.includes("yeni")) return "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]";
+  if (t.includes("çok") || t.includes("satan")) return "bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]";
+  if (t.includes("trend")) return "bg-[#FDF2F8] text-[#BE185D] border-[#FBCFE8]";
+  return "bg-white text-[#7C3AED] border-[#DDD6FE]";
+}
+
 export function CategorySubcategoryRail({
   title,
   items,
@@ -50,6 +61,9 @@ export function CategorySubcategoryRail({
             >
               {title} İçinde Keşfet
             </h2>
+            <p className="mt-2 text-sm text-[#6B7280]">
+              İlgili koleksiyonları hızlıca gezin, doğru aranjmana daha kısa yoldan ulaşın.
+            </p>
           </div>
           <button
             type="button"
@@ -69,7 +83,7 @@ export function CategorySubcategoryRail({
             type="button"
             aria-label="Alt koleksiyonlarda geri git"
             onClick={scrollPrev}
-            className="hidden sm:flex absolute left-[-12px] top-[44%] -translate-y-1/2 z-10 w-10 h-10 rounded-full items-center justify-center text-[#4C1D95] hover:scale-105 transition-all bg-white border border-[#E5E7EB] shadow-[0_10px_30px_rgba(17,24,39,0.10)]"
+            className="hidden sm:flex absolute left-[-12px] top-[42%] -translate-y-1/2 z-10 w-10 h-10 rounded-full items-center justify-center text-[#4C1D95] hover:scale-105 transition-all bg-white border border-[#E5E7EB] shadow-[0_10px_30px_rgba(17,24,39,0.10)]"
           >
             <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
@@ -77,7 +91,7 @@ export function CategorySubcategoryRail({
             type="button"
             aria-label="Alt koleksiyonlarda ileri git"
             onClick={scrollNext}
-            className="hidden sm:flex absolute right-[-12px] top-[44%] -translate-y-1/2 z-10 w-10 h-10 rounded-full items-center justify-center text-[#4C1D95] hover:scale-105 transition-all bg-white border border-[#E5E7EB] shadow-[0_10px_30px_rgba(17,24,39,0.10)]"
+            className="hidden sm:flex absolute right-[-12px] top-[42%] -translate-y-1/2 z-10 w-10 h-10 rounded-full items-center justify-center text-[#4C1D95] hover:scale-105 transition-all bg-white border border-[#E5E7EB] shadow-[0_10px_30px_rgba(17,24,39,0.10)]"
           >
             <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
@@ -88,8 +102,8 @@ export function CategorySubcategoryRail({
                 <Link
                   key={cat.id}
                   href={cat.href}
-                  className="flex-shrink-0 group flex flex-col items-center gap-3 select-none"
-                  style={{ width: "clamp(78px, 6.6vw, 108px)" }}
+                  className="flex-shrink-0 group flex flex-col items-center gap-3 select-none rounded-[28px] p-2 transition-all hover:bg-[#FAF5FF]"
+                  style={{ width: "clamp(92px, 7.4vw, 126px)" }}
                   draggable={false}
                 >
                   <motion.div
@@ -124,21 +138,37 @@ export function CategorySubcategoryRail({
                       </span>
                     )}
                     <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(140deg, rgba(139,92,246,0.20), rgba(255,255,255,0.12))" }} />
+                    {cat.tag ? (
+                      <span className={`absolute left-1/2 top-1 -translate-x-1/2 max-w-[88%] truncate rounded-full border px-2 py-0.5 text-[9px] font-extrabold shadow-sm ${badgeClass(cat.tag)}`}>
+                        {cat.tag}
+                      </span>
+                    ) : null}
                   </motion.div>
 
-                  <p
-                    className="w-full text-center text-[#374151] group-hover:text-[#7C3AED] transition-colors font-semibold"
-                    style={{
-                      fontSize: "clamp(9.5px, 0.86vw, 12px)",
-                      lineHeight: 1.3,
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                    } as CSSProperties}
-                  >
-                    {cat.name}
-                  </p>
+                  <div className="w-full text-center min-w-0">
+                    <p
+                      className="text-[#374151] group-hover:text-[#7C3AED] transition-colors font-semibold"
+                      style={{
+                        fontSize: "clamp(9.8px, 0.86vw, 12px)",
+                        lineHeight: 1.3,
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                      } as CSSProperties}
+                    >
+                      {cat.name}
+                    </p>
+                    {cat.count ? (
+                      <p className="mt-1 text-[10px] font-medium text-[#9CA3AF]">
+                        {cat.count} seçenek
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[10px] font-medium text-[#A78BFA] opacity-0 group-hover:opacity-100 transition-opacity">
+                        Koleksiyonu gör
+                      </p>
+                    )}
+                  </div>
                 </Link>
               ))}
             </div>
