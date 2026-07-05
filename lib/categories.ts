@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { fetchCategoryTree, type CategoryNode } from "./api";
+import { fetchCategoryTree, isCategoryVisible, type CategoryNode } from "./api";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — TEK KATEGORİ KAYNAĞI (CategoryTree single source)
@@ -14,8 +14,7 @@ export const getCategoryTree = cache(async (): Promise<CategoryNode[] | null> =>
 });
 
 const isActive = (n: CategoryNode) =>
-  n && typeof n.name === "string" && typeof n.slug === "string" &&
-  (typeof n.status !== "string" || n.status === "active");
+  n && typeof n.name === "string" && typeof n.slug === "string" && isCategoryVisible(n);
 
 export interface NavCategory { name: string; href: string; slug: string }
 

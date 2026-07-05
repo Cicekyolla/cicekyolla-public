@@ -1,3 +1,4 @@
+import { isCategoryVisible } from "@/lib/api";
 /**
  * CICEKYOLLA OS — CATALOG (tek kanonik frontend kaynağı)
  * ------------------------------------------------------------------
@@ -92,7 +93,7 @@ export function mapTreeToItems(nodes: CategoryNode[]): CategoryItem[] {
   for (const n of nodes) {
     if (!n || typeof n.name !== "string" || typeof n.slug !== "string") continue;
     // Public yalnız yayında (active) kategoriyi vitrinde gösterir; draft/passive atlanır.
-    if (typeof n.status === "string" && n.status !== "active") continue;
+    if (!isCategoryVisible(n)) continue;
     const href = `/kategori/${n.slug}`;
     // TEK KAYNAK: yalnız node'un kendi görseli (banner_image/icon). Hardcoded eşleşme YOK.
     const raw = n as { banner_image?: unknown; icon?: unknown; image?: unknown };
@@ -165,7 +166,7 @@ export function mapTreeToMegaMenu(nodes: CategoryNode[], maxGroups = 50, maxLink
   const out: Record<string, MegaGroup> = {};
   const isActive = (n: CategoryNode) =>
     n && typeof n.name === "string" && typeof n.slug === "string" &&
-    (typeof n.status !== "string" || n.status === "active");
+    isCategoryVisible(n);
   for (const n of nodes.filter(isActive).slice(0, maxGroups)) {
     const href = `/kategori/${n.slug}`;
     const kids = Array.isArray(n.children) ? (n.children as CategoryNode[]) : [];

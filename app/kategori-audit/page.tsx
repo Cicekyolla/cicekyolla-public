@@ -1,6 +1,6 @@
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { mapTreeToItems, mapTreeToMegaMenu, getBreadcrumbTrailFromTree } from "@/lib/catalog";
-import type { CategoryNode } from "@/lib/api";
+import { isCategoryVisible, type CategoryNode } from "@/lib/api";
 
 /* ============================================================================
    CICEKYOLLA — CATEGORY SYNC DATA AUDIT (canlı doğrulama)
@@ -11,8 +11,7 @@ import type { CategoryNode } from "@/lib/api";
 export const dynamic = "force-dynamic"; // her ziyarette canlı sayım
 
 const isActive = (n: CategoryNode) =>
-  n && typeof n.name === "string" && typeof n.slug === "string" &&
-  (typeof n.status !== "string" || n.status === "active");
+  n && typeof n.name === "string" && typeof n.slug === "string" && isCategoryVisible(n);
 
 function flattenAll(nodes: CategoryNode[]): CategoryNode[] {
   const out: CategoryNode[] = [];

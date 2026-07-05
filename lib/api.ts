@@ -121,6 +121,15 @@ export interface CategoryNode {
   [key: string]: unknown;
 }
 
+// TEK KAYNAK kategori görünürlük kuralı. Status enum: draft|active|passive|archived.
+// İş kararı: müşteriye 'passive' ve 'archived' GİZLENİR; 'draft' (Taslak) ve 'active'
+// GÖRÜNÜR. Sebep: mevcut katalogun tamamı Taslak durumunda ve yayında olması isteniyor.
+// (Kesin active-only istenirse tek satır: `s === "active"`.)
+export function isCategoryVisible(node: { status?: unknown }): boolean {
+  const s = typeof node?.status === "string" ? node.status.toLowerCase() : "";
+  return s !== "passive" && s !== "archived";
+}
+
 // Canlı kategori ağacını çeker. Env path yoksa veya backend not_found/hata
 // dönerse null → çağıran taraf mevcut kaynağa güvenle geri düşer.
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
