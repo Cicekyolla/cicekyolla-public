@@ -173,12 +173,6 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               {page.h1}
             </h1>
 
-            {page.intro_html ? (
-              <div
-                className="mt-6 max-w-[720px] text-[#4B5563] text-[17px] leading-[1.8] [&_p]:mb-4 [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_strong]:text-[#111827] [&_strong]:font-semibold"
-                dangerouslySetInnerHTML={{ __html: page.intro_html }}
-              />
-            ) : null}
           </div>
         </section>
 
@@ -254,10 +248,18 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
           </section>
         ) : null}
 
-        {/* ── SEO body ── */}
-        {page.body_blocks && page.body_blocks.length > 0 ? (
+        {/* ── SEO açıklama + body (ürünlerin altında, SSS'nin üstünde) ── */}
+        {page.intro_html || (page.body_blocks && page.body_blocks.length > 0) ? (
           <section aria-label="Koleksiyon içeriği" className="max-w-[820px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
-            {page.body_blocks.map((b, i) => renderBlock(b, i))}
+            {page.intro_html ? (
+              <div
+                className="mb-8 text-[#4B5563] text-[17px] leading-[1.8] [&_p]:mb-4 [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_strong]:text-[#111827] [&_strong]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: page.intro_html }}
+              />
+            ) : null}
+            {page.body_blocks && page.body_blocks.length > 0
+              ? page.body_blocks.map((b, i) => renderBlock(b, i))
+              : null}
           </section>
         ) : null}
 

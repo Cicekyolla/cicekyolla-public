@@ -8,7 +8,7 @@
  * Gereksinim: embla-carousel-react (package.json dependencies'e eklenecek).
  */
 
-import type { CSSProperties } from "react";
+import { type CSSProperties, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
@@ -42,7 +42,21 @@ export function FloatingCategoryRail({
   };
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
   const cats = items ?? [];
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start" });
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start", containScroll: "trimSnaps" });
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+  const onSelect = useCallback((api: NonNullable<typeof emblaApi>) => {
+    setCanPrev(api.canScrollPrev());
+    setCanNext(api.canScrollNext());
+  }, []);
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect(emblaApi);
+    emblaApi.on("select", onSelect).on("reInit", onSelect);
+    return () => { emblaApi.off("select", onSelect).off("reInit", onSelect); };
+  }, [emblaApi, onSelect]);
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
   if (cats.length === 0) return null;
 
   return (
@@ -75,8 +89,9 @@ export function FloatingCategoryRail({
           <button
             type="button"
             aria-label="Geri kaydır"
-            onClick={() => emblaApi?.scrollPrev()}
-            className={`hidden sm:flex absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center ${t.arrowText} transition-all`}
+            onClick={scrollPrev}
+            disabled={!canPrev}
+            className={`hidden sm:flex absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center ${t.arrowText} transition-all ${canPrev ? "opacity-100 cursor-pointer" : "opacity-0 pointer-events-none"}`}
             style={{ background: t.arrowBg, border: t.arrowBorder, backdropFilter: "blur(8px)" }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -84,8 +99,9 @@ export function FloatingCategoryRail({
           <button
             type="button"
             aria-label="İleri kaydır"
-            onClick={() => emblaApi?.scrollNext()}
-            className={`hidden sm:flex absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center ${t.arrowText} transition-all`}
+            onClick={scrollNext}
+            disabled={!canNext}
+            className={`hidden sm:flex absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full items-center justify-center ${t.arrowText} transition-all ${canNext ? "opacity-100 cursor-pointer" : "opacity-0 pointer-events-none"}`}
             style={{ background: t.arrowBg, border: t.arrowBorder, backdropFilter: "blur(8px)" }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
