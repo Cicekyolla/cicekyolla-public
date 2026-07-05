@@ -53,7 +53,7 @@ export default async function CategoryAuditPage() {
     { n: 9, label: "Mobile Menu kategori", count: nav.length, note: "active root (cap 50) = Footer" },
     { n: 10, label: "Sitemap.xml kategori URL", count: sitemapCats.length, note: "TÜM active (roots+children) — SEO tam kapsam" },
     { n: 11, label: "Category Landing açılabilen slug", count: activeAll.length, note: "her active node → /kategori/{slug}" },
-    { n: 12, label: "Search index kategori", count: "—", note: "Search kategori-suggestion yok (backend gerekir)" },
+    { n: 12, label: "Search index kategori", count: sitemapCats.length, note: "Header search → flattenCategories (gerçek /kategori/{slug} route)" },
     { n: 13, label: "Footer kategori", count: nav.length, note: "= Mobile (getCategoryNav)" },
     { n: 14, label: "Breadcrumb üretilebilen kategori", count: breadcrumbOk, note: "ağaç trail — active node başına" },
     { n: 15, label: "JSON-LD kategori (breadcrumb)", count: activeAll.length, note: "her category sayfasında breadcrumb JSON-LD" },

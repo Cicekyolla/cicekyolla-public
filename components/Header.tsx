@@ -23,7 +23,7 @@ type MegaGroup = {
 };
 
 /* ─── Header ─── */
-export function Header({ menu, nav }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[] }) {
+export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[]; search?: { name: string; href: string }[] }) {
   // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
   const menuData: Record<string, MegaGroup> = menu ?? {}; // TEK KAYNAK: yalnız canlı kategori ağacı; hardcoded/fallback YOK
@@ -37,6 +37,11 @@ export function Header({ menu, nav }: { menu?: Record<string, MegaGroup>; nav?: 
 
   const [cartCount] = useState(2);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  // TEK KAYNAK: search de canlı kategori ağacından çözer (gerçek slug route'ları).
+  const searchResults = query.trim().length >= 1
+    ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(query.trim().toLocaleLowerCase("tr"))).slice(0, 8)
+    : [];
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -271,9 +276,27 @@ export function Header({ menu, nav }: { menu?: Record<string, MegaGroup>; nav?: 
                   <input
                     autoFocus
                     type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
                     placeholder="Gül, orkide, buket, özel gün ara..."
                     className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
                   />
+                  {/* Canlı kategori önerileri — gerçek /kategori/{slug} route'ları */}
+                  {searchResults.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-10">
+                      {searchResults.map((r) => (
+                        <Link
+                          key={r.href}
+                          href={r.href}
+                          onClick={() => { setSearchOpen(false); setQuery(""); }}
+                          className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0"
+                        >
+                          {r.name}
+                          <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
