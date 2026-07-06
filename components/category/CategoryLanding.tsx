@@ -202,7 +202,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
         ) : null}
 
         {/* ── Filtre çubuğu (Çiçeksepeti deseni, GERÇEK backend filtreleri) ── */}
-        {categoryId ? <FilterBar /> : null}
+        {categoryId ? <FilterBar categories={subItems.map((s) => ({ name: s.name, href: s.href }))} /> : null}
 
         {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
         {products.length > 0 ? (

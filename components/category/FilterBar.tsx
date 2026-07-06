@@ -24,11 +24,12 @@ const SORTS = [
   { key: "name_asc", label: "A → Z" },
 ] as const;
 
-export function FilterBar() {
+export function FilterBar({ categories = [] }: { categories?: { name: string; href: string }[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  const [open, setOpen] = useState<null | "type" | "sort">(null);
+  const [open, setOpen] = useState<null | "cat" | "type" | "sort">(null);
+  const [catQuery, setCatQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,6 +70,44 @@ export function FilterBar() {
   return (
     <div ref={rootRef} className="max-w-[1440px] mx-auto px-6 lg:px-14 pt-8 lg:pt-10">
       <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Kategori dropdown (CANLI alt kategoriler — Çiçeksepeti deseni, aramalı) */}
+        {categories.length > 0 && (
+          <div className="relative">
+            <button onClick={() => setOpen(open === "cat" ? null : "cat")} className={`${pill} ${idle}`}>
+              Kategori
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            {open === "cat" && (
+              <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-20">
+                <div className="p-2.5 border-b border-black/[0.05]">
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="M21 21l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                    <input
+                      value={catQuery}
+                      onChange={(e) => setCatQuery(e.target.value)}
+                      placeholder="Ara"
+                      className="w-full pl-9 pr-3 py-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-[13px] focus:outline-none focus:border-[#C4B5FD]"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto py-1.5">
+                  {categories
+                    .filter((c) => c.name.toLocaleLowerCase("tr").includes(catQuery.trim().toLocaleLowerCase("tr")))
+                    .map((c) => (
+                      <button
+                        key={c.href}
+                        onClick={() => { router.push(c.href); setOpen(null); setCatQuery(""); }}
+                        className="w-full text-left px-4 py-2.5 text-[13.5px] text-[#374151] hover:bg-[#F5F3FF] hover:text-[#7C3AED] transition-colors"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Ürün Tipi dropdown */}
         <div className="relative">
           <button onClick={() => setOpen(open === "type" ? null : "type")} className={`${pill} ${curType ? active : idle}`}>
