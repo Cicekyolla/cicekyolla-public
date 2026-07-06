@@ -10,6 +10,7 @@ import {
 } from "@/lib/catalog";
 import { ProductCard } from "@/components/home/ProductCard";
 import { FloatingCategoryRail } from "@/components/home/FloatingCategoryRail";
+import { FilterBar } from "@/components/category/FilterBar";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -108,6 +109,12 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   const sortParam = typeof searchParams?.sort === "string" ? searchParams.sort : "created_at_desc";
   const sort = (SORTS.find((s) => s.key === sortParam)?.key ?? "created_at_desc") as typeof SORTS[number]["key"];
   const pageNum = Math.max(1, Number(typeof searchParams?.page === "string" ? searchParams.page : 1) || 1);
+  // FilterBar filtreleri (gerçek backend paramları). Sahte filtre yok.
+  const sp = (k: string) => (typeof searchParams?.[k] === "string" ? (searchParams[k] as string) : undefined);
+  const filterType = sp("type");
+  const sameDay = sp("same_day") === "1";
+  const bestseller = sp("bestseller") === "1";
+  const isNew = sp("new") === "1";
 
   const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
   // Kategori-içi alt kategori slider'ı (Çiçeksepeti deseni): mevcut kategorinin
@@ -117,18 +124,29 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
     ? mapTreeToItems(currentNode.children as Parameters<typeof mapTreeToItems>[0]).slice(0, 50)
     : [];
   const productPage = categoryId
-    ? await fetchProductsPaged({ category_id: categoryId, page_size: 12, page: pageNum, sort })
+    ? await fetchProductsPaged({
+        category_id: categoryId, page_size: 12, page: pageNum, sort,
+        product_type: filterType || undefined,
+        same_day_available: sameDay || undefined,
+        is_bestseller: bestseller || undefined,
+        is_new: isNew || undefined,
+      })
     : null;
   const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
   const totalProducts = productPage?.pagination.total ?? 0;
   const buildHref = (p: { sort?: string; page?: number }) => {
-    const sp = new URLSearchParams();
+    const qp = new URLSearchParams();
+    // Aktif filtreleri koru (pagination filtreleri düşürmez)
+    for (const k of ["type", "same_day", "bestseller", "new"]) {
+      const v = sp(k);
+      if (v) qp.set(k, v);
+    }
     const s = p.sort ?? sort;
     const pg = p.page ?? 1;
-    if (s !== "created_at_desc") sp.set("sort", s);
-    if (pg > 1) sp.set("page", String(pg));
-    const qs = sp.toString();
+    if (s !== "created_at_desc") qp.set("sort", s);
+    if (pg > 1) qp.set("page", String(pg));
+    const qs = qp.toString();
     return qs ? `${path}?${qs}` : path;
   };
 
@@ -183,9 +201,12 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
           </section>
         ) : null}
 
+        {/* ── Filtre çubuğu (Çiçeksepeti deseni, GERÇEK backend filtreleri) ── */}
+        {categoryId ? <FilterBar /> : null}
+
         {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
         {products.length > 0 ? (
-          <section aria-label="Bu kategorideki ürünler" className="max-w-[1440px] mx-auto px-6 lg:px-14 py-14 lg:py-20">
+          <section aria-label="Bu kategorideki ürünler" className="max-w-[1440px] mx-auto px-6 lg:px-14 py-10 lg:py-14">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
               <div>
                 <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Ürünler</p>
@@ -196,19 +217,6 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
                   Bu Koleksiyondaki Ürünler
                   {totalProducts > 0 ? <span className="ml-2 text-base font-normal text-[#9CA3AF]">({totalProducts})</span> : null}
                 </h2>
-              </div>
-              {/* Sıralama */}
-              <div className="flex flex-wrap items-center gap-2">
-                {SORTS.map((s) => (
-                  <Link
-                    key={s.key}
-                    href={buildHref({ sort: s.key, page: 1 })}
-                    scroll={false}
-                    className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-colors ${sort === s.key ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] border border-[#E5E7EB] hover:border-[#DDD6FE]"}`}
-                  >
-                    {s.label}
-                  </Link>
-                ))}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
@@ -245,6 +253,16 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
                 ) : null}
               </nav>
             ) : null}
+          </section>
+        ) : null}
+
+        {/* Filtre sonucu boşsa bilgilendirme */}
+        {categoryId && products.length === 0 ? (
+          <section className="max-w-[1440px] mx-auto px-6 lg:px-14 py-16 text-center">
+            <p className="text-[15px] text-[#6B7280]">Seçtiğin filtrelere uygun ürün bulunamadı.</p>
+            <Link href={path} scroll={false} className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline">
+              Filtreleri temizle
+            </Link>
           </section>
         ) : null}
 
