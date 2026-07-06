@@ -170,9 +170,9 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
 
           {/* CTA */}
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <button className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#111827] text-white text-[15px] font-bold transition-all hover:bg-[#000] hover:scale-[1.01]">
-              <ShoppingBag className="w-5 h-5" /> Sepete Ekle
-            </button>
+            <Link href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`} className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#111827] text-white text-[15px] font-bold transition-all hover:bg-[#000] hover:scale-[1.01]">
+              <ShoppingBag className="w-5 h-5" /> Hemen Sipariş Ver
+            </Link>
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
               target="_blank"
