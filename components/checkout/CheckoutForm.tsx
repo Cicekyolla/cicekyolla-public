@@ -45,7 +45,7 @@ export function CheckoutForm({ productName, productId, priceMinor }: Props) {
           delivery_address: f.delivery_address || null, delivery_district: f.delivery_district || null,
           delivery_date: f.delivery_date || null, delivery_time_slot: f.delivery_time_slot || null,
           card_message: f.card_message || null, source: "web",
-          items: [{ product_id: productId, product_name: productName, quantity: qty, unit_price_minor: priceMinor }],
+         items: [{ product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) }],
         }),
       });
       if (!res.ok) throw new Error(String(res.status));
