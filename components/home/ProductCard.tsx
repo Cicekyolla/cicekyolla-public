@@ -41,12 +41,12 @@ export function ProductCard({ product, idx }: { product: Product; idx: number })
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Image container */}
-        <div className="relative overflow-hidden rounded-[20px] bg-[#F3F4F6]" style={{ aspectRatio: "4/5" }}>
+        {/* Image container — beyaz stüdyo zemini, kırpma yok (object-contain) */}
+        <div className="relative overflow-hidden rounded-[20px] bg-white ring-1 ring-[#F1F0F5]" style={{ aspectRatio: "4/5" }}>
           <motion.img
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain p-3"
             animate={{ scale: hovered ? 1.06 : 1 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           />
