@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight } from "lucide-react";
+import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 
 const WHATSAPP = "905074413474";
@@ -40,13 +40,67 @@ function sanitizeProductHtml(html: string): string {
   // Olay işleyicileri + sunuma karışan attribute'lar (tipografiyi biz veriyoruz)
   s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
   s = s.replace(/\s(style|class|id|dir|tabindex|role|data-[\w-]+|width|height|align|face|color)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-  // Blok içerik barındıran sahte başlıkları düz bloğa indir (nested için 2 geçiş)
-  for (let i = 0; i < 2; i++) s = s.replace(/<h([1-6])[^>]*>([\s\S]*?<(?:p|ul|ol|div|br)[\s\S]*?)<\/h\1>/gi, "<div>$2</div>");
+  // Sahte başlıkları (uzun metin veya blok içeren) düz bloğa indir — gerçek kısa başlıkları KORUR.
+  // Callback ile başlık-başına işlenir; başlıklar arasına taşmaz.
+  s = s.replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (full, _lvl, inner) => {
+    const text = inner.replace(/<[^>]+>/g, "").trim();
+    return text.length > 90 || /<(?:p|ul|ol|div|br)\b/i.test(inner) ? `<div>${inner}</div>` : full;
+  });
   // Boş kalıntıları temizle
   s = s.replace(/<span>\s*<\/span>/gi, "").replace(/<div>\s*<\/div>/gi, "");
   // Baştaki tekrar başlık (çift "Ürün Açıklaması" önler)
   s = s.replace(/^\s*<h[1-6][^>]*>\s*Ürün\s+Açıklaması\s*<\/h[1-6]>/i, "");
   return s.trim();
+}
+
+// Açıklama gövdesi için premium tipografi (intro + accordion içleri paylaşır).
+const DESC_PROSE =
+  "text-[15px] text-[#4B5563] leading-[1.85] [&_p]:mb-4 [&_p:last-child]:mb-0 " +
+  "[&_h1]:text-[18px] [&_h1]:font-bold [&_h1]:text-[#111827] [&_h1]:mt-5 [&_h1]:mb-2 " +
+  "[&_h2]:text-[16px] [&_h2]:font-bold [&_h2]:text-[#111827] [&_h2]:mt-5 [&_h2]:mb-2 " +
+  "[&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-[#1F2937] [&_h3]:mt-4 [&_h3]:mb-2 " +
+  "[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_ol]:space-y-1.5 " +
+  "[&_li]:leading-relaxed [&_li]:marker:text-[#C4B5FD] [&_strong]:text-[#111827] [&_strong]:font-semibold " +
+  "[&_b]:text-[#111827] [&_b]:font-semibold [&_em]:italic [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline " +
+  "[&_blockquote]:border-l-2 [&_blockquote]:border-[#DDD6FE] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[#6B7280] [&_blockquote]:my-4 " +
+  "[&_hr]:my-5 [&_hr]:border-[#F3F4F6] [&_img]:hidden";
+
+type DescSection = { title: string | null; html: string; isIntro: boolean };
+
+// Uzun açıklamayı başlıklara göre bölümlere ayırır (intro + accordion bölümleri).
+// SEO: içerik DOM'da kalır; başlıklar korunur; native <details> Google tarafından okunur.
+function parseDescriptionSections(raw: string): DescSection[] {
+  const clean = sanitizeProductHtml(raw);
+  if (!clean) return [];
+  const re = /<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi;
+  const heads: { title: string; start: number; end: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(clean))) {
+    const title = m[1].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+    heads.push({ title, start: m.index, end: re.lastIndex });
+  }
+  if (!heads.length) return [{ title: null, html: clean, isIntro: true }];
+  const out: DescSection[] = [];
+  const intro = clean.slice(0, heads[0].start).trim();
+  if (intro) out.push({ title: null, html: intro, isIntro: true });
+  for (let i = 0; i < heads.length; i++) {
+    const body = clean.slice(heads[i].end, i + 1 < heads.length ? heads[i + 1].start : clean.length).trim();
+    if (!body && !heads[i].title) continue;
+    out.push({ title: heads[i].title || "Detay", html: body, isIntro: false });
+  }
+  return out;
+}
+
+// Bölüm başlığına göre ikon seçer (gerçek özelliğe göre, uydurma yok).
+function sectionIcon(title: string): LucideIcon {
+  const t = (title || "").toLocaleLowerCase("tr");
+  if (/(boyut|ölçü|ebat|\bcm\b|yükseklik|genişlik|ürün boyu)/.test(t)) return Ruler;
+  if (/(malzeme|içerik|içindeki|kullanıl|adet)/.test(t)) return Package;
+  if (/(bakım|saklama|ömür|taze|sula|canlı)/.test(t)) return Leaf;
+  if (/(teslim|kargo|gönderi|sipariş)/.test(t)) return Truck;
+  if (/(hediye|not|mesaj|kart)/.test(t)) return Gift;
+  if (/(açıklama|hakkında|anlam|hikaye|özel)/.test(t)) return Sparkles;
+  return Info;
 }
 
 export function ProductDetail({ data }: { data: PublicProductDetail }) {
@@ -216,16 +270,49 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
             <span>Fotoğrafla teslimat</span>
           </div>
 
-          {/* Uzun açıklama */}
-          {product.long_description && (
-            <div className="mt-9 pt-8 border-t border-[#F3F4F6]">
-              <h2 className="text-[16px] font-bold text-[#111827] mb-3">Ürün Açıklaması</h2>
-              <div
-                className="text-[15px] text-[#4B5563] leading-[1.85] [&_p]:mb-4 [&_p:last-child]:mb-0 [&_h1]:text-[20px] [&_h1]:font-bold [&_h1]:text-[#111827] [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-[#111827] [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-[16px] [&_h3]:font-semibold [&_h3]:text-[#1F2937] [&_h3]:mt-5 [&_h3]:mb-2 [&_h4]:text-[15px] [&_h4]:font-semibold [&_h4]:text-[#1F2937] [&_h4]:mt-4 [&_h4]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_ol]:space-y-1.5 [&_li]:leading-relaxed [&_li]:marker:text-[#C4B5FD] [&_strong]:text-[#111827] [&_strong]:font-semibold [&_b]:text-[#111827] [&_b]:font-semibold [&_em]:italic [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[#DDD6FE] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[#6B7280] [&_blockquote]:my-4 [&_hr]:my-6 [&_hr]:border-[#F3F4F6] [&_img]:hidden"
-                dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.long_description) }}
-              />
-            </div>
-          )}
+          {/* Uzun açıklama — premium bölümlenmiş sunum (kart + accordion + ikon, SEO semantik) */}
+          {product.long_description && (() => {
+            const sections = parseDescriptionSections(product.long_description);
+            if (!sections.length) return null;
+            const intro = sections.find((s) => s.isIntro);
+            const panels = sections.filter((s) => !s.isIntro);
+            return (
+              <section aria-label="Ürün Açıklaması" className="mt-9 pt-8 border-t border-[#F3F4F6]">
+                <h2 className="text-[16px] font-bold text-[#111827] mb-4">Ürün Açıklaması</h2>
+                {intro?.html && (
+                  <div className={DESC_PROSE} dangerouslySetInnerHTML={{ __html: intro.html }} />
+                )}
+                {panels.length > 0 && (
+                  <div className={`space-y-3 ${intro?.html ? "mt-6" : ""}`}>
+                    {panels.map((s, i) => {
+                      const Icon = sectionIcon(s.title || "");
+                      return (
+                        <details
+                          key={i}
+                          open={i === 0}
+                          className="group rounded-2xl border border-[#F0EEF6] bg-[#FBFAFE] transition-colors open:bg-white open:shadow-[0_1px_3px_rgba(124,58,237,0.06)]"
+                        >
+                          <summary className="flex items-center gap-3 cursor-pointer select-none px-4 sm:px-5 py-4 [&::-webkit-details-marker]:hidden">
+                            <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#F3EEFF] text-[#7C3AED] shrink-0">
+                              <Icon className="w-[18px] h-[18px]" />
+                            </span>
+                            <h3 className="flex-1 text-[15px] font-semibold text-[#1F2937] leading-snug">{s.title}</h3>
+                            <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0 transition-transform duration-200 group-open:rotate-180" />
+                          </summary>
+                          {s.html && (
+                            <div
+                              className={`px-4 sm:px-5 pb-5 ${DESC_PROSE}`}
+                              dangerouslySetInnerHTML={{ __html: s.html }}
+                            />
+                          )}
+                        </details>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
         </div>
       </div>
     </main>
