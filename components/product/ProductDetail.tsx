@@ -143,12 +143,12 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
       <div className="max-w-[1280px] mx-auto px-5 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
         {/* GALERİ */}
         <div>
-          <div className="relative overflow-hidden rounded-[24px] bg-[#F3F4F6]" style={{ aspectRatio: "4/5" }}>
+          <div className="relative overflow-hidden rounded-[24px] bg-white ring-1 ring-[#F1F0F5]" style={{ aspectRatio: "4/5" }}>
             {gallery.length > 0 ? (
               isVideo(cover.url) ? (
-                <video src={cover.url} controls className="w-full h-full object-cover" />
+                <video src={cover.url} controls className="w-full h-full object-contain p-4" />
               ) : (
-                <img src={cover.url} alt={cover.alt ?? product.name} className="w-full h-full object-cover" />
+                <img src={cover.url} alt={cover.alt ?? product.name} className="w-full h-full object-contain p-4" />
               )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#C4B5FD]">
@@ -186,8 +186,8 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
                   className={`relative w-[72px] h-[72px] rounded-[14px] overflow-hidden flex-shrink-0 transition-all ${i === active ? "ring-2 ring-[#7C3AED]" : "ring-1 ring-[#E5E7EB] opacity-70 hover:opacity-100"}`}
                 >
                   {isVideo(img.url)
-                    ? <video src={img.url} muted className="w-full h-full object-cover" />
-                    : <img src={img.url} alt={img.alt ?? ""} className="w-full h-full object-cover" />}
+                    ? <video src={img.url} muted className="w-full h-full object-contain bg-white p-1.5" />
+                    : <img src={img.url} alt={img.alt ?? ""} className="w-full h-full object-contain bg-white p-1.5" />}
                 </button>
               ))}
             </div>
