@@ -576,3 +576,8 @@ export default function AddressAutocomplete({
     </div>
   );
 }
+
+// Hem default hem named import desteklenir:
+//   import AddressAutocomplete from '...'
+//   import { AddressAutocomplete } from '...'
+export { AddressAutocomplete };
