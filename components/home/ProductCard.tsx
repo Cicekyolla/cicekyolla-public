@@ -1,148 +1,134 @@
 "use client";
 
 /**
- * CICEKYOLLA — Kategori ürün grid'i (infinite scroll).
- * İlk 50 ürün SSR'den (initialItems) gelir; kullanıcı aşağı indikçe IntersectionObserver
- * ile sonraki 50 server action'dan yüklenir. id bazlı dedupe → duplicate/atlama YOK.
- * Sıralama server'da korunur (aynı sort). Skeleton + "Tekrar dene" + liste-sonu durumu.
- * Tasarım dili korunur; ProductCard birebir kullanılır.
+ * ProductCard — ZIP Homepage.tsx birebir port. Reusable ürün kartı (BestSellers + ileride ürün grid'leri).
+ * Hover: görsel zoom + "Sepete Ekle" yukarı kayar; wishlist toggle; badge + fiyat + rating.
+ * Adaptasyon: react-router <Link to=…> → next/link <Link href=…>. Görsel/etkileşim birebir.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ProductCard } from "@/components/home/ProductCard";
-import type { CardProduct } from "@/lib/api";
-import {
-  loadCategoryProducts,
-  type CategorySort,
-} from "@/lib/categoryProducts.actions";
+import { useState } from "react";
+import Link from "next/link";
+import { motion } from "motion/react";
+import { Heart } from "lucide-react";
 
-export interface CategoryProductGridProps {
-  initialItems: CardProduct[];
-  categoryId: number;
-  total: number;
-  totalPages: number;
-  sort: CategorySort;
-  pageSize?: number;
-  filters?: {
-    type?: string;
-    sameDay?: boolean;
-    bestseller?: boolean;
-    isNew?: boolean;
-  };
-}
+export type Product = {
+  id: number;
+  name: string;
+  subtitle?: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  rating?: number;
+  reviews?: number;
+  slug: string;
+  badge?: string;
+};
 
-function CardSkeleton() {
-  return (
-    <div className="flex flex-col h-full rounded-[20px] border border-[#F1F0F5] bg-white overflow-hidden">
-      <div className="bg-[#F5F3FF] animate-pulse" style={{ aspectRatio: "4/5" }} />
-      <div className="flex flex-col flex-1 px-4 pt-3.5 pb-4">
-        <div className="h-3.5 rounded bg-[#F1F0F5] animate-pulse mb-2" />
-        <div className="h-3.5 w-2/3 rounded bg-[#F1F0F5] animate-pulse" />
-        <div className="mt-auto pt-3 h-4 w-1/3 rounded bg-[#EDE9FE] animate-pulse" />
-      </div>
-    </div>
-  );
-}
-
-export function CategoryProductGrid({
-  initialItems,
-  categoryId,
-  total,
-  totalPages,
-  sort,
-  pageSize = 50,
-  filters,
-}: CategoryProductGridProps) {
-  const [items, setItems] = useState<CardProduct[]>(initialItems);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const [maxPages, setMaxPages] = useState(totalPages);
-
-  // Görülen id kümesi — duplicate önleme (ref: render tetiklemez).
-  const seen = useRef<Set<number>>(new Set(initialItems.map((p) => p.id)));
-  const sentinel = useRef<HTMLDivElement | null>(null);
-
-  const done = page >= maxPages;
-
-  const loadMore = useCallback(async () => {
-    if (loading || done) return;
-    setLoading(true);
-    setError(false);
-    try {
-      const next = page + 1;
-      const res = await loadCategoryProducts({
-        categoryId,
-        page: next,
-        pageSize,
-        sort,
-        type: filters?.type,
-        sameDay: filters?.sameDay,
-        bestseller: filters?.bestseller,
-        isNew: filters?.isNew,
-      });
-      const fresh = res.items.filter((p) => !seen.current.has(p.id));
-      fresh.forEach((p) => seen.current.add(p.id));
-      setItems((prev) => [...prev, ...fresh]);
-      setMaxPages(res.totalPages || maxPages);
-      setPage(next);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, done, page, categoryId, pageSize, sort, filters, maxPages]);
-
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || done) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
-      },
-      { rootMargin: "700px 0px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [loadMore, done]);
-
-  const shownTotal = useMemo(() => Math.max(total, items.length), [total, items.length]);
+export function ProductCard({ product, idx }: { product: Product; idx: number }) {
+  const [wish, setWish] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   return (
-    <>
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-7">
-        {items.map((product, idx) => (
-          <ProductCard key={product.id} product={product} idx={Math.min(idx, 7)} />
-        ))}
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={`sk-${i}`} />)
-          : null}
-      </div>
+    <motion.div
+      className="h-full"
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: idx * 0.09, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Link
+        href={`/urun/${product.slug}`}
+        className="group flex flex-col h-full rounded-[20px] border border-[#F1F0F5] bg-white overflow-hidden transition-all duration-300 hover:shadow-[0_14px_36px_rgba(124,58,237,0.10)] hover:border-[#EDE9FE]"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Image container — beyaz stüdyo zemini, kırpma yok (object-contain) */}
+        <div className="relative overflow-hidden bg-white" style={{ aspectRatio: "4/5" }}>
+          <motion.img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-contain p-3"
+            animate={{ scale: hovered ? 1.06 : 1 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          />
+          {/* Gradient overlay */}
+          <div
+            className="absolute inset-0 transition-opacity duration-500"
+            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 50%)", opacity: hovered ? 1 : 0 }}
+          />
 
-      {/* IntersectionObserver hedefi */}
-      <div ref={sentinel} aria-hidden="true" className="h-px w-full" />
-
-      {/* Hata → Tekrar dene */}
-      {error && !loading ? (
-        <div className="flex flex-col items-center gap-3 py-10">
-          <p className="text-[13px] text-[#9CA3AF]">Ürünler yüklenirken bir sorun oluştu.</p>
-          <button
-            onClick={() => loadMore()}
-            className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-[#7C3AED] hover:bg-[#6D28D9] transition-colors"
+          {/* Badge — glassmorphism */}
+          {product.badge ? (
+          <div
+            className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-white text-[10px] font-bold tracking-wider"
+            style={{
+              background: "rgba(139,92,246,0.85)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              boxShadow: "0 4px 16px rgba(139,92,246,0.4)",
+            }}
           >
-            Tekrar dene
-          </button>
-        </div>
-      ) : null}
+            {product.badge}
+          </div>
+          ) : null}
 
-      {/* Liste sonu */}
-      {done && items.length > 0 && !loading ? (
-        <div className="flex items-center justify-center gap-3 py-10 text-[12px] text-[#C4B5FD]">
-          <span className="h-px w-10 bg-[#EDE9FE]" />
-          Tüm ürünler yüklendi ({shownTotal})
-          <span className="h-px w-10 bg-[#EDE9FE]" />
+          {/* Wishlist */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              setWish(!wish);
+            }}
+            aria-label="Favorilere ekle"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200"
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              transform: wish ? "scale(1.1)" : "scale(1)",
+            }}
+          >
+            <Heart className={`w-4 h-4 transition-colors ${wish ? "fill-[#8B5CF6] text-[#8B5CF6]" : "text-[#9CA3AF]"}`} />
+          </button>
+
+          {/* Quick add — slides up on hover */}
+          <motion.div
+            animate={{ y: hovered ? 0 : "100%" }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute bottom-0 left-0 right-0 p-4"
+          >
+            <button
+              className="w-full py-3 rounded-xl text-white text-sm font-semibold tracking-wide"
+              style={{
+                background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
+                boxShadow: "0 8px 24px rgba(139,92,246,0.5)",
+              }}
+            >
+              Sepete Ekle
+            </button>
+          </motion.div>
         </div>
-      ) : null}
-    </>
+
+        {/* Info — kartla bütünleşik; ad 2 satır, fiyat sabit alt hizalı */}
+        <div className="flex flex-col flex-1 px-4 pt-3.5 pb-4">
+          {product.subtitle ? (
+            <p className="text-[10px] text-[#A855F7] font-bold tracking-[0.18em] uppercase mb-1.5">{product.subtitle}</p>
+          ) : null}
+          <h3
+            className="text-[#111827] font-semibold leading-snug transition-colors duration-200 group-hover:text-[#7C3AED]"
+            style={{ fontSize: "14.5px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: "2.55em" }}
+          >
+            {product.name}
+          </h3>
+          <div className="mt-auto pt-3 flex items-baseline gap-2">
+            <span style={{ fontFamily: "var(--font-display)", fontSize: "19px" }} className="font-semibold text-[#111827]">
+              ₺{product.price}
+            </span>
+            {product.originalPrice ? (
+              <span className="text-sm text-[#C4B5FD] line-through font-medium">₺{product.originalPrice}</span>
+            ) : null}
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   );
 }
