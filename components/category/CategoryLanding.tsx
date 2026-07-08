@@ -239,22 +239,25 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
 
         {/* ── SEO açıklama + body (ürünlerin altında, SSS'nin üstünde) ── */}
         {page.intro_html || (page.body_blocks && page.body_blocks.length > 0) ? (
-          <section aria-label="Koleksiyon içeriği" className="max-w-[820px] mx-auto px-6 lg:px-8 py-14 lg:py-20">
-            {page.intro_html ? (
-              <div
-                className="mb-8 text-[#4B5563] text-[17px] leading-[1.8] [&_p]:mb-4 [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_strong]:text-[#111827] [&_strong]:font-semibold"
-                dangerouslySetInnerHTML={{ __html: page.intro_html }}
-              />
-            ) : null}
-            {page.body_blocks && page.body_blocks.length > 0
-              ? page.body_blocks.map((b, i) => renderBlock(b, i))
-              : null}
+          <section aria-label="Koleksiyon içeriği" className="border-t border-black/[0.05] bg-[#FCFCFE]">
+            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
+              {page.intro_html ? (
+                <div
+                  className="max-w-[860px] text-[#4B5563] text-[16px] lg:text-[17px] leading-[1.85] [&_p]:mb-5 [&_p:last-child]:mb-0 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:text-[#111827] [&_h2]:mt-8 [&_h2]:mb-3 [&_h3]:text-[18px] [&_h3]:font-semibold [&_h3]:text-[#1F2937] [&_h3]:mt-6 [&_h3]:mb-2 [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline [&_strong]:text-[#111827] [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-5 [&_ul]:space-y-1.5 [&_li]:leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: page.intro_html }}
+                />
+              ) : null}
+              {page.body_blocks && page.body_blocks.length > 0
+                ? page.body_blocks.map((b, i) => renderBlock(b, i))
+                : null}
+            </div>
           </section>
         ) : null}
 
         {/* ── FAQ (görsel accordion; JSON-LD route'ta üretiliyor → burada tekrar YOK) ── */}
         {faqItems.length > 0 ? (
-          <section aria-label="Sıkça sorulan sorular" className="max-w-[820px] mx-auto px-6 lg:px-8 pb-16 lg:pb-20">
+          <section aria-label="Sıkça sorulan sorular" className="max-w-[1100px] mx-auto px-6 lg:px-8 pt-12 lg:pt-16 pb-16 lg:pb-20">
+            <div className="max-w-[860px]">
             <h2
               style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
               className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8"
@@ -274,6 +277,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
                   <p className="mt-3 text-[#6B7280] text-[15px] leading-[1.8]">{f.a}</p>
                 </details>
               ))}
+            </div>
             </div>
           </section>
         ) : null}
