@@ -101,22 +101,38 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       setLoading(true);
       setSlotId(null);
       try {
+        // Boş string'ler backend Zod min(1)'i patlatır (422) -> undefined'a çevir.
+        const VALID_TYPES = ["flower", "plant", "wreath", "artificial", "gift", "service"];
+        const city = addr.il && addr.il.trim() ? addr.il.trim() : undefined;
+        const district = addr.ilce && addr.ilce.trim() ? addr.ilce.trim() : undefined;
+        const productType = VALID_TYPES.includes(product.product_type) ? product.product_type : undefined;
+        const payload: Record<string, unknown> = {
+          lat: addr.lat,
+          lng: addr.lng,
+          product_id: product.id,
+          date: isoOf(offset),
+        };
+        if (city) payload.city = city;
+        if (district) payload.district = district;
+        if (productType) payload.product_type = productType;
+
         const resp = await fetch("/api/delivery-check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lat: addr.lat,
-            lng: addr.lng,
-            product_id: product.id,
-            product_type: product.product_type,
-            city: addr.il ?? undefined,
-            district: addr.ilce ?? undefined,
-            date: isoOf(offset),
-          }),
+          body: JSON.stringify(payload),
         });
         const json = await resp.json();
-        if (seq === reqSeq.current) setResult(json?.data ?? null);
-      } catch {
+        if (seq !== reqSeq.current) return;
+        if (!resp.ok || !json?.data) {
+          // eslint-disable-next-line no-console
+          console.warn("[DeliveryPlanner] check hata:", resp.status, json);
+          setResult(null);
+        } else {
+          setResult(json.data);
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[DeliveryPlanner] check exception:", e);
         if (seq === reqSeq.current) setResult(null);
       } finally {
         if (seq === reqSeq.current) setLoading(false);
