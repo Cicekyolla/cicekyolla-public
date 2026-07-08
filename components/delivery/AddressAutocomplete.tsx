@@ -28,16 +28,17 @@ export interface SelectedAddress {
 }
 
 // Google Maps JS API'sini tek sefer yükler (singleton). @types/google.maps bağımlılığı yok — loose any.
+// loading=async modunda kütüphaneler importLibrary ile beklenir (onload'da places henüz HAZIR DEĞİL).
 let gmapsPromise: Promise<unknown> | null = null;
 function loadGoogleMaps(): Promise<unknown> {
   if (typeof window === "undefined") return Promise.reject(new Error("NO_WINDOW"));
-  const w = window as unknown as { google?: { maps?: { places?: unknown } } };
-  if (w.google?.maps?.places) return Promise.resolve(w.google);
+  const w = window as unknown as { google?: { maps?: { importLibrary?: unknown } } };
+  if (w.google?.maps?.importLibrary) return Promise.resolve(w.google);
   if (gmapsPromise) return gmapsPromise;
   if (!KEY) return Promise.reject(new Error("NO_KEY"));
   gmapsPromise = new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${KEY}&libraries=places&language=tr&region=TR&loading=async`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${KEY}&v=weekly&language=tr&region=TR&loading=async`;
     s.async = true;
     s.onload = () => resolve((window as unknown as { google: unknown }).google);
     s.onerror = () => reject(new Error("LOAD_FAIL"));
@@ -89,12 +90,16 @@ export function AddressAutocomplete({
   useEffect(() => {
     let alive = true;
     loadGoogleMaps()
-      .then((g: any) => {
+      .then(async (g: any) => {
+        // Kütüphaneleri AYRI AYRI bekle (async mod) — bu kritik.
+        const placesLib = await g.maps.importLibrary("places");
+        await g.maps.importLibrary("geocoding");
+        await g.maps.importLibrary("maps");
         if (!alive) return;
-        svcRef.current = new g.maps.places.AutocompleteService();
-        placesRef.current = new g.maps.places.PlacesService(document.createElement("div"));
+        svcRef.current = new placesLib.AutocompleteService();
+        placesRef.current = new placesLib.PlacesService(document.createElement("div"));
         geocoderRef.current = new g.maps.Geocoder();
-        tokenRef.current = new g.maps.places.AutocompleteSessionToken();
+        tokenRef.current = new placesLib.AutocompleteSessionToken();
         setReady(true);
       })
       .catch((e: Error) => setErr(e.message === "NO_KEY" ? "NO_KEY" : "LOAD_FAIL"));
