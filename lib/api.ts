@@ -241,6 +241,7 @@ export interface PublicProductListItem {
   currency: string; status: string; product_type: string;
   is_featured: boolean; is_bestseller: boolean; is_new: boolean;
   stock_quantity: number; cover_image_url: string | null; primary_category_id: number | null;
+  same_day_available?: boolean; delivery_scope?: string;
 }
 export interface PublicProductListParams {
   is_bestseller?: boolean; is_featured?: boolean; is_new?: boolean;
@@ -298,6 +299,8 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
 export interface CardProduct {
   id: number; name: string; slug: string; price: number;
   originalPrice?: number; image: string; badge?: string;
+  productType?: string; sameDay?: boolean; scope?: string;
+  hasSale?: boolean; isBestseller?: boolean; isNew?: boolean; categoryId?: number | null;
 }
 export function toCardProduct(p: PublicProductListItem): CardProduct {
   const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
@@ -309,5 +312,12 @@ export function toCardProduct(p: PublicProductListItem): CardProduct {
     originalPrice: hasSale ? Math.round(Number(p.price_minor) / 100) : undefined,
     image: p.cover_image_url ?? "",
     badge: hasSale ? "İndirim" : p.is_new ? "Yeni" : p.is_bestseller ? "Çok Satan" : undefined,
+    productType: p.product_type,
+    sameDay: p.same_day_available,
+    scope: p.delivery_scope,
+    hasSale,
+    isBestseller: p.is_bestseller,
+    isNew: p.is_new,
+    categoryId: p.primary_category_id,
   };
 }
