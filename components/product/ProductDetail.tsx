@@ -9,9 +9,9 @@
  * layout'tan gelir (DEĞİŞMEZ).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, type LucideIcon } from "lucide-react";
+import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 
 const WHATSAPP = "905074413474";
@@ -112,6 +112,20 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
   });
   const [active, setActive] = useState(0);
   const [wish, setWish] = useState(false);
+
+  // Teslimat günü seçimi — GERÇEK takvim (sahte tarih yok). Hydration güvenli: tarihler mount sonrası.
+  const [day, setDay] = useState(0);
+  const [dayInfo, setDayInfo] = useState<{ label: string; sub: string }[]>([
+    { label: "Bugün", sub: "" }, { label: "Yarın", sub: "" }, { label: "Sonraki gün", sub: "" },
+  ]);
+  useEffect(() => {
+    const fmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long" });
+    const wd = new Intl.DateTimeFormat("tr-TR", { weekday: "long" });
+    setDayInfo([0, 1, 2].map((off) => {
+      const d = new Date(); d.setDate(d.getDate() + off);
+      return { label: off === 0 ? "Bugün" : off === 1 ? "Yarın" : wd.format(d), sub: fmt.format(d) };
+    }));
+  }, []);
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
   const sel = variants.find((v) => v.id === variantId) ?? null;
@@ -210,24 +224,36 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
             )}
           </div>
 
-          {/* Teslimat rozetleri */}
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            {product.same_day_available && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F5F3FF] text-[#7C3AED] text-[12.5px] font-semibold">
-                <Zap className="w-4 h-4" /> Aynı gün teslimat
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F9FAFB] text-[#6B7280] text-[12.5px] font-semibold border border-[#F3F4F6]">
-              <Truck className="w-4 h-4" /> {SCOPE_LABEL[product.delivery_scope] ?? "Teslimat"}
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F9FAFB] text-[#6B7280] text-[12.5px] font-semibold border border-[#F3F4F6]">
-              <ShieldCheck className="w-4 h-4" /> Taze &amp; güvenli teslimat
-            </span>
+          {/* Teslimat lokasyonu + GÜN seçimi (gerçek takvim; sahte saat slotu YOK) */}
+          <div className="mt-6 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFE] p-4">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-[#4B5563]">
+              <MapPin className="w-4 h-4 text-[#7C3AED]" />
+              Teslimat: <span className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</span>
+              {product.same_day_available ? (
+                <span className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> Bugün teslimat uygun</span>
+              ) : null}
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {dayInfo.map((d, i) => (
+                <button
+                  key={i}
+                  onClick={() => setDay(i)}
+                  className={`rounded-xl px-2 py-2.5 text-center transition-all border ${day === i ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_10px_rgba(124,58,237,0.25)]" : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#C4B5FD]"}`}
+                >
+                  <div className="text-[13px] font-bold leading-tight">{d.label}</div>
+                  {d.sub ? <div className={`text-[11px] mt-0.5 ${day === i ? "text-white/80" : "text-[#9CA3AF]"}`}>{d.sub}</div> : null}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-[#9CA3AF] leading-relaxed">
+              <Clock className="w-3.5 h-3.5 mt-[1px] shrink-0" />
+              Uygun teslimat saati, bölgenizdeki yoğunluğa göre sipariş adımında gösterilir.
+            </p>
           </div>
 
           {/* Varyantlar */}
           {variants.length > 0 && (
-            <div className="mt-7">
+            <div className="mt-6">
               <div className="text-[12px] font-bold text-[#9CA3AF] tracking-wider mb-3">SEÇENEK</div>
               <div className="flex flex-wrap gap-2.5">
                 {variants.map((v) => (
@@ -246,29 +272,62 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
             </div>
           )}
 
-          {/* CTA */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Link href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`} className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#111827] text-white text-[15px] font-bold transition-all hover:bg-[#000] hover:scale-[1.01]">
+          {/* CTA — ana buton CICEKYOLLA mor; WhatsApp yeşil; favori */}
+          <div className="mt-7 flex gap-3">
+            <Link
+              href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`}
+              className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#7C3AED] text-white text-[15px] font-bold transition-all hover:bg-[#6D28D9] hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]"
+            >
               <ShoppingBag className="w-5 h-5" /> Hemen Sipariş Ver
             </Link>
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#25D366] text-white text-[15px] font-bold transition-all hover:brightness-105 hover:scale-[1.01]"
+              aria-label="WhatsApp ile Sipariş"
+              className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-[#25D366] text-white text-[14px] font-bold transition-all hover:brightness-105 hover:scale-[1.01]"
             >
-              <MessageCircle className="w-5 h-5" /> WhatsApp ile Sipariş
+              <MessageCircle className="w-5 h-5" /> <span className="hidden sm:inline">WhatsApp</span>
             </a>
+            <button
+              onClick={() => setWish(!wish)}
+              aria-label="Favorilere ekle"
+              className={`grid place-items-center w-14 rounded-2xl border transition-all ${wish ? "bg-[#FFF1F2] border-[#FECDD3] text-[#E11D48]" : "bg-white border-[#E5E7EB] text-[#9CA3AF] hover:border-[#C4B5FD]"}`}
+            >
+              <Heart className={`w-5 h-5 ${wish ? "fill-[#E11D48]" : ""}`} />
+            </button>
           </div>
 
-          {/* Güven şeridi */}
-          <div className="mt-6 flex items-center gap-4 text-[12px] text-[#9CA3AF]">
-            <span className="inline-flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" /> Premium kalite</span>
-            <span>·</span>
-            <span>El yapımı aranjman</span>
-            <span>·</span>
-            <span>Fotoğrafla teslimat</span>
+          {/* Güven ikonları — gerçek özellikler (sahte yorum/yıldız/satış YOK) */}
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+            {[
+              { icon: Camera, t: "Fotoğraftaki ürün gönderilir", show: true },
+              { icon: Leaf, t: "Taze hazırlanır", show: true },
+              { icon: ShieldCheck, t: "Güvenli ödeme", show: true },
+              { icon: Zap, t: "Aynı gün teslimat", show: product.same_day_available },
+              { icon: Gift, t: "Hediye notu eklenebilir", show: true },
+              { icon: Check, t: "Görsel onay desteği", show: true },
+            ].filter((x) => x.show).map((x, i) => (
+              <div key={i} className="flex items-center gap-2 text-[12px] text-[#4B5563]">
+                <span className="grid place-items-center w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] shrink-0"><x.icon className="w-3.5 h-3.5" /></span>
+                {x.t}
+              </div>
+            ))}
           </div>
+
+          {/* Görsel onay kutusu */}
+          <div className="mt-5 rounded-2xl bg-[#F5F3FF] border border-[#EDE9FE] p-4 flex items-start gap-3">
+            <span className="grid place-items-center w-9 h-9 rounded-xl bg-white text-[#7C3AED] shrink-0"><Camera className="w-[18px] h-[18px]" /></span>
+            <div>
+              <div className="text-[13.5px] font-bold text-[#111827]">Görsel Onay</div>
+              <p className="text-[12.5px] text-[#6B7280] mt-0.5 leading-relaxed">Hazırlanan ürünün fotoğrafını teslimat öncesi sizinle paylaşabiliriz.</p>
+            </div>
+          </div>
+
+          {/* Teslimat notu — şeffaf */}
+          <p className="mt-3 text-[11.5px] text-[#9CA3AF] leading-relaxed">
+            Teslimat saatleri bölge yoğunluğu, hava ve trafik durumuna göre değişebilir.
+          </p>
 
           {/* Uzun açıklama — premium bölümlenmiş sunum (kart + accordion + ikon, SEO semantik) */}
           {product.long_description && (() => {
@@ -313,7 +372,61 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
               </section>
             );
           })()}
+
+          {/* Teslimat Bilgisi + SSS — sabit, şeffaf accordion */}
+          <div className="mt-4 space-y-3">
+            <details className="group rounded-2xl border border-[#F0EEF6] bg-[#FBFAFE] open:bg-white open:shadow-[0_1px_3px_rgba(124,58,237,0.06)]">
+              <summary className="flex items-center gap-3 cursor-pointer select-none px-4 sm:px-5 py-4 [&::-webkit-details-marker]:hidden">
+                <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#F3EEFF] text-[#7C3AED] shrink-0"><Truck className="w-[18px] h-[18px]" /></span>
+                <h3 className="flex-1 text-[15px] font-semibold text-[#1F2937]">Teslimat Bilgisi</h3>
+                <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="px-4 sm:px-5 pb-5 text-[14px] text-[#4B5563] leading-[1.85]">
+                <p className="mb-2">Teslimat bölgesi: <b className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</b>.{product.same_day_available ? " Aynı gün teslimat uygundur." : ""}</p>
+                <p>Uygun teslimat günü ve saati sipariş adımında, bölgenizdeki yoğunluğa göre belirlenir. Teslimat saatleri hava ve trafik durumuna göre değişebilir.</p>
+              </div>
+            </details>
+            <details className="group rounded-2xl border border-[#F0EEF6] bg-[#FBFAFE] open:bg-white open:shadow-[0_1px_3px_rgba(124,58,237,0.06)]">
+              <summary className="flex items-center gap-3 cursor-pointer select-none px-4 sm:px-5 py-4 [&::-webkit-details-marker]:hidden">
+                <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#F3EEFF] text-[#7C3AED] shrink-0"><Info className="w-[18px] h-[18px]" /></span>
+                <h3 className="flex-1 text-[15px] font-semibold text-[#1F2937]">Sık Sorulan Sorular</h3>
+                <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="px-4 sm:px-5 pb-5 text-[14px] text-[#4B5563] leading-[1.85] space-y-3">
+                <div><b className="text-[#111827] block">Fotoğraftaki ürün mü gönderilir?</b>Evet, hazırlanan ürünün fotoğrafını teslimat öncesi sizinle paylaşabiliriz.</div>
+                <div><b className="text-[#111827] block">Hediye notu ekleyebilir miyim?</b>Evet, sipariş adımında hediye notunuzu ekleyebilirsiniz.</div>
+                <div><b className="text-[#111827] block">Teslimat saatini seçebilir miyim?</b>Uygun saat aralıkları sipariş adımında, bölgenizin uygunluğuna göre gösterilir.</div>
+              </div>
+            </details>
+          </div>
         </div>
+      </div>
+
+      {/* Mobil sticky CTA — satın alma paneli alta gelir */}
+      <div className="h-24 lg:hidden" aria-hidden="true" />
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-[#EDE9FE] px-4 py-3 flex items-center gap-3"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="shrink-0">
+          <div className="text-[11px] text-[#9CA3AF] leading-none">Fiyat</div>
+          <div className="text-[18px] font-bold text-[#111827] leading-tight">{formatMinorTRY(shown)}</div>
+        </div>
+        <Link
+          href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#7C3AED] text-white text-[14px] font-bold shadow-[0_6px_18px_rgba(124,58,237,0.3)]"
+        >
+          <ShoppingBag className="w-[18px] h-[18px]" /> Sipariş Ver
+        </Link>
+        <a
+          href={`https://wa.me/${WHATSAPP}?text=${waText}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="WhatsApp ile Sipariş"
+          className="grid place-items-center w-12 h-12 rounded-xl bg-[#25D366] text-white shrink-0"
+        >
+          <MessageCircle className="w-5 h-5" />
+        </a>
       </div>
     </main>
   );
