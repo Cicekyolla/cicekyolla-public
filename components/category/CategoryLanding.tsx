@@ -8,9 +8,9 @@ import {
   findCategoryIdBySlug,
   findCategoryNodeBySlug,
 } from "@/lib/catalog";
-import { ProductCard } from "@/components/home/ProductCard";
 import { FloatingCategoryRail } from "@/components/home/FloatingCategoryRail";
 import { FilterBar } from "@/components/category/FilterBar";
+import { CategoryProductGrid } from "@/components/category/CategoryProductGrid";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -125,7 +125,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
     : [];
   const productPage = categoryId
     ? await fetchProductsPaged({
-        category_id: categoryId, page_size: 12, page: pageNum, sort,
+        category_id: categoryId, page_size: 50, page: pageNum, sort,
         product_type: filterType || undefined,
         same_day_available: sameDay || undefined,
         is_bestseller: bestseller || undefined,
@@ -135,20 +135,6 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
   const totalProducts = productPage?.pagination.total ?? 0;
-  const buildHref = (p: { sort?: string; page?: number }) => {
-    const qp = new URLSearchParams();
-    // Aktif filtreleri koru (pagination filtreleri düşürmez)
-    for (const k of ["type", "same_day", "bestseller", "new"]) {
-      const v = sp(k);
-      if (v) qp.set(k, v);
-    }
-    const s = p.sort ?? sort;
-    const pg = p.page ?? 1;
-    if (s !== "created_at_desc") qp.set("sort", s);
-    if (pg > 1) qp.set("page", String(pg));
-    const qs = qp.toString();
-    return qs ? `${path}?${qs}` : path;
-  };
 
   return (
     <>
@@ -191,6 +177,13 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               {page.h1}
             </h1>
 
+            {/* Kısa kategori açıklaması — Category Center SEO (meta_description); yoksa nazik fallback */}
+            <p className="mt-6 text-[15px] lg:text-[17px] leading-[1.75] text-[#6B7280] max-w-[760px]">
+              {page.meta_description && page.meta_description.trim()
+                ? page.meta_description
+                : `${page.h1} kategorisinde özenle seçilmiş, taze ve premium çiçek & bitki seçenekleri; özel günlerden kurumsal hediyelere her anı değerli kılar. Aynı gün teslimat imkânıyla.`}
+            </p>
+
           </div>
         </section>
 
@@ -219,40 +212,18 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
                 </h2>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
-              {products.map((product, idx) => (
-                <ProductCard key={product.id} product={product} idx={idx} />
-              ))}
-            </div>
-            {/* Sayfalama */}
-            {totalPages > 1 ? (
-              <nav aria-label="Sayfalama" className="flex items-center justify-center gap-2 mt-12">
-                {pageNum > 1 ? (
-                  <Link href={buildHref({ page: pageNum - 1 })} className="px-4 py-2.5 rounded-xl text-[13px] font-semibold text-[#374151] bg-white border border-[#E5E7EB] hover:border-[#DDD6FE] transition-colors">
-                    ← Önceki
-                  </Link>
-                ) : null}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((n) => n === 1 || n === totalPages || Math.abs(n - pageNum) <= 1)
-                  .map((n, i, arr) => (
-                    <span key={n} className="flex items-center gap-2">
-                      {i > 0 && arr[i - 1] !== n - 1 ? <span className="text-[#C4B5FD]">…</span> : null}
-                      <Link
-                        href={buildHref({ page: n })}
-                        aria-current={n === pageNum ? "page" : undefined}
-                        className={`min-w-[40px] text-center px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-colors ${n === pageNum ? "bg-[#7C3AED] text-white" : "bg-white text-[#374151] border border-[#E5E7EB] hover:border-[#DDD6FE]"}`}
-                      >
-                        {n}
-                      </Link>
-                    </span>
-                  ))}
-                {pageNum < totalPages ? (
-                  <Link href={buildHref({ page: pageNum + 1 })} className="px-4 py-2.5 rounded-xl text-[13px] font-semibold text-[#374151] bg-white border border-[#E5E7EB] hover:border-[#DDD6FE] transition-colors">
-                    Sonraki →
-                  </Link>
-                ) : null}
-              </nav>
-            ) : null}
+            {/* Infinite scroll grid — ilk 50 SSR, sonrası server action ile otomatik yüklenir.
+                Numara sayfalama ana deneyim DEĞİL; SEO için ilk sayfa server-rendered kalır. */}
+            <CategoryProductGrid
+              key={`${sort}|${filterType ?? ""}|${sameDay ? 1 : 0}|${bestseller ? 1 : 0}|${isNew ? 1 : 0}`}
+              initialItems={products}
+              categoryId={categoryId as number}
+              total={totalProducts}
+              totalPages={totalPages}
+              sort={sort}
+              pageSize={50}
+              filters={{ type: filterType || undefined, sameDay, bestseller, isNew }}
+            />
           </section>
         ) : null}
 
