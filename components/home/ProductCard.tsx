@@ -22,11 +22,70 @@ export type Product = {
   reviews?: number;
   slug: string;
   badge?: string;
+  productType?: string;
+  sameDay?: boolean;
+  scope?: string;
+  hasSale?: boolean;
+  categoryId?: number | null;
 };
 
-export function ProductCard({ product, idx }: { product: Product; idx: number }) {
+/** Kategori sayfasından gelen bağlam (gerçek kategori / gönderim amacı). */
+export type CardContextTag = { label: string; isOccasion: boolean };
+
+type CardTag = { label: string; icon: string; tone: "occasion" | "category" | "delivery" | "promo" };
+
+// Etiketler HARDCODED değil — ürünün gerçek alanlarından (ad, tip, teslimat, kampanya) +
+// kategori bağlamından türetilir. Sahte sosyal kanıt YOK. Öncelik: amaç > kategori > teslimat > premium/kampanya. Maks 3.
+function deriveTags(p: Product, ctx?: CardContextTag): CardTag[] {
+  const tags: CardTag[] = [];
+  const n = (p.name || "").toLocaleLowerCase("tr");
+  const has = (...k: string[]) => k.some((x) => n.includes(x));
+
+  // 1) GÖNDERİM AMACI
+  if (ctx?.isOccasion) tags.push({ label: ctx.label, icon: "🎯", tone: "occasion" });
+  else if (has("sevgili", "romantik", "aşk")) tags.push({ label: "Sevgiliye Özel", icon: "🌹", tone: "occasion" });
+  else if (has("doğum günü", "dogum gunu")) tags.push({ label: "Doğum Günü", icon: "🎂", tone: "occasion" });
+  else if (has("yeni ev", "ev hediye")) tags.push({ label: "Yeni Ev Hediyesi", icon: "🏡", tone: "occasion" });
+  else if (has("anneler", "anneye")) tags.push({ label: "Anneye Hediye", icon: "👩", tone: "occasion" });
+  else if (has("geçmiş olsun", "gecmis olsun")) tags.push({ label: "Geçmiş Olsun", icon: "💐", tone: "occasion" });
+  else if (has("başsağlığı", "taziye", "cenaze")) tags.push({ label: "Başsağlığı", icon: "🙏", tone: "occasion" });
+  else if (has("açılış", "acilis")) tags.push({ label: "Açılış Töreni", icon: "🎈", tone: "occasion" });
+  else if (has("kurumsal")) tags.push({ label: "Kurumsal Hediye", icon: "🏢", tone: "occasion" });
+
+  // 2) KATEGORİ
+  if (ctx && !ctx.isOccasion && tags.length < 3) {
+    tags.push({ label: ctx.label, icon: "🌿", tone: "category" });
+  } else if (tags.length < 3) {
+    if (has("orkide")) tags.push({ label: "Orkide", icon: "🌸", tone: "category" });
+    else if (has("gül", "gul")) tags.push({ label: "Güller", icon: "🌹", tone: "category" });
+    else if (p.productType === "plant") tags.push({ label: "Saksı Bitkisi", icon: "🪴", tone: "category" });
+    else if (p.productType === "artificial") tags.push({ label: "Solmayan Çiçek", icon: "🌼", tone: "category" });
+    else if (p.productType === "wreath") tags.push({ label: "Çelenk", icon: "🎗️", tone: "category" });
+    else tags.push({ label: "Taze Çiçek", icon: "🌼", tone: "category" });
+  }
+
+  // 3) TESLİMAT
+  if (tags.length < 3 && p.sameDay) tags.push({ label: "Aynı Gün Teslim", icon: "🚀", tone: "delivery" });
+  else if (tags.length < 3 && p.scope === "istanbul") tags.push({ label: "İstanbul İçi Teslimat", icon: "📍", tone: "delivery" });
+
+  // 4) PREMIUM / KAMPANYA
+  if (tags.length < 3 && has("premium", "lüks", "luks", "deluxe")) tags.push({ label: "Premium Koleksiyon", icon: "💎", tone: "promo" });
+  else if (tags.length < 3 && p.hasSale) tags.push({ label: "Kampanyalı", icon: "🎉", tone: "promo" });
+
+  return tags.slice(0, 3);
+}
+
+const TAG_TONE: Record<CardTag["tone"], string> = {
+  occasion: "bg-[#FFF1F2] text-[#E11D48] border-[#FECDD3]",
+  category: "bg-[#F5F3FF] text-[#7C3AED] border-[#EDE9FE]",
+  delivery: "bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]",
+  promo: "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]",
+};
+
+export function ProductCard({ product, idx, contextTag }: { product: Product; idx: number; contextTag?: CardContextTag }) {
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const tags = deriveTags(product, contextTag);
 
   return (
     <motion.div
@@ -119,6 +178,19 @@ export function ProductCard({ product, idx }: { product: Product; idx: number })
           >
             {product.name}
           </h3>
+          {tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {tags.map((t, i) => (
+                <span
+                  key={i}
+                  className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-[3px] rounded-full border ${TAG_TONE[t.tone]}`}
+                >
+                  <span aria-hidden="true">{t.icon}</span>
+                  {t.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-auto pt-3 flex items-baseline gap-2">
             <span style={{ fontFamily: "var(--font-display)", fontSize: "19px" }} className="font-semibold text-[#111827]">
               ₺{product.price}
