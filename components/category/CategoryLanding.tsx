@@ -120,6 +120,13 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // Kategori-içi alt kategori slider'ı (Çiçeksepeti deseni): mevcut kategorinin
   // DOĞRUDAN children'ı → yuvarlak koleksiyon kartları (≤50). Canlı ağaç, uydurma yok.
   const currentNode = tree ? findCategoryNodeBySlug(tree, slug) : null;
+
+  // Ürün kartı bağlam etiketi: mevcut kategori adı + gönderim-amacı mı (kök ata zincirine göre).
+  const rootSlug = trail[0]?.slug ?? slug;
+  const isOccasion = /gonderim-amac|ozel-gun|sevgili|anneler|babalar|dogum-gun|yeni-bebek|yeni-ev|mezuniyet|tesekkur|gecmis-olsun|bassagligi|acilis|kutlama|yildonumu|evlilik|nisan/.test(
+    `${rootSlug} ${slug}`,
+  );
+  const contextTag = { label: page.h1, isOccasion };
   const subItems = currentNode?.children
     ? mapTreeToItems(currentNode.children as Parameters<typeof mapTreeToItems>[0]).slice(0, 50)
     : [];
@@ -223,6 +230,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               sort={sort}
               pageSize={50}
               filters={{ type: filterType || undefined, sameDay, bestseller, isNew }}
+              contextTag={contextTag}
             />
           </section>
         ) : null}
