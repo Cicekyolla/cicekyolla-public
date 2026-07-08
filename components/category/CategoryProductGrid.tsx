@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ProductCard } from "@/components/home/ProductCard";
+import { ProductCard, type CardContextTag } from "@/components/home/ProductCard";
 import type { CardProduct } from "@/lib/api";
 import { loadCategoryProducts } from "@/lib/categoryProducts.actions";
 
@@ -32,6 +32,7 @@ export interface CategoryProductGridProps {
     bestseller?: boolean;
     isNew?: boolean;
   };
+  contextTag?: CardContextTag;
 }
 
 function CardSkeleton() {
@@ -55,6 +56,7 @@ export function CategoryProductGrid({
   sort,
   pageSize = 50,
   filters,
+  contextTag,
 }: CategoryProductGridProps) {
   const [items, setItems] = useState<CardProduct[]>(initialItems);
   const [page, setPage] = useState(1);
@@ -115,7 +117,7 @@ export function CategoryProductGrid({
     <>
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-7">
         {items.map((product, idx) => (
-          <ProductCard key={product.id} product={product} idx={Math.min(idx, 7)} />
+          <ProductCard key={product.id} product={product} idx={Math.min(idx, 7)} contextTag={contextTag} />
         ))}
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={`sk-${i}`} />)
