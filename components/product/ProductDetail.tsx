@@ -9,10 +9,11 @@
  * layout'tan gelir (DEĞİŞMEZ).
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
+import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 
 const WHATSAPP = "905074413474";
 
@@ -113,19 +114,6 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
   const [active, setActive] = useState(0);
   const [wish, setWish] = useState(false);
 
-  // Teslimat günü seçimi — GERÇEK takvim (sahte tarih yok). Hydration güvenli: tarihler mount sonrası.
-  const [day, setDay] = useState(0);
-  const [dayInfo, setDayInfo] = useState<{ label: string; sub: string }[]>([
-    { label: "Bugün", sub: "" }, { label: "Yarın", sub: "" }, { label: "Sonraki gün", sub: "" },
-  ]);
-  useEffect(() => {
-    const fmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long" });
-    const wd = new Intl.DateTimeFormat("tr-TR", { weekday: "long" });
-    setDayInfo([0, 1, 2].map((off) => {
-      const d = new Date(); d.setDate(d.getDate() + off);
-      return { label: off === 0 ? "Bugün" : off === 1 ? "Yarın" : wd.format(d), sub: fmt.format(d) };
-    }));
-  }, []);
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
   const sel = variants.find((v) => v.id === variantId) ?? null;
@@ -224,32 +212,15 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
             )}
           </div>
 
-          {/* Teslimat lokasyonu + GÜN seçimi (gerçek takvim; sahte saat slotu YOK) */}
-          <div className="mt-6 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFE] p-4">
-            <div className="flex items-center gap-2 text-[13px] font-semibold text-[#4B5563]">
-              <MapPin className="w-4 h-4 text-[#7C3AED]" />
-              Teslimat: <span className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</span>
-              {product.same_day_available ? (
-                <span className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> Bugün teslimat uygun</span>
-              ) : null}
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {dayInfo.map((d, i) => (
-                <button
-                  key={i}
-                  onClick={() => setDay(i)}
-                  className={`rounded-xl px-2 py-2.5 text-center transition-all border ${day === i ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_10px_rgba(124,58,237,0.25)]" : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#C4B5FD]"}`}
-                >
-                  <div className="text-[13px] font-bold leading-tight">{d.label}</div>
-                  {d.sub ? <div className={`text-[11px] mt-0.5 ${day === i ? "text-white/80" : "text-[#9CA3AF]"}`}>{d.sub}</div> : null}
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-[#9CA3AF] leading-relaxed">
-              <Clock className="w-3.5 h-3.5 mt-[1px] shrink-0" />
-              Uygun teslimat saati, bölgenizdeki yoğunluğa göre sipariş adımında gösterilir.
-            </p>
-          </div>
+          {/* Teslimat planlayıcı — adres + 30 gün takvim + banda endeksli slot (Delivery Engine V2) */}
+          <DeliveryPlanner
+            product={{
+              id: product.id,
+              product_type: product.product_type,
+              same_day_available: product.same_day_available,
+              delivery_scope: product.delivery_scope,
+            }}
+          />
 
           {/* Varyantlar */}
           {variants.length > 0 && (
