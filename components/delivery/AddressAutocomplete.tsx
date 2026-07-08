@@ -1,272 +1,578 @@
-"use client";
+'use client';
 
 /**
- * CICEKYOLLA OS — Google Maps Adres Arama & Konum Doğrulama (ADDITIVE, yeniden kullanılabilir)
- * -----------------------------------------------------------------------------------------
- * • Google Places Autocomplete (özel premium dropdown) + harita pin + elle düzeltme.
- * • Seçilen adresten: formatted_address, place_id, lat, lng, city (il), district (ilçe), neighborhood (mahalle).
- * • Google YALNIZ adres/koordinat doğrulama için. Teslimat KARARI (aynı gün/ücret/süre) CICEKYOLLA
- *   backend'inden verilecek — bu bileşen sadece "hazır veri" üretir (onSelect ile dışarı verir).
- * • API key ENV'den: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY (koda YAZILMAZ). Domain restriction Google Cloud'da.
- * • Key yoksa/başarısızsa nazik durum gösterir; mevcut sistemi bozmaz.
+ * CICEKYOLLA — AddressAutocomplete
+ * ---------------------------------
+ * Google Maps adres arama + konum doğrulama bileşeni.
+ *
+ * TASARIM KARARLARI
+ *  - Google SADECE adres/koordinat doğrulama içindir. Teslimat kararı
+ *    (aynı gün / ücret / süre) CICEKYOLLA backend'inden gelir.
+ *  - Yeni Google Cloud projeleri (1 Mart 2025 sonrası) eski
+ *    `AutocompleteService` / `PlacesService` sınıflarını DESTEKLEMEZ.
+ *    Bu yüzden birincil yol YENİ Places API'dir:
+ *      • AutocompleteSuggestion.fetchAutocompleteSuggestions()
+ *      • Place.fetchFields()
+ *    Eski API yalnızca fallback olarak (varsa) denenir.
+ *  - Google Maps JS'i kendimiz, resmi inline bootstrap loader ile yükleriz;
+ *    dışarıdaki bir <script> etiketine bağımlı değiliz. `importLibrary`
+ *    ile ihtiyaç duyulan kütüphaneler beklenir.
+ *
+ * Anahtar: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { MapPin, Search, Loader2, Check, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+// ----------------------------------------------------------------------------
+// Tipler
+// ----------------------------------------------------------------------------
 
-export interface SelectedAddress {
+export interface AddressResult {
   formattedAddress: string;
   placeId: string;
-  lat: number;
-  lng: number;
-  city: string;
-  district: string;
-  neighborhood: string;
-  source: "autocomplete" | "manual";
+  lat: number | null;
+  lng: number | null;
+  il: string | null; // administrative_area_level_1
+  ilce: string | null; // administrative_area_level_2
+  mahalle: string | null; // administrative_area_level_3 / neighborhood / sublocality
+  raw?: unknown;
 }
 
-// Google Maps JS API'sini tek sefer yükler (singleton). @types/google.maps bağımlılığı yok — loose any.
-// loading=async modunda kütüphaneler importLibrary ile beklenir (onload'da places henüz HAZIR DEĞİL).
-let gmapsPromise: Promise<unknown> | null = null;
-function loadGoogleMaps(): Promise<unknown> {
-  if (typeof window === "undefined") return Promise.reject(new Error("NO_WINDOW"));
-  const w = window as unknown as { google?: { maps?: { importLibrary?: unknown } } };
-  if (w.google?.maps?.importLibrary) return Promise.resolve(w.google);
-  if (gmapsPromise) return gmapsPromise;
-  if (!KEY) return Promise.reject(new Error("NO_KEY"));
-  gmapsPromise = new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${KEY}&v=weekly&language=tr&region=TR&loading=async`;
-    s.async = true;
-    s.onload = () => resolve((window as unknown as { google: unknown }).google);
-    s.onerror = () => reject(new Error("LOAD_FAIL"));
-    document.head.appendChild(s);
+interface Suggestion {
+  placeId: string;
+  primary: string;
+  secondary: string;
+  // Yeni API'de öneriden Place üretmek için taşınır:
+  prediction?: any;
+}
+
+interface Props {
+  onSelect?: (result: AddressResult) => void;
+  placeholder?: string;
+  defaultValue?: string;
+  className?: string;
+  /** Ülke kısıtı (varsayılan Türkiye). */
+  regionCodes?: string[];
+}
+
+// ----------------------------------------------------------------------------
+// Google Maps loader (promise-cached, SSR-safe)
+// ----------------------------------------------------------------------------
+
+declare global {
+  interface Window {
+    google?: any;
+    __cyGmapsPromise?: Promise<any>;
+  }
+}
+
+const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+/**
+ * Resmi inline bootstrap loader'ı enjekte eder ve `google.maps.importLibrary`
+ * hazır olana kadar bekler. Birden fazla çağrıda tek promise paylaşılır.
+ */
+function loadGoogleMaps(): Promise<any> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('window yok (SSR)'));
+  }
+  if (window.google?.maps?.importLibrary) {
+    return Promise.resolve(window.google);
+  }
+  if (window.__cyGmapsPromise) {
+    return window.__cyGmapsPromise;
+  }
+  if (!MAPS_KEY) {
+    return Promise.reject(new Error('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY tanımlı değil'));
+  }
+
+  window.__cyGmapsPromise = new Promise<any>((resolve, reject) => {
+    try {
+      // Google resmi bootstrap snippet'i (dynamic library import).
+      // https://developers.google.com/maps/documentation/javascript/load-maps-js-api
+      (function (g: any) {
+        let h: any;
+        let a: any;
+        let k: any;
+        const p = 'The Google Maps JavaScript API';
+        const c = 'google';
+        const l = 'importLibrary';
+        const q = '__ib__';
+        const m = document;
+        let b: any = window as any;
+        b = b[c] || (b[c] = {});
+        const d = b.maps || (b.maps = {});
+        const r = new Set<string>();
+        const e = new URLSearchParams();
+        const u = () =>
+          h ||
+          (h = new Promise<void>(async (res, rej) => {
+            a = m.createElement('script');
+            e.set('libraries', [...r] + '');
+            for (k in g) {
+              e.set(k.replace(/[A-Z]/g, (t: string) => '_' + t[0].toLowerCase()), g[k]);
+            }
+            e.set('callback', c + '.maps.' + q);
+            a.src = `https://maps.${c}apis.com/maps/api/js?` + e;
+            d[q] = res;
+            a.onerror = () => (h = rej(Error(p + ' could not load.')));
+            a.nonce = (m.querySelector('script[nonce]') as any)?.nonce || '';
+            m.head.append(a);
+          }));
+        d[l]
+          ? console.warn(p + ' only loads once. Ignoring:', g)
+          : (d[l] = (f: string, ...n: any[]) => r.add(f) && u().then(() => d[l](f, ...n)));
+      })({ key: MAPS_KEY, v: 'weekly', language: 'tr', region: 'TR' });
+
+      const start = Date.now();
+      const poll = () => {
+        if (window.google?.maps?.importLibrary) {
+          resolve(window.google);
+        } else if (Date.now() - start > 15000) {
+          reject(new Error('Google Maps yüklenemedi (zaman aşımı)'));
+        } else {
+          setTimeout(poll, 60);
+        }
+      };
+      poll();
+    } catch (err) {
+      reject(err);
+    }
   });
-  return gmapsPromise;
+
+  return window.__cyGmapsPromise;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function parseComponents(components: any[]): { city: string; district: string; neighborhood: string } {
-  const get = (type: string) => components?.find((c) => c.types?.includes(type))?.long_name ?? "";
+// ----------------------------------------------------------------------------
+// Adres bileşeni çözümleme yardımcıları
+// ----------------------------------------------------------------------------
+
+function pickComponent(components: any[], types: string[]): string | null {
+  if (!Array.isArray(components)) return null;
+  for (const t of types) {
+    const hit = components.find((c: any) => {
+      const ct = c.types || c.Types || [];
+      return Array.isArray(ct) && ct.includes(t);
+    });
+    if (hit) {
+      return hit.longText ?? hit.long_name ?? hit.shortText ?? hit.short_name ?? null;
+    }
+  }
+  return null;
+}
+
+function buildResult(place: any): AddressResult {
+  const comps = place.addressComponents ?? place.address_components ?? [];
+  const loc = place.location ?? place.geometry?.location ?? null;
+  const lat =
+    typeof loc?.lat === 'function' ? loc.lat() : typeof loc?.lat === 'number' ? loc.lat : null;
+  const lng =
+    typeof loc?.lng === 'function' ? loc.lng() : typeof loc?.lng === 'number' ? loc.lng : null;
+
   return {
-    city: get("administrative_area_level_1"), // il
-    district: get("administrative_area_level_2"), // ilçe
-    neighborhood:
-      get("administrative_area_level_4") ||
-      get("neighborhood") ||
-      get("sublocality_level_1") ||
-      get("sublocality") ||
-      get("administrative_area_level_3"), // mahalle (fallback'li)
+    formattedAddress: place.formattedAddress ?? place.formatted_address ?? '',
+    placeId: place.id ?? place.place_id ?? '',
+    lat,
+    lng,
+    il: pickComponent(comps, ['administrative_area_level_1']),
+    ilce: pickComponent(comps, ['administrative_area_level_2']),
+    mahalle: pickComponent(comps, [
+      'administrative_area_level_4',
+      'administrative_area_level_3',
+      'neighborhood',
+      'sublocality_level_1',
+      'sublocality',
+    ]),
+    raw: place,
   };
 }
 
-export function AddressAutocomplete({
+// ----------------------------------------------------------------------------
+// Bileşen
+// ----------------------------------------------------------------------------
+
+export default function AddressAutocomplete({
   onSelect,
-  placeholder = "Mahalle, sokak, hastane, okul, AVM veya adres girin",
-  showMap = true,
-}: {
-  onSelect?: (a: SelectedAddress) => void;
-  placeholder?: string;
-  showMap?: boolean;
-}) {
-  const [ready, setReady] = useState(false);
-  const [err, setErr] = useState<null | "NO_KEY" | "LOAD_FAIL">(null);
-  const [query, setQuery] = useState("");
-  const [preds, setPreds] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<SelectedAddress | null>(null);
+  placeholder = 'Mahalle, sokak, hastane, okul, AVM veya adres girin',
+  defaultValue = '',
+  className,
+  regionCodes = ['tr'],
+}: Props) {
+  const [query, setQuery] = useState(defaultValue);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<AddressResult | null>(null);
 
-  const svcRef = useRef<any>(null);
-  const placesRef = useRef<any>(null);
-  const geocoderRef = useRef<any>(null);
-  const tokenRef = useRef<any>(null);
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const mapDivRef = useRef<HTMLDivElement>(null);
+  // Google API modülleri (mount'ta yüklenir)
+  const libsRef = useRef<{
+    places?: any;
+    geocoding?: any;
+    sessionToken?: any;
+    useNewApi: boolean;
+  }>({ useNewApi: true });
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // --- Init: Google Maps + kütüphaneleri yükle -----------------------------
   useEffect(() => {
-    let alive = true;
-    loadGoogleMaps()
-      .then(async (g: any) => {
-        // Kütüphaneleri AYRI AYRI bekle (async mod) — bu kritik.
-        const placesLib = await g.maps.importLibrary("places");
-        await g.maps.importLibrary("geocoding");
-        await g.maps.importLibrary("maps");
-        if (!alive) return;
-        svcRef.current = new placesLib.AutocompleteService();
-        placesRef.current = new placesLib.PlacesService(document.createElement("div"));
-        geocoderRef.current = new g.maps.Geocoder();
-        tokenRef.current = new placesLib.AutocompleteSessionToken();
-        setReady(true);
-      })
-      .catch((e: Error) => setErr(e.message === "NO_KEY" ? "NO_KEY" : "LOAD_FAIL"));
+    let cancelled = false;
+    (async () => {
+      try {
+        const google = await loadGoogleMaps();
+        const places = await google.maps.importLibrary('places');
+        let geocoding: any = null;
+        try {
+          geocoding = await google.maps.importLibrary('geocoding');
+        } catch {
+          /* geocoding opsiyonel */
+        }
+
+        // Yeni API mevcut mu?
+        const hasNew =
+          !!places?.AutocompleteSuggestion?.fetchAutocompleteSuggestions &&
+          !!places?.Place;
+
+        libsRef.current = {
+          places,
+          geocoding,
+          useNewApi: hasNew,
+        };
+
+        if (hasNew && places.AutocompleteSessionToken) {
+          libsRef.current.sessionToken = new places.AutocompleteSessionToken();
+        }
+
+        if (!cancelled) {
+          setReady(true);
+          setError(null);
+        }
+      } catch (err: any) {
+        // Sessizce yut ama kullanıcıya dostça bildir; detay konsolda.
+        // eslint-disable-next-line no-console
+        console.error('[AddressAutocomplete] init hatası:', err);
+        if (!cancelled) {
+          setError('Adres servisi şu anda kullanılamıyor. Lütfen adresi elle yazın.');
+          setReady(false);
+        }
+      }
+    })();
     return () => {
-      alive = false;
+      cancelled = true;
     };
   }, []);
 
-  // Debounced tahminler
-  useEffect(() => {
-    if (!ready || query.trim().length < 3) {
-      setPreds([]);
-      return;
-    }
-    setLoading(true);
-    const t = setTimeout(() => {
-      svcRef.current.getPlacePredictions(
-        { input: query, componentRestrictions: { country: "tr" }, sessionToken: tokenRef.current },
-        (res: any[]) => {
-          setPreds(res ?? []);
-          setLoading(false);
-          setOpen(true);
-        },
-      );
-    }, 250);
-    return () => clearTimeout(t);
-  }, [query, ready]);
+  // --- Öneri getir ----------------------------------------------------------
+  const fetchSuggestions = useCallback(
+    async (input: string) => {
+      const libs = libsRef.current;
+      if (!ready || !libs.places || input.trim().length < 3) {
+        setSuggestions([]);
+        setOpen(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
 
-  const emit = useCallback(
-    (addr: SelectedAddress) => {
-      setSelected(addr);
-      // Doğrulama logu (istenildiği gibi):
-      // eslint-disable-next-line no-console
-      console.log(`[CICEKYOLLA][adres:${addr.source}]`, addr);
-      onSelect?.(addr);
-    },
-    [onSelect],
-  );
+      try {
+        if (libs.useNewApi) {
+          // --- YENİ Places API ---
+          const request: any = {
+            input,
+            language: 'tr',
+            region: 'tr',
+            includedRegionCodes: regionCodes,
+          };
+          if (libs.sessionToken) request.sessionToken = libs.sessionToken;
 
-  const reverseGeocode = useCallback(
-    (lat: number, lng: number) => {
-      geocoderRef.current?.geocode({ location: { lat, lng } }, (res: any[]) => {
-        const r = res?.[0];
-        if (!r) return;
-        emit({ formattedAddress: r.formatted_address, placeId: r.place_id, lat, lng, ...parseComponents(r.address_components), source: "manual" });
-      });
-    },
-    [emit],
-  );
+          const { suggestions: raw } =
+            await libs.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
-  const drawMap = useCallback(
-    (lat: number, lng: number) => {
-      const g = (window as any).google;
-      if (!showMap || !g || !mapDivRef.current) return;
-      const center = { lat, lng };
-      if (!mapRef.current) {
-        mapRef.current = new g.maps.Map(mapDivRef.current, { center, zoom: 16, disableDefaultUI: true, zoomControl: true, clickableIcons: false });
-        markerRef.current = new g.maps.Marker({ map: mapRef.current, position: center, draggable: true });
-        markerRef.current.addListener("dragend", () => {
-          const p = markerRef.current.getPosition();
-          reverseGeocode(p.lat(), p.lng());
-        });
-      } else {
-        mapRef.current.setCenter(center);
-        markerRef.current.setPosition(center);
+          const mapped: Suggestion[] = (raw || [])
+            .filter((s: any) => s.placePrediction)
+            .map((s: any) => {
+              const pp = s.placePrediction;
+              return {
+                placeId: pp.placeId,
+                primary: pp.mainText?.text ?? pp.text?.text ?? '',
+                secondary: pp.secondaryText?.text ?? '',
+                prediction: pp,
+              };
+            });
+
+          setSuggestions(mapped);
+          setOpen(mapped.length > 0);
+        } else if (libs.places.AutocompleteService) {
+          // --- ESKİ API (fallback; yeni projelerde muhtemelen yok) ---
+          const svc = new libs.places.AutocompleteService();
+          const res: any = await new Promise((resolve) => {
+            svc.getPlacePredictions(
+              {
+                input,
+                componentRestrictions: { country: regionCodes },
+                language: 'tr',
+              },
+              (predictions: any, status: any) => {
+                resolve({ predictions, status });
+              }
+            );
+          });
+          const mapped: Suggestion[] = (res.predictions || []).map((p: any) => ({
+            placeId: p.place_id,
+            primary: p.structured_formatting?.main_text ?? p.description ?? '',
+            secondary: p.structured_formatting?.secondary_text ?? '',
+            prediction: p,
+          }));
+          setSuggestions(mapped);
+          setOpen(mapped.length > 0);
+        } else {
+          throw new Error('Uygun autocomplete servisi bulunamadı');
+        }
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[AddressAutocomplete] öneri hatası:', err);
+        setSuggestions([]);
+        setOpen(false);
+        setError('Adres önerileri alınamadı. Lütfen tekrar deneyin.');
+      } finally {
+        setLoading(false);
       }
     },
-    [showMap, reverseGeocode],
+    [ready, regionCodes]
   );
 
-  const choose = useCallback(
-    (pred: any) => {
-      setQuery(pred.description);
-      setPreds([]);
+  // --- Input değişimi (debounce) -------------------------------------------
+  const onInputChange = (v: string) => {
+    setQuery(v);
+    setSelected(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(v), 280);
+  };
+
+  // --- Öneri seçimi ---------------------------------------------------------
+  const handleSelect = useCallback(
+    async (s: Suggestion) => {
+      const libs = libsRef.current;
       setOpen(false);
-      placesRef.current.getDetails(
-        { placeId: pred.place_id, fields: ["formatted_address", "geometry", "address_components", "place_id"], sessionToken: tokenRef.current },
-        (place: any) => {
-          if (!place?.geometry) return;
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
-          emit({ formattedAddress: place.formatted_address, placeId: place.place_id, lat, lng, ...parseComponents(place.address_components), source: "autocomplete" });
-          drawMap(lat, lng);
-          tokenRef.current = new (window as any).google.maps.places.AutocompleteSessionToken();
-        },
-      );
+      setQuery(s.secondary ? `${s.primary} ${s.secondary}` : s.primary);
+      setLoading(true);
+      setError(null);
+
+      try {
+        let result: AddressResult | null = null;
+
+        if (libs.useNewApi && s.prediction?.toPlace) {
+          // Yeni API: prediction → Place → fetchFields
+          const place = s.prediction.toPlace();
+          await place.fetchFields({
+            fields: [
+              'id',
+              'formattedAddress',
+              'location',
+              'addressComponents',
+              'displayName',
+            ],
+          });
+          result = buildResult(place);
+          // Yeni oturum token'ı (fiyatlandırma oturumunu kapatır)
+          if (libs.places?.AutocompleteSessionToken) {
+            libs.sessionToken = new libs.places.AutocompleteSessionToken();
+          }
+        } else if (libs.geocoding?.Geocoder) {
+          // Fallback: placeId → Geocoder
+          const geocoder = new libs.geocoding.Geocoder();
+          const res: any = await new Promise((resolve, reject) => {
+            geocoder.geocode({ placeId: s.placeId }, (r: any, status: any) => {
+              if (status === 'OK' && r && r[0]) resolve(r[0]);
+              else reject(new Error('Geocode başarısız: ' + status));
+            });
+          });
+          result = buildResult(res);
+        }
+
+        if (result) {
+          setSelected(result);
+          // Konsola doğrulama verisi (brief §4 gereği)
+          // eslint-disable-next-line no-console
+          console.log('[AddressAutocomplete] seçilen adres:', result);
+          onSelect?.(result);
+        } else {
+          setError('Adres detayları alınamadı.');
+        }
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[AddressAutocomplete] detay hatası:', err);
+        setError('Adres detayları alınamadı. Lütfen tekrar deneyin.');
+      } finally {
+        setLoading(false);
+      }
     },
-    [emit, drawMap],
+    [onSelect]
   );
 
-  if (err === "NO_KEY") {
-    return (
-      <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-4 flex items-start gap-3 text-[13px] text-[#92400E]">
-        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-        Adres arama için Google Maps anahtarı yapılandırılmalı: <code className="font-mono">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> (Vercel → Environment Variables).
-      </div>
-    );
-  }
+  // --- Dışarı tıklayınca kapat ---------------------------------------------
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
 
+  // --------------------------------------------------------------------------
+  // Render
+  // --------------------------------------------------------------------------
   return (
-    <div className="relative">
-      {/* Arama input */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#9CA3AF]" />
+    <div ref={rootRef} className={className} style={{ position: 'relative', width: '100%' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: '#fff',
+          border: '1px solid #E9E4F0',
+          borderRadius: 16,
+          padding: '16px 20px',
+          boxShadow: '0 2px 16px rgba(139,92,246,0.06)',
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="7" stroke="#8B5CF6" strokeWidth="2" />
+          <path d="M21 21l-4.3-4.3" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" />
+        </svg>
         <input
+          type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => preds.length && setOpen(true)}
+          onChange={(e) => onInputChange(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder={placeholder}
-          disabled={!ready && !err}
-          className="w-full pl-11 pr-11 py-3.5 rounded-2xl border border-[#EDE9FE] bg-white text-[14px] text-[#111827] placeholder:text-[#9CA3AF] outline-none transition-all focus:border-[#7C3AED] focus:ring-4 focus:ring-[#7C3AED]/10"
+          autoComplete="off"
+          spellCheck={false}
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            fontSize: 16,
+            color: '#1A1226',
+            background: 'transparent',
+          }}
         />
-        {(loading || !ready) && !err ? (
-          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#7C3AED] animate-spin" />
-        ) : selected ? (
-          <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#059669]" />
-        ) : null}
+        {loading && (
+          <span
+            aria-label="yükleniyor"
+            style={{
+              width: 18,
+              height: 18,
+              border: '2px solid #E9E4F0',
+              borderTopColor: '#8B5CF6',
+              borderRadius: '50%',
+              animation: 'cy-spin 0.7s linear infinite',
+              flexShrink: 0,
+            }}
+          />
+        )}
       </div>
 
-      {err === "LOAD_FAIL" ? (
-        <p className="mt-2 text-[12px] text-[#B91C1C]">Adres servisi yüklenemedi. Bağlantınızı kontrol edin.</p>
-      ) : null}
-
-      {/* Öneri listesi (özel premium dropdown) */}
-      {open && preds.length > 0 ? (
-        <ul className="absolute z-30 mt-2 w-full max-h-80 overflow-auto rounded-2xl border border-[#EDE9FE] bg-white shadow-[0_16px_40px_rgba(17,24,39,0.10)] py-1.5">
-          {preds.map((p) => (
-            <li key={p.place_id}>
+      {open && suggestions.length > 0 && (
+        <ul
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            listStyle: 'none',
+            margin: 0,
+            padding: 6,
+            background: '#fff',
+            border: '1px solid #E9E4F0',
+            borderRadius: 16,
+            boxShadow: '0 12px 40px rgba(26,18,38,0.12)',
+            maxHeight: 320,
+            overflowY: 'auto',
+          }}
+        >
+          {suggestions.map((s) => (
+            <li key={s.placeId}>
               <button
-                onClick={() => choose(p)}
-                className="w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-[#F9F7FF] transition-colors"
+                type="button"
+                onClick={() => handleSelect(s)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  padding: '12px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#F6F2FC')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <MapPin className="w-4 h-4 text-[#7C3AED] mt-0.5 shrink-0" />
-                <span className="min-w-0">
-                  <span className="block text-[13.5px] font-semibold text-[#111827] truncate">
-                    {p.structured_formatting?.main_text ?? p.description}
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ marginTop: 2, flexShrink: 0 }}
+                >
+                  <path
+                    d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"
+                    stroke="#8B5CF6"
+                    strokeWidth="1.6"
+                  />
+                  <circle cx="12" cy="10" r="2.4" stroke="#8B5CF6" strokeWidth="1.6" />
+                </svg>
+                <span style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 15, color: '#1A1226', fontWeight: 500 }}>
+                    {s.primary}
                   </span>
-                  <span className="block text-[12px] text-[#9CA3AF] truncate">
-                    {p.structured_formatting?.secondary_text ?? ""}
-                  </span>
+                  {s.secondary && (
+                    <span style={{ fontSize: 13, color: '#8A7FA0' }}>{s.secondary}</span>
+                  )}
                 </span>
               </button>
             </li>
           ))}
         </ul>
-      ) : null}
+      )}
 
-      {/* Harita + seçilen adres özeti */}
-      {selected ? (
-        <div className="mt-3 rounded-2xl border border-[#EDE9FE] overflow-hidden">
-          {showMap ? <div ref={mapDivRef} className="w-full h-48 bg-[#F5F3FF]" /> : null}
-          <div className="p-4 bg-[#FBFAFE]">
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-[#7C3AED] mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[13.5px] font-semibold text-[#111827]">{selected.formattedAddress}</p>
-                <p className="text-[12px] text-[#6B7280] mt-1">
-                  {[selected.city, selected.district, selected.neighborhood].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-            </div>
-            {showMap ? (
-              <p className="mt-2 text-[11.5px] text-[#9CA3AF]">Konum yanlışsa haritadaki işaretçiyi sürükleyerek düzeltebilirsiniz.</p>
-            ) : null}
-          </div>
+      {error && (
+        <p style={{ marginTop: 12, color: '#C0392B', fontSize: 14 }}>{error}</p>
+      )}
+
+      {selected && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 16,
+            background: '#F6F2FC',
+            border: '1px solid #E9E4F0',
+            borderRadius: 14,
+            fontSize: 14,
+            color: '#1A1226',
+          }}
+        >
+          <strong style={{ color: '#7C3AED' }}>Doğrulanan adres</strong>
+          <p style={{ margin: '8px 0 0' }}>{selected.formattedAddress}</p>
+          <p style={{ margin: '4px 0 0', color: '#8A7FA0', fontSize: 13 }}>
+            {[selected.il, selected.ilce, selected.mahalle].filter(Boolean).join(' · ') || '—'}
+            {selected.lat != null && selected.lng != null
+              ? ` · ${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`
+              : ''}
+          </p>
         </div>
-      ) : null}
+      )}
+
+      <style>{`@keyframes cy-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
