@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle } from "lucide-react";
+import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
 
 // --- Endpoint yanıt tipleri (backend sözleşmesi) ---------------------------
@@ -92,6 +92,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   const [errDetail, setErrDetail] = useState<string | null>(null);
   const [nowTs, setNowTs] = useState<number>(() => Date.now());
   const [todayClosed, setTodayClosed] = useState(false);
+  const [mode, setMode] = useState<"sameday" | "cargo">("sameday");
   const reqSeq = useRef(0);
   const passedRef = useRef(false);
 
@@ -209,6 +210,13 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
     }
   }, [nowTs, dayOffset, address, sameDayAvail, cutoffStr, check]);
 
+  // Sonuç gelince varsayılan mod: aynı gün uygunsa 'sameday', değilse 'cargo'.
+  useEffect(() => {
+    if (!result) return;
+    if (result.same_day?.available && (result.same_day.slots?.length ?? 0) > 0) setMode("sameday");
+    else if (result.cargo?.available) setMode("cargo");
+  }, [result]);
+
   const onPickSlot = (s: Slot) => {
     setSlotId(s.id);
     if (address) onSelect?.({ date: isoOf(dayOffset), mode: "sameday", slot: s, band: result?.same_day.band, address });
@@ -314,91 +322,150 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                 <AlertCircle className="w-4 h-4 mt-[1px] shrink-0" />
                 {errDetail}
               </div>
-            ) : !result ? null : sd?.available && sd.slots && sd.slots.length > 0 ? (
-              <div>
-                {/* Aynı gün — band + süre + ücret + son alım */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] mb-2">
-                  <span className="inline-flex items-center gap-1 font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> Aynı gün teslimat</span>
-                  {sd.band && <span className="text-[#6B7280]">{sd.band.replace("İstanbul - ", "")}</span>}
-                  {sd.est_min_minutes != null && sd.est_max_minutes != null && (
-                    <span className="text-[#6B7280]">· {sd.est_min_minutes}-{sd.est_max_minutes} dk</span>
-                  )}
-                  <span className="text-[#6B7280]">· Teslimat {feeText(sd.fee_minor)}</span>
-                  {sd.cutoff_time && <span className="text-[#6B7280]">· Son alım {String(sd.cutoff_time).slice(0, 5)}</span>}
-                </div>
+            ) : !result ? null : (() => {
+              const showSameday = !!(sd?.available && sd.slots && sd.slots.length > 0);
+              const showCargo = !!cargo?.available;
+              if (!showSameday && !showCargo) {
+                return (
+                  <div className="flex items-start gap-2 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3 text-[12.5px] text-[#B91C1C]">
+                    <AlertCircle className="w-4 h-4 mt-[1px] shrink-0" />
+                    {result.message}
+                  </div>
+                );
+              }
+              const cargoFree = (cargo?.fee_minor ?? 0) === 0;
+              return (
+                <div>
+                  <style>{`@keyframes cyExpand{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-                {/* Cut-off canlı geri sayım (sadece BUGÜN; kesme saati API'den) */}
-                {dayOffset === 0 && remainingMs != null && remainingMs > 0 && (() => {
-                  const urgent = remainingMs < 3_600_000;
-                  const hh = String(Math.floor(remainingMs / 3_600_000)).padStart(2, "0");
-                  const mm = String(Math.floor((remainingMs % 3_600_000) / 60_000)).padStart(2, "0");
-                  const ss = String(Math.floor((remainingMs % 60_000) / 1_000)).padStart(2, "0");
-                  return (
-                    <div
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2 mb-2.5 text-[12.5px] font-semibold border ${
-                        urgent
-                          ? "bg-[#FEF2F2] border-[#FCA5A5] text-[#B91C1C] animate-pulse"
-                          : "bg-[#F5F3FF] border-[#DDD6FE] text-[#6D28D9]"
-                      }`}
-                    >
-                      <Clock className="w-4 h-4 shrink-0" />
-                      <span>Bugün teslimat için kalan süre:</span>
-                      <span className="ml-auto tabular-nums font-bold tracking-tight text-[14px]">
-                        {hh}:{mm}:{ss}
-                      </span>
-                    </div>
-                  );
-                })()}
-
-                {/* Slot ızgarası */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {sd.slots.map((s) => {
-                    const disabled = s.remaining <= 0;
-                    const activeSlot = slotId === s.id;
-                    return (
+                  {/* TESLİMAT SEÇENEĞİ KARTLARI */}
+                  <div className="text-[11px] font-bold text-[#9CA3AF] tracking-wider mb-2">TESLİMAT SEÇENEĞİ</div>
+                  <div className={`grid gap-2.5 ${showSameday && showCargo ? "sm:grid-cols-2" : "grid-cols-1"}`}>
+                    {showSameday && (
                       <button
-                        key={s.id}
-                        disabled={disabled}
-                        onClick={() => onPickSlot(s)}
-                        className={`relative rounded-xl px-2 py-2.5 text-center transition-all border text-[13px] font-semibold ${
-                          disabled
-                            ? "bg-[#F3F4F6] text-[#C4C4C4] border-[#EEE] cursor-not-allowed line-through"
-                            : activeSlot
-                            ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_12px_rgba(124,58,237,0.3)]"
-                            : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#7C3AED] hover:shadow-[0_2px_8px_rgba(124,58,237,0.12)]"
+                        onClick={() => setMode("sameday")}
+                        className={`relative text-left rounded-[20px] border p-3.5 min-h-[92px] transition-all ${
+                          mode === "sameday"
+                            ? "border-[#7C3AED] bg-[#F5F3FF] shadow-[0_6px_20px_rgba(124,58,237,0.18)]"
+                            : "border-[#EDE9FE] bg-white hover:border-[#C4B5FD] hover:shadow-[0_4px_16px_rgba(124,58,237,0.1)]"
                         }`}
                       >
-                        {activeSlot && <Check className="w-3.5 h-3.5 absolute top-1.5 right-1.5" />}
-                        {s.label}
-                        {!disabled && s.extra_fee_minor > 0 && (
-                          <div className={`text-[10px] font-medium mt-0.5 ${activeSlot ? "text-white/80" : "text-[#9CA3AF]"}`}>+{feeText(s.extra_fee_minor)}</div>
-                        )}
+                        <span className="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857]">AYNI GÜN</span>
+                        {mode === "sameday" && <Check className="w-4 h-4 text-[#7C3AED] absolute bottom-2.5 right-2.5" />}
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center mb-2">
+                          <Truck className="w-[18px] h-[18px] text-white" />
+                        </div>
+                        <div className="text-[13.5px] font-bold text-[#111827]">Aynı Gün Teslimat</div>
+                        <div className="text-[11.5px] text-[#6B7280] mt-0.5">
+                          {dayOffset === 0 ? "Bugün teslim" : "Seçili gün teslim"}
+                          {sd?.est_min_minutes != null && sd?.est_max_minutes != null ? ` · ${sd.est_min_minutes}-${sd.est_max_minutes} dk` : ""}
+                        </div>
                       </button>
-                    );
-                  })}
+                    )}
+                    {showCargo && (
+                      <button
+                        onClick={() => { setMode("cargo"); if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", address }); }}
+                        className={`relative text-left rounded-[20px] border p-3.5 min-h-[92px] transition-all ${
+                          mode === "cargo"
+                            ? "border-[#7C3AED] bg-[#F5F3FF] shadow-[0_6px_20px_rgba(124,58,237,0.18)]"
+                            : "border-[#EDE9FE] bg-white hover:border-[#C4B5FD] hover:shadow-[0_4px_16px_rgba(124,58,237,0.1)]"
+                        }`}
+                      >
+                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center">YARIN<br />KARGODA</span>
+                        {mode === "cargo" && <Check className="w-4 h-4 text-[#7C3AED] absolute bottom-2.5 right-2.5" />}
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center mb-2">
+                          <Package className="w-[18px] h-[18px] text-white" />
+                        </div>
+                        <div className="text-[13.5px] font-bold text-[#111827]">{cargoFree ? "Ücretsiz Kargo" : "Kargo"}</div>
+                        <div className="text-[11.5px] text-[#6B7280] mt-0.5">Türkiye Geneli · {cargo?.est_text ?? "1-5 iş günü"}</div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* SEÇİLİ KARTA AİT ANİMASYONLU AÇILIR KUTU (~280ms) */}
+                  <div key={mode} className="mt-3" style={{ animation: "cyExpand .28s ease-out" }}>
+                    {mode === "sameday" && showSameday ? (
+                      <div>
+                        {/* band + süre + ücret + son alım */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] mb-2">
+                          <span className="inline-flex items-center gap-1 font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> Aynı gün teslimat</span>
+                          {sd!.band && <span className="text-[#6B7280]">{sd!.band.replace("İstanbul - ", "")}</span>}
+                          {sd!.est_min_minutes != null && sd!.est_max_minutes != null && (
+                            <span className="text-[#6B7280]">· {sd!.est_min_minutes}-{sd!.est_max_minutes} dk</span>
+                          )}
+                          <span className="text-[#6B7280]">· Teslimat {feeText(sd!.fee_minor)}</span>
+                          {sd!.cutoff_time && <span className="text-[#6B7280]">· Son alım {String(sd!.cutoff_time).slice(0, 5)}</span>}
+                        </div>
+
+                        {/* Cut-off canlı geri sayım (sadece BUGÜN; kesme saati API'den) */}
+                        {dayOffset === 0 && remainingMs != null && remainingMs > 0 && (() => {
+                          const urgent = remainingMs < 3_600_000;
+                          const hh = String(Math.floor(remainingMs / 3_600_000)).padStart(2, "0");
+                          const mm = String(Math.floor((remainingMs % 3_600_000) / 60_000)).padStart(2, "0");
+                          const ss = String(Math.floor((remainingMs % 60_000) / 1_000)).padStart(2, "0");
+                          return (
+                            <div className={`flex items-center gap-2 rounded-xl px-3 py-2 mb-2.5 text-[12.5px] font-semibold border ${urgent ? "bg-[#FEF2F2] border-[#FCA5A5] text-[#B91C1C] animate-pulse" : "bg-[#F5F3FF] border-[#DDD6FE] text-[#6D28D9]"}`}>
+                              <Clock className="w-4 h-4 shrink-0" />
+                              <span>Bugün teslimat için kalan süre:</span>
+                              <span className="ml-auto tabular-nums font-bold tracking-tight text-[14px]">{hh}:{mm}:{ss}</span>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Slot ızgarası */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {sd!.slots!.map((s) => {
+                            const disabled = s.remaining <= 0;
+                            const activeSlot = slotId === s.id;
+                            return (
+                              <button
+                                key={s.id}
+                                disabled={disabled}
+                                onClick={() => onPickSlot(s)}
+                                className={`relative rounded-xl px-2 py-2.5 text-center transition-all border text-[13px] font-semibold ${disabled ? "bg-[#F3F4F6] text-[#C4C4C4] border-[#EEE] cursor-not-allowed line-through" : activeSlot ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_12px_rgba(124,58,237,0.3)]" : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#7C3AED] hover:shadow-[0_2px_8px_rgba(124,58,237,0.12)]"}`}
+                              >
+                                {activeSlot && <Check className="w-3.5 h-3.5 absolute top-1.5 right-1.5" />}
+                                {s.label}
+                                {!disabled && s.extra_fee_minor > 0 && (
+                                  <div className={`text-[10px] font-medium mt-0.5 ${activeSlot ? "text-white/80" : "text-[#9CA3AF]"}`}>+{feeText(s.extra_fee_minor)}</div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {slotId != null && (
+                          <p className="mt-2.5 flex items-center gap-1.5 text-[12px] font-medium text-[#059669]">
+                            <Check className="w-4 h-4" /> Teslimat saatiniz seçildi — sipariş adımında onaylanacak.
+                          </p>
+                        )}
+                      </div>
+                    ) : mode === "cargo" && showCargo ? (
+                      <div className="rounded-[18px] border border-[#DDD6FE] bg-gradient-to-b from-[#F5F3FF] to-white p-4 shadow-[0_4px_18px_rgba(124,58,237,0.1)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><Package className="w-4 h-4 text-[#7C3AED]" /></div>
+                          <div className="text-[13px] font-extrabold tracking-wide text-[#6D28D9]">{cargoFree ? "ÜCRETSİZ KARGO" : "KARGO"}</div>
+                        </div>
+                        <ul className="space-y-1.5 text-[12.5px] text-[#374151]">
+                          <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#059669] shrink-0" /> Siparişiniz siparişe özel hazırlanır.</li>
+                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> Yarın kargoya teslim edilir.</li>
+                        </ul>
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                          <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">
+                            <div className="text-[10.5px] text-[#9CA3AF] font-semibold">Tahmini teslimat</div>
+                            <div className="text-[13px] font-bold text-[#111827] mt-0.5">{cargo!.est_text ?? "1-5 iş günü"}</div>
+                          </div>
+                          <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">
+                            <div className="text-[10.5px] text-[#9CA3AF] font-semibold">Kargo ücreti</div>
+                            <div className="text-[13px] font-bold text-[#7C3AED] mt-0.5">{cargoFree ? "Ücretsiz" : feeText(cargo!.fee_minor)}</div>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-[#9CA3AF] mt-2.5">Tahmini teslimat süreleri bulunduğunuz ile göre değişebilir.</p>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                {slotId != null && (
-                  <p className="mt-2.5 flex items-center gap-1.5 text-[12px] font-medium text-[#059669]">
-                    <Check className="w-4 h-4" /> Teslimat saatiniz seçildi — sipariş adımında onaylanacak.
-                  </p>
-                )}
-              </div>
-            ) : cargo?.available && !sd?.available ? (
-              <div className="flex items-start gap-2.5 rounded-xl bg-white border border-[#EDE9FE] p-3">
-                <div className="w-9 h-9 rounded-lg bg-[#EDE9FE] flex items-center justify-center shrink-0">
-                  <Truck className="w-4.5 h-4.5 text-[#7C3AED]" />
-                </div>
-                <div>
-                  <div className="text-[13px] font-bold text-[#111827]">Kargo ile teslimat</div>
-                  <p className="text-[12px] text-[#6B7280] mt-0.5">{cargo.est_text ?? "1-5 iş günü"} içinde, ücretsiz kargo ile gönderilir.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3 text-[12.5px] text-[#B91C1C]">
-                <AlertCircle className="w-4 h-4 mt-[1px] shrink-0" />
-                {result.message}
-              </div>
-            )}
+              );
+            })()}
           </div>
         </>
       )}
