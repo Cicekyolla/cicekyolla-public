@@ -219,6 +219,7 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
               product_type: product.product_type,
               same_day_available: product.same_day_available,
               delivery_scope: product.delivery_scope,
+              categoryId: data.categories?.find((c) => c.is_primary)?.category_id ?? data.categories?.[0]?.category_id ?? null,
             }}
           />
 
