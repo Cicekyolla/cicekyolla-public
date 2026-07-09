@@ -11,6 +11,7 @@
  */
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { MapPin, PackageX, ChevronRight, Sparkles } from "lucide-react";
 
 interface Props {
@@ -27,6 +28,21 @@ function slugifyTr(s: string): string {
 
 export default function DeliveryAlternatives({ excludeId, city, district, categoryId }: Props) {
   const cityName = (city && city.trim()) || "Bu adrese";
+
+  // Recommendation Engine config (admin-yönetimli). Gelmezse mevcut premium metne düşer.
+  const [cfg, setCfg] = useState<{ description?: string; cta_text?: string; is_active?: boolean } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/recommendation-config")
+      .then((r) => r.json())
+      .then((d) => { if (alive) setCfg(d?.data ?? null); })
+      .catch(() => { if (alive) setCfg(null); });
+    return () => { alive = false; };
+  }, []);
+
+  const fill = (tpl: string) => tpl.replace(/\{city\}/g, cityName + (cityName.endsWith("adrese") ? "" : "'a"));
+  const descText = cfg?.description || `💜 Endişelenmeyin — ${cityName}${cityName.endsWith("adrese") ? "" : "'a"} güvenle gönderebileceğiniz özel ürünleri sizin için hazırladık.`;
+  const ctaText = cfg?.cta_text ? fill(cfg.cta_text) : `${cityName}${cityName.endsWith("adrese") ? " Uygun" : "'a Gönderilebilen"} Ürünleri Gör`;
   const citySlug = slugifyTr(city || "turkiye");
   const q = new URLSearchParams();
   if (excludeId) q.set("from", String(excludeId));
@@ -48,7 +64,7 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
           </div>
           <p className="text-[13.5px] font-bold text-[#111827] mt-1">Bu canlı çiçek ürünü bu adrese gönderilemiyor.</p>
           <p className="text-[12.5px] text-[#6B7280] mt-1 leading-relaxed">
-            💜 Endişelenmeyin — {cityName}{cityName.endsWith("adrese") ? "" : "'a"} güvenle gönderebileceğiniz özel ürünleri sizin için hazırladık.
+            {descText}
           </p>
         </div>
       </div>
@@ -60,7 +76,7 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
         style={{ background: "linear-gradient(90deg, #7C3AED 0%, #6D28D9 100%)" }}
       >
         <Sparkles className="w-4 h-4" />
-        {cityName}{cityName.endsWith("adrese") ? " Uygun" : "'a Gönderilebilen"} Ürünleri Gör
+        {ctaText}
         <ChevronRight className="w-4 h-4" />
       </Link>
       <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">Türkiye geneli ücretsiz kargo ile gönderilebilen özel ürünler</p>
