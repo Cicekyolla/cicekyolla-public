@@ -1,33 +1,16 @@
-// recommendationApi.ts — Recommendation Engine config (admin). Gerçek /api/admin/recommendation-config.
-const ORIGIN =
-  (import.meta as { env?: { VITE_API_ORIGIN?: string } }).env?.VITE_API_ORIGIN ?? '';
-const BASE = `${ORIGIN}/api/admin/recommendation-config`;
+import { NextResponse } from "next/server";
 
-async function http<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, credentials: 'include', ...init });
-  if (!res.ok) throw new Error(`recommendation_api_${res.status}`);
-  return res.json() as Promise<T>;
+const API_ORIGIN =
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+
+export const revalidate = 120;
+
+export async function GET() {
+  try {
+    const resp = await fetch(`${API_ORIGIN}/api/public/recommendation-config`, { next: { revalidate: 120 } });
+    const json = await resp.json().catch(() => null);
+    return NextResponse.json(json ?? { data: null }, { status: resp.ok ? 200 : 200 });
+  } catch {
+    return NextResponse.json({ data: null });
+  }
 }
-
-export interface RecommendationConfig {
-  id: number;
-  is_active: boolean;
-  title: string;
-  description: string;
-  cta_text: string;
-  algorithm: 'same_category_first' | 'bestseller' | 'price_proximity';
-  max_items: number;
-  layout: 'grid' | 'carousel';
-  collection_url_template: string;
-  cargo_types: string[];
-  updated_at: string | null;
-}
-
-export const recommendationApi = {
-  get(): Promise<{ data: RecommendationConfig }> {
-    return http(`${BASE}`);
-  },
-  update(patch: Partial<Omit<RecommendationConfig, 'id' | 'updated_at'>>): Promise<{ data: RecommendationConfig }> {
-    return http(`${BASE}`, { method: 'PUT', body: JSON.stringify(patch) });
-  },
-};
