@@ -7,6 +7,8 @@
 //   title_tag, meta_description, h1, intro_html, body_blocks[], faq[], schema_jsonld } }
 // ---------------------------------------------------------------------------
 
+import { mediaUrl, mediaUrlOrNull } from "./media";
+
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
@@ -216,6 +218,10 @@ export async function fetchProductBySlug(slug: string): Promise<PublicProductDet
   if (!data?.product) return null;
   // Public yalnız yayında (active) ürünü gösterir.
   if (data.product.status !== "active") return null;
+  // R2 (r2.dev) galeri görsel/video URL'lerini same-origin /r2 proxy'sine çevir (TR erişim fix'i).
+  if (Array.isArray(data.images)) {
+    data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url) }));
+  }
   return data;
 }
 
@@ -285,8 +291,11 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   }
   if (!res.ok) return empty;
   const json = (await res.json()) as ProductPage;
+  const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
+  // R2 (r2.dev) kapak URL'lerini same-origin /r2 proxy'sine çevir (TR erişim fix'i).
+  const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url) }));
   return {
-    items: Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [],
+    items,
     pagination: json?.pagination ?? empty.pagination,
   };
 }
