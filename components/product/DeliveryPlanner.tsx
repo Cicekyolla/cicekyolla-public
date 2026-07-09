@@ -89,6 +89,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [slotId, setSlotId] = useState<number | null>(null);
+  const [errDetail, setErrDetail] = useState<string | null>(null);
   const reqSeq = useRef(0);
 
   const days = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ offset: i, ...labelOf(i) })), []);
@@ -96,44 +97,68 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
 
   const check = useCallback(
     async (addr: AddressResult, offset: number) => {
-      if (addr.lat == null || addr.lng == null) return;
+      const latNum = Number(addr.lat);
+      const lngNum = Number(addr.lng);
+      if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return;
       const seq = ++reqSeq.current;
       setLoading(true);
       setSlotId(null);
+      setErrDetail(null);
       try {
         // Boş string'ler backend Zod min(1)'i patlatır (422) -> undefined'a çevir.
         const VALID_TYPES = ["flower", "plant", "wreath", "artificial", "gift", "service"];
         const city = addr.il && addr.il.trim() ? addr.il.trim() : undefined;
         const district = addr.ilce && addr.ilce.trim() ? addr.ilce.trim() : undefined;
         const productType = VALID_TYPES.includes(product.product_type) ? product.product_type : undefined;
-        const payload: Record<string, unknown> = {
-          lat: addr.lat,
-          lng: addr.lng,
-          product_id: product.id,
-          date: isoOf(offset),
-        };
+        // KRİTİK: pg BIGINT id'yi STRING döndürebilir -> Number()'a zorla (z.number() aksi halde 422).
+        const pid = Number(product.id);
+        const selectedDate = isoOf(offset);
+
+        const payload: Record<string, unknown> = { lat: latNum, lng: lngNum, date: selectedDate };
+        if (Number.isInteger(pid) && pid > 0) payload.product_id = pid;
         if (city) payload.city = city;
         if (district) payload.district = district;
         if (productType) payload.product_type = productType;
+
+        // --- Geçici debug log'ları (görev gereği) ---
+        // eslint-disable-next-line no-console
+        console.log("[DeliveryPlanner] selectedAddress:", addr);
+        // eslint-disable-next-line no-console
+        console.log("[DeliveryPlanner] selectedDate:", selectedDate);
+        // eslint-disable-next-line no-console
+        console.log("[DeliveryPlanner] requestPayload:", payload);
 
         const resp = await fetch("/api/delivery-check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const json = await resp.json();
+        const json = await resp.json().catch(() => null);
         if (seq !== reqSeq.current) return;
+
+        // eslint-disable-next-line no-console
+        console.log("[DeliveryPlanner] apiResponse:", resp.status, json);
+
         if (!resp.ok || !json?.data) {
-          // eslint-disable-next-line no-console
-          console.warn("[DeliveryPlanner] check hata:", resp.status, json);
+          const detail =
+            json?.details?.fieldErrors
+              ? Object.entries(json.details.fieldErrors)
+                  .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+                  .join(" · ")
+              : json?.error ?? `HTTP ${resp.status}`;
+          setErrDetail(`Teslimat kontrolü başarısız (${resp.status}) — ${detail}`);
           setResult(null);
         } else {
+          setErrDetail(null);
           setResult(json.data);
         }
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn("[DeliveryPlanner] check exception:", e);
-        if (seq === reqSeq.current) setResult(null);
+        if (seq === reqSeq.current) {
+          setErrDetail("Teslimat servisine ulaşılamadı. Lütfen tekrar deneyin.");
+          setResult(null);
+        }
       } finally {
         if (seq === reqSeq.current) setLoading(false);
       }
@@ -237,6 +262,11 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
             {loading ? (
               <div className="flex items-center gap-2 text-[13px] text-[#7C3AED] py-3">
                 <Loader2 className="w-4 h-4 animate-spin" /> Uygun teslimat kontrol ediliyor…
+              </div>
+            ) : errDetail ? (
+              <div className="flex items-start gap-2 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3 text-[12.5px] text-[#B91C1C]">
+                <AlertCircle className="w-4 h-4 mt-[1px] shrink-0" />
+                {errDetail}
               </div>
             ) : !result ? null : sd?.available && sd.slots && sd.slots.length > 0 ? (
               <div>
