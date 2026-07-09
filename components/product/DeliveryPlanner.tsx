@@ -90,7 +90,10 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [slotId, setSlotId] = useState<number | null>(null);
   const [errDetail, setErrDetail] = useState<string | null>(null);
+  const [nowTs, setNowTs] = useState<number>(() => Date.now());
+  const [todayClosed, setTodayClosed] = useState(false);
   const reqSeq = useRef(0);
+  const passedRef = useRef(false);
 
   const days = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ offset: i, ...labelOf(i) })), []);
   const quickDays = days.slice(0, 3);
@@ -151,6 +154,11 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         } else {
           setErrDetail(null);
           setResult(json.data);
+          if (offset === 0) {
+            const passed = !!json.data?.same_day?.cutoff_passed_today;
+            setTodayClosed(passed);
+            passedRef.current = passed;
+          }
         }
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -170,6 +178,36 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   useEffect(() => {
     if (address) check(address, dayOffset);
   }, [address, dayOffset, check]);
+
+  // Bugün + aynı gün uygun iken kesme saatine kalan süre (ms). Sadece bugün anlamlı.
+  const cutoffStr = result?.same_day?.cutoff_time ?? null;
+  const sameDayAvail = !!result?.same_day?.available;
+  function cutoffRemainingMs(cutoff: string, ts: number): number {
+    const m = /^(\d{1,2}):(\d{2})/.exec(cutoff);
+    if (!m) return 0;
+    const d = new Date(ts);
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    return d.getTime() - ts;
+  }
+  const remainingMs =
+    dayOffset === 0 && cutoffStr ? cutoffRemainingMs(cutoffStr, nowTs) : null;
+
+  // Canlı sayaç: sadece bugün + aynı gün uygun + kesme geçmemişken saniyede bir tik.
+  useEffect(() => {
+    if (dayOffset !== 0 || !sameDayAvail || !cutoffStr || todayClosed) return;
+    const id = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [dayOffset, sameDayAvail, cutoffStr, todayClosed]);
+
+  // Kesme saati geçince: aynı gün slotlarını kapat + /api/delivery-check tekrar çağır.
+  useEffect(() => {
+    if (dayOffset !== 0 || !address || !sameDayAvail || !cutoffStr) return;
+    if (cutoffRemainingMs(cutoffStr, nowTs) <= 0 && !passedRef.current) {
+      passedRef.current = true;
+      setTodayClosed(true);
+      check(address, 0); // backend cutoff_passed_today=true döner -> slotlar kapanır
+    }
+  }, [nowTs, dayOffset, address, sameDayAvail, cutoffStr, check]);
 
   const onPickSlot = (s: Slot) => {
     setSlotId(s.id);
@@ -196,7 +234,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       <div className="mt-3">
         <AddressAutocomplete
           placeholder="Teslimat adresini yazın (mahalle / cadde / AVM)"
-          onSelect={(r) => { setAddress(r); setResult(null); }}
+          onSelect={(r) => { setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(0); }}
         />
       </div>
 
@@ -212,20 +250,28 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         <>
           {/* Gün seçimi */}
           <div className="mt-4 grid grid-cols-3 gap-2">
-            {quickDays.map((d) => (
-              <button
-                key={d.offset}
-                onClick={() => setDayOffset(d.offset)}
-                className={`rounded-xl px-2 py-2.5 text-center transition-all border ${
-                  dayOffset === d.offset
-                    ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_10px_rgba(124,58,237,0.25)]"
-                    : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#C4B5FD]"
-                }`}
-              >
-                <div className="text-[13px] font-bold leading-tight">{d.label}</div>
-                <div className={`text-[11px] mt-0.5 ${dayOffset === d.offset ? "text-white/80" : "text-[#9CA3AF]"}`}>{d.sub}</div>
-              </button>
-            ))}
+            {quickDays.map((d) => {
+              const isTodayClosed = d.offset === 0 && todayClosed;
+              return (
+                <button
+                  key={d.offset}
+                  disabled={isTodayClosed}
+                  onClick={() => !isTodayClosed && setDayOffset(d.offset)}
+                  className={`rounded-xl px-2 py-2.5 text-center transition-all border ${
+                    isTodayClosed
+                      ? "bg-[#F3F4F6] text-[#9CA3AF] border-[#EEE] cursor-not-allowed"
+                      : dayOffset === d.offset
+                      ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_10px_rgba(124,58,237,0.25)]"
+                      : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#C4B5FD]"
+                  }`}
+                >
+                  <div className="text-[13px] font-bold leading-tight">{d.label}</div>
+                  <div className={`text-[11px] mt-0.5 ${isTodayClosed ? "text-[#B91C1C] font-semibold" : dayOffset === d.offset ? "text-white/80" : "text-[#9CA3AF]"}`}>
+                    {isTodayClosed ? "Kapandı" : d.sub}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* 30 günlük takvim aç/kapa */}
@@ -270,7 +316,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
               </div>
             ) : !result ? null : sd?.available && sd.slots && sd.slots.length > 0 ? (
               <div>
-                {/* Aynı gün — band + süre + ücret */}
+                {/* Aynı gün — band + süre + ücret + son alım */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] mb-2">
                   <span className="inline-flex items-center gap-1 font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> Aynı gün teslimat</span>
                   {sd.band && <span className="text-[#6B7280]">{sd.band.replace("İstanbul - ", "")}</span>}
@@ -278,7 +324,32 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                     <span className="text-[#6B7280]">· {sd.est_min_minutes}-{sd.est_max_minutes} dk</span>
                   )}
                   <span className="text-[#6B7280]">· Teslimat {feeText(sd.fee_minor)}</span>
+                  {sd.cutoff_time && <span className="text-[#6B7280]">· Son alım {String(sd.cutoff_time).slice(0, 5)}</span>}
                 </div>
+
+                {/* Cut-off canlı geri sayım (sadece BUGÜN; kesme saati API'den) */}
+                {dayOffset === 0 && remainingMs != null && remainingMs > 0 && (() => {
+                  const urgent = remainingMs < 3_600_000;
+                  const hh = String(Math.floor(remainingMs / 3_600_000)).padStart(2, "0");
+                  const mm = String(Math.floor((remainingMs % 3_600_000) / 60_000)).padStart(2, "0");
+                  const ss = String(Math.floor((remainingMs % 60_000) / 1_000)).padStart(2, "0");
+                  return (
+                    <div
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 mb-2.5 text-[12.5px] font-semibold border ${
+                        urgent
+                          ? "bg-[#FEF2F2] border-[#FCA5A5] text-[#B91C1C] animate-pulse"
+                          : "bg-[#F5F3FF] border-[#DDD6FE] text-[#6D28D9]"
+                      }`}
+                    >
+                      <Clock className="w-4 h-4 shrink-0" />
+                      <span>Bugün teslimat için kalan süre:</span>
+                      <span className="ml-auto tabular-nums font-bold tracking-tight text-[14px]">
+                        {hh}:{mm}:{ss}
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* Slot ızgarası */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {sd.slots.map((s) => {
