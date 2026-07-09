@@ -5,6 +5,7 @@ import { getCategoryTree } from "@/lib/categories";
 import { mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
 import { HomeHero } from "../components/home/HomeHero";
+import HeroDeliveryBar from "../components/home/HeroDeliveryBar";
 import { TrustBar } from "../components/home/TrustBar";
 import { Manifesto } from "../components/home/Manifesto";
 import { FeaturedCollections } from "../components/home/FeaturedCollections";
@@ -159,6 +160,7 @@ export default async function HomePage() {
         <FloatingCategoryRail items={collections} />
       </section>
 
+      <HeroDeliveryBar />
       <HomeHero />
       <TrustBar />
       <Manifesto />
