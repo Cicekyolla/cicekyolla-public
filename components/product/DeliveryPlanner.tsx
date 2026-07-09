@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
+import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
 
 // --- Endpoint yanıt tipleri (backend sözleşmesi) ---------------------------
 interface Slot {
@@ -327,10 +328,11 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
               const showCargo = !!cargo?.available;
               if (!showSameday && !showCargo) {
                 return (
-                  <div className="flex items-start gap-2 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3 text-[12.5px] text-[#B91C1C]">
-                    <AlertCircle className="w-4 h-4 mt-[1px] shrink-0" />
-                    {result.message}
-                  </div>
+                  <DeliveryAlternatives
+                    excludeId={product.id}
+                    city={result.location?.city}
+                    district={result.location?.district}
+                  />
                 );
               }
               const cargoFree = (cargo?.fee_minor ?? 0) === 0;
