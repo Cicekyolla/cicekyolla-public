@@ -58,7 +58,7 @@ export interface SelectedDelivery {
 }
 
 interface Props {
-  product: { id: number; product_type: string; same_day_available: boolean; delivery_scope: string };
+  product: { id: number; product_type: string; same_day_available: boolean; delivery_scope: string; categoryId?: number | null };
   onSelect?: (sel: SelectedDelivery) => void;
 }
 
@@ -332,6 +332,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                     excludeId={product.id}
                     city={result.location?.city}
                     district={result.location?.district}
+                    categoryId={product.categoryId}
                   />
                 );
               }
