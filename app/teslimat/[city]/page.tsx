@@ -12,7 +12,17 @@ import { fetchProducts, type PublicProductListItem } from "@/lib/api";
  * tüm sonuçlar canlı katalogdan (fetchProducts). Mevcut mimari bozulmaz (additive).
  */
 
-const CARGO_TYPES = ["plant", "artificial", "gift"];
+const CARGO_TYPES_DEFAULT = ["plant", "artificial", "gift"];
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+
+interface RecConfig { title: string; max_items: number; cargo_types: string[]; is_active: boolean; }
+async function loadConfig(): Promise<RecConfig | null> {
+  try {
+    const r = await fetch(`${API_ORIGIN}/api/public/recommendation-config`, { next: { revalidate: 120 } });
+    const j = await r.json().catch(() => null);
+    return j?.data ?? null;
+  } catch { return null; }
+}
 
 function titleCaseTr(slug: string): string {
   return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toLocaleUpperCase("tr-TR"));
@@ -31,7 +41,7 @@ export async function generateMetadata({ params }: { params: { city: string } })
   };
 }
 
-async function loadCargoProducts(catId: number, excludeId: number): Promise<PublicProductListItem[]> {
+async function loadCargoProducts(catId: number, excludeId: number, cargoTypes: string[], limit: number): Promise<PublicProductListItem[]> {
   const calls: Promise<PublicProductListItem[]>[] = [
     fetchProducts({ page_size: 60 }),
     fetchProducts({ is_bestseller: true, page_size: 24 }),
@@ -44,13 +54,13 @@ async function loadCargoProducts(catId: number, excludeId: number): Promise<Publ
   for (const p of lists.flat()) {
     if (!p.cover_image_url) continue;
     if (excludeId && p.id === excludeId) continue;
-    if (!CARGO_TYPES.includes(p.product_type)) continue;
+    if (!cargoTypes.includes(p.product_type)) continue;
     if (seen.has(p.id)) continue;
     seen.add(p.id);
     items.push(p);
   }
   items.sort((a, b) => (a.is_bestseller !== b.is_bestseller ? (a.is_bestseller ? -1 : 1) : 0));
-  return items;
+  return items.slice(0, limit);
 }
 
 export default async function DeliveryCityPage({
@@ -63,7 +73,11 @@ export default async function DeliveryCityPage({
   const cityName = searchParams.il?.trim() || titleCaseTr(params.city);
   const catId = Number(searchParams.cat || 0);
   const excludeId = Number(searchParams.from || 0);
-  const items = await loadCargoProducts(catId, excludeId);
+  const cfg = await loadConfig();
+  const cargoTypes = cfg?.cargo_types?.length ? cfg.cargo_types : CARGO_TYPES_DEFAULT;
+  const maxItems = cfg?.max_items && cfg.max_items > 0 ? cfg.max_items : 24;
+  const pageTitle = cfg?.title?.trim() ? cfg.title.replace(/\{city\}/g, `${cityName}'a`) : `${cityName}'a Gönderilebilen Ürünler`;
+  const items = await loadCargoProducts(catId, excludeId, cargoTypes, maxItems);
 
   return (
     <main className="min-h-screen bg-white">
@@ -78,7 +92,7 @@ export default async function DeliveryCityPage({
             <PackageCheck className="w-4 h-4" /> Türkiye Geneli Ücretsiz Kargo
           </div>
           <h1 className="mt-2 text-[24px] md:text-[30px] font-bold text-[#111827] tracking-tight">
-            {cityName}&rsquo;a Gönderilebilen Ürünler
+            {pageTitle}
           </h1>
           <p className="mt-1.5 text-[13.5px] text-[#6B7280] max-w-2xl leading-relaxed">
             Seçtiğiniz adrese güvenle gönderebileceğiniz özel ürünler. Tümü kargo ile Türkiye&rsquo;nin her yerine ulaşır.
