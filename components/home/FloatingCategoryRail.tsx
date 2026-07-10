@@ -10,6 +10,7 @@
 
 import { type CSSProperties, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
@@ -43,6 +44,7 @@ export function FloatingCategoryRail({
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
   const cats = items ?? [];
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start", containScroll: "trimSnaps" });
+  const router = useRouter();
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
   const onSelect = useCallback((api: NonNullable<typeof emblaApi>) => {
@@ -114,6 +116,7 @@ export function FloatingCategoryRail({
                 <Link
                   key={cat.id}
                   href={cat.href}
+                  onClick={(e) => { e.preventDefault(); router.push(cat.href); }}
                   className="flex-shrink-0 group flex flex-col items-center gap-2.5 select-none"
                   style={{ width: "clamp(64px, 8.6vw, 87px)" }}
                   draggable={false}
@@ -121,7 +124,6 @@ export function FloatingCategoryRail({
                   {/* Circle image — hover glow via CSS group-hover, no DOM mutation */}
                   <motion.div
                     whileHover={{ y: -6, scale: 1.1 }}
-                    whileTap={{ scale: 0.91 }}
                     transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                     className="relative w-full flex-shrink-0 overflow-hidden cat-circle"
                     style={{
