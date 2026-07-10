@@ -7,7 +7,7 @@
 //   title_tag, meta_description, h1, intro_html, body_blocks[], faq[], schema_jsonld } }
 // ---------------------------------------------------------------------------
 
-import { mediaUrl, mediaUrlOrNull } from "./media";
+import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
@@ -189,7 +189,8 @@ export interface PublicProductSeo {
   meta_title: string | null; meta_description: string | null; canonical_url: string | null;
   og_title: string | null; og_description: string | null; og_image: string | null;
 }
-export interface PublicProductImage { id: number; url: string; alt: string | null; role: string; sort_order: number; }
+export interface MediaDerivatives { webp?: string; avif?: string; responsive?: Record<string, string> }
+export interface PublicProductImage { id: number; url: string; alt: string | null; role: string; sort_order: number; blurhash?: string | null; derivatives?: MediaDerivatives | null; }
 export interface PublicProductVariant {
   id: number; title: string; sku: string | null;
   price_minor: string | number | null; sale_price_minor: string | number | null;
@@ -220,7 +221,7 @@ export async function fetchProductBySlug(slug: string): Promise<PublicProductDet
   if (data.product.status !== "active") return null;
   // R2 (r2.dev) galeri görsel/video URL'lerini same-origin /r2 proxy'sine çevir (TR erişim fix'i).
   if (Array.isArray(data.images)) {
-    data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url) }));
+    data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url), derivatives: mediaDerivatives(im.derivatives) }));
   }
   return data;
 }
@@ -248,6 +249,7 @@ export interface PublicProductListItem {
   is_featured: boolean; is_bestseller: boolean; is_new: boolean;
   stock_quantity: number; cover_image_url: string | null; primary_category_id: number | null;
   same_day_available?: boolean; delivery_scope?: string;
+  cover_blurhash?: string | null; cover_derivatives?: MediaDerivatives | null;
 }
 export interface PublicProductListParams {
   is_bestseller?: boolean; is_featured?: boolean; is_new?: boolean;
@@ -293,7 +295,7 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   const json = (await res.json()) as ProductPage;
   const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
   // R2 (r2.dev) kapak URL'lerini same-origin /r2 proxy'sine çevir (TR erişim fix'i).
-  const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url) }));
+  const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
   return {
     items,
     pagination: json?.pagination ?? empty.pagination,
@@ -310,6 +312,7 @@ export interface CardProduct {
   originalPrice?: number; image: string; badge?: string;
   productType?: string; sameDay?: boolean; scope?: string;
   hasSale?: boolean; isBestseller?: boolean; isNew?: boolean; categoryId?: number | null;
+  derivatives?: MediaDerivatives | null; blurhash?: string | null;
 }
 export function toCardProduct(p: PublicProductListItem): CardProduct {
   const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
@@ -328,5 +331,7 @@ export function toCardProduct(p: PublicProductListItem): CardProduct {
     isBestseller: p.is_bestseller,
     isNew: p.is_new,
     categoryId: p.primary_category_id,
+    derivatives: p.cover_derivatives ?? null,
+    blurhash: p.cover_blurhash ?? null,
   };
 }
