@@ -30,6 +30,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface AddressResult {
   formattedAddress: string;
   placeId: string;
+  placeName?: string | null; // POI/kurum/AVM/okul adı (öneri ana metni) — checkout'ta korunur
   lat: number | null;
   lng: number | null;
   il: string | null; // administrative_area_level_1
@@ -67,6 +68,15 @@ declare global {
 }
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+// Google isteği ağ tarafında takılırsa (yetkisiz domain / engellenen istek) promise
+// hiç dönmez → spinner sonsuz döner. Bu watchdog belirli sürede reddeder → dostça hata.
+function withTimeout<T>(p: Promise<T>, ms: number, msg: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(msg)), ms)),
+  ]);
+}
 
 /**
  * Resmi inline bootstrap loader'ı enjekte eder ve `google.maps.importLibrary`
@@ -289,7 +299,11 @@ export default function AddressAutocomplete({
           if (libs.sessionToken) request.sessionToken = libs.sessionToken;
 
           const { suggestions: raw } =
-            await libs.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+            await withTimeout<any>(
+              libs.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request),
+              8000,
+              'Adres servisi yanıt vermedi (zaman aşımı)',
+            );
 
           const mapped: Suggestion[] = (raw || [])
             .filter((s: any) => s.placePrediction)
@@ -336,7 +350,7 @@ export default function AddressAutocomplete({
         console.error('[AddressAutocomplete] öneri hatası:', err);
         setSuggestions([]);
         setOpen(false);
-        setError('Adres önerileri alınamadı. Lütfen tekrar deneyin.');
+        setError('Adres önerileri şu anda alınamıyor. Adresi elle yazıp devam edebilirsiniz.');
       } finally {
         setLoading(false);
       }
@@ -394,10 +408,9 @@ export default function AddressAutocomplete({
         }
 
         if (result) {
+          // POI/kurum adı (Maltepe okul/AVM/site) → öneri ana metninden koru.
+          result.placeName = s.primary || result.placeName || null;
           setSelected(result);
-          // Konsola doğrulama verisi (brief §4 gereği)
-          // eslint-disable-next-line no-console
-          console.log('[AddressAutocomplete] seçilen adres:', result);
           onSelect?.(result);
         } else {
           setError('Adres detayları alınamadı.');
