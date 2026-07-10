@@ -37,3 +37,18 @@ export function mediaUrlOrNull(url: string | null | undefined): string | null {
   if (url == null || url === "") return url ?? null;
   return mediaUrl(url);
 }
+
+/** Türev nesnesindeki (webp/avif/responsive) tüm URL'leri r2→/r2 normalize eder. */
+export function mediaDerivatives<T extends { webp?: string; avif?: string; responsive?: Record<string, string> } | null | undefined>(
+  d: T,
+): T {
+  if (!d) return d;
+  const out: { webp?: string; avif?: string; responsive?: Record<string, string> } = {};
+  if (d.webp) out.webp = mediaUrl(d.webp);
+  if (d.avif) out.avif = mediaUrl(d.avif);
+  if (d.responsive) {
+    out.responsive = {};
+    for (const [w, u] of Object.entries(d.responsive)) out.responsive[w] = mediaUrl(u);
+  }
+  return out as T;
+}
