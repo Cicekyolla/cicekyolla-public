@@ -16,6 +16,7 @@ import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } fro
 import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
+import { savePendingDelivery } from "@/lib/pendingDelivery";
 
 const WHATSAPP = "905074413474";
 
@@ -250,6 +251,29 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
               delivery_scope: product.delivery_scope,
               categoryId: data.categories?.find((c) => c.is_primary)?.category_id ?? data.categories?.[0]?.category_id ?? null,
             }}
+            onSelect={(sel) =>
+              savePendingDelivery({
+                productSlug: product.slug,
+                productName: product.name,
+                categoryId: data.categories?.find((c) => c.is_primary)?.category_id ?? data.categories?.[0]?.category_id ?? null,
+                date: sel.date,
+                mode: sel.mode,
+                slotId: sel.slot?.id ?? null,
+                slotLabel: sel.slot?.label,
+                slotStart: sel.slot?.start_time,
+                slotEnd: sel.slot?.end_time,
+                slotFeeMinor: sel.slot?.extra_fee_minor ?? null,
+                address: sel.address.formattedAddress,
+                placeName: sel.address.placeName ?? null,
+                neighborhood: sel.address.mahalle ?? null,
+                district: sel.address.ilce ?? undefined,
+                city: sel.address.il ?? undefined,
+                placeId: sel.address.placeId ?? null,
+                lat: sel.address.lat ?? null,
+                lng: sel.address.lng ?? null,
+                band: sel.band ?? null,
+              })
+            }
           />
 
           {/* Varyantlar */}
