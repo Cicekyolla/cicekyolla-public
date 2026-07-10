@@ -157,7 +157,7 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
                   className="w-full h-full object-contain p-4"
                 />
               ) : (
-                <ProductImage src={cover.url} alt={cover.alt ?? product.name} priority padding="16px" sizes="(max-width:1024px) 100vw, 50vw" />
+                <ProductImage src={cover.url} alt={cover.alt ?? product.name} priority padding="16px" derivatives={cover.derivatives} blurhash={cover.blurhash} sizes="(max-width:1024px) 100vw, 50vw" />
               )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#C4B5FD]">
