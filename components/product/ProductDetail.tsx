@@ -13,6 +13,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
+import { ProductImage } from "@/components/product/ProductImage";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 
 const WHATSAPP = "905074413474";
@@ -148,9 +149,15 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
           <div className="relative overflow-hidden rounded-[24px] bg-white ring-1 ring-[#F1F0F5]" style={{ aspectRatio: "4/5" }}>
             {gallery.length > 0 ? (
               isVideo(cover.url) ? (
-                <video src={cover.url} controls className="w-full h-full object-contain p-4" />
+                <video
+                  src={cover.url}
+                  controls
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-full h-full object-contain p-4"
+                />
               ) : (
-                <img src={cover.url} alt={cover.alt ?? product.name} className="w-full h-full object-contain p-4" />
+                <ProductImage src={cover.url} alt={cover.alt ?? product.name} priority padding="16px" sizes="(max-width:1024px) 100vw, 50vw" />
               )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#C4B5FD]">
@@ -188,8 +195,8 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
                   className={`relative w-[72px] h-[72px] rounded-[14px] overflow-hidden flex-shrink-0 transition-all ${i === active ? "ring-2 ring-[#7C3AED]" : "ring-1 ring-[#E5E7EB] opacity-70 hover:opacity-100"}`}
                 >
                   {isVideo(img.url)
-                    ? <video src={img.url} muted className="w-full h-full object-contain bg-white p-1.5" />
-                    : <img src={img.url} alt={img.alt ?? ""} className="w-full h-full object-contain bg-white p-1.5" />}
+                    ? <video src={img.url} muted draggable={false} onContextMenu={(e) => e.preventDefault()} className="w-full h-full object-contain bg-white p-1.5" />
+                    : <ProductImage src={img.url} alt={img.alt ?? ""} padding="6px" protect={false} />}
                 </button>
               ))}
             </div>
