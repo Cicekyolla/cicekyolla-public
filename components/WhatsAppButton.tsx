@@ -7,10 +7,16 @@
  */
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 
 export function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
+  const pathname = usePathname();
+
+  // Ürün detay sayfasında kendi sticky "Sipariş Ver" + WhatsApp CTA'sı var →
+  // global yüzen buton mobilde onunla ÇAKIŞIYOR. O sayfalarda gizle (çakışma + çift buton biter).
+  if (pathname?.startsWith("/urun/")) return null;
 
   return (
     <motion.a
