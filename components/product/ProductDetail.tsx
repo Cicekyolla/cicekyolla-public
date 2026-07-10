@@ -11,9 +11,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, type LucideIcon } from "lucide-react";
+import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 import { ProductImage } from "@/components/product/ProductImage";
+import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 
 const WHATSAPP = "905074413474";
@@ -114,6 +115,7 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
   });
   const [active, setActive] = useState(0);
   const [wish, setWish] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
@@ -146,7 +148,11 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
       <div className="max-w-[1280px] mx-auto px-5 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
         {/* GALERİ */}
         <div>
-          <div className="relative overflow-hidden rounded-[24px] bg-white ring-1 ring-[#F1F0F5]" style={{ aspectRatio: "4/5" }}>
+          <div
+            className={`relative overflow-hidden rounded-[24px] bg-white ring-1 ring-[#F1F0F5] ${gallery.length > 0 && !isVideo(cover.url) ? "cursor-zoom-in" : ""}`}
+            style={{ aspectRatio: "4/5" }}
+            onClick={() => { if (gallery.length > 0 && !isVideo(cover.url)) setLightboxOpen(true); }}
+          >
             {gallery.length > 0 ? (
               isVideo(cover.url) ? (
                 <video
@@ -164,6 +170,12 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
                 <Sparkles className="w-10 h-10" />
               </div>
             )}
+            {/* Büyüt ipucu (dokun → tam ekran) */}
+            {gallery.length > 0 && !isVideo(cover.url) ? (
+              <div className="absolute bottom-4 right-4 z-[2] w-9 h-9 rounded-full bg-white/85 backdrop-blur flex items-center justify-center shadow-md pointer-events-none">
+                <ZoomIn className="w-4 h-4 text-[#6B7280]" />
+              </div>
+            ) : null}
             {/* Badge'ler */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
               {hasSale && (
@@ -177,13 +189,23 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
               )}
             </div>
             <button
-              onClick={() => setWish((w) => !w)}
+              onClick={(e) => { e.stopPropagation(); setWish((w) => !w); }}
               aria-label="Favorilere ekle"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center transition-all hover:scale-110"
+              className="absolute top-4 right-4 z-[2] w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center transition-all hover:scale-110"
             >
               <Heart className={`w-5 h-5 transition-colors ${wish ? "fill-[#DC2626] text-[#DC2626]" : "text-[#6B7280]"}`} />
             </button>
           </div>
+
+          {/* Tam ekran büyütme (dokun → zoom/lightbox) */}
+          {lightboxOpen && gallery.length > 0 ? (
+            <Lightbox
+              items={gallery.map((im): LightboxItem => ({ url: im.url, alt: im.alt, isVideo: isVideo(im.url) }))}
+              index={active}
+              onIndexChange={setActive}
+              onClose={() => setLightboxOpen(false)}
+            />
+          ) : null}
 
           {/* Küçük görseller */}
           {gallery.length > 1 && (
