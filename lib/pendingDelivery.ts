@@ -37,6 +37,7 @@ export interface PendingDelivery {
   band?: string | null;
   deliveryFeeMinor?: number | null;
   cargoEstimate?: string | null;
+  occasion?: string | null; // vesile (ileride CRM/AI/kampanya)
 
   ts?: number;
 }
