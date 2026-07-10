@@ -166,7 +166,7 @@ export default function HeroDeliveryBar() {
     }
 
     return (
-      <div className="flex items-center gap-2 whitespace-nowrap px-4 py-2 text-[12.5px] md:text-[13px]">
+      <div className="flex items-center gap-2 whitespace-normal md:whitespace-nowrap px-4 py-2 text-[12.5px] md:text-[13px] w-full md:w-auto">
         <Icon className="w-4 h-4 shrink-0 text-white/90" />
         <span className="leading-tight">{content}</span>
       </div>
@@ -179,7 +179,7 @@ export default function HeroDeliveryBar() {
       style={{ background: "linear-gradient(90deg, #5B21B6 0%, #7C3AED 45%, #6D28D9 100%)" }}
       aria-label="Aynı gün teslimat son alım durumu"
     >
-      <div className="max-w-[1280px] mx-auto flex items-stretch overflow-x-auto md:overflow-visible divide-x divide-white/15">
+      <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row md:items-stretch divide-y md:divide-y-0 md:divide-x divide-white/15">
         {renderSide("anadolu")}
         {renderSide("avrupa")}
         <div className="hidden lg:flex items-center gap-1.5 px-4 py-2 text-[12px] text-white/70 ml-auto">
