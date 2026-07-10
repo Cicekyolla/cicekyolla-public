@@ -10,15 +10,18 @@ import { useState } from "react";
 import AccountGate from "./AccountGate";
 import CheckoutWizard from "./CheckoutWizard";
 
+export interface CheckoutAddon { id: number; name: string; priceMinor: number; image: string | null }
+
 type Props = {
   productName: string;
   productId: number | null;
   priceMinor: number;
   productSlug: string;
   coverUrl?: string | null;
+  addons?: CheckoutAddon[];
 };
 
-export default function CheckoutFlow({ productName, productId, priceMinor, productSlug, coverUrl }: Props) {
+export default function CheckoutFlow({ productName, productId, priceMinor, productSlug, coverUrl, addons }: Props) {
   const [phase, setPhase] = useState<"gate" | "form">("gate");
 
   if (phase === "gate") {
@@ -34,5 +37,5 @@ export default function CheckoutFlow({ productName, productId, priceMinor, produ
   }
 
   // Premium sipariş hazırlama deneyimi (Alıcı → Kart → Gönderen → Özet).
-  return <CheckoutWizard productName={productName} productId={productId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} />;
+  return <CheckoutWizard productName={productName} productId={productId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} />;
 }
