@@ -125,14 +125,6 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         if (district) payload.district = district;
         if (productType) payload.product_type = productType;
 
-        // --- Geçici debug log'ları (görev gereği) ---
-        // eslint-disable-next-line no-console
-        console.log("[DeliveryPlanner] selectedAddress:", addr);
-        // eslint-disable-next-line no-console
-        console.log("[DeliveryPlanner] selectedDate:", selectedDate);
-        // eslint-disable-next-line no-console
-        console.log("[DeliveryPlanner] requestPayload:", payload);
-
         const resp = await fetch("/api/delivery-check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -140,9 +132,6 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         });
         const json = await resp.json().catch(() => null);
         if (seq !== reqSeq.current) return;
-
-        // eslint-disable-next-line no-console
-        console.log("[DeliveryPlanner] apiResponse:", resp.status, json);
 
         if (!resp.ok || !json?.data) {
           const detail =
@@ -162,9 +151,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
             passedRef.current = passed;
           }
         }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn("[DeliveryPlanner] check exception:", e);
+      } catch {
         if (seq === reqSeq.current) {
           setErrDetail("Teslimat servisine ulaşılamadı. Lütfen tekrar deneyin.");
           setResult(null);
