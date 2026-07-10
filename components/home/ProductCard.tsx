@@ -10,6 +10,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart } from "lucide-react";
+import { ProductImage } from "@/components/product/ProductImage";
 
 export type Product = {
   id: number;
@@ -101,14 +102,14 @@ export function ProductCard({ product, idx, contextTag }: { product: Product; id
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Image container — beyaz stüdyo zemini, kırpma yok (object-contain) */}
+        {/* Image container — beyaz stüdyo zemini, kırpma yok (object-contain), merkezi ProductImage */}
         <div className="relative overflow-hidden bg-white" style={{ aspectRatio: "4/5" }}>
-          <motion.img
+          <ProductImage
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-contain p-3"
-            animate={{ scale: hovered ? 1.06 : 1 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            scale={hovered ? 1.06 : 1}
+            padding="12px"
+            sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
           />
           {/* Gradient overlay */}
           <div
