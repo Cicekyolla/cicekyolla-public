@@ -28,6 +28,8 @@ export type Product = {
   scope?: string;
   hasSale?: boolean;
   categoryId?: number | null;
+  derivatives?: { webp?: string; avif?: string; responsive?: Record<string, string> } | null;
+  blurhash?: string | null;
 };
 
 /** Kategori sayfasından gelen bağlam (gerçek kategori / gönderim amacı). */
@@ -109,6 +111,8 @@ export function ProductCard({ product, idx, contextTag }: { product: Product; id
             alt={product.name}
             scale={hovered ? 1.06 : 1}
             padding="12px"
+            derivatives={product.derivatives}
+            blurhash={product.blurhash}
             sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
           />
           {/* Gradient overlay */}
