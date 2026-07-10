@@ -119,7 +119,7 @@ export default async function DeliveryCityPage({
               return (
                 <Link key={p.id} href={`/urun/${p.slug}`} className="group">
                   <div className="relative w-full aspect-[4/5] rounded-[20px] overflow-hidden bg-white ring-1 ring-[#F1F0F5]">
-                    <ProductImage source={p} alt={p.name} hoverZoom padding="12px" sizes="(max-width:768px) 50vw, (max-width:1024px) 33vw, 25vw" />
+                    <ProductImage source={p} alt={p.name} hoverZoom padding="4px" sizes="(max-width:768px) 50vw, (max-width:1024px) 33vw, 25vw" />
                     <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857]">
                       <Truck className="w-3 h-3" /> {badge}
                     </span>
