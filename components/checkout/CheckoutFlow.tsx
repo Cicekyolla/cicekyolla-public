@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import AccountGate from "./AccountGate";
-import { CheckoutForm } from "./CheckoutForm";
+import CheckoutWizard from "./CheckoutWizard";
 
 type Props = {
   productName: string;
@@ -33,6 +33,6 @@ export default function CheckoutFlow({ productName, productId, priceMinor, produ
     );
   }
 
-  // Alıcı Bilgileri — mevcut form (birebir korunur).
-  return <CheckoutForm productName={productName} productId={productId} priceMinor={priceMinor} productSlug={productSlug} />;
+  // Premium sipariş hazırlama deneyimi (Alıcı → Kart → Gönderen → Özet).
+  return <CheckoutWizard productName={productName} productId={productId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} />;
 }
