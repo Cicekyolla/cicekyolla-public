@@ -61,7 +61,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
       { key: "gonderen", label: "Gönderen" },
       { key: "odeme", label: "Ödeme" },
     ];
-    if (addons.length > 0) base.splice(5, 0, { key: "ekurun", label: "Ek Ürünler" });
+    if (addons.length > 0) base.splice(4, 0, { key: "ekurun", label: "Ek Ürünler" });
     return base;
   }, [addons]);
 
