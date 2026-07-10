@@ -1,16 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+
+// tr tarih (gün adı dahil)
+function fmtDate(d?: string): string | null {
+  if (!d) return null;
+  const dt = new Date(d + "T00:00:00");
+  if (isNaN(dt.getTime())) return d;
+  return dt.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
+}
 
 /* Fast Checkout (C4) — gerçek POST /api/orders (guest). Mock YOK.
    Vercel rewrite /api/:path* → backend public order endpoint. */
 
-interface Props { productName: string; productId: number | null; priceMinor: number; }
+interface Props { productName: string; productId: number | null; priceMinor: number; productSlug?: string; }
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 
-export function CheckoutForm({ productName, productId, priceMinor }: Props) {
+// DeliveryPlanner slot'unu (backend saatleri) checkout'un 4 sabit dilimine eşler.
+function mapToSlot(start?: string, label?: string): string {
+  if (label && SLOTS.includes(label)) return label;
+  const h = start ? parseInt(start.slice(0, 2), 10) : NaN;
+  if (h >= 9 && h < 12) return SLOTS[0];
+  if (h >= 12 && h < 15) return SLOTS[1];
+  if (h >= 15 && h < 18) return SLOTS[2];
+  if (h >= 18 && h < 21) return SLOTS[3];
+  return SLOTS[0];
+}
+
+export function CheckoutForm({ productName, productId, priceMinor, productSlug }: Props) {
   const [qty, setQty] = useState(1);
   const [f, setF] = useState({
     customer_name: "", customer_phone: "", customer_email: "",
@@ -21,6 +41,22 @@ export function CheckoutForm({ productName, productId, priceMinor }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ order_number: string } | null>(null);
+  const [prefilled, setPrefilled] = useState<PendingDelivery | null>(null);
+
+  // Ürün sayfasında seçilen teslimat bilgisini (varsa) ÖN-DOLDUR. Kullanıcı düzenleyebilir.
+  useEffect(() => {
+    const p = readPendingDelivery();
+    if (!p) return;
+    if (productSlug && p.productSlug && p.productSlug !== productSlug) return;
+    setF((prev) => ({
+      ...prev,
+      delivery_address: p.address ?? prev.delivery_address,
+      delivery_district: p.district ?? prev.delivery_district,
+      delivery_date: p.date ?? prev.delivery_date,
+      delivery_time_slot: p.mode === "sameday" ? mapToSlot(p.slotStart, p.slotLabel) : prev.delivery_time_slot,
+    }));
+    setPrefilled(p);
+  }, [productSlug]);
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -51,6 +87,7 @@ export function CheckoutForm({ productName, productId, priceMinor }: Props) {
       if (!res.ok) throw new Error(String(res.status));
       const json = await res.json();
       setDone({ order_number: json.data.order_number });
+      clearPendingDelivery();
     } catch {
       setError("Sipariş oluşturulamadı. Lütfen tekrar deneyin.");
     } finally { setLoading(false); }
@@ -86,6 +123,29 @@ export function CheckoutForm({ productName, productId, priceMinor }: Props) {
         </section>
         <section>
           <h2 className="text-[11px] tracking-[0.2em] text-[#8B5CF6] uppercase font-bold mb-4">Alıcı & Teslimat</h2>
+          {prefilled ? (
+            <div className="mb-5 rounded-2xl border border-[#DDD6FE] bg-gradient-to-b from-[#FBFAFF] to-[#F5F3FF] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-[#7C3AED] text-white flex items-center justify-center text-[12px]">✓</span>
+                  <p className="text-[12.5px] font-bold text-[#5B21B6]">Ürün sayfasında seçtiğiniz teslimat bilgileri getirildi</p>
+                </div>
+                {productSlug ? (
+                  <Link href={`/urun/${productSlug}`} className="text-[12px] font-semibold text-[#7C3AED] hover:underline shrink-0">Düzenle</Link>
+                ) : null}
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2 pl-8">
+                {prefilled.placeName ? <PInfo label="Seçilen Yer" value={prefilled.placeName} /> : null}
+                {(prefilled.neighborhood || prefilled.district || prefilled.city) ? (
+                  <PInfo label="Bölge" value={`${prefilled.neighborhood ? prefilled.neighborhood + ", " : ""}${prefilled.district ?? ""}${prefilled.city ? " / " + prefilled.city : ""}`} />
+                ) : null}
+                {fmtDate(prefilled.date) ? <PInfo label="Tarih" value={fmtDate(prefilled.date)!} /> : null}
+                {prefilled.slotLabel ? <PInfo label="Saat" value={prefilled.slotLabel} /> : null}
+                <PInfo label="Teslimat Türü" value={prefilled.mode === "cargo" ? "Ücretsiz Kargo" : "Aynı Gün Teslimat"} />
+              </div>
+              <p className="text-[11.5px] text-[#8B5CF6]/70 mt-3 pl-8">Dilerseniz aşağıdaki alanlardan düzenleyebilirsiniz.</p>
+            </div>
+          ) : null}
           <div className="grid sm:grid-cols-2 gap-4">
             <div><label className={label}>Alıcı Adı *</label><input className={input} value={f.recipient_name} onChange={set("recipient_name")} /></div>
             <div><label className={label}>Alıcı Telefonu</label><input className={input} value={f.recipient_phone} onChange={set("recipient_phone")} /></div>
@@ -125,6 +185,16 @@ export function CheckoutForm({ productName, productId, priceMinor }: Props) {
         </button>
         <p className="text-[11px] text-[#9CA3AF] text-center mt-3">Ödeme adımı entegrasyonu ayrıca eklenecektir.</p>
       </aside>
+    </div>
+  );
+}
+
+// Teslimat Bilgileri panelinde tek satır (premium, marka tonları)
+function PInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] text-[#9CA3AF] font-semibold uppercase tracking-wide">{label}</p>
+      <p className="text-[12.5px] text-[#4B5563] font-medium leading-snug truncate">{value}</p>
     </div>
   );
 }
