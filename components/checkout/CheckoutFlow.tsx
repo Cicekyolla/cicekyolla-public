@@ -10,7 +10,7 @@ import { useState } from "react";
 import AccountGate from "./AccountGate";
 import CheckoutWizard from "./CheckoutWizard";
 
-export interface CheckoutAddon { id: number; name: string; priceMinor: number; image: string | null }
+export interface CheckoutAddon { id: number; name: string; priceMinor: number; image: string | null; category: string }
 
 type Props = {
   productName: string;
