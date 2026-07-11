@@ -121,12 +121,10 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
     setLoading(true);
     try {
       const noteLabels = notes.map((id) => DELIVERY_NOTES.find((d) => d.id === id)?.label).filter(Boolean) as string[];
-      const opNotes = [...noteLabels];
-      if (surprise) opNotes.push("Sürpriz sipariş — göndereni söylemeyin, alıcıyı önceden aramayın");
-      if (visibility === "hidden") opNotes.push("Gönderen bilgisi alıcıyla paylaşılmasın");
-      else if (visibility === "anonymous") opNotes.push("İsimsiz gönderim");
-      const extra = [opNotes.join(", "), specialNote.trim()].filter(Boolean).join(" — ");
-      const fullAddress = extra ? `${address} • Not: ${extra}` : address;
+      if (surprise) noteLabels.push("Sürpriz gönderim");
+      if (visibility === "hidden") noteLabels.push("Gönderen bilgisi gizli");
+      else if (visibility === "anonymous") noteLabels.push("İsimsiz gönderim");
+      const deliveryNotes = [noteLabels.join(", "), specialNote.trim()].filter(Boolean).join(" — ") || null;
 
       // İmza yalnız "Adımı Kartta Göster" seçiliyse eklenir (isimsiz/gizli → imza yok).
       const composedCard = cardMessage
@@ -147,9 +145,20 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
           customer_name: senderName, customer_phone: senderPhone,
           customer_email: senderEmail || null,
           recipient_name: recipientName, recipient_phone: recipientPhone || null,
-          delivery_address: fullAddress || null, delivery_district: pd?.district || null,
+          delivery_address: address || null, delivery_district: pd?.district || null,
+          delivery_city: pd?.city || null,
           delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
           card_message: composedCard, source: "web",
+          occasion: occasion || null,
+          sender_visibility: visibility,
+          is_surprise: surprise,
+          delivery_notes: deliveryNotes,
+          place_id: pd?.placeId || null,
+          place_name: pd?.placeName || null,
+          formatted_address: pd?.address || null,
+          lat: pd?.lat ?? null,
+          lng: pd?.lng ?? null,
+          delivery_neighborhood: pd?.neighborhood || null,
           items,
         }),
       });
@@ -185,7 +194,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
       <StepProgress steps={steps} activeIdx={stepIdx} />
 
       <div className="grid lg:grid-cols-[1fr_370px] gap-6 lg:gap-8 items-start mt-8">
-        <div className="order-2 lg:order-1 min-h-[320px]">
+        <div className="order-1 min-h-[320px]">
           <AnimatePresence mode="wait">
             <motion.div key={stepKey} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
               {stepKey === "alici" && (
@@ -241,7 +250,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
           </div>
         </div>
 
-        <div className="order-1 lg:order-2">
+        <div className="order-2">
           <LivingReceipt
             productName={productName} coverUrl={coverUrl} productPrice={priceMinor} total={total} productSlug={productSlug}
             addons={addons} addonQty={addonQty}
