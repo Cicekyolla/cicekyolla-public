@@ -38,7 +38,7 @@ export function Footer({ categories }: { categories?: { name: string; href: stri
                 >
                   Çiçekyolla
                 </span>
-                <span className="text-[9px] tracking-[0.35em] text-[#8B5CF6] uppercase font-bold">Premium Florist</span>
+                <span className="text-[9px] tracking-[0.35em] text-[#8B5CF6] uppercase font-bold">Premium Çiçekçi</span>
               </div>
             </div>
 
