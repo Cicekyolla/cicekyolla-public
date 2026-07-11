@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
 import { ProductDetail } from "@/components/product/ProductDetail";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductCard } from "@/components/home/ProductCard";
 
 /* ============================================================================
@@ -59,6 +60,8 @@ export default async function ProductPage({ params }: PageProps) {
     .map(toCardProduct);
 
   // Product JSON-LD (schema) — gerçek üründen.
+  const ratingCount = Number((product as { rating_count?: number }).rating_count ?? 0);
+  const ratingAvg = Number((product as { rating_avg?: number }).rating_avg ?? 0);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -66,6 +69,7 @@ export default async function ProductPage({ params }: PageProps) {
     description: product.short_description || product.long_description || product.name,
     image: cover ? [cover] : undefined,
     sku: product.sku || undefined,
+    ...(ratingCount > 0 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: ratingAvg.toFixed(1), reviewCount: ratingCount } } : {}),
     offers: {
       "@type": "Offer",
       price: (Number(price) / 100).toFixed(2),
@@ -78,6 +82,7 @@ export default async function ProductPage({ params }: PageProps) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ProductDetail data={data} />
+      <ProductReviews productId={product.id} productName={product.name} />
       {related.length > 0 ? (
         <section aria-label="İlgili ürünler" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-20">
           <div className="border-t border-black/[0.06] pt-14">
