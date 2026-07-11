@@ -73,6 +73,8 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
   const [senderName, setSenderName] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
+  const [visibility, setVisibility] = useState<"show" | "anonymous" | "hidden">("show");
+  const [surprise, setSurprise] = useState(false);
   const [addonQty, setAddonQty] = useState<Record<number, number>>({});
   const qty = 1;
 
@@ -118,9 +120,18 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
     }
     setLoading(true);
     try {
-      const noteLabels = notes.map((id) => DELIVERY_NOTES.find((d) => d.id === id)?.label).filter(Boolean);
-      const extra = [noteLabels.join(", "), specialNote.trim()].filter(Boolean).join(" — ");
+      const noteLabels = notes.map((id) => DELIVERY_NOTES.find((d) => d.id === id)?.label).filter(Boolean) as string[];
+      const opNotes = [...noteLabels];
+      if (surprise) opNotes.push("Sürpriz sipariş — göndereni söylemeyin, alıcıyı önceden aramayın");
+      if (visibility === "hidden") opNotes.push("Gönderen bilgisi alıcıyla paylaşılmasın");
+      else if (visibility === "anonymous") opNotes.push("İsimsiz gönderim");
+      const extra = [opNotes.join(", "), specialNote.trim()].filter(Boolean).join(" — ");
       const fullAddress = extra ? `${address} • Not: ${extra}` : address;
+
+      // İmza yalnız "Adımı Kartta Göster" seçiliyse eklenir (isimsiz/gizli → imza yok).
+      const composedCard = cardMessage
+        ? cardMessage + (visibility === "show" && senderName.trim() ? `\n— ${senderName.trim()}` : "")
+        : null;
 
       const items = [
         { product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) },
@@ -138,7 +149,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
           recipient_name: recipientName, recipient_phone: recipientPhone || null,
           delivery_address: fullAddress || null, delivery_district: pd?.district || null,
           delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
-          card_message: cardMessage || null, source: "web",
+          card_message: composedCard, source: "web",
           items,
         }),
       });
@@ -188,9 +199,12 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
                   regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
                 />
               )}
-              {stepKey === "kart" && <StepKart occasion={occasion} cardMessage={cardMessage} setCardMessage={setCardMessage} />}
+              {stepKey === "kart" && <StepKart occasion={occasion} recipientName={recipientName} cardMessage={cardMessage} setCardMessage={setCardMessage} />}
               {stepKey === "gonderen" && (
-                <StepGonderen name={senderName} setName={setSenderName} phone={senderPhone} setPhone={setSenderPhone} email={senderEmail} setEmail={setSenderEmail} />
+                <StepGonderen
+                  name={senderName} setName={setSenderName} phone={senderPhone} setPhone={setSenderPhone} email={senderEmail} setEmail={setSenderEmail}
+                  visibility={visibility} setVisibility={setVisibility} surprise={surprise} setSurprise={setSurprise}
+                />
               )}
               {stepKey === "ekurun" && <StepAddons addons={addons} addonQty={addonQty} setAddon={setAddon} />}
               {stepKey === "odeme" && (
@@ -234,6 +248,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
             regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
             placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
             recipientName={recipientName} occasion={occasion} cardMessage={cardMessage} senderName={senderName}
+            visibility={visibility} surprise={surprise}
           />
         </div>
       </div>
@@ -349,16 +364,18 @@ function lsWrite(key: string, arr: string[]) {
   try { window.localStorage.setItem(key, JSON.stringify(arr.slice(0, 8))); } catch { /* geç */ }
 }
 
-function StepKart(p: { occasion: string | null; cardMessage: string; setCardMessage: (v: string) => void }) {
+function StepKart(p: { occasion: string | null; recipientName: string; cardMessage: string; setCardMessage: (v: string) => void }) {
   const [tone, setTone] = useState<Tone>("samimi");
   const [lang, setLang] = useState<Lang>("tr");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
 
   useEffect(() => { setFavorites(lsRead(FAV_KEY)); setRecent(lsRead(RECENT_KEY)); }, []);
 
-  const suggestions = useMemo(() => suggestMessages(p.occasion, tone, lang), [p.occasion, tone, lang]);
+  const curated = useMemo(() => suggestMessages(p.occasion, tone, lang), [p.occasion, tone, lang]);
+  const suggestions = aiSuggestions.length ? aiSuggestions : curated;
 
   const choose = (text: string) => {
     p.setCardMessage(text);
@@ -374,19 +391,28 @@ function StepKart(p: { occasion: string | null; cardMessage: string; setCardMess
     setFavorites(next); lsWrite(FAV_KEY, next);
   };
 
-  // "Akıllı Öneri" — FAZ 1: küratörlü havuzdan taze öneri. FAZ 2'de gerçek AI
-  // (/api/ai/card-message) çağrısı buraya eklenecek; hata olursa yine buraya düşer.
-  const smartSuggest = async () => {
+  // "AI ile Yaz" — gerçek AI (Claude Haiku) çağrısı; hata/boşsa küratörlü havuza düşer.
+  const aiWrite = async () => {
     setAiBusy(true);
     try {
-      const pool = suggestions.filter((s) => s !== p.cardMessage);
-      const pick = (pool.length ? pool : suggestions)[Math.floor(Math.random() * (pool.length ? pool.length : suggestions.length))];
-      await new Promise((r) => setTimeout(r, 260)); // küçük "düşünüyor" hissi
+      const res = await fetch("/api/ai/card-message", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occasion: p.occasion, tone, language: lang, recipientName: p.recipientName || null }),
+      });
+      const json = await res.json().catch(() => null);
+      const msgs: string[] = json?.data?.messages ?? [];
+      if (msgs.length) { setAiSuggestions(msgs); choose(msgs[0]); return; }
+      throw new Error("empty");
+    } catch {
+      const pool = curated.filter((s) => s !== p.cardMessage);
+      const pick = (pool.length ? pool : curated)[Math.floor(Math.random() * (pool.length ? pool.length : curated.length))];
       if (pick) choose(pick);
     } finally { setAiBusy(false); }
   };
 
   const isFav = favorites.includes(p.cardMessage.trim());
+
+  useEffect(() => { setAiSuggestions([]); }, [tone, lang, p.occasion]);
 
   return (
     <Card title="Kart mesajı" subtitle="Çiçekle birlikte gidecek not. Tonu seçin, önerilerden ilham alın ya da kendiniz yazın.">
@@ -424,9 +450,9 @@ function StepKart(p: { occasion: string | null; cardMessage: string; setCardMess
             <span className="line-clamp-1">“{m}”</span>
           </button>
         ))}
-        <button onClick={smartSuggest} disabled={aiBusy}
+        <button onClick={aiWrite} disabled={aiBusy}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#7C3AED] text-white text-[12.5px] font-bold hover:bg-[#6D28D9] transition-colors disabled:opacity-70">
-          {aiBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Akıllı Öneri
+          {aiBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} {aiBusy ? "Yazıyor…" : "AI ile Yaz"}
         </button>
       </div>
 
@@ -474,35 +500,95 @@ function StepKart(p: { occasion: string | null; cardMessage: string; setCardMess
       )}
 
       <p className="text-[11.5px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
-        <Sparkles className="w-3.5 h-3.5 text-[#C4B5FD]" /> Gerçek AI ile kişiye özel mesaj üretimi yakında.
+        <Sparkles className="w-3.5 h-3.5 text-[#C4B5FD]" /> “AI ile Yaz” alıcı, vesile ve seçtiğiniz tona göre size özel mesaj üretir.
       </p>
     </Card>
   );
 }
 
 /* ---------------------------- Adım: Gönderen ---------------------------- */
-function StepGonderen(p: { name: string; setName: (v: string) => void; phone: string; setPhone: (v: string) => void; email: string; setEmail: (v: string) => void }) {
+function StepGonderen(p: {
+  name: string; setName: (v: string) => void; phone: string; setPhone: (v: string) => void; email: string; setEmail: (v: string) => void;
+  visibility: "show" | "anonymous" | "hidden"; setVisibility: (v: "show" | "anonymous" | "hidden") => void;
+  surprise: boolean; setSurprise: (v: boolean) => void;
+}) {
+  const opts: { id: "show" | "anonymous" | "hidden"; title: string; desc: string }[] = [
+    { id: "show", title: "Adımı Kartta Göster", desc: "Kart mesajının altında adınız görünür. Örn. “Sevgiler, " + (p.name.trim() || "Adem") + "”." },
+    { id: "anonymous", title: "İsimsiz Gönder", desc: "Kartta ve teslimatta gönderen adı görünmez." },
+    { id: "hidden", title: "Tamamen Gizli Gönderim", desc: "Adınız, telefon ve e-postanız alıcıyla asla paylaşılmaz." },
+  ];
   return (
-    <Card title="Gönderen bilgileri" subtitle="Sipariş onayı ve iletişim için gereklidir.">
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div><label className={labelCls}>Ad Soyad *</label><input className={inputCls} value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Adınız Soyadınız" /></div>
-        <div><label className={labelCls}>Telefon *</label><input className={inputCls} value={p.phone} onChange={(e) => p.setPhone(e.target.value)} placeholder="+90 5xx xxx xx xx" /></div>
-        <div className="sm:col-span-2"><label className={labelCls}>E-posta</label><input className={inputCls} value={p.email} onChange={(e) => p.setEmail(e.target.value)} placeholder="ornek@eposta.com" /></div>
-      </div>
-      <div className="flex items-center gap-2 mt-5 text-[12.5px] text-[#6B7280]">
-        <ShieldCheck className="w-4 h-4 text-[#22C55E]" /> Bilgileriniz yalnızca sipariş için kullanılır (KVKK uyumlu).
-      </div>
-    </Card>
+    <div>
+      <Card title="Gönderen bilgileri" subtitle="Sipariş onayı ve iletişim için gereklidir. Bu bilgiler alıcıyla paylaşılmaz.">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div><label className={labelCls}>Ad Soyad *</label><input className={inputCls} value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Adınız Soyadınız" /></div>
+          <div><label className={labelCls}>Telefon *</label><input className={inputCls} value={p.phone} onChange={(e) => p.setPhone(e.target.value)} placeholder="+90 5xx xxx xx xx" /></div>
+          <div className="sm:col-span-2"><label className={labelCls}>E-posta</label><input className={inputCls} value={p.email} onChange={(e) => p.setEmail(e.target.value)} placeholder="ornek@eposta.com" /></div>
+        </div>
+        <div className="flex items-center gap-2 mt-5 text-[12.5px] text-[#6B7280]">
+          <ShieldCheck className="w-4 h-4 text-[#22C55E]" /> Telefon ve e-postanız hiçbir koşulda alıcıya gösterilmez (KVKK uyumlu).
+        </div>
+      </Card>
+
+      <Card title="Gönderen bilgileriniz alıcıyla paylaşılsın mı?" subtitle="Siparişinizi isimsiz veya tamamen gizli gönderebilirsiniz.">
+        <div className="space-y-2.5">
+          {opts.map((o) => {
+            const on = p.visibility === o.id;
+            return (
+              <button key={o.id} onClick={() => p.setVisibility(o.id)}
+                className={`w-full flex items-start gap-3 text-left p-4 rounded-2xl border transition-all ${on ? "border-[#C4B5FD] bg-[#FBFAFF] shadow-[0_10px_28px_-18px_rgba(124,58,237,0.5)]" : "border-[#E9E7F0] bg-white hover:border-[#DDD6FE]"}`}>
+                <span className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${on ? "border-[#7C3AED]" : "border-[#D1D5DB]"}`}>
+                  {on && <span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED]" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[14px] font-bold text-[#1F2937]">{o.title}</span>
+                  <span className="block text-[12.5px] text-[#6B7280] mt-0.5 leading-snug">{o.desc}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button onClick={() => p.setSurprise(!p.surprise)}
+          className={`w-full flex items-center gap-3 mt-3 p-4 rounded-2xl border transition-all ${p.surprise ? "border-[#C4B5FD] bg-[#F5F3FF]" : "border-[#E9E7F0] bg-white hover:border-[#DDD6FE]"}`}>
+          <span className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-all ${p.surprise ? "bg-[#7C3AED] justify-end" : "bg-[#E5E7EB] justify-start"}`}>
+            <span className="w-5 h-5 rounded-full bg-white shadow" />
+          </span>
+          <span className="text-left">
+            <span className="block text-[14px] font-bold text-[#1F2937]">🎁 Sürpriz Olarak Gönder</span>
+            <span className="block text-[12.5px] text-[#6B7280] mt-0.5">Teslimat öncesi alıcıya gönderen bilgisi verilmez.</span>
+          </span>
+        </button>
+      </Card>
+    </div>
   );
 }
 
 /* ---------------------------- Adım: Ek Ürünler -------------------------- */
 function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, number>; setAddon: (id: number, q: number) => void }) {
   const count = p.addons.reduce((s, a) => s + (p.addonQty[a.id] || 0), 0);
+  const cats = useMemo(() => {
+    const set: string[] = [];
+    p.addons.forEach((a) => { if (!set.includes(a.category)) set.push(a.category); });
+    return set;
+  }, [p.addons]);
+  const [tab, setTab] = useState<string>("Tümü");
+  const list = tab === "Tümü" ? p.addons : p.addons.filter((a) => a.category === tab);
+
   return (
     <Card title="Siparişinizi tamamlayın" subtitle="Bu güzel anı daha da özel kılacak dokunuşlar. İsterseniz ekleyin, isterseniz atlayın.">
+      {cats.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {["Tümü", ...cats].map((c) => (
+            <button key={c} onClick={() => setTab(c)}
+              className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tab === c ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-        {p.addons.map((a) => {
+        {list.map((a) => {
           const q = p.addonQty[a.id] || 0;
           const on = q > 0;
           return (
@@ -595,8 +681,10 @@ function LivingReceipt(p: {
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
   regionLabel: string; placeName: string | null; dateStr: string | null; slotStr: string | null; typeStr: string | null;
   recipientName: string; occasion: string | null; cardMessage: string; senderName: string;
+  visibility: "show" | "anonymous" | "hidden"; surprise: boolean;
 }) {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
+  const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? "İsimsiz gönderim" : "Tamamen gizli gönderim";
   return (
     <aside className="lg:sticky lg:top-6 rounded-[22px] border border-[#F1F0F5] bg-white p-5 shadow-[0_10px_40px_-18px_rgba(124,58,237,0.28)]">
       <div className="flex items-center justify-between mb-4">
@@ -644,7 +732,12 @@ function LivingReceipt(p: {
       )}
 
       {p.cardMessage && <ReceiptGroup label="Kart Mesajı"><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
-      {p.senderName && <ReceiptGroup label="Gönderen"><RLine icon={User} value={p.senderName} /></ReceiptGroup>}
+      {(senderLine || p.surprise) && (
+        <ReceiptGroup label="Gönderen">
+          {senderLine && <RLine icon={User} value={senderLine} />}
+          {p.surprise && <RLine icon={Gift} value="🎁 Sürpriz sipariş" />}
+        </ReceiptGroup>
+      )}
 
       <div className="mt-4 pt-4 border-t border-[#F4F3F7] flex items-center justify-between">
         <span className="text-[13px] font-semibold text-[#6B7280]">Toplam</span>
