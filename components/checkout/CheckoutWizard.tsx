@@ -15,10 +15,12 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Check, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Package, User,
   Heart, MessageSquareText, ShieldCheck, Truck, Pencil, Plus, Minus, ShoppingBag, Gift,
+  Sparkles, Star, RefreshCw,
 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
+import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
@@ -40,16 +42,6 @@ function mapToSlot(start?: string, label?: string): string {
 }
 
 type Props = { productName: string; productId: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[] };
-
-const QUICK_MESSAGES: Record<string, string[]> = {
-  sevgili: ["Seni seviyorum ❤️", "İyi ki varsın, iyi ki benimlesin."],
-  anne: ["Canım annem, seni çok seviyorum.", "Her şey için teşekkürler anne."],
-  baba: ["Canım babam, seni çok seviyorum.", "İyi ki babamsın."],
-  dogum_gunu: ["Nice mutlu yıllara! 🎉", "Doğum günün kutlu olsun, tüm dileklerin gerçek olsun."],
-  gecmis_olsun: ["Geçmiş olsun, acil şifalar dilerim.", "En kısa sürede sağlığına kavuşman dileğiyle."],
-  kurumsal: ["Başarılarınızın devamını dileriz.", "Nice başarılara, saygılarımızla."],
-  _default: ["Sevgiyle gönderildi 💐", "Bu güzel gün için…"],
-};
 
 export default function CheckoutWizard({ productName, productId, priceMinor, productSlug, coverUrl, addons = [] }: Props) {
   const steps = useMemo(() => {
@@ -345,21 +337,145 @@ function StepAlici(p: {
   );
 }
 
-/* ---------------------------- Adım: Kart Mesajı ------------------------- */
+/* ---------------------------- Adım: Kart Mesajı (premium, AI-hazır) ------ */
+const FAV_KEY = "cy_card_favorites";
+const RECENT_KEY = "cy_card_recent";
+function lsRead(key: string): string[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(window.localStorage.getItem(key) || "[]"); } catch { return []; }
+}
+function lsWrite(key: string, arr: string[]) {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(key, JSON.stringify(arr.slice(0, 8))); } catch { /* geç */ }
+}
+
 function StepKart(p: { occasion: string | null; cardMessage: string; setCardMessage: (v: string) => void }) {
-  const quick = (p.occasion && QUICK_MESSAGES[p.occasion]) || QUICK_MESSAGES._default;
+  const [tone, setTone] = useState<Tone>("samimi");
+  const [lang, setLang] = useState<Lang>("tr");
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [recent, setRecent] = useState<string[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+
+  useEffect(() => { setFavorites(lsRead(FAV_KEY)); setRecent(lsRead(RECENT_KEY)); }, []);
+
+  const suggestions = useMemo(() => suggestMessages(p.occasion, tone, lang), [p.occasion, tone, lang]);
+
+  const choose = (text: string) => {
+    p.setCardMessage(text);
+    const next = [text, ...recent.filter((r) => r !== text)];
+    setRecent(next); lsWrite(RECENT_KEY, next);
+  };
+
+  const toggleFav = () => {
+    const msg = p.cardMessage.trim();
+    if (!msg) return;
+    const exists = favorites.includes(msg);
+    const next = exists ? favorites.filter((f) => f !== msg) : [msg, ...favorites];
+    setFavorites(next); lsWrite(FAV_KEY, next);
+  };
+
+  // "Akıllı Öneri" — FAZ 1: küratörlü havuzdan taze öneri. FAZ 2'de gerçek AI
+  // (/api/ai/card-message) çağrısı buraya eklenecek; hata olursa yine buraya düşer.
+  const smartSuggest = async () => {
+    setAiBusy(true);
+    try {
+      const pool = suggestions.filter((s) => s !== p.cardMessage);
+      const pick = (pool.length ? pool : suggestions)[Math.floor(Math.random() * (pool.length ? pool.length : suggestions.length))];
+      await new Promise((r) => setTimeout(r, 260)); // küçük "düşünüyor" hissi
+      if (pick) choose(pick);
+    } finally { setAiBusy(false); }
+  };
+
+  const isFav = favorites.includes(p.cardMessage.trim());
+
   return (
-    <Card title="Kart mesajı" subtitle="Çiçekle birlikte gidecek not. İsterseniz hazır bir mesajla başlayın.">
-      <div className="flex flex-wrap gap-2 mb-4">
-        {quick.map((m) => (
-          <button key={m} onClick={() => p.setCardMessage(m)} className="px-3.5 py-2 rounded-xl bg-[#F7F6FB] text-[#4B5563] text-[12.5px] font-medium hover:bg-[#F0EEF9] transition-colors text-left">“{m}”</button>
-        ))}
+    <Card title="Kart mesajı" subtitle="Çiçekle birlikte gidecek not. Tonu seçin, önerilerden ilham alın ya da kendiniz yazın.">
+      {/* Canlı önizleme */}
+      <div className="rounded-[18px] p-5 mb-5 bg-gradient-to-br from-[#FBFAFF] to-[#F5F3FF] border border-[#EDE9FE]">
+        <p className="text-[10px] tracking-[0.16em] text-[#8B5CF6] uppercase font-bold mb-2">Önizleme</p>
+        <p className="text-[15px] text-[#3B3357] leading-relaxed italic min-h-[48px] whitespace-pre-wrap" style={{ fontFamily: "var(--font-display)" }}>
+          {p.cardMessage ? `“${p.cardMessage}”` : "Mesajınız burada canlı görünecek…"}
+        </p>
       </div>
-      <textarea className={`${inputCls} min-h-[130px] resize-y`} value={p.cardMessage} onChange={(e) => p.setCardMessage(e.target.value)} maxLength={300} placeholder="Kendi mesajınızı yazın…" />
-      <div className="flex justify-between mt-2">
-        <span className="text-[12px] text-[#9CA3AF]">AI destekli öneriler yakında.</span>
+
+      {/* Ton + Dil */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {TONES.map((t) => (
+          <button key={t.id} onClick={() => setTone(t.id)}
+            className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tone === t.id ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
+            {t.label}
+          </button>
+        ))}
+        <div className="ml-auto inline-flex rounded-full bg-[#F1F0F5] p-0.5">
+          {(["tr", "en"] as Lang[]).map((l) => (
+            <button key={l} onClick={() => setLang(l)}
+              className={`px-3 py-1.5 rounded-full text-[11.5px] font-bold transition-all ${lang === l ? "bg-white text-[#7C3AED] shadow-sm" : "text-[#9CA3AF]"}`}>
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Öneri chip'leri + Akıllı Öneri */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {suggestions.map((m) => (
+          <button key={m} onClick={() => choose(m)}
+            className="px-3.5 py-2 rounded-xl bg-[#F7F6FB] text-[#4B5563] text-[12.5px] font-medium hover:bg-[#F0EEF9] transition-colors text-left max-w-full">
+            <span className="line-clamp-1">“{m}”</span>
+          </button>
+        ))}
+        <button onClick={smartSuggest} disabled={aiBusy}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#7C3AED] text-white text-[12.5px] font-bold hover:bg-[#6D28D9] transition-colors disabled:opacity-70">
+          {aiBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Akıllı Öneri
+        </button>
+      </div>
+
+      {/* Metin + araçlar */}
+      <textarea className={`${inputCls} min-h-[120px] resize-y`} value={p.cardMessage} onChange={(e) => p.setCardMessage(e.target.value)} maxLength={300} placeholder="Kendi mesajınızı yazın…" />
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-3">
+          <button onClick={toggleFav} disabled={!p.cardMessage.trim()}
+            className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors disabled:opacity-40 ${isFav ? "text-[#7C3AED]" : "text-[#9CA3AF] hover:text-[#7C3AED]"}`}>
+            <Star className={`w-4 h-4 ${isFav ? "fill-[#7C3AED]" : ""}`} /> {isFav ? "Favorilerde" : "Favorilere ekle"}
+          </button>
+          {p.cardMessage && (
+            <button onClick={() => p.setCardMessage("")} className="text-[12.5px] font-medium text-[#9CA3AF] hover:text-[#6B7280]">Kartsız gönder</button>
+          )}
+        </div>
         <span className="text-[12px] text-[#9CA3AF]">{p.cardMessage.length}/300</span>
       </div>
+
+      {/* Favoriler */}
+      {favorites.length > 0 && (
+        <div className="mt-5">
+          <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold mb-2">Favorileriniz</p>
+          <div className="flex flex-wrap gap-2">
+            {favorites.map((m) => (
+              <button key={m} onClick={() => choose(m)} className="px-3 py-1.5 rounded-lg bg-[#F5F3FF] text-[#6D28D9] text-[12px] font-medium hover:bg-[#EDE9FE] transition-colors max-w-[240px]">
+                <span className="line-clamp-1">“{m}”</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Son kullanılanlar */}
+      {recent.length > 0 && (
+        <div className="mt-4">
+          <p className="text-[10px] tracking-[0.14em] text-[#9CA3AF] uppercase font-bold mb-2">Son kullanılanlar</p>
+          <div className="flex flex-wrap gap-2">
+            {recent.filter((r) => !favorites.includes(r)).slice(0, 5).map((m) => (
+              <button key={m} onClick={() => choose(m)} className="px-3 py-1.5 rounded-lg bg-[#FAFAFB] text-[#6B7280] text-[12px] font-medium hover:bg-[#F1F0F5] transition-colors max-w-[240px]">
+                <span className="line-clamp-1">“{m}”</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-[11.5px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
+        <Sparkles className="w-3.5 h-3.5 text-[#C4B5FD]" /> Gerçek AI ile kişiye özel mesaj üretimi yakında.
+      </p>
     </Card>
   );
 }
