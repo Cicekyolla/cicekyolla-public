@@ -86,11 +86,11 @@ export default async function ProductPage({ params }: PageProps) {
         const fn = (product as { florist_note?: string | null; florist_note_status?: string | null });
         if (!fn.florist_note || fn.florist_note_status !== "approved") return null;
         return (
-          <section aria-label="Florist Notu" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-4">
+          <section aria-label="Çiçek Yolla Önerisi" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-4">
             <div className="rounded-[22px] border border-[#EDE9FE] bg-gradient-to-br from-[#FBFAFF] to-[#F5F3FF] p-6 lg:p-7">
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#7C3AED] text-white text-[13px]">✿</span>
-                <span className="text-[11px] tracking-[0.28em] text-[#6D28D9] uppercase font-bold">Florist Notu</span>
+                <span className="text-[11px] tracking-[0.28em] text-[#6D28D9] uppercase font-bold">Çiçek Yolla Önerisi</span>
               </div>
               <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#3F3A52]" style={{ fontFamily: "var(--font-display)" }}>
                 {fn.florist_note}
