@@ -23,14 +23,24 @@ export default async function HizliSiparisPage({
   const coverUrl = detail.images?.find((i) => i.role === "cover")?.url ?? detail.images?.[0]?.url ?? null;
 
   // Ek ürünler (çikolata/ayıcık/kart/balon…) — gift tipi, server'da çekilir (token server-only).
+  const catOf = (name: string): string => {
+    const n = name.toLocaleLowerCase("tr");
+    if (/(çikolata|cikolata|truf|praline|chocolate)/.test(n)) return "Çikolata";
+    if (/(ayıcık|ayicik|peluş|pelus|teddy|tavşan|tavsan|oyuncak)/.test(n)) return "Ayıcık & Peluş";
+    if (/(kart|card|pankart|mesaj)/.test(n)) return "Kart";
+    if (/(balon|balloon)/.test(n)) return "Balon";
+    if (/(mum|candle)/.test(n)) return "Mum";
+    if (/(vazo|vase)/.test(n)) return "Vazo";
+    return "Diğer";
+  };
   const addonRaw = await fetchProducts({ product_type: "gift", page_size: 12 }).catch(() => []);
   const addons = addonRaw
     .filter((a) => a.id !== p.id && a.cover_image_url)
     .map((a) => {
       const s = a.sale_price_minor != null && Number(a.sale_price_minor) > 0 && Number(a.sale_price_minor) < Number(a.price_minor);
-      return { id: a.id, name: a.name, priceMinor: Math.round(s ? Number(a.sale_price_minor) : Number(a.price_minor)), image: a.cover_image_url ?? null };
+      return { id: a.id, name: a.name, priceMinor: Math.round(s ? Number(a.sale_price_minor) : Number(a.price_minor)), image: a.cover_image_url ?? null, category: catOf(a.name) };
     })
-    .slice(0, 8);
+    .slice(0, 12);
 
   return (
     <main className="min-h-screen bg-white">
