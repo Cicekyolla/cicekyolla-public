@@ -105,7 +105,7 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                   Çiçekyolla
                 </span>
                 <span className="text-[9px] tracking-[0.35em] text-[#8B5CF6] uppercase font-semibold" style={{ letterSpacing: "0.32em" }}>
-                  Premium Florist
+                  Premium Çiçekçi
                 </span>
               </div>
             </Link>
