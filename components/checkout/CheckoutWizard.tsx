@@ -203,7 +203,6 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
           delivery_city: pd?.city || null,
           delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
           card_message: composedCard, source: "web",
-          coupon_code: coupon?.code ?? null,
           occasion: occasion || null,
           sender_visibility: visibility,
           is_surprise: surprise,
