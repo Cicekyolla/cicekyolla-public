@@ -181,6 +181,21 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   const remainingMs =
     dayOffset === 0 && cutoffStr ? cutoffRemainingMs(cutoffStr, nowTs) : null;
 
+  // Slot bazlı "son alım geçti mi" — yalnız BUGÜN için anlamlı.
+  // Kural: slotun kendi cutoff_time'ı varsa onu kullan; yoksa slot başlangıcından 1 saat önce.
+  // (Örn. 15:00 slotu → son alım 14:00; 14:00'ı geçince slot kapanır.)
+  function slotCutoffPassed(s: Slot, ts: number): boolean {
+    if (dayOffset !== 0) return false; // yalnız bugün
+    const timeStr = s.cutoff_time ?? s.start_time; // cutoff yoksa start üzerinden hesapla
+    const m = /^(\d{1,2}):(\d{2})/.exec(timeStr);
+    if (!m) return false;
+    const d = new Date(ts);
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    // cutoff_time yoksa başlangıçtan 1 saat çıkar
+    const cutoffMs = s.cutoff_time ? d.getTime() : d.getTime() - 60 * 60 * 1000;
+    return cutoffMs - ts <= 0;
+  }
+
   // Canlı sayaç: sadece bugün + aynı gün uygun + kesme geçmemişken saniyede bir tik.
   useEffect(() => {
     if (dayOffset !== 0 || !sameDayAvail || !cutoffStr || todayClosed) return;
@@ -405,7 +420,9 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                         {/* Slot ızgarası */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {sd!.slots!.map((s) => {
-                            const disabled = s.remaining <= 0;
+                            const soldOut = s.remaining <= 0;
+                            const timePassed = slotCutoffPassed(s, nowTs);
+                            const disabled = soldOut || timePassed;
                             const activeSlot = slotId === s.id;
                             return (
                               <button
@@ -418,6 +435,11 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                                 {s.label}
                                 {!disabled && s.extra_fee_minor > 0 && (
                                   <div className={`text-[10px] font-medium mt-0.5 ${activeSlot ? "text-white/80" : "text-[#9CA3AF]"}`}>+{feeText(s.extra_fee_minor)}</div>
+                                )}
+                                {disabled && (
+                                  <div className="text-[9.5px] font-semibold mt-0.5 text-[#B91C1C] no-underline">
+                                    {timePassed ? "Süresi geçti" : "Doldu"}
+                                  </div>
                                 )}
                               </button>
                             );
