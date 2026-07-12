@@ -7,6 +7,9 @@
 // Sipariş POST'u YALNIZ son adımda; items[] dizisine ek ürünler eklenir
 // (contract değişmez — items zaten dizi). Order Flow DEĞİŞMEZ.
 // Yaşayan sipariş fişi sağda; her seçimde canlı güncellenir.
+// FIX (422): Ek ürün (addon) satırlarında product_id / quantity /
+// unit_price_minor artık ana üründeki gibi güvenli sayıya çevrilir —
+// API'den string gelen değerler Zod validasyonunu düşürüyordu.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useState } from "react";
@@ -131,11 +134,22 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
         ? cardMessage + (visibility === "show" && senderName.trim() ? `\n— ${senderName.trim()}` : "")
         : null;
 
+      // FIX (422): Ek ürün satırları da ana ürün gibi güvenli sayıya çevrilir.
+      // API'den string gelen id/priceMinor, Zod (z.number().int()) tarafından
+      // reddediliyordu. Geçersiz/pozitif olmayan id → null (şema nullable kabul eder).
       const items = [
         { product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) },
-        ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => ({
-          product_id: a.id, product_name: a.name, quantity: addonQty[a.id], unit_price_minor: a.priceMinor,
-        })),
+        ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => {
+          const pid = Math.round(Number(a.id));
+          const q = Math.max(1, Math.round(Number(addonQty[a.id]) || 1));
+          const price = Math.max(0, Math.round(Number(a.priceMinor) || 0));
+          return {
+            product_id: Number.isFinite(pid) && pid > 0 ? pid : null,
+            product_name: a.name,
+            quantity: q,
+            unit_price_minor: price,
+          };
+        }),
       ];
 
       const res = await fetch("/api/orders", {
