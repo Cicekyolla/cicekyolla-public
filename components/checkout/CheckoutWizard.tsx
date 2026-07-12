@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Check, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Package, User,
   Heart, MessageSquareText, ShieldCheck, Truck, Pencil, Plus, Minus, ShoppingBag, Gift,
-  Sparkles, Star, RefreshCw,
+  Sparkles, Star, RefreshCw, TicketPercent,
 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
@@ -79,6 +79,11 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
   const [visibility, setVisibility] = useState<"show" | "anonymous" | "hidden">("show");
   const [surprise, setSurprise] = useState(false);
   const [addonQty, setAddonQty] = useState<Record<number, number>>({});
+  // Kupon (indirim daima backend /api/public/coupon motorundan gelir; frontend hesap yapmaz)
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount_minor: number } | null>(null);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const qty = 1;
 
   useEffect(() => {
@@ -94,7 +99,42 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
     () => addons.reduce((s, a) => s + (addonQty[a.id] || 0) * a.priceMinor, 0),
     [addons, addonQty]
   );
-  const total = priceMinor * qty + addonsTotal;
+  const subtotal = priceMinor * qty + addonsTotal;
+  const discountMinor = coupon?.discount_minor ?? 0;
+  const total = Math.max(0, subtotal - discountMinor);
+
+  // Sepet değişince uygulanmış kupon geçersiz olabilir → temizle (yeniden uygulanır).
+  useEffect(() => { if (coupon) { setCoupon(null); setCouponMsg(null); } /* eslint-disable-next-line */ }, [addonQty]);
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+    setCouponBusy(true); setCouponMsg(null);
+    try {
+      const items = [
+        { product_id: productId != null ? Number(productId) : null, quantity: qty },
+        ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => ({ product_id: Number(a.id), quantity: addonQty[a.id] })),
+      ].filter((it) => it.product_id != null);
+      // Not: bölgesel kupon için ileride pd'ye sayısal city_id/district_id eklenince
+      // buraya geçirilecek. Şu an bölge gönderilmez → backend bölgesiz kuponu her yerde geçerli sayar.
+      const res = await fetch("/api/coupon", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, items }),
+      });
+      const json = await res.json().catch(() => null);
+      const d = json?.data;
+      if (d?.valid && d.discount_minor > 0) {
+        setCoupon({ code: d.code, discount_minor: d.discount_minor });
+        setCouponMsg(null);
+      } else {
+        setCoupon(null);
+        setCouponMsg(d?.message ?? "Kupon uygulanamadı.");
+      }
+    } catch {
+      setCoupon(null); setCouponMsg("Kupon doğrulanamadı. Lütfen tekrar deneyin.");
+    } finally { setCouponBusy(false); }
+  };
+  const removeCoupon = () => { setCoupon(null); setCouponInput(""); setCouponMsg(null); };
 
   const dateStr = fmtDate(pd?.date);
   const slotStr = pd?.slotLabel ?? (pd?.slotStart ? mapToSlot(pd.slotStart) : null);
@@ -163,6 +203,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
           delivery_city: pd?.city || null,
           delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
           card_message: composedCard, source: "web",
+          coupon_code: coupon?.code ?? null,
           occasion: occasion || null,
           sender_visibility: visibility,
           is_surprise: surprise,
@@ -232,11 +273,14 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
               {stepKey === "ekurun" && <StepAddons addons={addons} addonQty={addonQty} setAddon={setAddon} />}
               {stepKey === "odeme" && (
                 <StepOdeme
-                  productName={productName} productPrice={priceMinor} total={total}
+                  productName={productName} productPrice={priceMinor} total={total} subtotal={subtotal}
                   addons={addons} addonQty={addonQty}
                   recipientName={recipientName} occasion={occasion}
                   address={address} region={`${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
                   dateStr={dateStr} slotStr={slotStr} typeStr={typeStr} cardMessage={cardMessage}
+                  couponInput={couponInput} setCouponInput={setCouponInput}
+                  coupon={coupon} couponMsg={couponMsg} couponBusy={couponBusy}
+                  applyCoupon={applyCoupon} removeCoupon={removeCoupon}
                 />
               )}
             </motion.div>
@@ -266,8 +310,8 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
 
         <div className="order-2">
           <LivingReceipt
-            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} total={total} productSlug={productSlug}
-            addons={addons} addonQty={addonQty}
+            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} total={total} subtotal={subtotal} productSlug={productSlug}
+            addons={addons} addonQty={addonQty} coupon={coupon}
             regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
             placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
             recipientName={recipientName} occasion={occasion} cardMessage={cardMessage} senderName={senderName}
@@ -647,18 +691,53 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
 
 /* ---------------------------- Adım: Ödeme/Özet -------------------------- */
 function StepOdeme(p: {
-  productName: string; productPrice: number; total: number;
+  productName: string; productPrice: number; total: number; subtotal: number;
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
   recipientName: string; occasion: string | null;
   address: string; region: string; dateStr: string | null; slotStr: string | null; typeStr: string | null; cardMessage: string;
+  couponInput: string; setCouponInput: (v: string) => void;
+  coupon: { code: string; discount_minor: number } | null; couponMsg: string | null; couponBusy: boolean;
+  applyCoupon: () => void; removeCoupon: () => void;
 }) {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
+  const hasDiscount = !!p.coupon && p.coupon.discount_minor > 0;
   return (
     <Card title="Siparişinizi onaylayın" subtitle="Her şey hazır. Onayladığınızda siparişiniz oluşturulur.">
       <div className="space-y-2.5">
         <LineItem name={p.productName} qty={1} price={p.productPrice} />
         {selected.map((a) => <LineItem key={a.id} name={a.name} qty={p.addonQty[a.id]} price={a.priceMinor * p.addonQty[a.id]} addon />)}
       </div>
+
+      {/* İndirim Kodu */}
+      <div className="mt-4 pt-4 border-t border-[#F1F0F5]">
+        <label className="block text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-2">İndirim Kodu</label>
+        {hasDiscount ? (
+          <div className="flex items-center justify-between rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
+            <span className="flex items-center gap-2 text-[13.5px] font-semibold text-[#15803D]">
+              <TicketPercent className="w-4 h-4" /> {p.coupon!.code} uygulandı
+            </span>
+            <button onClick={p.removeCoupon} className="text-[12.5px] font-semibold text-[#6B7280] hover:text-[#991B1B]">Kaldır</button>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <input
+                value={p.couponInput}
+                onChange={(e) => p.setCouponInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); p.applyCoupon(); } }}
+                placeholder="Kupon kodunuz"
+                className="flex-1 px-4 py-3 rounded-2xl border border-[#E9E7F0] bg-[#FCFCFD] text-[14px] tracking-wide uppercase text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#C4B5FD] focus:bg-white focus:ring-4 focus:ring-[#F5F3FF] transition-all"
+              />
+              <button onClick={p.applyCoupon} disabled={p.couponBusy || !p.couponInput.trim()}
+                className={`px-5 rounded-2xl text-[14px] font-bold text-white transition-all ${p.couponBusy || !p.couponInput.trim() ? "bg-[#C4B5FD] cursor-not-allowed" : "bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.98]"}`}>
+                {p.couponBusy ? "…" : "Uygula"}
+              </button>
+            </div>
+            {p.couponMsg && <p className="mt-2 text-[12.5px] font-medium text-[#B91C1C]">{p.couponMsg}</p>}
+          </>
+        )}
+      </div>
+
       <div className="mt-4 pt-4 border-t border-[#F1F0F5] space-y-3">
         <RevRow icon={User} label="Alıcı" value={`${p.recipientName || "—"}${occasionLabel(p.occasion) ? " · " + occasionLabel(p.occasion) : ""}`} />
         <RevRow icon={MapPin} label="Teslimat" value={`${p.region ? p.region + " — " : ""}${p.address || "—"}`} />
@@ -666,9 +745,22 @@ function StepOdeme(p: {
         {p.typeStr && <RevRow icon={Truck} label="Teslimat Tipi" value={p.typeStr} />}
         {p.cardMessage && <RevRow icon={MessageSquareText} label="Kart Mesajı" value={`“${p.cardMessage}”`} />}
       </div>
-      <div className="mt-5 pt-4 border-t border-[#F1F0F5] flex items-center justify-between">
-        <span className="text-[14px] font-semibold text-[#6B7280]">Toplam</span>
-        <span className="text-[22px] font-bold text-[#111827]">{money(p.total)}</span>
+
+      <div className="mt-5 pt-4 border-t border-[#F1F0F5] space-y-2">
+        {hasDiscount && (
+          <>
+            <div className="flex items-center justify-between text-[13.5px] text-[#6B7280]">
+              <span>Ara Toplam</span><span>{money(p.subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-[13.5px] font-semibold text-[#15803D]">
+              <span>İndirim ({p.coupon!.code})</span><span>−{money(p.coupon!.discount_minor)}</span>
+            </div>
+          </>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[14px] font-semibold text-[#6B7280]">Toplam</span>
+          <span className="text-[22px] font-bold text-[#111827]">{money(p.total)}</span>
+        </div>
       </div>
       <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" /> Güvenli ödeme adımı yakında entegre edilecektir.</p>
     </Card>
@@ -700,8 +792,9 @@ function RevRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ clas
 
 /* ---------------------------- Yaşayan Fiş ------------------------------- */
 function LivingReceipt(p: {
-  productName: string; coverUrl?: string | null; productPrice: number; total: number; productSlug?: string;
+  productName: string; coverUrl?: string | null; productPrice: number; total: number; subtotal: number; productSlug?: string;
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
+  coupon: { code: string; discount_minor: number } | null;
   regionLabel: string; placeName: string | null; dateStr: string | null; slotStr: string | null; typeStr: string | null;
   recipientName: string; occasion: string | null; cardMessage: string; senderName: string;
   visibility: "show" | "anonymous" | "hidden"; surprise: boolean;
@@ -762,9 +855,22 @@ function LivingReceipt(p: {
         </ReceiptGroup>
       )}
 
-      <div className="mt-4 pt-4 border-t border-[#F4F3F7] flex items-center justify-between">
-        <span className="text-[13px] font-semibold text-[#6B7280]">Toplam</span>
-        <span className="text-[19px] font-bold text-[#111827]">{money(p.total)}</span>
+      <div className="mt-4 pt-4 border-t border-[#F4F3F7] space-y-1.5">
+        {p.coupon && p.coupon.discount_minor > 0 && (
+          <>
+            <div className="flex items-center justify-between text-[12px] text-[#6B7280]">
+              <span>Ara Toplam</span><span>{money(p.subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-[12px] font-semibold text-[#15803D]">
+              <span className="flex items-center gap-1"><TicketPercent className="w-3 h-3" />{p.coupon.code}</span>
+              <span>−{money(p.coupon.discount_minor)}</span>
+            </div>
+          </>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-[#6B7280]">Toplam</span>
+          <span className="text-[19px] font-bold text-[#111827]">{money(p.total)}</span>
+        </div>
       </div>
     </aside>
   );
