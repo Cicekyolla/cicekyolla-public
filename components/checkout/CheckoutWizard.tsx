@@ -28,6 +28,20 @@ import type { CheckoutAddon } from "./CheckoutFlow";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
+
+// --- Doğrulama (API sözleşmesiyle uyumlu) ---
+// E-posta: backend Zod .email() ile birebir (Response "Invalid email" = Zod default).
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+// Telefon: TR formatı. Rakamları al; 10 hane (5xx...) veya 11 hane (05xx) veya +90'lı 12 hane kabul.
+const phoneDigits = (v: string) => v.replace(/\D/g, "");
+const isValidTRPhone = (v: string) => {
+  const d = phoneDigits(v);
+  // 5xxxxxxxxx (10) | 05xxxxxxxxx (11) | 905xxxxxxxxx (12)
+  if (d.length === 10) return d.startsWith("5");
+  if (d.length === 11) return d.startsWith("05");
+  if (d.length === 12) return d.startsWith("905");
+  return false;
+};
 function fmtDate(d?: string): string | null {
   if (!d) return null;
   const dt = new Date(d + "T00:00:00");
@@ -86,14 +100,55 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
   const [couponBusy, setCouponBusy] = useState(false);
   const qty = 1;
 
+  // --- Checkout taslağı (sessionStorage): yenilemede ödeme-dışı bilgiler korunur ---
+  const DRAFT_KEY = `cy_checkout_draft_${productSlug ?? "default"}`;
+  const draftLoaded = useMemo(() => ({ v: false }), []);
+  useEffect(() => {
+    if (typeof window === "undefined" || draftLoaded.v) return;
+    try {
+      const raw = window.sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.recipientName != null) setRecipientName(d.recipientName);
+        if (d.recipientPhone != null) setRecipientPhone(d.recipientPhone);
+        if (d.occasion != null) setOccasion(d.occasion);
+        if (Array.isArray(d.notes)) setNotes(d.notes);
+        if (d.specialNote != null) setSpecialNote(d.specialNote);
+        if (d.address != null) setAddress(d.address);
+        if (d.cardMessage != null) setCardMessage(d.cardMessage);
+        if (d.senderName != null) setSenderName(d.senderName);
+        if (d.senderPhone != null) setSenderPhone(d.senderPhone);
+        if (d.senderEmail != null) setSenderEmail(d.senderEmail);
+        if (d.visibility != null) setVisibility(d.visibility);
+        if (typeof d.surprise === "boolean") setSurprise(d.surprise);
+        if (d.addonQty != null) setAddonQty(d.addonQty);
+      }
+    } catch { /* taslak bozuksa yok say */ }
+    draftLoaded.v = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const p = readPendingDelivery();
     if (!p) return;
     if (productSlug && p.productSlug && p.productSlug !== productSlug) return;
     setPd(p);
-    if (p.address) setAddress(p.address);
-    if (p.occasion) setOccasion(p.occasion as string);
+    if (p.address && !address) setAddress(p.address);
+    if (p.occasion && !occasion) setOccasion(p.occasion as string);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productSlug]);
+
+  // Taslağı otomatik kaydet (ödeme-dışı bilgiler). Sipariş tamamlanınca temizlenir.
+  useEffect(() => {
+    if (typeof window === "undefined" || !draftLoaded.v || done) return;
+    try {
+      window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+        recipientName, recipientPhone, occasion, notes, specialNote, address,
+        cardMessage, senderName, senderPhone, senderEmail, visibility, surprise, addonQty,
+      }));
+    } catch { /* kota dolabilir, yok say */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipientName, recipientPhone, occasion, notes, specialNote, address, cardMessage, senderName, senderPhone, senderEmail, visibility, surprise, addonQty]);
 
   const addonsTotal = useMemo(
     () => addons.reduce((s, a) => s + (addonQty[a.id] || 0) * a.priceMinor, 0),
@@ -146,9 +201,12 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
   const stepKey = steps[stepIdx].key;
   const canNext = useMemo(() => {
     if (stepKey === "alici") return recipientName.trim().length > 0;
-    if (stepKey === "gonderen") return senderName.trim().length > 0 && senderPhone.trim().length > 0;
+    if (stepKey === "gonderen")
+      return senderName.trim().length > 0
+        && isValidTRPhone(senderPhone)
+        && isValidEmail(senderEmail);
     return true;
-  }, [stepKey, recipientName, senderName, senderPhone]);
+  }, [stepKey, recipientName, senderName, senderPhone, senderEmail]);
 
   const go = (dir: 1 | -1) => {
     setError(null);
@@ -158,8 +216,14 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
 
   const submit = async () => {
     setError(null);
-    if (!senderName || !senderPhone || !recipientName) {
-      setError("Lütfen gönderen ve alıcı bilgilerini tamamlayın."); return;
+    if (!senderName.trim() || !recipientName.trim()) {
+      setError("Lütfen gönderen ve alıcı adını tamamlayın."); return;
+    }
+    if (!isValidTRPhone(senderPhone)) {
+      setError("Lütfen geçerli bir telefon numarası girin (örn. 05xx xxx xx xx)."); return;
+    }
+    if (!isValidEmail(senderEmail)) {
+      setError("Lütfen geçerli bir e-posta adresi girin."); return;
     }
     setLoading(true);
     try {
@@ -220,6 +284,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
       const json = await res.json();
       setDone({ order_number: json.data.order_number });
       clearPendingDelivery();
+      try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
     } catch {
       setError("Sipariş oluşturulamadı. Lütfen tekrar deneyin.");
     } finally {
@@ -578,6 +643,11 @@ function StepGonderen(p: {
   visibility: "show" | "anonymous" | "hidden"; setVisibility: (v: "show" | "anonymous" | "hidden") => void;
   surprise: boolean; setSurprise: (v: boolean) => void;
 }) {
+  // Hata yalnız alan ilk kez terk edilince (blur) gösterilir; düzeltilince anında kalkar.
+  const [touched, setTouched] = useState<{ phone?: boolean; email?: boolean }>({});
+  const phoneErr = touched.phone && !isValidTRPhone(p.phone);
+  const emailErr = touched.email && !isValidEmail(p.email);
+  const errInput = "w-full px-4 py-3.5 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] text-[15px] text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#F87171] focus:bg-white focus:ring-4 focus:ring-[#FEE2E2] transition-all";
   const opts: { id: "show" | "anonymous" | "hidden"; title: string; desc: string }[] = [
     { id: "show", title: "Adımı Kartta Göster", desc: "Kart mesajının altında adınız görünür. Örn. “Sevgiler, " + (p.name.trim() || "Adem") + "”." },
     { id: "anonymous", title: "İsimsiz Gönder", desc: "Kartta ve teslimatta gönderen adı görünmez." },
@@ -588,8 +658,30 @@ function StepGonderen(p: {
       <Card title="Gönderen bilgileri" subtitle="Sipariş onayı ve iletişim için gereklidir. Bu bilgiler alıcıyla paylaşılmaz.">
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className={labelCls}>Ad Soyad *</label><input className={inputCls} value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Adınız Soyadınız" /></div>
-          <div><label className={labelCls}>Telefon *</label><input className={inputCls} value={p.phone} onChange={(e) => p.setPhone(e.target.value)} placeholder="+90 5xx xxx xx xx" /></div>
-          <div className="sm:col-span-2"><label className={labelCls}>E-posta</label><input className={inputCls} value={p.email} onChange={(e) => p.setEmail(e.target.value)} placeholder="ornek@eposta.com" /></div>
+          <div>
+            <label className={labelCls}>Telefon *</label>
+            <input
+              className={phoneErr ? errInput : inputCls}
+              value={p.phone}
+              inputMode="tel"
+              onChange={(e) => p.setPhone(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+              placeholder="05xx xxx xx xx"
+            />
+            {phoneErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">Geçerli bir telefon numarası girin (05xx xxx xx xx).</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelCls}>E-posta *</label>
+            <input
+              className={emailErr ? errInput : inputCls}
+              value={p.email}
+              inputMode="email"
+              onChange={(e) => p.setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              placeholder="ornek@eposta.com"
+            />
+            {emailErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">Geçerli bir e-posta adresi girin (sipariş onayı için gereklidir).</p>}
+          </div>
         </div>
         <div className="flex items-center gap-2 mt-5 text-[12.5px] text-[#6B7280]">
           <ShieldCheck className="w-4 h-4 text-[#22C55E]" /> Telefon ve e-postanız hiçbir koşulda alıcıya gösterilmez (KVKK uyumlu).
