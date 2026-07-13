@@ -2,7 +2,7 @@
 
 /**
  * §5b NATIONWIDE SHIPPING + DEKORASYON SPLIT — ZIP Homepage.tsx birebir.
- * İki premium özellik kartı: "Türkiye'nin Her Köşesine Çiçek" (81 il kargo) + "Mekanınızı Dönüştürün" (deko).
+ * İki premium özellik kartı: "Türkiye Geneli Kargo" + "Mekanınızı Dönüştürün" (deko).
  * Adaptasyon: react-router <Link to=…> → next/link <Link href=…>. Görsel/hover birebir.
  */
 
@@ -35,14 +35,14 @@ export function FeatureSplit() {
               <div className="absolute inset-0 p-8 flex flex-col justify-end">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-[10px] tracking-[0.25em] text-green-400 uppercase font-bold">81 İle Gönderim</span>
+                  <span className="text-[10px] tracking-[0.25em] text-green-400 uppercase font-bold">Türkiye Geneli Kargo</span>
                 </div>
                 <h3 style={{ fontFamily: "var(--font-display)", lineHeight: 1.1 }} className="text-2xl lg:text-3xl font-semibold text-white mb-2">
                   Türkiye&apos;nin Her
                   <br />
                   Köşesine Çiçek
                 </h3>
-                <p className="text-white/60 text-sm mb-5">Bugün sipariş verin, yarın kargoda. Özel korumalı paketleme ile güvenli teslimat.</p>
+                <p className="text-white/60 text-sm mb-5">Özel korumalı paketleme ile güvenli kargo teslimatı.</p>
                 <span className="inline-flex items-center gap-2 text-sm font-bold text-white border border-white/30 rounded-full px-5 py-2.5 group-hover:bg-white group-hover:text-[#7C3AED] transition-all w-fit">
                   Kargo Ürünleri <ArrowRight className="w-3.5 h-3.5" />
                 </span>
