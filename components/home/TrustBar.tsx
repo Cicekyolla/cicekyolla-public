@@ -9,15 +9,13 @@
  */
 
 import { motion } from "motion/react";
-import { Zap, Truck, Leaf, Shield, Award, Clock } from "lucide-react";
+import { Leaf, Shield } from "lucide-react";
 
+// Doğrulanmamış USP iddiaları (müşteri sayısı/destek/kargo eşiği) kaldırıldı.
+// Yalnız ürün/ödeme düzeyinde savunulabilir, sayısal olmayan USP'ler kalır.
 const items = [
-  { icon: Zap, text: "Aynı Gün Teslimat" },
-  { icon: Truck, text: "Ücretsiz Kargo" },
   { icon: Leaf, text: "Taptaze Garantisi" },
   { icon: Shield, text: "Güvenli Ödeme" },
-  { icon: Award, text: "2.400+ Mutlu Müşteri" },
-  { icon: Clock, text: "7/24 WhatsApp Destek" },
 ];
 
 export function TrustBar() {
