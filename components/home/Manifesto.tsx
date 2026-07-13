@@ -3,20 +3,12 @@
 /**
  * §3 EDITORIAL / MANIFESTO — ZIP Homepage.tsx birebir port.
  * Sol: "Çiçekler kelimelerden daha güçlüdür…" manifesto (Fraunces, gradient vurgu).
- * Sağ: 4 istatistik kartı (2.400+ / %98 / 50+ / 7-24) — CountUp animasyonlu, lilac gradient kart.
+ * (Doğrulanmamış istatistik kartları kaldırıldı — yalnız manifesto metni.)
  * Sıra: TrustBar(USP)'tan sonra. SEO/SSR'a dokunulmadı; yeni mock/placeholder yok.
  */
 
 import { motion } from "motion/react";
 import { SectionLabel } from "./SectionHeading";
-import { CountUp } from "./CountUp";
-
-const stats = [
-  { num: 2400, suf: "+", label: "Mutlu Müşteri" },
-  { num: 98, suf: "%", label: "Memnuniyet" },
-  { num: 50, suf: "+", label: "Benzersiz Ürün" },
-  { num: 7, suf: "/24", label: "WhatsApp Destek" },
-];
 
 export function Manifesto() {
   return (
@@ -48,34 +40,6 @@ export function Manifesto() {
               </em>{" "}
               Biz bu gücü her teslimatımıza taşırız.&rdquo;
             </blockquote>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="grid grid-cols-2 gap-6"
-          >
-            {stats.map(({ num, suf, label }) => (
-              <div
-                key={label}
-                className="rounded-2xl p-6"
-                style={{
-                  background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
-                  border: "1px solid rgba(139,92,246,0.1)",
-                }}
-              >
-                <p
-                  style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", lineHeight: 1 }}
-                  className="font-semibold text-[#111827] mb-2"
-                >
-                  <CountUp target={num} suffix={suf} />
-                </p>
-                <p className="text-xs text-[#6B7280] font-medium tracking-wide">{label}</p>
-              </div>
-            ))}
           </motion.div>
         </div>
       </div>
