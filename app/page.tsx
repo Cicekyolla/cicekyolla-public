@@ -22,6 +22,8 @@ import { CorporateReferences } from "../components/home/CorporateReferences";
 import { DistrictDelivery } from "../components/home/DistrictDelivery";
 import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
+import { getPublishedHomepage } from "@/lib/homepage";
+import { HomepageRenderer } from "../components/home/HomepageRenderer";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -47,7 +49,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { absolute: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat" },
   description:
-    "Türkiye'nin en prestijli çiçek markası. Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat ve 81 ile ücretsiz kargo.",
+    "Özenle seçilmiş premium aranjmanlar, zarif paketleme ve aynı gün teslimat seçenekleri.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -76,10 +78,10 @@ function HomeJsonLd() {
       url: SITE_URL,
       logo: `${SITE_URL}/logo.png`,
       description:
-        "Türkiye'nin premium çiçek ve hediye markası. Aynı gün teslimat, 81 ile kargo.",
+        "Premium çiçek ve hediye markası. Aynı gün teslimat seçenekleri.",
       contactPoint: {
         "@type": "ContactPoint",
-        telephone: "+90-555-123-45-67",
+        telephone: "+90-507-441-3474",
         contactType: "customer service",
         availableLanguage: "Turkish",
       },
@@ -147,6 +149,20 @@ export default async function HomePage() {
         image: p.cover_image_url as string,
       };
     });
+
+  // CMS: yayınlanan snapshot varsa onu render et (sıra/enabled/zaman penceresi
+  // API tarafında uygulanır; ürün bölümleri DTO ürünleriyle ProductCard olarak
+  // gelir). Yayın yoksa VEYA API hatasında aşağıdaki mevcut (temizlenmiş)
+  // tasarım güvenli biçimde çalışmaya devam eder. Draft ASLA public'e çıkmaz.
+  const publishedHomepage = await getPublishedHomepage();
+  if (publishedHomepage && publishedHomepage.sections.length > 0) {
+    return (
+      <>
+        <HomeJsonLd />
+        <HomepageRenderer dto={publishedHomepage} ctx={{ collections, imagedCollections }} />
+      </>
+    );
+  }
 
   return (
     <>
