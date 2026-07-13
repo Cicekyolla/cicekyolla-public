@@ -17,7 +17,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
-import { Truck, ArrowRight, MessageCircle, Star } from "lucide-react";
+import { Truck, ArrowRight, MessageCircle } from "lucide-react";
 
 export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -147,7 +147,7 @@ export function HomeHero() {
               transition={{ delay: 0.55, duration: 0.7 }}
               className="text-white/60 text-lg leading-relaxed mb-10 max-w-[460px]"
             >
-              Türkiye&apos;nin en prestijli çiçek markası. Özenle seçilmiş premium
+              Özenle seçilmiş premium
               aranjmanlar, zarif paketleme, aynı gün teslimat.
             </motion.p>
 
@@ -217,12 +217,6 @@ export function HomeHero() {
             <p className="text-white text-sm font-semibold">Aynı Gün Teslimat</p>
             <p className="text-white/50 text-xs">14:00&apos;a kadar sipariş ver</p>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-          ))}
-          <span className="text-white/50 text-xs ml-1.5">4.9 · 2.400+ yorum</span>
         </div>
       </motion.div>
     </section>
