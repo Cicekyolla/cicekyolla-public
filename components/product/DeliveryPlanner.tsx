@@ -83,6 +83,53 @@ function feeText(minor?: number): string {
   return `${(minor / 100).toLocaleString("tr-TR", { minimumFractionDigits: 0 })} ₺`;
 }
 
+// --- Yaka (Anadolu/Avrupa) tespiti + aynı gün son alım kuralı ----------------
+// İş kuralı (kullanıcı onaylı): Anadolu son alım 19:00, Avrupa son alım 16:00.
+// Her slot ayrıca başlangıcından 1 saat önce kapanır (hazırlık/dağıtım payı).
+// Slot kapanır: now >= min(yaka son alımı, slot başlangıcı − 1 saat).
+// Backend `side` alanı DÖNMÜYOR; yaka adresten (ilçe → boylam fallback) çıkarılır.
+type Side = "anadolu" | "avrupa";
+
+// Türkçe karakterleri sadeleştir (Google ilçe adı "Kadıköy"/"Kadikoy" → "kadikoy").
+function trNorm(s: string): string {
+  return s
+    .replace(/İ/g, "i").replace(/I/g, "i").replace(/ı/g, "i")
+    .replace(/Ş/g, "s").replace(/ş/g, "s")
+    .replace(/Ğ/g, "g").replace(/ğ/g, "g")
+    .replace(/Ü/g, "u").replace(/ü/g, "u")
+    .replace(/Ö/g, "o").replace(/ö/g, "o")
+    .replace(/Ç/g, "c").replace(/ç/g, "c")
+    .toLowerCase().trim();
+}
+
+// İstanbul'un Anadolu yakası ilçeleri (14). Liste tam kapsar; dışındaki bilinen
+// İstanbul ilçesi Avrupa varsayılır.
+const ANADOLU_DISTRICTS = new Set<string>([
+  "adalar", "atasehir", "beykoz", "cekmekoy", "kadikoy", "kartal", "maltepe",
+  "pendik", "sancaktepe", "sultanbeyli", "sile", "tuzla", "umraniye", "uskudar",
+]);
+
+function sideOf(addr: AddressResult | null): Side {
+  const d = addr?.ilce ? trNorm(addr.ilce) : "";
+  if (d && ANADOLU_DISTRICTS.has(d)) return "anadolu";
+  if (d) return "avrupa"; // bilinen ilçe, Anadolu değilse Avrupa
+  // İlçe yoksa boylam ile: Boğaz ~29.02; doğusu Anadolu.
+  if (typeof addr?.lng === "number" && Number.isFinite(addr.lng)) {
+    return addr.lng >= 29.02 ? "anadolu" : "avrupa";
+  }
+  return "anadolu"; // en gevşek varsayım; başlangıç−1s kuralı geçmişi yine de kapatır
+}
+
+const SIDE_LAST_PICKUP_MIN: Record<Side, number> = { anadolu: 19 * 60, avrupa: 16 * 60 };
+const PREP_LEAD_MIN = 60; // slot başlangıcından önce kapanma payı (dakika)
+
+// 'HH:MM...' -> günün dakikası (null/eşleşmezse null).
+function hhmmToMin(v: string | null | undefined): number | null {
+  if (!v) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(v);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
 export default function DeliveryPlanner({ product, onSelect }: Props) {
   const [address, setAddress] = useState<AddressResult | null>(null);
   const [dayOffset, setDayOffset] = useState(0);
@@ -182,18 +229,20 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
     dayOffset === 0 && cutoffStr ? cutoffRemainingMs(cutoffStr, nowTs) : null;
 
   // Slot bazlı "son alım geçti mi" — yalnız BUGÜN için anlamlı.
-  // Kural: slotun kendi cutoff_time'ı varsa onu kullan; yoksa slot başlangıcından 1 saat önce.
-  // (Örn. 15:00 slotu → son alım 14:00; 14:00'ı geçince slot kapanır.)
+  // Etkin son alım = min(yaka son alımı, slot başlangıcı − PREP_LEAD_MIN).
+  // DB cutoff_time yalnızca DAHA ERKEN ise daraltır (asla gevşetmez — eski bug:
+  // geç/anlamsız bir cutoff_time değeri geçmiş slotu açık bırakıyordu).
   function slotCutoffPassed(s: Slot, ts: number): boolean {
     if (dayOffset !== 0) return false; // yalnız bugün
-    const timeStr = s.cutoff_time ?? s.start_time; // cutoff yoksa start üzerinden hesapla
-    const m = /^(\d{1,2}):(\d{2})/.exec(timeStr);
-    if (!m) return false;
-    const d = new Date(ts);
-    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
-    // cutoff_time yoksa başlangıçtan 1 saat çıkar
-    const cutoffMs = s.cutoff_time ? d.getTime() : d.getTime() - 60 * 60 * 1000;
-    return cutoffMs - ts <= 0;
+    const slotStartMin = hhmmToMin(s.start_time);
+    if (slotStartMin == null) return false; // başlangıç okunamıyorsa güvenli tarafta kal
+    const side = sideOf(address);
+    let cutoffMin = Math.min(SIDE_LAST_PICKUP_MIN[side], slotStartMin - PREP_LEAD_MIN);
+    const dbCutoffMin = hhmmToMin(s.cutoff_time);
+    if (dbCutoffMin != null) cutoffMin = Math.min(cutoffMin, dbCutoffMin);
+    const now = new Date(ts);
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return nowMin >= cutoffMin;
   }
 
   // Canlı sayaç: sadece bugün + aynı gün uygun + kesme geçmemişken saniyede bir tik.
