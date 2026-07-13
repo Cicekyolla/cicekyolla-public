@@ -2,7 +2,8 @@
 
 /**
  * §12 DISTRICT DELIVERY — ZIP Homepage.tsx birebir port.
- * Sol: ilçe/il listesi → programmatic /cicek-gonder/{slug} iç linkleri (SEO District Pages ile uyumlu).
+ * Sol: ilçe/il listesi → programmatic /cicek-gonder/{slug} iç linkleri (SEO District Pages).
+ * Not: sahte sipariş sayıları ve doğrulanmamış süre vaatleri kaldırıldı; yalnız gerçek SEO kapsama linkleri.
  * Sağ: animasyonlu soyut harita (dönen halkalar + şehir noktaları, ping efekti).
  * Adaptasyon: react-router <Link to=…> → next/link <Link href=…>. districts verisi co-located.
  */
@@ -13,14 +14,14 @@ import { MapPin, ArrowRight } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 
 const districts = [
-  { name: "Kadıköy", time: "2–3 saat", orders: "847" },
-  { name: "Beşiktaş", time: "2–3 saat", orders: "723" },
-  { name: "Şişli", time: "2–3 saat", orders: "612" },
-  { name: "Üsküdar", time: "3–4 saat", orders: "489" },
-  { name: "Ataşehir", time: "3–4 saat", orders: "378" },
-  { name: "Maltepe", time: "3–4 saat", orders: "321" },
-  { name: "Ankara", time: "Aynı gün", orders: "956" },
-  { name: "İzmir", time: "Aynı gün", orders: "634" },
+  { name: "Kadıköy" },
+  { name: "Beşiktaş" },
+  { name: "Şişli" },
+  { name: "Üsküdar" },
+  { name: "Ataşehir" },
+  { name: "Maltepe" },
+  { name: "Ankara" },
+  { name: "İzmir" },
 ];
 
 const cityDots = [
@@ -55,8 +56,9 @@ export function DistrictDelivery() {
               Köşesine Teslimat
             </SectionTitle>
             <p className="text-[#6B7280] text-[16px] leading-relaxed mt-6 mb-10">
-              İstanbul&apos;dan Ankara&apos;ya, İzmir&apos;den Antalya&apos;ya — yüzlerce ilçeye aynı
-              gün teslimat. 14:00&apos;a kadar verilen siparişler bugün teslim edilir.
+              İstanbul, Ankara ve İzmir başta olmak üzere birçok bölgeye teslimat.
+              Teslimat süresi ve aynı gün uygunluğu, adres ve saat seçimine göre
+              sipariş adımında belirlenir.
             </p>
             <div className="grid grid-cols-1 gap-2.5">
               {districts.map((d, idx) => (
@@ -93,11 +95,9 @@ export function DistrictDelivery() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[#111827] group-hover:text-[#8B5CF6] transition-colors">{d.name}</p>
-                        <p className="text-xs text-[#9CA3AF]">{d.time} teslimat</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-[#8B5CF6] bg-[#F5F3FF] px-2 py-1 rounded-full">{d.orders} sipariş</span>
                       <ArrowRight className="w-3.5 h-3.5 text-[#DDD6FE] group-hover:text-[#8B5CF6] group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </Link>
@@ -155,7 +155,6 @@ export function DistrictDelivery() {
                     }}
                   >
                     <p className="text-[12px] font-bold text-[#111827]">{dot.label}</p>
-                    <p className="text-[10px] text-[#8B5CF6] font-semibold">Aynı gün ✓</p>
                   </div>
                 </motion.div>
               ))}
