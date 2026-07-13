@@ -3,7 +3,7 @@
 /**
  * §5c SAME DAY DELIVERY — ZIP Homepage.tsx birebir port.
  * Sol: başlık + kopya + 3 adım (Sipariş/Hazırlanır/Teslimat) + 2 CTA.
- * Sağ: görsel kart grid — 14:00 kapsama kartı (şehir çipleri) + Taze Garanti + Ücretsiz Kargo.
+ * Sağ: görsel kart grid — 14:00 kapsama kartı (şehir çipleri) + Taze Garanti (doğrulanmamış ücretsiz kargo kartı kaldırıldı).
  * Adaptasyon: react-router <Link><button> → next/link <Link> (buton stili). Görsel/etkileşim birebir.
  */
 
@@ -148,19 +148,6 @@ export function SameDayDelivery() {
               <p className="text-xs text-[#8B5CF6] font-bold mt-2 tracking-wide">Taze Garanti</p>
             </div>
 
-            {/* Free shipping */}
-            <div
-              className="relative overflow-hidden rounded-[20px] p-6"
-              style={{ background: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: "1px solid rgba(16,185,129,0.15)" }}
-            >
-              <Truck className="w-5 h-5 text-[#10B981] mb-3" />
-              <p style={{ fontFamily: "var(--font-display)", fontSize: "1.6rem", lineHeight: 1 }} className="font-semibold text-[#111827]">
-                Ücretsiz
-                <br />
-                Kargo
-              </p>
-              <p className="text-xs text-[#10B981] font-bold mt-2 tracking-wide">₺400 üzeri</p>
-            </div>
           </motion.div>
         </div>
       </div>
