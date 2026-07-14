@@ -38,7 +38,14 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "collection_rail":
       return <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0"><FloatingCategoryRail items={ctx.collections} /></section>;
     case "hero_delivery_bar":   return <HeroDeliveryBar />;
-    case "hero":                return <HomeHero />;
+    case "hero": {
+      const cfg = s.config ?? {};
+      return <HomeHero brand={{
+        logoUrl: typeof cfg.logo_url === "string" ? cfg.logo_url : undefined,
+        logoAlt: typeof cfg.logo_alt === "string" ? cfg.logo_alt : undefined,
+        logoTagline: typeof cfg.logo_tagline === "string" ? cfg.logo_tagline : undefined,
+      }} />;
+    }
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
     case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} />;
