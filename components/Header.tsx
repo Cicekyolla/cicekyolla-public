@@ -337,7 +337,7 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden pb-4"
+                className="overflow-visible pb-4"
               >
                 <div className="relative max-w-xl mx-auto">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
