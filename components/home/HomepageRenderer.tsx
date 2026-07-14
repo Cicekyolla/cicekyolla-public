@@ -61,11 +61,19 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
 }
 
 export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCtx }) {
+  const enabledSections = dto.sections.filter((s) => s.enabled);
+  const hasCollectionRail = enabledSections.some((s) => s.type === "collection_rail");
+
   return (
     <>
-      {dto.sections
-        .filter((s) => s.enabled)
-        .map((s) => <Fragment key={s.id}>{renderSection(s, ctx)}</Fragment>)}
+      {/* Koleksiyon rayı header ile hero arasındaki temel vitrin öğesidir.
+          CMS sürümünde kayıt yoksa kaybolmaz; kayıt varsa ikinci kez gösterilmez. */}
+      {!hasCollectionRail ? (
+        <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
+          <FloatingCategoryRail items={ctx.collections} />
+        </section>
+      ) : null}
+      {enabledSections.map((s) => <Fragment key={s.id}>{renderSection(s, ctx)}</Fragment>)}
     </>
   );
 }
