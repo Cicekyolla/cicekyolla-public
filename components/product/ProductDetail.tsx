@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, ChevronDown, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, type LucideIcon } from "lucide-react";
+import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
@@ -117,6 +117,7 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
   const [active, setActive] = useState(0);
   const [wish, setWish] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
 
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
@@ -354,76 +355,75 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
             Teslimat saatleri bölge yoğunluğu, hava ve trafik durumuna göre değişebilir.
           </p>
 
-          {/* Uzun açıklama — premium bölümlenmiş sunum (kart + accordion + ikon, SEO semantik) */}
+          {/* Ürün bilgileri — tek satırlı sekmeler; aynı anda yalnız seçilen içerik görünür */}
           {product.long_description && (() => {
             const sections = parseDescriptionSections(product.long_description);
             if (!sections.length) return null;
             const intro = sections.find((s) => s.isIntro);
             const panels = sections.filter((s) => !s.isIntro);
             return (
-              <section aria-label="Ürün Açıklaması" className="mt-9 pt-8 border-t border-[#F3F4F6]">
-                <h2 className="text-[16px] font-bold text-[#111827] mb-4">Ürün Açıklaması</h2>
-                {intro?.html && (
-                  <div className={DESC_PROSE} dangerouslySetInnerHTML={{ __html: intro.html }} />
-                )}
-                {panels.length > 0 && (
-                  <div className={`space-y-3 ${intro?.html ? "mt-6" : ""}`}>
-                    {panels.map((s, i) => {
-                      const Icon = sectionIcon(s.title || "");
-                      return (
-                        <details
-                          key={i}
-                          open={i === 0}
-                          className="group rounded-2xl border border-[#F0EEF6] bg-[#FBFAFE] transition-colors open:bg-white open:shadow-[0_1px_3px_rgba(124,58,237,0.06)]"
-                        >
-                          <summary className="flex items-center gap-3 cursor-pointer select-none px-4 sm:px-5 py-4 [&::-webkit-details-marker]:hidden">
-                            <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#F3EEFF] text-[#7C3AED] shrink-0">
-                              <Icon className="w-[18px] h-[18px]" />
-                            </span>
-                            <h3 className="flex-1 text-[15px] font-semibold text-[#1F2937] leading-snug">{s.title}</h3>
-                            <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0 transition-transform duration-200 group-open:rotate-180" />
-                          </summary>
-                          {s.html && (
-                            <div
-                              className={`px-4 sm:px-5 pb-5 ${DESC_PROSE}`}
-                              dangerouslySetInnerHTML={{ __html: s.html }}
-                            />
-                          )}
-                        </details>
-                      );
-                    })}
-                  </div>
-                )}
+              <section aria-label="Ürün detayları" className="mt-9 pt-7 border-t border-[#F3F4F6]">
+                <div role="tablist" aria-label="Ürün bilgi sekmeleri" className="flex gap-7 overflow-x-auto border-b border-[#D1D5DB] scrollbar-none">
+                  {[
+                    ["description", "Ürün Açıklaması"],
+                    ["details", "Ürün Bilgileri"],
+                    ["delivery", "Gönderim Detayları"],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={infoTab === key}
+                      onClick={() => setInfoTab(key as typeof infoTab)}
+                      className={`relative shrink-0 pb-3 text-[15px] font-medium transition-colors ${infoTab === key ? "text-[#111827]" : "text-[#9CA3AF] hover:text-[#4B5563]"}`}
+                    >
+                      {label}
+                      {infoTab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-[#7C3AED]" />}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-6">
+                  {infoTab === "description" && (
+                    <div role="tabpanel" className={DESC_PROSE}>
+                      {intro?.html ? (
+                        <div dangerouslySetInnerHTML={{ __html: intro.html }} />
+                      ) : panels[0]?.html ? (
+                        <div dangerouslySetInnerHTML={{ __html: panels[0].html }} />
+                      ) : null}
+                    </div>
+                  )}
+
+                  {infoTab === "details" && (
+                    <div role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {panels.length > 0 ? panels.map((s, i) => {
+                        const Icon = sectionIcon(s.title || "");
+                        return (
+                          <div key={i} className="rounded-xl border border-[#F0EEF6] bg-[#FBFAFE] px-4 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <span className="grid place-items-center w-8 h-8 rounded-lg bg-[#F3EEFF] text-[#7C3AED] shrink-0"><Icon className="w-4 h-4" /></span>
+                              <h3 className="text-[14px] font-semibold text-[#1F2937] leading-snug">{s.title}</h3>
+                            </div>
+                            {s.html && <div className={`mt-3 ${DESC_PROSE}`} dangerouslySetInnerHTML={{ __html: s.html }} />}
+                          </div>
+                        );
+                      }) : (
+                        <p className="text-[14px] text-[#6B7280]">Bu ürün için ek içerik bilgisi bulunmuyor.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {infoTab === "delivery" && (
+                    <div role="tabpanel" className="text-[14px] text-[#4B5563] leading-[1.85] space-y-3">
+                      <p>Teslimat bölgesi: <b className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</b>.{product.same_day_available ? " Aynı gün teslimat uygundur." : ""}</p>
+                      <p>Uygun teslimat günü ve saati sipariş adımında, bölgenizdeki yoğunluğa göre belirlenir. Teslimat saatleri hava ve trafik durumuna göre değişebilir.</p>
+                      <p>Hediye notunuzu sipariş adımında ekleyebilir; hazırlanan ürünün görsel onayını talep edebilirsiniz.</p>
+                    </div>
+                  )}
+                </div>
               </section>
             );
           })()}
-
-          {/* Teslimat Bilgisi + SSS — sabit, şeffaf accordion */}
-          <div className="mt-4 space-y-3">
-            <details className="group rounded-2xl border border-[#F0EEF6] bg-[#FBFAFE] open:bg-white open:shadow-[0_1px_3px_rgba(124,58,237,0.06)]">
-              <summary className="flex items-center gap-3 cursor-pointer select-none px-4 sm:px-5 py-4 [&::-webkit-details-marker]:hidden">
-                <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#F3EEFF] text-[#7C3AED] shrink-0"><Truck className="w-[18px] h-[18px]" /></span>
-                <h3 className="flex-1 text-[15px] font-semibold text-[#1F2937]">Teslimat Bilgisi</h3>
-                <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="px-4 sm:px-5 pb-5 text-[14px] text-[#4B5563] leading-[1.85]">
-                <p className="mb-2">Teslimat bölgesi: <b className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</b>.{product.same_day_available ? " Aynı gün teslimat uygundur." : ""}</p>
-                <p>Uygun teslimat günü ve saati sipariş adımında, bölgenizdeki yoğunluğa göre belirlenir. Teslimat saatleri hava ve trafik durumuna göre değişebilir.</p>
-              </div>
-            </details>
-            <details className="group rounded-2xl border border-[#F0EEF6] bg-[#FBFAFE] open:bg-white open:shadow-[0_1px_3px_rgba(124,58,237,0.06)]">
-              <summary className="flex items-center gap-3 cursor-pointer select-none px-4 sm:px-5 py-4 [&::-webkit-details-marker]:hidden">
-                <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#F3EEFF] text-[#7C3AED] shrink-0"><Info className="w-[18px] h-[18px]" /></span>
-                <h3 className="flex-1 text-[15px] font-semibold text-[#1F2937]">Sık Sorulan Sorular</h3>
-                <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="px-4 sm:px-5 pb-5 text-[14px] text-[#4B5563] leading-[1.85] space-y-3">
-                <div><b className="text-[#111827] block">Fotoğraftaki ürün mü gönderilir?</b>Evet, hazırlanan ürünün fotoğrafını teslimat öncesi sizinle paylaşabiliriz.</div>
-                <div><b className="text-[#111827] block">Hediye notu ekleyebilir miyim?</b>Evet, sipariş adımında hediye notunuzu ekleyebilirsiniz.</div>
-                <div><b className="text-[#111827] block">Teslimat saatini seçebilir miyim?</b>Uygun saat aralıkları sipariş adımında, bölgenizin uygunluğuna göre gösterilir.</div>
-              </div>
-            </details>
-          </div>
         </div>
       </div>
 
