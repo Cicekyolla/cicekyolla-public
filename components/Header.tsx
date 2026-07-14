@@ -14,7 +14,18 @@ import type { MegaGroup } from "@/lib/headerNav";
 
 
 /* ─── Header ─── */
-export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>; nav?: { name: string; href: string }[]; search?: { name: string; href: string }[] }) {
+export interface HeaderBrand {
+  logoUrl?: string;
+  logoAlt?: string;
+  logoTagline?: string;
+}
+
+export function Header({ menu, nav, search, brand }: {
+  menu?: Record<string, MegaGroup>;
+  nav?: { name: string; href: string }[];
+  search?: { name: string; href: string }[];
+  brand?: HeaderBrand;
+}) {
   // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
   const menuData: Record<string, MegaGroup> = menu ?? {}; // TEK KAYNAK: yalnız canlı kategori ağacı; hardcoded/fallback YOK
@@ -116,32 +127,38 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
           <div className="flex items-center justify-between h-[68px] lg:h-[72px] gap-4 lg:gap-6 xl:gap-8">
 
-            {/* ── Logo ── */}
-            <Link href="/" className="flex-shrink-0 flex items-center gap-2 xl:gap-3 group">
-              {/* Monogram icon */}
-              <div
-                className="w-9 h-9 xl:w-10 xl:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-105"
-                style={{
-                  background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)",
-                  boxShadow: "0 4px 16px rgba(139,92,246,0.35)",
-                }}
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
-                  <path strokeLinecap="round" d="M9 8c0-1.7 1.3-3 3-3s3 1.3 3 3"/>
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span
-                  style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em", lineHeight: 1 }}
-                  className="text-[18px] xl:text-[22px] font-semibold text-[#111827] uppercase"
-                >
-                  Çiçekyolla
-                </span>
-                <span className="text-[9px] tracking-[0.35em] text-[#8B5CF6] uppercase font-semibold" style={{ letterSpacing: "0.32em" }}>
-                  Premium Çiçekçi
-                </span>
-              </div>
+            {/* ── Logo — homepage CMS markası; mevcut header ölçüsü korunur ── */}
+            <Link href="/" className="flex-shrink-0 flex items-center group">
+              {brand?.logoUrl ? (
+                <div className="flex flex-col justify-center">
+                  <img
+                    src={brand.logoUrl}
+                    alt={brand.logoAlt || "ÇiçekYolla"}
+                    className="block h-[38px] lg:h-[42px] w-auto max-w-[190px] xl:max-w-[230px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
+                  {brand.logoTagline ? (
+                    <span className="mt-0.5 pl-1 text-[8px] xl:text-[9px] tracking-[0.32em] text-[#8B5CF6] uppercase font-semibold leading-none">
+                      {brand.logoTagline}
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 xl:gap-3">
+                  <div
+                    className="w-9 h-9 xl:w-10 xl:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-105"
+                    style={{ background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)", boxShadow: "0 4px 16px rgba(139,92,246,0.35)" }}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
+                      <path strokeLinecap="round" d="M9 8c0-1.7 1.3-3 3-3s3 1.3 3 3"/>
+                    </svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em", lineHeight: 1 }} className="text-[18px] xl:text-[22px] font-semibold text-[#111827] uppercase">Çiçekyolla</span>
+                    <span className="text-[9px] text-[#8B5CF6] uppercase font-semibold" style={{ letterSpacing: "0.32em" }}>Premium Çiçekçi</span>
+                  </div>
+                </div>
+              )}
             </Link>
 
             {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
@@ -207,18 +224,15 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                 <SheetContent side="right" className="w-80 bg-white p-0">
                   <div className="flex flex-col h-full">
                     <div className="p-7 border-b border-black/[0.05]">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-9 h-9 rounded-full flex items-center justify-center"
-                          style={{ background: "linear-gradient(135deg, #7C3AED, #A855F7)" }}
-                        >
-                          <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
-                          </svg>
-                        </div>
-                        <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em" }} className="text-lg font-semibold text-[#111827] uppercase">
-                          Çiçekyolla
-                        </span>
+                      <div className="flex items-center">
+                        {brand?.logoUrl ? (
+                          <div className="flex flex-col">
+                            <img src={brand.logoUrl} alt={brand.logoAlt || "ÇiçekYolla"} className="block h-10 w-auto max-w-[210px] object-contain object-left" />
+                            {brand.logoTagline ? <span className="mt-1 pl-1 text-[8px] tracking-[0.3em] text-[#8B5CF6] uppercase font-semibold">{brand.logoTagline}</span> : null}
+                          </div>
+                        ) : (
+                          <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em" }} className="text-lg font-semibold text-[#111827] uppercase">Çiçekyolla</span>
+                        )}
                       </div>
                     </div>
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
