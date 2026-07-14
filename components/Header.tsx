@@ -131,11 +131,14 @@ export function Header({ menu, nav, search, brand }: {
             <Link href="/" className="flex-shrink-0 flex items-center group">
               {brand?.logoUrl ? (
                 <div className="flex flex-col justify-center">
-                  <img
-                    src={brand.logoUrl}
-                    alt={brand.logoAlt || "ÇiçekYolla"}
-                    className="block h-[38px] lg:h-[42px] w-auto max-w-[190px] xl:max-w-[230px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
-                  />
+                  <div className="relative h-[50px] w-[190px] xl:w-[225px] overflow-hidden">
+                    <img
+                      src={brand.logoUrl}
+                      alt={brand.logoAlt || "ÇiçekYolla"}
+                      className="absolute h-[130px] xl:h-[142px] w-auto max-w-none -left-[34px] xl:-left-[38px] -top-[37px] xl:-top-[41px] transition-transform duration-300 group-hover:scale-[1.025]"
+                      style={{ filter: "saturate(1.2) contrast(1.08) drop-shadow(0 3px 5px rgba(124,58,237,0.28))" }}
+                    />
+                  </div>
                   {brand.logoTagline ? (
                     <span className="mt-0.5 pl-1 text-[8px] xl:text-[9px] tracking-[0.32em] text-[#8B5CF6] uppercase font-semibold leading-none">
                       {brand.logoTagline}
@@ -227,7 +230,9 @@ export function Header({ menu, nav, search, brand }: {
                       <div className="flex items-center">
                         {brand?.logoUrl ? (
                           <div className="flex flex-col">
-                            <img src={brand.logoUrl} alt={brand.logoAlt || "ÇiçekYolla"} className="block h-10 w-auto max-w-[210px] object-contain object-left" />
+                            <div className="relative h-[48px] w-[190px] overflow-hidden">
+                              <img src={brand.logoUrl} alt={brand.logoAlt || "ÇiçekYolla"} className="absolute h-[128px] w-auto max-w-none -left-[33px] -top-[37px]" style={{ filter: "saturate(1.2) contrast(1.08) drop-shadow(0 3px 5px rgba(124,58,237,0.25))" }} />
+                            </div>
                             {brand.logoTagline ? <span className="mt-1 pl-1 text-[8px] tracking-[0.3em] text-[#8B5CF6] uppercase font-semibold">{brand.logoTagline}</span> : null}
                           </div>
                         ) : (
