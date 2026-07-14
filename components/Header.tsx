@@ -31,9 +31,16 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  // TEK KAYNAK: search de canlı kategori ağacından çözer (gerçek slug route'ları).
-  const searchResults = query.trim().length >= 1
-    ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(query.trim().toLocaleLowerCase("tr"))).slice(0, 8)
+  const [productResults, setProductResults] = useState<Array<{
+    slug: string;
+    name: string;
+    cover_image_url: string | null;
+    price_minor: number | string;
+  }>>([]);
+  const [searching, setSearching] = useState(false);
+  // Kategoriler canlı ağaçtan; ürünler /api/search üzerinden canlı katalogdan gelir.
+  const categoryResults = query.trim().length >= 1
+    ? (search ?? []).filter((c) => c.name.toLocaleLowerCase("tr").includes(query.trim().toLocaleLowerCase("tr"))).slice(0, 4)
     : [];
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -44,6 +51,33 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (!searchOpen || term.length < 2) {
+      setProductResults([]);
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const body = await response.json() as { products?: typeof productResults };
+        setProductResults(body.products ?? []);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") setProductResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, searchOpen]);
 
   const handleMouseEnter = (key: string) => {
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
@@ -315,20 +349,50 @@ export function Header({ menu, nav, search }: { menu?: Record<string, MegaGroup>
                     placeholder="Gül, orkide, buket, özel gün ara..."
                     className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
                   />
-                  {/* Canlı kategori önerileri — gerçek /kategori/{slug} route'ları */}
-                  {searchResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-10">
-                      {searchResults.map((r) => (
+                  {/* Yazarken canlı ürün + kategori önerileri */}
+                  {query.trim().length >= 2 && (searching || productResults.length > 0 || categoryResults.length > 0) && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-[70] max-h-[440px] overflow-y-auto">
+                      {searching && productResults.length === 0 && (
+                        <div className="px-4 py-4 text-sm text-[#9CA3AF]">Ürünler aranıyor…</div>
+                      )}
+                      {productResults.map((product) => {
+                        const price = Math.round(Number(product.price_minor) / 100).toLocaleString("tr-TR");
+                        return (
+                          <Link
+                            key={product.slug}
+                            href={`/urun/${product.slug}`}
+                            onClick={() => { setSearchOpen(false); setQuery(""); setProductResults([]); }}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F3FF] transition-colors border-b border-black/[0.04]"
+                          >
+                            {product.cover_image_url ? (
+                              <img src={product.cover_image_url} alt="" width={48} height={48} className="w-12 h-12 rounded-xl object-cover bg-[#F9FAFB] flex-shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-xl bg-[#F3F4F6] flex-shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-semibold text-[#374151] truncate">{product.name}</div>
+                              <div className="text-xs font-bold text-[#8B5CF6] mt-0.5">₺{price}</div>
+                            </div>
+                            <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB] flex-shrink-0" />
+                          </Link>
+                        );
+                      })}
+                      {categoryResults.map((category) => (
                         <Link
-                          key={r.href}
-                          href={r.href}
-                          onClick={() => { setSearchOpen(false); setQuery(""); }}
+                          key={category.href}
+                          href={category.href}
+                          onClick={() => { setSearchOpen(false); setQuery(""); setProductResults([]); }}
                           className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0"
                         >
-                          {r.name}
+                          <span><span className="text-[10px] uppercase tracking-wider text-[#9CA3AF] mr-2">Kategori</span>{category.name}</span>
                           <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
                         </Link>
                       ))}
+                    </div>
+                  )}
+                  {query.trim().length >= 2 && !searching && productResults.length === 0 && categoryResults.length === 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] z-[70] px-4 py-4 text-sm text-[#6B7280]">
+                      Sonuç bulunamadı.
                     </div>
                   )}
                 </div>
