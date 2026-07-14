@@ -146,23 +146,25 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   return (
     <>
       <main className="bg-white">
-        {/* ── Premium hero band (lilac) ── */}
+        {/* ── Figma kategori şeridi — ortak şablon, tüm kategorilere otomatik uygulanır ── */}
         <section
           aria-label="Koleksiyon başlığı"
-          className="border-b border-black/[0.04]"
-          style={{ background: "linear-gradient(180deg, #FAFAFA 0%, #F5F3FF 100%)" }}
+          className="relative overflow-hidden border-b border-white/10"
+          style={{ background: "linear-gradient(105deg, #16072E 0%, #241048 48%, #1B0B3C 100%)" }}
         >
-          <div className="max-w-[1100px] mx-auto px-6 lg:px-8 pt-10 pb-14 lg:pt-14 lg:pb-20">
-            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#9CA3AF] mb-8">
-              <Link href="/" className="hover:text-[#8B5CF6] transition-colors">Ana Sayfa</Link>
+          <div aria-hidden className="absolute -right-16 -top-44 h-[520px] w-[520px] rounded-full bg-[#7C3AED]/10 blur-3xl" />
+          <div aria-hidden className="absolute right-[22%] -bottom-56 h-[420px] w-[420px] rounded-full border-[70px] border-white/[0.025]" />
+          <div className="relative max-w-[1440px] mx-auto px-6 lg:px-14 pt-8 pb-10 lg:pt-10 lg:pb-12">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-white/45 mb-7">
+              <Link href="/" className="hover:text-[#C4B5FD] transition-colors">Ana Sayfa</Link>
               {trail.length ? (
                 trail.map((t, i) => (
                   <span key={t.slug} className="flex items-center gap-2">
                     <span aria-hidden="true">/</span>
                     {i === trail.length - 1 ? (
-                      <span className="text-[#374151] font-medium">{t.name}</span>
+                      <span className="text-white font-medium">{t.name}</span>
                     ) : (
-                      <Link href={`/kategori/${t.slug}`} className="hover:text-[#8B5CF6] transition-colors">
+                      <Link href={`/kategori/${t.slug}`} className="hover:text-[#C4B5FD] transition-colors">
                         {t.name}
                       </Link>
                     )}
@@ -171,21 +173,21 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               ) : (
                 <>
                   <span aria-hidden="true">/</span>
-                  <span className="text-[#374151] font-medium">{page.h1}</span>
+                  <span className="text-white font-medium">{page.h1}</span>
                 </>
               )}
             </nav>
 
-            <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-4">Koleksiyon</p>
+            <p className="text-[10px] tracking-[0.3em] text-[#C084FC] uppercase font-bold mb-3">Koleksiyon</p>
             <h1
               style={{ fontFamily: "var(--font-display)", lineHeight: 1.08, letterSpacing: "-0.02em" }}
-              className="text-4xl md:text-5xl lg:text-[56px] font-semibold text-[#111827] max-w-[820px]"
+              className="text-4xl md:text-5xl lg:text-[56px] font-semibold text-white max-w-[820px]"
             >
               {page.h1}
             </h1>
 
             {/* Kısa kategori açıklaması — Category Center SEO (meta_description); yoksa nazik fallback */}
-            <p className="mt-6 text-[15px] lg:text-[17px] leading-[1.75] text-[#6B7280] max-w-[760px]">
+            <p className="mt-4 text-[15px] lg:text-[17px] leading-[1.7] text-white/58 max-w-[760px]">
               {page.meta_description && page.meta_description.trim()
                 ? page.meta_description
                 : `${page.h1} kategorisinde özenle seçilmiş, taze ve premium çiçek & bitki seçenekleri; özel günlerden kurumsal hediyelere her anı değerli kılar. Aynı gün teslimat imkânıyla.`}
