@@ -58,18 +58,38 @@ export function FilterBar({ categories = [] }: { categories?: { name: string; hr
     [sp, setParam],
   );
 
+  const clearQuickFilters = useCallback(() => {
+    const next = new URLSearchParams(Array.from(sp.entries()));
+    ["bestseller", "new", "same_day", "page"].forEach((key) => next.delete(key));
+    const qs = next.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, pathname, sp]);
+
   const curType = sp.get("type") ?? "";
   const curSort = sp.get("sort") ?? "created_at_desc";
   const typeLabel = PRODUCT_TYPES.find((t) => t.key === curType)?.label ?? "Ürün Tipi";
   const sortLabel = SORTS.find((s) => s.key === curSort)?.label ?? "Sıralama";
 
-  const pill = "flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold border transition-all whitespace-nowrap";
-  const idle = "bg-white text-[#374151] border-[#E5E7EB] hover:border-[#DDD6FE]";
-  const active = "bg-[#F5F3FF] text-[#7C3AED] border-[#C4B5FD]";
+  const pill = "flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold border transition-all whitespace-nowrap";
+  const idle = "bg-white text-[#5B6472] border-[#E8E2F5] hover:border-[#C4B5FD] hover:text-[#7C3AED]";
+  const active = "text-white border-[#8B5CF6] bg-gradient-to-r from-[#7C3AED] to-[#A855F7] shadow-[0_6px_18px_rgba(124,58,237,0.24)]";
+  const hasQuickFilter = Boolean(sp.get("bestseller") || sp.get("new") || sp.get("same_day"));
 
   return (
-    <div ref={rootRef} className="max-w-[1440px] mx-auto px-6 lg:px-14 pt-8 lg:pt-10">
-      <div className="flex items-center gap-2.5 flex-wrap">
+    <div ref={rootRef} className="border-b border-black/[0.05] bg-white">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-14 py-4 flex items-center gap-2.5 flex-wrap">
+        <button onClick={clearQuickFilters} className={`${pill} ${!hasQuickFilter ? active : idle}`}>
+          Tümü
+        </button>
+        <button onClick={() => toggleParam("bestseller")} className={`${pill} ${sp.get("bestseller") ? active : idle}`}>
+          Çok Satan
+        </button>
+        <button onClick={() => toggleParam("new")} className={`${pill} ${sp.get("new") ? active : idle}`}>
+          Yeni
+        </button>
+        <button onClick={() => toggleParam("same_day")} className={`${pill} ${sp.get("same_day") ? active : idle}`}>
+          Aynı Gün
+        </button>
         {/* Kategori dropdown (CANLI alt kategoriler — Çiçeksepeti deseni, aramalı) */}
         {categories.length > 0 && (
           <div className="relative">
@@ -128,19 +148,6 @@ export function FilterBar({ categories = [] }: { categories?: { name: string; hr
             </div>
           )}
         </div>
-
-        {/* Aynı Gün toggle */}
-        <button onClick={() => toggleParam("same_day")} className={`${pill} ${sp.get("same_day") ? active : idle}`}>
-          🚚 Aynı Gün
-        </button>
-        {/* Çok Satan toggle */}
-        <button onClick={() => toggleParam("bestseller")} className={`${pill} ${sp.get("bestseller") ? active : idle}`}>
-          ⭐ Çok Satan
-        </button>
-        {/* Yeni toggle */}
-        <button onClick={() => toggleParam("new")} className={`${pill} ${sp.get("new") ? active : idle}`}>
-          ✨ Yeni
-        </button>
 
         {/* Sırala dropdown (sağa yasla) */}
         <div className="relative ml-auto">
