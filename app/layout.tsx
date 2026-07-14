@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="tr">
       <body>
-        <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} />
+        <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
         {children}
         <Footer categories={footerOrUndef} brand={footerBrand} />
         <WhatsAppButton />
