@@ -19,13 +19,7 @@ import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle } from "lucide-react";
 
-export interface HomeHeroBrand {
-  logoUrl?: string;
-  logoAlt?: string;
-  logoTagline?: string;
-}
-
-export function HomeHero({ brand }: { brand?: HomeHeroBrand }) {
+export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
 
   const { scrollYProgress } = useScroll({
@@ -94,26 +88,6 @@ export function HomeHero({ brand }: { brand?: HomeHeroBrand }) {
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14 w-full">
           <div className="max-w-[660px]">
-            {brand?.logoUrl ? (
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-                className="mb-5 w-fit max-w-full"
-              >
-                <img
-                  src={brand.logoUrl}
-                  alt={brand.logoAlt || "ÇiçekYolla"}
-                  className="block h-auto w-[250px] sm:w-[310px] lg:w-[360px] max-w-full object-contain object-left"
-                />
-                {brand.logoTagline ? (
-                  <p className="mt-1 pl-1 text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.28em] text-[#E9D5FF]/85">
-                    {brand.logoTagline}
-                  </p>
-                ) : null}
-              </motion.div>
-            ) : null}
-
             {/* Live badge */}
             <motion.div
               initial={{ opacity: 0, x: -16 }}

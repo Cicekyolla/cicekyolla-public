@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
+import { getPublishedHomepage } from "@/lib/homepage";
 
 // TEK KAYNAK: layout kategori ağacını getCategoryTree (React cache) ile bir kez çeker;
 // Header (mega menu + mobil) ve Footer aynı canlı veriden beslenir. İkinci liste YOK.
@@ -14,6 +15,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let nav: { name: string; href: string }[] = [];
   let footerNav: ReturnType<typeof getCategoryNav> = [];
   let search: { name: string; href: string }[] = [];
+  let footerBrand: { logoUrl?: string; logoAlt?: string; logoTagline?: string } | undefined;
   try {
     const tree = await getCategoryTree();
     const built = buildHeaderMenu(tree);
@@ -25,6 +27,20 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   } catch {
     menu = undefined; nav = []; footerNav = []; search = [];
   }
+  try {
+    const homepage = await getPublishedHomepage();
+    const heroConfig = homepage?.sections.find((section) => section.type === "hero")?.config;
+    if (heroConfig && typeof heroConfig.logo_url === "string" && heroConfig.logo_url.trim()) {
+      footerBrand = {
+        logoUrl: heroConfig.logo_url,
+        logoAlt: typeof heroConfig.logo_alt === "string" ? heroConfig.logo_alt : "ÇiçekYolla",
+        logoTagline: typeof heroConfig.logo_tagline === "string" ? heroConfig.logo_tagline : "Premium Çiçekçi",
+      };
+    }
+  } catch {
+    footerBrand = undefined;
+  }
+
   const navOrUndef = nav.length > 0 ? nav : undefined;
   const footerOrUndef = footerNav.length > 0 ? footerNav : undefined;
 
@@ -33,7 +49,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} />
         {children}
-        <Footer categories={footerOrUndef} />
+        <Footer categories={footerOrUndef} brand={footerBrand} />
         <WhatsAppButton />
       </body>
     </html>
