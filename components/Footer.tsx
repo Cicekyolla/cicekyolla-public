@@ -33,11 +33,14 @@ export function Footer({
             <div className="mb-6">
               {brand?.logoUrl ? (
                 <div className="w-fit max-w-full">
-                  <img
-                    src={brand.logoUrl}
-                    alt={brand.logoAlt || "ÇiçekYolla"}
-                    className="block h-auto w-[220px] sm:w-[250px] max-w-full object-contain object-left"
-                  />
+                  <div className="relative h-[92px] w-[285px] max-w-full overflow-hidden">
+                    <img
+                      src={brand.logoUrl}
+                      alt={brand.logoAlt || "ÇiçekYolla"}
+                      className="absolute h-[218px] w-auto max-w-none -left-[57px] -top-[61px]"
+                      style={{ filter: "saturate(1.18) contrast(1.08) drop-shadow(0 7px 12px rgba(168,85,247,0.32))" }}
+                    />
+                  </div>
                   {brand.logoTagline ? (
                     <p className="mt-2 pl-1 text-[9px] font-bold uppercase tracking-[0.35em] text-[#C084FC]">
                       {brand.logoTagline}
