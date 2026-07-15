@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import type { MegaGroup } from "@/lib/headerNav";
-import { BrandLogoImage } from "./BrandLogoImage";
 
 /* ─── Mega menu data ─── */
 /* ── Extra nav links ── */
@@ -19,6 +18,34 @@ export interface HeaderBrand {
   logoUrl?: string;
   logoAlt?: string;
   logoTagline?: string;
+}
+
+function HeaderWordmark({ tagline, compact = false }: { tagline?: string; compact?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-start">
+        <span
+          style={{ fontFamily: "var(--font-display)" }}
+          className={`${compact ? "text-[32px]" : "text-[36px] xl:text-[40px]"} whitespace-nowrap font-semibold leading-[0.82] tracking-[-0.045em] text-[#51247A]`}
+        >
+          ÇiçekYolla
+        </span>
+        <svg
+          viewBox="0 0 28 32"
+          aria-hidden="true"
+          className={`${compact ? "h-6 w-5" : "h-7 w-6 xl:h-8 xl:w-7"} -ml-0.5 -mt-2 flex-shrink-0`}
+        >
+          <path d="M13.8 30C13.2 22.4 14.7 15.3 19.2 9" fill="none" stroke="#5B9E3B" strokeWidth="2.1" strokeLinecap="round" />
+          <path d="M14.5 21.5C10.2 18.5 7.2 18.7 4.7 20.1c2.4 3.7 5.6 4.5 9.7 2.8" fill="#6BAA45" />
+          <path d="M18.8 10.7C13.5 7.6 13.3 3.8 14.8 1.1c4.9 1.5 6.4 4.9 4 9.6Z" fill="#5B2A86" />
+          <path d="M19.6 10.4C21.3 5.3 24.5 3.8 27 4.1c.2 4.8-2 7.4-7.4 6.3Z" fill="#7440A0" />
+        </svg>
+      </div>
+      <span className={`${compact ? "mt-1 text-[8px]" : "mt-1.5 text-[8.5px] xl:text-[9px]"} pl-0.5 font-bold uppercase leading-none tracking-[0.32em] text-[#51247A]`}>
+        {tagline || "Premium Çiçekçi"}
+      </span>
+    </div>
+  );
 }
 
 export function Header({ menu, nav, search, brand }: {
@@ -126,43 +153,15 @@ export function Header({ menu, nav, search, brand }: {
         }}
       >
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
-          <div className="flex items-center justify-between h-[68px] lg:h-[72px] gap-4 lg:gap-6 xl:gap-8">
+          <div className="flex items-center justify-between h-[82px] lg:h-[92px] gap-4 lg:gap-6 xl:gap-8">
 
-            {/* ── Logo — homepage CMS markası; mevcut header ölçüsü korunur ── */}
-            <Link href="/" className="flex-shrink-0 flex items-center group">
-              {brand?.logoUrl ? (
-                <div className="flex flex-col justify-center">
-                  <div className="flex h-[54px] w-[230px] xl:w-[260px] items-center overflow-visible">
-                    <BrandLogoImage
-                      src={brand.logoUrl}
-                      alt={brand.logoAlt || "ÇiçekYolla"}
-                      className="block h-[50px] xl:h-[54px] w-auto max-w-[230px] xl:max-w-[260px] object-contain object-left"
-                      style={{ filter: "saturate(1.18) contrast(1.08) drop-shadow(0 5px 9px rgba(124,58,237,0.3))" }}
-                    />
-                  </div>
-                  {brand.logoTagline ? (
-                    <span className="mt-0.5 pl-1 text-[8px] xl:text-[9px] tracking-[0.32em] text-[#8B5CF6] uppercase font-semibold leading-none">
-                      {brand.logoTagline}
-                    </span>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 xl:gap-3">
-                  <div
-                    className="w-9 h-9 xl:w-10 xl:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-105"
-                    style={{ background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)", boxShadow: "0 4px 16px rgba(139,92,246,0.35)" }}
-                  >
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
-                      <path strokeLinecap="round" d="M9 8c0-1.7 1.3-3 3-3s3 1.3 3 3"/>
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em", lineHeight: 1 }} className="text-[18px] xl:text-[22px] font-semibold text-[#111827] uppercase">Çiçekyolla</span>
-                    <span className="text-[9px] text-[#8B5CF6] uppercase font-semibold" style={{ letterSpacing: "0.32em" }}>Premium Çiçekçi</span>
-                  </div>
-                </div>
-              )}
+            {/* ── Logo — hero tipografisiyle aynı keskin vektör marka sistemi ── */}
+            <Link
+              href="/"
+              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-[#FAF8FF]"
+              aria-label="ÇiçekYolla ana sayfa"
+            >
+              <HeaderWordmark tagline={brand?.logoTagline} />
             </Link>
 
             {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
@@ -229,21 +228,7 @@ export function Header({ menu, nav, search, brand }: {
                   <div className="flex flex-col h-full">
                     <div className="p-7 border-b border-black/[0.05]">
                       <div className="flex items-center">
-                        {brand?.logoUrl ? (
-                          <div className="flex flex-col">
-                            <div className="flex h-[52px] w-[220px] items-center overflow-visible">
-                              <BrandLogoImage
-                                src={brand.logoUrl}
-                                alt={brand.logoAlt || "ÇiçekYolla"}
-                                className="block h-[48px] w-auto max-w-[220px] object-contain object-left"
-                                style={{ filter: "saturate(1.18) contrast(1.08) drop-shadow(0 4px 7px rgba(124,58,237,0.28))" }}
-                              />
-                            </div>
-                            {brand.logoTagline ? <span className="mt-1 pl-1 text-[8px] tracking-[0.3em] text-[#8B5CF6] uppercase font-semibold">{brand.logoTagline}</span> : null}
-                          </div>
-                        ) : (
-                          <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.12em" }} className="text-lg font-semibold text-[#111827] uppercase">Çiçekyolla</span>
-                        )}
+<HeaderWordmark tagline={brand?.logoTagline} compact />
                       </div>
                     </div>
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
