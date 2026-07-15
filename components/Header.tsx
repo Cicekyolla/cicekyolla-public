@@ -134,7 +134,7 @@ export function Header({ menu, nav, search, brand }: {
               className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-[#FAF8FF]"
               aria-label="ÇiçekYolla ana sayfa"
             >
-              <BrandWordmark tagline={brand?.logoTagline} />
+              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} />
             </Link>
 
             {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
@@ -201,7 +201,7 @@ export function Header({ menu, nav, search, brand }: {
                   <div className="flex flex-col h-full">
                     <div className="p-7 border-b border-black/[0.05]">
                       <div className="flex items-center">
-<BrandWordmark tagline={brand?.logoTagline} size="compact" />
+<BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} size="compact" />
                       </div>
                     </div>
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
