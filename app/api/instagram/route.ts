@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
 const INSTAGRAM_HANDLE =
-  process.env.INSTAGRAM_HANDLE?.trim().replace(/^@/, "") ?? "cicekyolla";
+  process.env.INSTAGRAM_HANDLE?.trim().replace(/^@/, "") || "cicekyolla";
 const INSTAGRAM_GRAPH_ENDPOINT =
   process.env.INSTAGRAM_GRAPH_ENDPOINT ??
   "https://graph.instagram.com/me/media";
