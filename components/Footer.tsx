@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
+import { BrandLogoImage } from "./BrandLogoImage";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -33,16 +34,12 @@ export function Footer({
             <div className="mb-6">
               {brand?.logoUrl ? (
                 <div className="w-fit max-w-full">
-                  <div className="flex h-[112px] w-[330px] max-w-full items-center overflow-visible">
-                    <img
+                  <div className="flex h-[104px] w-[330px] max-w-full items-center overflow-visible">
+                    <BrandLogoImage
                       src={brand.logoUrl}
                       alt={brand.logoAlt || "ÇiçekYolla"}
-                      className="block h-[94px] w-auto max-w-none object-contain object-left"
-                      style={{
-                        transform: "scale(1.5)",
-                        transformOrigin: "left center",
-                        filter: "saturate(1.24) contrast(1.1) brightness(1.08) drop-shadow(0 8px 14px rgba(168,85,247,0.38))",
-                      }}
+                      className="block h-[88px] w-auto max-w-[310px] object-contain object-left"
+                      style={{ filter: "saturate(1.2) contrast(1.1) brightness(1.08) drop-shadow(0 8px 14px rgba(168,85,247,0.38))" }}
                     />
                   </div>
                   {brand.logoTagline ? (
