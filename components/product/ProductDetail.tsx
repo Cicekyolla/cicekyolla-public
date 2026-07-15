@@ -16,6 +16,7 @@ import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } fro
 import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
+import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery } from "@/lib/pendingDelivery";
 
 const WHATSAPP = "905074413474";
@@ -241,6 +242,9 @@ export function ProductDetail({
               ))}
             </div>
           )}
+
+          {/* Masaüstünde ürün görselinin altındaki doğal boşluğu dolduran additive güven alanı. */}
+          <ProductTrustPanel />
         </div>
 
         {/* BİLGİ */}
