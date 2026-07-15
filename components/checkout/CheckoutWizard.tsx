@@ -727,56 +727,94 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
   const count = p.addons.reduce((s, a) => s + (p.addonQty[a.id] || 0), 0);
   const cats = useMemo(() => {
     const set: string[] = [];
-    p.addons.forEach((a) => { if (!set.includes(a.category)) set.push(a.category); });
+    p.addons.forEach((a) => { if (a.category && !set.includes(a.category)) set.push(a.category); });
     return set;
   }, [p.addons]);
   const [tab, setTab] = useState<string>("Tümü");
   const list = tab === "Tümü" ? p.addons : p.addons.filter((a) => a.category === tab);
 
   return (
-    <Card title="Siparişinizi tamamlayın" subtitle="Bu güzel anı daha da özel kılacak dokunuşlar. İsterseniz ekleyin, isterseniz atlayın.">
-      {cats.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {["Tümü", ...cats].map((c) => (
-            <button key={c} onClick={() => setTab(c)}
-              className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tab === c ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
-              {c}
-            </button>
-          ))}
+    <section className="overflow-hidden rounded-[30px] border border-[#2E1857] bg-[linear-gradient(135deg,#0D031F_0%,#17062F_48%,#2B0D55_100%)] text-white shadow-[0_28px_70px_-34px_rgba(76,29,149,0.85)]">
+      <div className="px-5 py-6 sm:px-8 sm:py-8 border-b border-white/10">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#7C3AED]/25 ring-1 ring-[#A78BFA]/25">
+            <Sparkles className="h-5 w-5 text-[#C4B5FD]" />
+          </span>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#C4B5FD]">Siparişinizi tamamlayın</p>
+            <h2 className="mt-1 text-[20px] font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>Müşteriler Bunları da Ekledi</h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#B9AECF]">Çiçeğinize uygun tamamlayıcıları seçin; istemediklerinizi eklemeden devam edebilirsiniz.</p>
+          </div>
         </div>
-      )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-        {list.map((a) => {
+
+        {cats.length > 0 && (
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {["Tümü", ...cats].map((cat) => (
+              <button key={cat} onClick={() => setTab(cat)}
+                className={`shrink-0 rounded-full border px-4 py-2 text-[12px] font-bold transition-all ${tab === cat ? "border-[#A855F7] bg-[#8B5CF6] text-white shadow-[0_8px_22px_-10px_rgba(168,85,247,0.95)]" : "border-white/15 bg-white/[0.06] text-[#D8CFF0] hover:border-[#8B5CF6]/70 hover:bg-[#7C3AED]/20"}`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:gap-4 sm:p-7">
+        {list.map((a, index) => {
           const q = p.addonQty[a.id] || 0;
           const on = q > 0;
+          const badge = index === 0 ? "En Çok Tercih" : index === 1 ? "Popüler" : index === 2 ? "Yeni" : null;
           return (
-            <div key={a.id} className={`rounded-[18px] border p-2.5 transition-all ${on ? "border-[#C4B5FD] bg-[#FBFAFF] shadow-[0_10px_28px_-16px_rgba(124,58,237,0.5)]" : "border-[#F1F0F5] bg-white hover:border-[#E9E7F0]"}`}>
-              <div className="relative w-full aspect-square rounded-[12px] overflow-hidden bg-white">
-                <ProductImage src={a.image ?? undefined} alt={a.name} padding="0px" protect={false} />
+            <article key={a.id} className={`group overflow-hidden rounded-[20px] border transition-all ${on ? "border-[#A855F7] bg-[#29104C] shadow-[0_18px_35px_-22px_rgba(168,85,247,0.95)]" : "border-white/10 bg-[#1C0A38] hover:-translate-y-0.5 hover:border-[#7C3AED]/70"}`}>
+              <div className="relative aspect-[4/3] overflow-hidden bg-white/95">
+                <ProductImage src={a.image ?? undefined} alt={a.name} padding="8px" protect={false} />
+                {badge && <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold text-white ${index === 0 ? "bg-[#F59E0B]" : "bg-[#8B5CF6]"}`}>{badge}</span>}
               </div>
-              <p className="text-[12.5px] font-semibold text-[#374151] mt-2 leading-snug line-clamp-2 min-h-[34px]">{a.name}</p>
-              <p className="text-[13.5px] font-bold text-[#111827] mt-0.5">{money(a.priceMinor)}</p>
-              {on ? (
-                <div className="mt-2 flex items-center justify-between rounded-xl bg-[#7C3AED] text-white px-2 py-1.5">
-                  <button onClick={() => p.setAddon(a.id, q - 1)} aria-label="Azalt" className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white/15"><Minus className="w-3.5 h-3.5" /></button>
-                  <span className="text-[13px] font-bold tabular-nums">{q}</span>
-                  <button onClick={() => p.setAddon(a.id, q + 1)} aria-label="Artır" className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white/15"><Plus className="w-3.5 h-3.5" /></button>
+              <div className="p-3.5">
+                <p className="min-h-[38px] text-[12.5px] font-bold leading-snug text-white line-clamp-2">{a.name}</p>
+                <p className="mt-1 text-[11px] text-[#A99BBC]">{a.category || "Tamamlayıcı Ürün"}</p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-[16px] font-extrabold text-[#D8B4FE]">+{money(a.priceMinor)}</span>
+                  {on ? (
+                    <div className="flex items-center rounded-full border border-[#A855F7]/55 bg-[#7C3AED] p-0.5">
+                      <button onClick={() => p.setAddon(a.id, q - 1)} aria-label="Azalt" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Minus className="h-3.5 w-3.5" /></button>
+                      <span className="min-w-6 text-center text-[12px] font-bold">{q}</span>
+                      <button onClick={() => p.setAddon(a.id, q + 1)} aria-label="Artır" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Plus className="h-3.5 w-3.5" /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => p.setAddon(a.id, 1)} aria-label={`${a.name} ekle`} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] text-white transition-colors hover:border-[#A855F7] hover:bg-[#7C3AED]">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <button onClick={() => p.setAddon(a.id, 1)} className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl border border-[#DDD6FE] text-[#7C3AED] text-[12.5px] font-bold py-1.5 hover:bg-[#F5F3FF] transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Ekle
-                </button>
-              )}
-            </div>
+              </div>
+            </article>
           );
         })}
       </div>
+
+      {list.length === 0 && <p className="px-7 pb-7 text-[13px] text-[#B9AECF]">Bu kategoride gösterilecek aktif tamamlayıcı ürün bulunmuyor.</p>}
+
+      <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { icon: Sparkles, title: "Taze Çiçek Garantisi", text: "7–10 gün taze kalma garantisi." },
+          { icon: Truck, title: "Aynı Gün Teslimat", text: "Uygun bölgelerde 14:00'a kadar." },
+          { icon: ShieldCheck, title: "Güvenli Ödeme", text: "256-bit SSL ile korunan işlem." },
+          { icon: Package, title: "Özel Paketleme", text: "Özenli sunum ve hediye notu." },
+        ].map(({ icon: Icon, title, text }) => (
+          <div key={title} className="flex gap-3 border-white/10 px-5 py-4 sm:[&:nth-child(odd)]:border-r lg:border-r lg:last:border-r-0">
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#C084FC]" />
+            <div><p className="text-[12px] font-bold text-white">{title}</p><p className="mt-0.5 text-[10.5px] leading-relaxed text-[#9F91B6]">{text}</p></div>
+          </div>
+        ))}
+      </div>
+
       {count > 0 && (
-        <div className="mt-4 flex items-center gap-2 text-[13px] text-[#6D28D9] font-semibold">
-          <ShoppingBag className="w-4 h-4" /> {count} ek ürün eklendi
+        <div className="flex items-center gap-2 border-t border-[#A855F7]/25 bg-[#7C3AED]/15 px-6 py-3 text-[12.5px] font-bold text-[#DDD6FE]">
+          <ShoppingBag className="h-4 w-4" /> {count} tamamlayıcı ürün sepete eklendi
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 
