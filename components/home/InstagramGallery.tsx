@@ -49,6 +49,16 @@ function isHttps(value: unknown): value is string {
   }
 }
 
+function isInstagramUrl(value: unknown): value is string {
+  if (!isHttps(value)) return false;
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host === "instagram.com" || host.endsWith(".instagram.com");
+  } catch {
+    return false;
+  }
+}
+
 function manualPosts(
   config: InstagramGalleryConfig | undefined,
   profileUrl: string
@@ -56,16 +66,39 @@ function manualPosts(
   if (!Array.isArray(config?.images)) return [];
 
   return config.images
-    .filter(isHttps)
     .slice(0, 24)
-    .map((image, index) => ({
-      id: `manual-${index}-${image}`,
-      image,
-      permalink: profileUrl,
-      caption: "Çiçek Yolla Instagram gönderisi",
-      mediaType: "IMAGE",
-      timestamp: null,
-    }));
+    .map((item, index): InstagramPost | null => {
+      // Eski CMS kayıtları yalnız görsel URL'si içeriyordu; profil bağlantısına
+      // yönlenmeye devam eder. Yeni kayıtlar gerçek gönderi permalink'i taşır.
+      if (isHttps(item)) {
+        return {
+          id: `manual-${index}-${item}`,
+          image: item,
+          permalink: profileUrl,
+          caption: "Çiçek Yolla Instagram gönderisi",
+          mediaType: "IMAGE",
+          timestamp: null,
+        };
+      }
+
+      if (!item || typeof item !== "object") return null;
+      const post = item as Record<string, unknown>;
+      if (post.enabled === false || !isHttps(post.image)) return null;
+      if (!isInstagramUrl(post.permalink)) return null;
+
+      return {
+        id: `manual-${index}-${post.image}`,
+        image: post.image,
+        permalink: post.permalink,
+        caption:
+          typeof post.caption === "string"
+            ? post.caption.trim().slice(0, 300) || null
+            : null,
+        mediaType: "IMAGE",
+        timestamp: null,
+      };
+    })
+    .filter((post): post is InstagramPost => post !== null);
 }
 
 export function InstagramGallery({
