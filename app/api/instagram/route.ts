@@ -109,7 +109,7 @@ export async function GET() {
         { status: 502 }
       );
     }
-    const posts = (Array.isArray(payload.data) ? payload.data : [])
+    const posts = (Array.isArray(payload?.data) ? payload.data : [])
       .map((item) => {
         const image =
           item.media_type === "VIDEO"
