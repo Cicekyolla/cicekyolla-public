@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN?.trim();
 const INSTAGRAM_HANDLE =
   process.env.INSTAGRAM_HANDLE?.trim().replace(/^@/, "") || "cicekyolla";
 const INSTAGRAM_GRAPH_ENDPOINT =
@@ -88,15 +88,27 @@ export async function GET() {
       next: { revalidate: 3600 },
     });
 
+    const payload = (await res.json().catch(() => null)) as
+      | InstagramGraphResponse
+      | null;
+
     if (!res.ok) {
-      console.error("[instagram] Graph API failed", res.status);
+      console.error(
+        "[instagram] Graph API failed",
+        res.status,
+        payload?.error?.code,
+        payload?.error?.type
+      );
       return NextResponse.json(
-        { error: "instagram_unavailable" },
+        {
+          error: "instagram_unavailable",
+          metaStatus: res.status,
+          metaCode: payload?.error?.code ?? null,
+          metaType: payload?.error?.type ?? null,
+        },
         { status: 502 }
       );
     }
-
-    const payload = (await res.json()) as InstagramGraphResponse;
     const posts = (Array.isArray(payload.data) ? payload.data : [])
       .map((item) => {
         const image =
