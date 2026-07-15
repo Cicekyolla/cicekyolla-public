@@ -1,54 +1,49 @@
+import { mediaUrl } from "@/lib/media";
+
 export function BrandWordmark({
+  logoUrl,
+  alt = "ÇiçekYolla",
   tagline,
   size = "header",
   inverse = false,
 }: {
+  logoUrl?: string;
+  alt?: string;
   tagline?: string;
   size?: "header" | "compact" | "footer";
   inverse?: boolean;
 }) {
-  const wordmarkSize =
-    size === "footer"
-      ? "text-[42px] xl:text-[46px]"
-      : size === "compact"
-        ? "text-[32px]"
-        : "text-[36px] xl:text-[40px]";
-  const flowerSize =
-    size === "footer"
-      ? "h-8 w-7 xl:h-9 xl:w-8"
-      : size === "compact"
-        ? "h-6 w-5"
-        : "h-7 w-6 xl:h-8 xl:w-7";
-  const taglineSize =
-    size === "footer"
-      ? "mt-2 text-[9px] xl:text-[10px]"
-      : size === "compact"
-        ? "mt-1 text-[8px]"
-        : "mt-1.5 text-[8.5px] xl:text-[9px]";
-  const wordmarkColor = inverse ? "text-white" : "text-[#51247A]";
+  const isFooter = size === "footer";
+  const isCompact = size === "compact";
+  const frameClass = isFooter
+    ? "h-[76px] w-[230px] xl:h-[82px] xl:w-[250px]"
+    : isCompact
+      ? "h-[46px] w-[142px]"
+      : "h-[52px] w-[168px] xl:h-[56px] xl:w-[182px]";
+  const imageClass = isFooter
+    ? "left-[-45px] top-[-29px] h-[145px] xl:left-[-49px] xl:top-[-32px] xl:h-[158px]"
+    : isCompact
+      ? "left-[-27px] top-[-18px] h-[88px]"
+      : "left-[-31px] top-[-20px] h-[100px] xl:left-[-34px] xl:top-[-22px] xl:h-[108px]";
+  const taglineClass = isFooter
+    ? "mt-2 text-[9px] xl:text-[10px]"
+    : isCompact
+      ? "mt-1 text-[8px]"
+      : "mt-1.5 text-[8.5px] xl:text-[9px]";
   const taglineColor = inverse ? "text-[#C084FC]" : "text-[#51247A]";
 
   return (
-    <div className="flex w-fit flex-col" aria-label="ÇiçekYolla">
-      <div className="flex items-start">
-        <span
-          style={{ fontFamily: "var(--font-display)" }}
-          className={`${wordmarkSize} ${wordmarkColor} whitespace-nowrap font-semibold leading-[0.82] tracking-[-0.045em]`}
-        >
-          ÇiçekYolla
-        </span>
-        <svg
-          viewBox="0 0 28 32"
-          aria-hidden="true"
-          className={`${flowerSize} -ml-0.5 -mt-2 flex-shrink-0`}
-        >
-          <path d="M13.8 30C13.2 22.4 14.7 15.3 19.2 9" fill="none" stroke={inverse ? "#7CCB5A" : "#5B9E3B"} strokeWidth="2.1" strokeLinecap="round" />
-          <path d="M14.5 21.5C10.2 18.5 7.2 18.7 4.7 20.1c2.4 3.7 5.6 4.5 9.7 2.8" fill={inverse ? "#73B84D" : "#6BAA45"} />
-          <path d="M18.8 10.7C13.5 7.6 13.3 3.8 14.8 1.1c4.9 1.5 6.4 4.9 4 9.6Z" fill={inverse ? "#C084FC" : "#5B2A86"} />
-          <path d="M19.6 10.4C21.3 5.3 24.5 3.8 27 4.1c.2 4.8-2 7.4-7.4 6.3Z" fill={inverse ? "#A855F7" : "#7440A0"} />
-        </svg>
+    <div className="flex w-fit flex-col" aria-label={alt}>
+      <div className={`${frameClass} relative overflow-hidden`}>
+        <img
+          src={mediaUrl(logoUrl || "/brand-logo")}
+          alt={alt}
+          className={`${imageClass} absolute block w-auto max-w-none object-contain`}
+          decoding="async"
+          draggable={false}
+        />
       </div>
-      <span className={`${taglineSize} ${taglineColor} pl-0.5 font-bold uppercase leading-none tracking-[0.32em]`}>
+      <span className={`${taglineClass} ${taglineColor} pl-0.5 text-center font-bold uppercase leading-none tracking-[0.32em]`}>
         {tagline || "Premium Çiçekçi"}
       </span>
     </div>
