@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ProductReviews } from "@/components/product/ProductReviews";
-import { ProductCard } from "@/components/home/ProductCard";
+import { ProductImage } from "@/components/product/ProductImage";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -101,15 +102,85 @@ export default async function ProductPage({ params }: PageProps) {
       })()}
       <ProductReviews productId={product.id} productName={product.name} />
       {related.length > 0 ? (
-        <section aria-label="İlgili ürünler" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-20">
-          <div className="border-t border-black/[0.06] pt-14">
-            <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Keşfet</p>
-            <h2 style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }} className="text-2xl lg:text-3xl font-semibold text-[#111827] mb-8">
-              Bunları da Beğenebilirsiniz
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
-              {related.map((p, idx) => (
-                <ProductCard key={p.id} product={p} idx={idx} />
+        <section aria-label="Sıkça birlikte alınan ürünler" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-20">
+          <div
+            className="overflow-hidden rounded-[32px] border border-white/10 px-5 py-7 sm:px-7 lg:px-10 lg:py-10"
+            style={{
+              background: "linear-gradient(135deg, #0B001F 0%, #19063A 52%, #35136D 100%)",
+              boxShadow: "0 24px 70px rgba(39, 10, 86, 0.22)",
+            }}
+          >
+            <div className="mb-7 flex items-center gap-4 border-b border-white/10 pb-6">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#8B5CF6]/25 text-xl text-[#C4B5FD]">
+                ✦
+              </span>
+              <div>
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.28em] text-[#C4B5FD]">
+                  Sıkça Birlikte Alınanlar
+                </p>
+                <h2 className="text-xl font-semibold text-white lg:text-2xl" style={{ fontFamily: "var(--font-display)" }}>
+                  Müşteriler Bunları da İnceledi
+                </h2>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+              {related.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/urun/${p.slug}`}
+                  className="group flex min-w-0 flex-col overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.06] transition duration-300 hover:-translate-y-1 hover:border-[#A78BFA]/60 hover:bg-white/[0.10]"
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden bg-white">
+                    <ProductImage
+                      src={p.image}
+                      alt={p.name}
+                      padding="0px"
+                      derivatives={p.derivatives}
+                      blurhash={p.blurhash}
+                      sizes="(max-width:640px) 50vw, 25vw"
+                    />
+                    {p.badge ? (
+                      <span className="absolute left-3 top-3 rounded-full bg-[#8B5CF6] px-2.5 py-1 text-[9px] font-bold text-white">
+                        {p.badge}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex min-h-[132px] flex-1 flex-col p-4">
+                    <h3
+                      className="text-[13px] font-semibold leading-snug text-white sm:text-[14px]"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                    >
+                      {p.name}
+                    </h3>
+                    <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+                      <span className="text-lg font-bold text-[#D8B4FE]" style={{ fontFamily: "var(--font-display)" }}>
+                        ₺{p.price}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 text-xl text-white transition group-hover:border-[#A78BFA] group-hover:bg-[#8B5CF6]"
+                      >
+                        +
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-7 grid overflow-hidden rounded-[22px] border border-white/10 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["🌸", "Taze Çiçek Garantisi", "7–10 gün taze kalma garantisi"],
+                ["⚡", "Aynı Gün Teslimat", "14:00'a kadar verilen siparişlerde"],
+                ["🔒", "Güvenli Ödeme", "256-bit SSL ile korunan ödeme"],
+                ["📦", "Özel Paketleme", "Özenli ve premium sunum"],
+              ].map(([icon, title, text]) => (
+                <div key={title} className="border-b border-white/10 p-5 last:border-b-0 sm:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0">
+                  <span className="mb-3 block text-xl">{icon}</span>
+                  <p className="mb-1 text-sm font-semibold text-white">{title}</p>
+                  <p className="text-xs leading-relaxed text-[#B9A8D1]">{text}</p>
+                </div>
               ))}
             </div>
           </div>
