@@ -126,22 +126,26 @@ export function Header({ menu, nav, search, brand }: {
         }}
       >
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
-          <div className="flex items-center justify-between h-[68px] lg:h-[72px] gap-4 lg:gap-6 xl:gap-8">
+          <div className="flex items-center justify-between h-[82px] lg:h-[92px] gap-4 lg:gap-6 xl:gap-8">
 
-            {/* ── Logo — homepage CMS markası; mevcut header ölçüsü korunur ── */}
-            <Link href="/" className="flex-shrink-0 flex items-center group">
+            {/* ── Logo — şeffaf PNG boşluğu kırpılarak güçlü marka ölçeğinde gösterilir ── */}
+            <Link
+              href="/"
+              className="group relative -ml-2 flex flex-shrink-0 items-center rounded-[20px] px-2 py-1.5 transition-all duration-300 hover:bg-[#FAF8FF]"
+              aria-label="ÇiçekYolla ana sayfa"
+            >
               {brand?.logoUrl ? (
                 <div className="flex flex-col justify-center">
-                  <div className="flex h-[54px] w-[230px] xl:w-[260px] items-center overflow-visible">
+                  <div className="relative h-[52px] w-[168px] overflow-hidden sm:w-[180px] xl:h-[56px] xl:w-[194px]">
                     <BrandLogoImage
                       src={brand.logoUrl}
                       alt={brand.logoAlt || "ÇiçekYolla"}
-                      className="block h-[50px] xl:h-[54px] w-auto max-w-[230px] xl:max-w-[260px] object-contain object-left"
-                      style={{ filter: "saturate(1.18) contrast(1.08) drop-shadow(0 5px 9px rgba(124,58,237,0.3))" }}
+                      className="absolute left-[-31px] top-[-20px] block h-[100px] w-auto max-w-none object-contain transition-transform duration-500 group-hover:scale-[1.025] xl:left-[-34px] xl:top-[-22px] xl:h-[108px]"
+                      style={{ filter: "saturate(1.34) contrast(1.2) brightness(0.96) drop-shadow(0 7px 13px rgba(109,40,217,0.32))" }}
                     />
                   </div>
                   {brand.logoTagline ? (
-                    <span className="mt-0.5 pl-1 text-[8px] xl:text-[9px] tracking-[0.32em] text-[#8B5CF6] uppercase font-semibold leading-none">
+                    <span className="mt-0.5 w-[168px] text-center text-[8.5px] font-bold uppercase leading-none tracking-[0.34em] text-[#6D28D9] sm:w-[180px] xl:w-[194px] xl:text-[9.5px]">
                       {brand.logoTagline}
                     </span>
                   ) : null}
