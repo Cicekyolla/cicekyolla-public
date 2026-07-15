@@ -259,7 +259,7 @@ export function ProductDetail({
             )}
           </div>
 
-          {/* Otomatik boyut önerileri — üç ayrı gerçek ürün; sahte varyant/fiyat YOK */}
+          {/* Otomatik boyut önerileri — üç ayrı gerçek ürün; sahte varyant ve sahte fiyat YOK */}
           {sizeProducts.length >= 3 && (
             <section aria-labelledby="auto-size-title" className="mt-7">
               <h2 id="auto-size-title" className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
