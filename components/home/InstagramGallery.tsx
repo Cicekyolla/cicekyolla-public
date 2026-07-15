@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { Instagram, Play } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import { mediaUrl } from "@/lib/media";
 
 interface InstagramPost {
   id: string;
@@ -73,7 +74,7 @@ function manualPosts(
       if (isHttps(item)) {
         return {
           id: `manual-${index}-${item}`,
-          image: item,
+          image: mediaUrl(item),
           permalink: profileUrl,
           caption: "Çiçek Yolla Instagram gönderisi",
           mediaType: "IMAGE",
@@ -88,7 +89,7 @@ function manualPosts(
 
       return {
         id: `manual-${index}-${post.image}`,
-        image: post.image,
+        image: mediaUrl(post.image),
         permalink: post.permalink,
         caption:
           typeof post.caption === "string"
@@ -149,7 +150,7 @@ export function InstagramGallery({
             : [];
 
         if (alive) {
-          setPosts(validPosts);
+          setPosts(validPosts.map((post) => ({ ...post, image: mediaUrl(post.image) })));
           if (json?.handle) setHandle(cleanHandle(json.handle));
           if (isHttps(json?.profileUrl)) setProfileUrl(json.profileUrl);
         }
