@@ -163,7 +163,7 @@ export function Footer({
                   <Phone className="w-3.5 h-3.5 text-[#A855F7]" />
                 </div>
                 <div>
-                  <p className="text-sm text-white font-semibold">{process.env.NEXT_PUBLIC_LEGAL_PHONE || "Telefon bilgisi yakında"}</p>
+                  <p className="text-sm text-white font-semibold">{process.env.NEXT_PUBLIC_LEGAL_PHONE || "0507 441 34 74"}</p>
                   <p className="text-xs text-[#6B7280] mt-0.5">Her gün 08:00 – 22:00</p>
                 </div>
               </li>
