@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+const INSTAGRAM_HANDLE =
+  process.env.INSTAGRAM_HANDLE?.replace(/^@/, "") ?? "cicekyolla";
 const INSTAGRAM_GRAPH_ENDPOINT =
   process.env.INSTAGRAM_GRAPH_ENDPOINT ??
   "https://graph.instagram.com/me/media";
@@ -134,8 +136,8 @@ export async function GET() {
     return NextResponse.json(
       {
         source: "instagram_graph",
-        handle: "cicekyolla",
-        profileUrl: "https://www.instagram.com/cicekyolla/",
+        handle: INSTAGRAM_HANDLE,
+        profileUrl: `https://www.instagram.com/${INSTAGRAM_HANDLE}/`,
         posts,
       },
       {
