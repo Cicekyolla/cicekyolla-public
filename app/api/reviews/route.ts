@@ -57,7 +57,7 @@ export const revalidate = 3600;
  * Ana sayfa için gerçek Google işletme değerlendirmeleri.
  * - Google Place Details (New) verisini olduğu gibi kullanır.
  * - Puan/toplam sayı Google'ın işletme toplamıdır; gösterilen kartların ortalaması değildir.
- * - Yorum sırası ve puanı değiştirilmez, olumlu yorum filtresi uygulanmaz.
+ * - Yorum metni ve puanı değiştirilmez; arayüz 5 yıldızlıları önce gösterir.
  * - API yoksa sahte fallback üretmez.
  */
 export async function GET() {
