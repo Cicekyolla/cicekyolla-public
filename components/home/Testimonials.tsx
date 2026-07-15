@@ -118,6 +118,11 @@ export function Testimonials() {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
+  // Kullanıcı tercihi: gerçek yorumları değiştirmeden 5 yıldızlıları öne al.
+  // Array#sort modern tarayıcılarda stabildir; eşit puanlılar Google sırasını korur.
+  const orderedReviews = [...reviews].sort(
+    (a, b) => (b.rating ?? -1) - (a.rating ?? -1)
+  );
 
   return (
     <section
@@ -142,8 +147,8 @@ export function Testimonials() {
               </span>
             </SectionTitle>
             <p className="mt-5 max-w-xl text-sm leading-6 text-[#746C80]">
-              Yorumlar Google işletme profilimizden doğrudan alınır; puanlar,
-              metinler ve sıralama değiştirilmez.
+              Yorumlar Google işletme profilimizden doğrudan alınır; puan ve
+              metinler değiştirilmez, 5 yıldızlı değerlendirmeler önce gösterilir.
             </p>
           </div>
 
@@ -187,7 +192,7 @@ export function Testimonials() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {reviews.slice(0, 6).map((review, index) => {
+          {orderedReviews.slice(0, 6).map((review, index) => {
             const author = (
               <span className="font-semibold text-[#211B2D] transition-colors group-hover:text-[#7C3AED]">
                 {review.author}
