@@ -21,7 +21,7 @@ export function Footer({
 }) {
   const contactPhone = brand?.contactPhone?.trim() || "0507 441 34 74";
   const contactEmail = brand?.contactEmail?.trim() || "info@cicekyolla.com.tr";
-  const phoneDigits = contactPhone.replace(/\\D/g, "");
+  const phoneDigits = contactPhone.replace(/\D/g, "");
   const contactPhoneHref = phoneDigits.startsWith("0")
     ? `+90${phoneDigits.slice(1)}`
     : phoneDigits.startsWith("90")
