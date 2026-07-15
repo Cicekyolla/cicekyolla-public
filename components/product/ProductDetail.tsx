@@ -502,3 +502,31 @@ export function ProductDetail({
       </div>
 
       {/* Mobil sticky CTA — satın alma paneli alta gelir */}
+      <div className="h-24 lg:hidden" aria-hidden="true" />
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-[#EDE9FE] px-4 py-3 flex items-center gap-3"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="shrink-0">
+          <div className="text-[11px] text-[#9CA3AF] leading-none">Fiyat</div>
+          <div className="text-[18px] font-bold text-[#111827] leading-tight">{formatMinorTRY(shown)}</div>
+        </div>
+        <Link
+          href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#7C3AED] text-white text-[14px] font-bold shadow-[0_6px_18px_rgba(124,58,237,0.3)]"
+        >
+          <ShoppingBag className="w-[18px] h-[18px]" /> Sipariş Ver
+        </Link>
+        <a
+          href={`https://wa.me/${WHATSAPP}?text=${waText}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="WhatsApp ile Sipariş"
+          className="grid place-items-center w-12 h-12 rounded-xl bg-[#25D366] text-white shrink-0"
+        >
+          <MessageCircle className="w-5 h-5" />
+        </a>
+      </div>
+    </main>
+  );
+}
