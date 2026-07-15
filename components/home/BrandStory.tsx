@@ -39,6 +39,10 @@ export function BrandStory() {
               <img
                 src="https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1200&h=1500&fit=crop&auto=format&q=92"
                 alt="Çiçekyolla atölyesi"
+                width={1200}
+                height={1500}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             </div>

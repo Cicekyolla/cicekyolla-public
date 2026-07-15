@@ -136,6 +136,8 @@ export function FloatingCategoryRail({
                       <img
                         src={cat.image}
                         alt={cat.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
                         draggable={false}
                       />
