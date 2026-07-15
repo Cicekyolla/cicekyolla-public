@@ -7,7 +7,7 @@ import { getCategoryTree, flattenCategories } from "@/lib/categories";
    ile AYNI kaynak. Admin'de kategori eklenince sitemap otomatik güncellenir.
    ============================================================================ */
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.cicekyolla.com.tr";
 
 export const revalidate = 3600;
 
@@ -18,6 +18,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/hakkimizda`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/iletisim`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${SITE}/kvkk`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/cerez-politikasi`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/gizlilik-politikasi`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/on-bilgilendirme`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/mesafeli-satis-sozlesmesi`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/teslimat-iade`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   let categoryRoutes: MetadataRoute.Sitemap = [];

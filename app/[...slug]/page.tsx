@@ -63,13 +63,14 @@ function absoluteUrl(path: string): string {
   return SITE_URL + (path.startsWith("/") ? path : "/" + path);
 }
 
-type PageProps = { params: { slug?: string[] }; searchParams?: { [k: string]: string | string[] | undefined } };
+type PageProps = { params: Promise<{ slug?: string[] }>; searchParams?: Promise<{ [k: string]: string | string[] | undefined }> };
 
 // ---- SEO META (title / description / canonical / robots) ---- (DEĞİŞMEDİ)
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const path = slugToPath(params.slug);
+  const resolvedParams = await params;
+  const path = slugToPath(resolvedParams.slug);
   const page = await resolvePage(path);
 
   if (!page) {
@@ -128,7 +129,9 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 
 // ---- Sayfa ----
 export default async function Page({ params, searchParams }: PageProps) {
-  const path = slugToPath(params.slug);
+  const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const path = slugToPath(resolvedParams.slug);
   const page = await resolvePage(path);
 
   if (!page) notFound();
@@ -162,7 +165,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   if (path.startsWith("/kategori/")) {
     return (
       <>
-        <CategoryLanding page={page} path={path} searchParams={searchParams} />
+        <CategoryLanding page={page} path={path} searchParams={resolvedSearchParams} />
         {jsonLd}
       </>
     );

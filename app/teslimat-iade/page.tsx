@@ -1,0 +1,3 @@
+import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
+import { company } from "@/lib/legal";
+export default function Page() { return <LegalPage title="Teslimat, İptal ve İade Politikası"><LegalSection title="Teslimat kontrolü"><p>Adres, ürün, stok, teslimat bölgesi ve kapasite sipariş öncesinde doğrulanır.</p></LegalSection><LegalSection title="Değişiklik ve iptal"><p>Hazırlık başlamadan önce değişiklik talepleri {company.phone} veya {company.email} üzerinden alınır.</p></LegalSection><LegalSection title="Hasarlı veya hatalı ürün"><p>Ürün fotoğrafı ve sipariş numarasıyla destek ekibine başvurulabilir.</p></LegalSection></LegalPage>; }

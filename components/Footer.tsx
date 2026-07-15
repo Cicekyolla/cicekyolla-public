@@ -163,7 +163,7 @@ export function Footer({
                   <Phone className="w-3.5 h-3.5 text-[#A855F7]" />
                 </div>
                 <div>
-                  <p className="text-sm text-white font-semibold">0555 123 45 67</p>
+                  <p className="text-sm text-white font-semibold">{process.env.NEXT_PUBLIC_LEGAL_PHONE || "Telefon bilgisi yakında"}</p>
                   <p className="text-xs text-[#6B7280] mt-0.5">Her gün 08:00 – 22:00</p>
                 </div>
               </li>
@@ -193,6 +193,9 @@ export function Footer({
             {[
               { label: "KVKK", href: "/kvkk" },
               { label: "Mesafeli Satış", href: "/mesafeli-satis-sozlesmesi" },
+              { label: "Çerezler", href: "/cerez-politikasi" },
+              { label: "Gizlilik", href: "/gizlilik-politikasi" },
+              { label: "Teslimat ve İade", href: "/teslimat-iade" },
               { label: "SSS", href: "/sss" },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="text-xs text-[#4B5563] hover:text-[#9CA3AF] transition-colors">
