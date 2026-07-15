@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
-import { ProductDetail } from "@/components/product/ProductDetail";
+import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductImage } from "@/components/product/ProductImage";
 
@@ -53,12 +53,24 @@ export default async function ProductPage({ params }: PageProps) {
   // Admin: ürünün kategorisi → /api/products?category_id= → BURASI. Mock YOK.
   const primaryCat = data.categories.find((c) => c.is_primary) ?? data.categories[0];
   const relatedRows = primaryCat
-    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 8, sort: "created_at_desc" })
+    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: "created_at_desc" })
     : [];
-  const related = relatedRows
-    .filter((p) => p.slug !== product.slug && p.cover_image_url)
-    .slice(0, 4)
-    .map(toCardProduct);
+  const availableRelated = relatedRows.filter((p) => p.slug !== product.slug && p.cover_image_url);
+  const related = availableRelated.slice(0, 4).map(toCardProduct);
+
+  // ── OTOMATİK BOYUT ÖNERİLERİ ──
+  // Aynı kategorideki gerçek ürünlerden mevcut fiyata en yakın üçünü seçer.
+  // Bunlar varyant değildir; her kart kendi gerçek ürün sayfasına gider.
+  const currentPriceMinor = Number(price);
+  const sizeProducts: AutoSizeProduct[] = [...availableRelated]
+    .sort((a, b) => {
+      const aPrice = Number(a.sale_price_minor && Number(a.sale_price_minor) > 0 ? a.sale_price_minor : a.price_minor);
+      const bPrice = Number(b.sale_price_minor && Number(b.sale_price_minor) > 0 ? b.sale_price_minor : b.price_minor);
+      return Math.abs(aPrice - currentPriceMinor) - Math.abs(bPrice - currentPriceMinor);
+    })
+    .slice(0, 3)
+    .map(toCardProduct)
+    .sort((a, b) => a.price - b.price);
 
   // Product JSON-LD (schema) — gerçek üründen.
   const ratingCount = Number((product as { rating_count?: number }).rating_count ?? 0);
@@ -82,7 +94,7 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ProductDetail data={data} />
+      <ProductDetail data={data} sizeProducts={sizeProducts} />
       {(() => {
         const fn = (product as { florist_note?: string | null; florist_note_status?: string | null });
         if (!fn.florist_note || fn.florist_note_status !== "approved") return null;

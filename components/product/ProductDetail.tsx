@@ -107,7 +107,23 @@ function sectionIcon(title: string): LucideIcon {
   return Info;
 }
 
-export function ProductDetail({ data }: { data: PublicProductDetail }) {
+export type AutoSizeProduct = {
+  id: number;
+  name: string;
+  slug: string;
+  image: string;
+  price: number;
+  derivatives?: PublicProductImage["derivatives"];
+  blurhash?: string | null;
+};
+
+export function ProductDetail({
+  data,
+  sizeProducts = [],
+}: {
+  data: PublicProductDetail;
+  sizeProducts?: AutoSizeProduct[];
+}) {
   const { product, images, variants } = data;
   const gallery: PublicProductImage[] = [...images].sort((a, b) => {
     if (a.role === "cover") return -1;
@@ -242,6 +258,64 @@ export function ProductDetail({ data }: { data: PublicProductDetail }) {
               <span className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{formatMinorTRY(basePrice)}</span>
             )}
           </div>
+
+          {/* Otomatik boyut önerileri — üç ayrı gerçek ürün; sahte varyant ve sahte fiyat YOK */}
+          {sizeProducts.length >= 3 && (
+            <section aria-labelledby="auto-size-title" className="mt-7">
+              <h2 id="auto-size-title" className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
+                Boyut Seçin
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {sizeProducts.slice(0, 3).map((item, index) => {
+                  const labels = [
+                    ["Küçük", "Standart"],
+                    ["Orta", "Premium"],
+                    ["Büyük", "Deluxe"],
+                  ] as const;
+                  const [label, tier] = labels[index];
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/urun/${item.slug}`}
+                      aria-label={`${label}: ${item.name}, ₺${item.price}`}
+                      className={`group overflow-hidden rounded-[18px] border bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] ${
+                        index === 1 ? "border-[#8B5CF6] bg-[#F8F5FF] shadow-[0_7px_20px_rgba(124,58,237,0.10)]" : "border-[#EDE9FE]"
+                      }`}
+                    >
+                      <div className="relative aspect-[4/3] overflow-hidden bg-white">
+                        <ProductImage
+                          src={item.image}
+                          alt={item.name}
+                          padding="8px"
+                          derivatives={item.derivatives}
+                          blurhash={item.blurhash}
+                          sizes="(max-width:640px) 100vw, 180px"
+                        />
+                      </div>
+                      <div className="border-t border-[#F1EEFA] px-3.5 py-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-[14px] font-bold text-[#111827]">{label}</p>
+                            <p className="text-[11px] text-[#9CA3AF]">{tier}</p>
+                          </div>
+                          <p className={`text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>₺{item.price}</p>
+                        </div>
+                        <p
+                          className="mt-2 text-[11px] font-medium leading-[1.45] text-[#4B5563]"
+                          style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                        >
+                          {item.name}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              <p className="mt-2.5 text-[10.5px] leading-relaxed text-[#9CA3AF]">
+                Her seçenek ayrı bir gerçek üründür. Seçtiğinizde ilgili ürün sayfası açılır.
+              </p>
+            </section>
+          )}
 
           {/* Teslimat planlayıcı — adres + 30 gün takvim + banda endeksli slot (Delivery Engine V2) */}
           <DeliveryPlanner
