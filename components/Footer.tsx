@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
-import { BrandLogoImage } from "./BrandLogoImage";
+import { BrandWordmark } from "./BrandWordmark";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -41,44 +41,9 @@ export function Footer({
 
           {/* Brand column */}
           <div>
-            {/* Footer brand — homepage CMS'ten yönetilir; Header ve Hero'yu etkilemez. */}
-            <div className="mb-6">
-              {brand?.logoUrl ? (
-                <div className="w-fit max-w-full">
-                  <div className="flex h-[104px] w-[330px] max-w-full items-center overflow-visible">
-                    <BrandLogoImage
-                      src={brand.logoUrl}
-                      alt={brand.logoAlt || "ÇiçekYolla"}
-                      className="block h-[88px] w-auto max-w-[310px] object-contain object-left"
-                      style={{ filter: "saturate(1.2) contrast(1.1) brightness(1.08) drop-shadow(0 8px 14px rgba(168,85,247,0.38))" }}
-                    />
-                  </div>
-                  {brand.logoTagline ? (
-                    <p className="mt-2 pl-1 text-[9px] font-bold uppercase tracking-[0.35em] text-[#C084FC]">
-                      {brand.logoTagline}
-                    </p>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center"
-                    style={{
-                      background: "linear-gradient(135deg, #7C3AED, #A855F7)",
-                      boxShadow: "0 6px 20px rgba(139,92,246,0.4)",
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" className="w-5.5 h-5.5 text-white" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.5 2 6 5 6 8c0 2.5 1.5 4.5 3 5.5.5.3 1 .5 1.5.7V20a1 1 0 002 0v-5.8c.5-.2 1-.4 1.5-.7C15.5 12.5 18 10.5 18 8c0-3-2.5-6-6-6z"/>
-                      <path strokeLinecap="round" d="M9 8c0-1.7 1.3-3 3-3s3 1.3 3 3"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <span style={{ fontFamily: "var(--font-display)", letterSpacing: "0.14em", lineHeight: 1 }} className="text-xl font-semibold text-white uppercase block">Çiçekyolla</span>
-                    <span className="text-[9px] tracking-[0.35em] text-[#8B5CF6] uppercase font-bold">Premium Çiçekçi</span>
-                  </div>
-                </div>
-              )}
+            {/* Footer wordmark ağdan görsel çağırmaz; header ile aynı sabit marka bileşenidir. */}
+            <div className="mb-8">
+              <BrandWordmark tagline={brand?.logoTagline} size="footer" inverse />
             </div>
 
             <p className="text-sm text-[#6B7280] leading-relaxed max-w-xs mb-8">
