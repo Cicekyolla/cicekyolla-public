@@ -26,6 +26,10 @@ export function FeatureSplit() {
               <img
                 src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1200&h=675&fit=crop&auto=format&q=88"
                 alt="Türkiye Geneli Kargo"
+                width={1200}
+                height={675}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />
               <div
@@ -61,6 +65,10 @@ export function FeatureSplit() {
               <img
                 src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=675&fit=crop&auto=format&q=88"
                 alt="Yapay Çiçek Dekorasyon"
+                width={1200}
+                height={675}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />
               <div

@@ -40,6 +40,11 @@ export function HomeHero() {
         <img
           src="https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92"
           alt="Cinematic luxury flowers"
+          width={2800}
+          height={1800}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
           className="w-full h-full object-cover"
           style={{
             transform: "scale(1.12)",

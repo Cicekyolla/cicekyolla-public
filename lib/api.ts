@@ -110,6 +110,7 @@ export async function fetchSeoPage(
 // publicCategoriesRouter)). Env yalnız override için; varsayılan gerçek uçtur.
 // Böylece public ağaç HER ZAMAN admin Category Center ile aynı kaynaktan beslenir.
 const CATEGORIES_PATH = process.env.NEXT_PUBLIC_CATEGORIES_PATH ?? "/api/categories";
+const COMPACT_CATEGORIES_PATH = "/api/public/catalog/categories";
 
 // Category Center düğümü — ekranda DOĞRULANMIŞ alanlar (name, slug) zorunlu;
 // hiyerarşi/SEO/görsel/durum alanları opsiyonel ve şemaya göre esnektir.
@@ -135,37 +136,32 @@ export function isCategoryVisible(node: { status?: unknown }): boolean {
 // Canlı kategori ağacını çeker. Env path yoksa veya backend not_found/hata
 // dönerse null → çağıran taraf mevcut kaynağa güvenle geri düşer.
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
-  const url = `${API_ORIGIN}${CATEGORIES_PATH}`;
+  const paths = CATEGORIES_PATH === COMPACT_CATEGORIES_PATH
+    ? [COMPACT_CATEGORIES_PATH]
+    : [COMPACT_CATEGORIES_PATH, CATEGORIES_PATH];
 
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 300 } });
-  } catch {
-    return null;
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${API_ORIGIN}${path}`, {
+        headers: apiHeaders(),
+        next: { revalidate: 300 },
+      });
+      if (!res.ok) continue;
+      const json = await res.json() as unknown;
+      const payload = (json as { data?: unknown } | null)?.data ?? json;
+      if (!Array.isArray(payload)) continue;
+      const nodes = payload.filter(
+        (n): n is CategoryNode =>
+          !!n &&
+          typeof (n as CategoryNode).name === "string" &&
+          typeof (n as CategoryNode).slug === "string"
+      );
+      if (nodes.length > 0) return nodes;
+    } catch {
+      // Compact endpoint eski API sürümünde yoksa mevcut kategori sözleşmesine düş.
+    }
   }
-
-  if (!res.ok) return null;
-
-  let json: unknown;
-  try {
-    json = await res.json();
-  } catch {
-    return null;
-  }
-
-  // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
-  const payload =
-    (json as { data?: unknown } | null)?.data ?? (json as unknown);
-  if (!Array.isArray(payload)) return null;
-
-  // Yalnız geçerli düğümleri (name + slug) al; şema-dışı alanlar korunur.
-  const nodes = payload.filter(
-    (n): n is CategoryNode =>
-      !!n &&
-      typeof (n as CategoryNode).name === "string" &&
-      typeof (n as CategoryNode).slug === "string"
-  );
-  return nodes.length > 0 ? nodes : null;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

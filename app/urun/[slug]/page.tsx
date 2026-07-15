@@ -13,10 +13,11 @@ import { ProductCard } from "@/components/home/ProductCard";
    Yalnız 'active' ürün gösterilir (fetchProductBySlug gate eder → null → 404).
    ============================================================================ */
 
-type PageProps = { params: { slug: string } };
+type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const data = await fetchProductBySlug(params.slug);
+  const { slug } = await params;
+  const data = await fetchProductBySlug(slug);
   if (!data) return { title: "Ürün bulunamadı — Cicekyolla" };
   const { product, seo } = data;
   const title = seo?.meta_title || `${product.name} — Cicekyolla`;
@@ -39,7 +40,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProductPage({ params }: PageProps) {
-  const data = await fetchProductBySlug(params.slug);
+  const { slug } = await params;
+  const data = await fetchProductBySlug(slug);
   if (!data) notFound();
 
   const { product, images } = data;

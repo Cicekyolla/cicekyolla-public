@@ -6,6 +6,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
+import { CookieConsent } from "@/components/CookieConsent";
 
 // TEK KAYNAK: layout kategori ağacını getCategoryTree (React cache) ile bir kez çeker;
 // Header (mega menu + mobil) ve Footer aynı canlı veriden beslenir. İkinci liste YOK.
@@ -51,6 +52,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {children}
         <Footer categories={footerOrUndef} brand={footerBrand} />
         <WhatsAppButton />
+        <CookieConsent />
       </body>
     </html>
   );

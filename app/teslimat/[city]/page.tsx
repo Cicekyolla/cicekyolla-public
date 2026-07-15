@@ -33,8 +33,9 @@ function tl(m: number | string): string {
 }
 const TYPE_BADGE: Record<string, string> = { plant: "Türkiye Geneli", artificial: "Ücretsiz Kargo", gift: "1-3 İş Günü" };
 
-export async function generateMetadata({ params }: { params: { city: string } }): Promise<Metadata> {
-  const name = titleCaseTr(params.city);
+export async function generateMetadata({ params }: { params: Promise<{ city: string }> }): Promise<Metadata> {
+  const { city } = await params;
+  const name = titleCaseTr(city);
   return {
     title: `${name} Gönderilebilen Ürünler — Çiçekyolla`,
     description: `${name} adresine Türkiye geneli ücretsiz kargo ile gönderilebilen özel ürünler.`,
@@ -68,12 +69,13 @@ export default async function DeliveryCityPage({
   params,
   searchParams,
 }: {
-  params: { city: string };
-  searchParams: { cat?: string; il?: string; from?: string };
+  params: Promise<{ city: string }>;
+  searchParams: Promise<{ cat?: string; il?: string; from?: string }>;
 }) {
-  const cityName = searchParams.il?.trim() || titleCaseTr(params.city);
-  const catId = Number(searchParams.cat || 0);
-  const excludeId = Number(searchParams.from || 0);
+  const [{ city }, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const cityName = resolvedSearchParams.il?.trim() || titleCaseTr(city);
+  const catId = Number(resolvedSearchParams.cat || 0);
+  const excludeId = Number(resolvedSearchParams.from || 0);
   const cfg = await loadConfig();
   const cargoTypes = cfg?.cargo_types?.length ? cfg.cargo_types : CARGO_TYPES_DEFAULT;
   const maxItems = cfg?.max_items && cfg.max_items > 0 ? cfg.max_items : 24;
