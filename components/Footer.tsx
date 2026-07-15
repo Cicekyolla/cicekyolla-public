@@ -43,7 +43,7 @@ export function Footer({
           <div>
             {/* Footer wordmark ağdan görsel çağırmaz; header ile aynı sabit marka bileşenidir. */}
             <div className="mb-8">
-              <BrandWordmark tagline={brand?.logoTagline} size="footer" inverse />
+              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} size="footer" inverse />
             </div>
 
             <p className="text-sm text-[#6B7280] leading-relaxed max-w-xs mb-8">
