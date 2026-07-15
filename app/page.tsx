@@ -156,10 +156,17 @@ export default async function HomePage() {
   // tasarım güvenli biçimde çalışmaya devam eder. Draft ASLA public'e çıkmaz.
   const publishedHomepage = await getPublishedHomepage();
   if (publishedHomepage && publishedHomepage.sections.length > 0) {
+    // Yayınlanmış CMS sürümünde testimonials yoksa gerçek Google yorumlarını
+    // sayfanın sonunda additive göster. Admin ileride bölümü eklerse duplicate olmaz.
+    const hasPublishedTestimonials = publishedHomepage.sections.some(
+      (section) => section.enabled && section.type === "testimonials"
+    );
+
     return (
       <>
         <HomeJsonLd />
         <HomepageRenderer dto={publishedHomepage} ctx={{ collections, imagedCollections }} />
+        {!hasPublishedTestimonials && <Testimonials />}
       </>
     );
   }
