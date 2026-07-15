@@ -186,6 +186,51 @@ export default async function ProductPage({ params }: PageProps) {
           </div>
         </section>
       ) : null}
+      <section aria-labelledby="product-faq-title" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-24">
+        <div className="grid gap-10 border-t border-black/[0.06] pt-14 lg:grid-cols-[340px_1fr] lg:gap-20">
+          <div>
+            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.3em] text-[#8B5CF6]">
+              Sık Sorulan Sorular
+            </p>
+            <h2
+              id="product-faq-title"
+              className="mb-5 text-3xl font-semibold text-[#111827] lg:text-4xl"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+            >
+              Merak Ettikleriniz
+            </h2>
+            <p className="max-w-[300px] text-[15px] leading-relaxed text-[#6B7280]">
+              Bu ürün ve teslimat süreciyle ilgili en çok sorulan soruları derledik. Başka bir sorunuz varsa bize ulaşabilirsiniz.
+            </p>
+            <Link
+              href="/iletisim"
+              className="mt-7 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#0D9488] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(16,185,129,0.24)] transition hover:-translate-y-0.5"
+            >
+              <span aria-hidden="true">◉</span>
+              Bize Sor
+            </Link>
+          </div>
+
+          <div className="divide-y divide-[#EDE9FE]">
+            {[
+              ["Çiçekler ne zaman teslim edilir?", "Teslimat tarihi ve uygun saat aralığı sipariş adımında, seçtiğiniz bölgeye göre gösterilir."],
+              ["Çiçekler ne kadar taze kalır?", "Doğru bakım ve ortam koşullarında çoğu aranjman yaklaşık 7–10 gün tazeliğini korur."],
+              ["Fotoğraftaki çiçeklerle aynı mı geliyor?", "Tasarımın genel görünümü korunur. Mevsimsel tedarik durumunda eşdeğer renk ve değerde çiçeklerle küçük değişiklikler yapılabilir."],
+              ["Kişisel mesaj karta nasıl yazılır?", "Sipariş adımlarındaki kart mesajı alanına notunuzu yazabilirsiniz; mesajınız ürünle birlikte hazırlanır."],
+              ["Teslimat adresi yanlışsa ne yapabilirim?", "Sipariş hazırlanmadan önce iletişim sayfamızdan bize ulaşın. Uygunluk durumuna göre adresi güncelleyebiliriz."],
+              ["Büyük boy seçimi daha mı iyi görünür?", "Büyük boy seçeneği, ürünün temel tasarımını koruyarak daha dolgun ve gösterişli bir sunum sağlar."],
+            ].map(([question, answer], index) => (
+              <details key={question} className="group" open={index === 0}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-5 py-6 text-[16px] font-semibold text-[#111827] outline-none transition hover:text-[#7C3AED] focus-visible:ring-2 focus-visible:ring-[#A78BFA] [&::-webkit-details-marker]:hidden">
+                  <span>{question}</span>
+                  <span aria-hidden="true" className="text-xl font-normal text-[#8B5CF6] transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="max-w-3xl pb-6 pr-10 text-[14px] leading-7 text-[#6B7280]">{answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
       {/* Fiyat özeti (SSR erişilebilirlik / no-JS fallback) */}
       <span className="sr-only">{formatMinorTRY(price)}</span>
     </>
