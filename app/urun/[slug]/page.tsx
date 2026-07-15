@@ -202,13 +202,18 @@ export default async function ProductPage({ params }: PageProps) {
             <p className="max-w-[300px] text-[15px] leading-relaxed text-[#6B7280]">
               Bu ürün ve teslimat süreciyle ilgili en çok sorulan soruları derledik. Başka bir sorunuz varsa bize ulaşabilirsiniz.
             </p>
-            <Link
-              href="/iletisim"
+            <a
+              href="https://wa.me/905074413474?text=Merhaba%2C%20%C3%BCr%C3%BCn%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp'tan ürün hakkında soru sor"
               className="mt-7 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#0D9488] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(16,185,129,0.24)] transition hover:-translate-y-0.5"
             >
-              <span aria-hidden="true">◉</span>
-              Bize Sor
-            </Link>
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                <path d="M12 2a9.7 9.7 0 0 0-8.3 14.7L2.4 22l5.5-1.4A9.8 9.8 0 1 0 12 2Zm0 17.7a8 8 0 0 1-4.1-1.1l-.3-.2-3.3.9.9-3.2-.2-.3A8 8 0 1 1 12 19.7Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.2 0-.4.1-.5l.4-.5.3-.5c.1-.2 0-.4 0-.5l-.7-1.7c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.7 2.6 4.2 3.7.6.3 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.2-.2-.2-.4-.3Z" />
+              </svg>
+              WhatsApp'tan Sor
+            </a>
           </div>
 
           <div className="divide-y divide-[#EDE9FE]">
