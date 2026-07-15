@@ -29,6 +29,20 @@ const nextConfig = {
       },
     ];
   },
+  async headers() {
+    return [
+      {
+        // Yükleme adları zaman damgalı ve değişmezdir. Vercel edge ile tarayıcı
+        // bir kez alınan medyayı kalıcı saklar; R2 geçici olarak yavaşlasa bile
+        // galeride daha önce yüklenen görseller kesintisiz gösterilir.
+        source: "/r2/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=31536000, stale-while-revalidate=86400" },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
