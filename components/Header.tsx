@@ -141,11 +141,11 @@ export function Header({ menu, nav, search, brand }: {
                       src={brand.logoUrl}
                       alt={brand.logoAlt || "ÇiçekYolla"}
                       className="absolute left-[-31px] top-[-20px] block h-[100px] w-auto max-w-none object-contain transition-transform duration-500 group-hover:scale-[1.025] xl:left-[-34px] xl:top-[-22px] xl:h-[108px]"
-                      style={{ filter: "saturate(1.34) contrast(1.2) brightness(0.96) drop-shadow(0 7px 13px rgba(109,40,217,0.32))" }}
+                      style={{ filter: "hue-rotate(332deg) saturate(1.58) contrast(1.32) brightness(0.74) drop-shadow(0 7px 13px rgba(76,29,149,0.28))" }}
                     />
                   </div>
                   {brand.logoTagline ? (
-                    <span className="mt-0.5 w-[168px] text-center text-[8.5px] font-bold uppercase leading-none tracking-[0.34em] text-[#6D28D9] sm:w-[180px] xl:w-[194px] xl:text-[9.5px]">
+                    <span className="mt-0.5 w-[168px] text-center text-[8.5px] font-bold uppercase leading-none tracking-[0.34em] text-[#4C1D95] sm:w-[180px] xl:w-[194px] xl:text-[9.5px]">
                       {brand.logoTagline}
                     </span>
                   ) : null}
