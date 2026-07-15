@@ -50,7 +50,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "editors_picks":       return <ProductShowcase title={s.title ?? "Editör Seçimleri"} products={s.products} />;
     case "brand_story":         return <BrandStory />;
     case "testimonials":        return <Testimonials />;
-    case "instagram_gallery":   return <InstagramGallery />;
+    case "instagram_gallery":   return <InstagramGallery config={s.config} />;
     case "corporate_references":return <CorporateReferences />;
     case "district_delivery":   return <DistrictDelivery />;
     case "whatsapp_cta":        return <WhatsAppCTA />;
