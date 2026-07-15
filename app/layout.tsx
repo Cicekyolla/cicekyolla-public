@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { Footer, type FooterBrand } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
@@ -15,7 +15,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let nav: { name: string; href: string }[] = [];
   let footerNav: ReturnType<typeof getCategoryNav> = [];
   let search: { name: string; href: string }[] = [];
-  let footerBrand: { logoUrl?: string; logoAlt?: string; logoTagline?: string } | undefined;
+  let footerBrand: FooterBrand | undefined;
   try {
     const tree = await getCategoryTree();
     const built = buildHeaderMenu(tree);
@@ -30,11 +30,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   try {
     const homepage = await getPublishedHomepage();
     const heroConfig = homepage?.sections.find((section) => section.type === "hero")?.config;
-    if (heroConfig && typeof heroConfig.logo_url === "string" && heroConfig.logo_url.trim()) {
+    if (heroConfig) {
       footerBrand = {
-        logoUrl: heroConfig.logo_url,
+        logoUrl: typeof heroConfig.logo_url === "string" && heroConfig.logo_url.trim() ? heroConfig.logo_url : undefined,
         logoAlt: typeof heroConfig.logo_alt === "string" ? heroConfig.logo_alt : "ÇiçekYolla",
         logoTagline: typeof heroConfig.logo_tagline === "string" ? heroConfig.logo_tagline : "Premium Çiçekçi",
+        contactPhone: typeof heroConfig.contact_phone === "string" && heroConfig.contact_phone.trim() ? heroConfig.contact_phone : "0507 441 34 74",
+        contactEmail: typeof heroConfig.contact_email === "string" && heroConfig.contact_email.trim() ? heroConfig.contact_email : "info@cicekyolla.com.tr",
       };
     }
   } catch {

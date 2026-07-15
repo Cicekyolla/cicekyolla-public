@@ -8,6 +8,8 @@ export interface FooterBrand {
   logoUrl?: string;
   logoAlt?: string;
   logoTagline?: string;
+  contactPhone?: string;
+  contactEmail?: string;
 }
 
 export function Footer({
@@ -17,6 +19,15 @@ export function Footer({
   categories?: { name: string; href: string }[];
   brand?: FooterBrand;
 }) {
+  const contactPhone = brand?.contactPhone?.trim() || "0507 441 34 74";
+  const contactEmail = brand?.contactEmail?.trim() || "info@cicekyolla.com.tr";
+  const phoneDigits = contactPhone.replace(/\D/g, "");
+  const contactPhoneHref = phoneDigits.startsWith("0")
+    ? `+90${phoneDigits.slice(1)}`
+    : phoneDigits.startsWith("90")
+      ? `+${phoneDigits}`
+      : `+90${phoneDigits}`;
+
   return (
     <footer
       style={{
@@ -163,7 +174,7 @@ export function Footer({
                   <Phone className="w-3.5 h-3.5 text-[#A855F7]" />
                 </div>
                 <div>
-                  <p className="text-sm text-white font-semibold">0555 123 45 67</p>
+                  <a href={`tel:${contactPhoneHref}`} className="text-sm text-white font-semibold hover:text-[#C4B5FD] transition-colors">{contactPhone}</a>
                   <p className="text-xs text-[#6B7280] mt-0.5">Her gün 08:00 – 22:00</p>
                 </div>
               </li>
@@ -171,7 +182,7 @@ export function Footer({
                 <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)" }}>
                   <Mail className="w-3.5 h-3.5 text-[#A855F7]" />
                 </div>
-                <span className="text-sm text-[#6B7280] mt-1.5">destek@cicekyolla.com.tr</span>
+                <a href={`mailto:${contactEmail}`} className="text-sm text-[#6B7280] hover:text-white transition-colors mt-1.5">{contactEmail}</a>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)" }}>
