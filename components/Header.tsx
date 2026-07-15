@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import type { MegaGroup } from "@/lib/headerNav";
+import { BrandLogoImage } from "./BrandLogoImage";
 
 /* ─── Mega menu data ─── */
 /* ── Extra nav links ── */
@@ -131,16 +132,12 @@ export function Header({ menu, nav, search, brand }: {
             <Link href="/" className="flex-shrink-0 flex items-center group">
               {brand?.logoUrl ? (
                 <div className="flex flex-col justify-center">
-                  <div className="flex h-[50px] w-[220px] xl:w-[250px] items-center overflow-visible">
-                    <img
+                  <div className="flex h-[54px] w-[230px] xl:w-[260px] items-center overflow-visible">
+                    <BrandLogoImage
                       src={brand.logoUrl}
                       alt={brand.logoAlt || "ÇiçekYolla"}
-                      className="block h-[48px] xl:h-[52px] w-auto max-w-none object-contain object-left"
-                      style={{
-                        transform: "translateY(-1px) scale(1.7)",
-                        transformOrigin: "left center",
-                        filter: "saturate(1.24) contrast(1.1) drop-shadow(0 4px 7px rgba(124,58,237,0.3))",
-                      }}
+                      className="block h-[50px] xl:h-[54px] w-auto max-w-[230px] xl:max-w-[260px] object-contain object-left"
+                      style={{ filter: "saturate(1.18) contrast(1.08) drop-shadow(0 5px 9px rgba(124,58,237,0.3))" }}
                     />
                   </div>
                   {brand.logoTagline ? (
@@ -235,11 +232,11 @@ export function Header({ menu, nav, search, brand }: {
                         {brand?.logoUrl ? (
                           <div className="flex flex-col">
                             <div className="flex h-[52px] w-[220px] items-center overflow-visible">
-                              <img
+                              <BrandLogoImage
                                 src={brand.logoUrl}
                                 alt={brand.logoAlt || "ÇiçekYolla"}
-                                className="block h-[48px] w-auto max-w-none object-contain object-left"
-                                style={{ transform: "scale(1.65)", transformOrigin: "left center", filter: "saturate(1.24) contrast(1.1) drop-shadow(0 4px 7px rgba(124,58,237,0.28))" }}
+                                className="block h-[48px] w-auto max-w-[220px] object-contain object-left"
+                                style={{ filter: "saturate(1.18) contrast(1.08) drop-shadow(0 4px 7px rgba(124,58,237,0.28))" }}
                               />
                             </div>
                             {brand.logoTagline ? <span className="mt-1 pl-1 text-[8px] tracking-[0.3em] text-[#8B5CF6] uppercase font-semibold">{brand.logoTagline}</span> : null}
