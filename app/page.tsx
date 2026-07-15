@@ -156,17 +156,32 @@ export default async function HomePage() {
   // tasarım güvenli biçimde çalışmaya devam eder. Draft ASLA public'e çıkmaz.
   const publishedHomepage = await getPublishedHomepage();
   if (publishedHomepage && publishedHomepage.sections.length > 0) {
-    // Yayınlanmış CMS sürümünde testimonials yoksa gerçek Google yorumlarını
-    // sayfanın sonunda additive göster. Admin ileride bölümü eklerse duplicate olmaz.
-    const hasPublishedTestimonials = publishedHomepage.sections.some(
-      (section) => section.enabled && section.type === "testimonials"
+    // Google yorumları + Instagram, kullanıcı kararına göre ana akışın sonunda
+    // daima bu sırada yaşar. CMS kaydı varsa config/enabled korunur; iki bölüm
+    // renderer'dan çıkarıldığı için duplicate oluşmaz.
+    const testimonialsSection = publishedHomepage.sections.find(
+      (section) => section.type === "testimonials"
     );
+    const instagramSection = publishedHomepage.sections.find(
+      (section) => section.type === "instagram_gallery"
+    );
+    const contentHomepage = {
+      ...publishedHomepage,
+      sections: publishedHomepage.sections.filter(
+        (section) =>
+          section.type !== "testimonials" &&
+          section.type !== "instagram_gallery"
+      ),
+    };
+    const showTestimonials = testimonialsSection?.enabled !== false;
+    const showInstagram = instagramSection?.enabled !== false;
 
     return (
       <>
         <HomeJsonLd />
-        <HomepageRenderer dto={publishedHomepage} ctx={{ collections, imagedCollections }} />
-        {!hasPublishedTestimonials && <Testimonials />}
+        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections }} />
+        {showTestimonials && <Testimonials />}
+        {showInstagram && <InstagramGallery config={instagramSection?.config} />}
       </>
     );
   }
