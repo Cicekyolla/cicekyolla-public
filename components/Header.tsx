@@ -340,7 +340,7 @@ export function Header({ menu, nav, search, brand }: {
                     </nav>
                     <div className="p-5 border-t border-black/[0.05]">
                       <a
-                        href="https://wa.me/905551234567"
+                        href="https://wa.me/905074413474"
                         className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white text-sm font-semibold"
                         style={{ background: "linear-gradient(135deg, #25D366, #128C7E)", boxShadow: "0 6px 20px rgba(37,211,102,0.3)" }}
                       >
