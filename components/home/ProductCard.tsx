@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Heart } from "lucide-react";
+import { Heart, Zap, Clock3 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 
 export type Product = {
@@ -34,6 +34,7 @@ export type Product = {
 
 /** Kategori sayfasından gelen bağlam (gerçek kategori / gönderim amacı). */
 export type CardContextTag = { label: string; isOccasion: boolean };
+export type ProductDeliveryPromise = "today" | "tomorrow";
 
 type CardTag = { label: string; icon: string; tone: "occasion" | "category" | "delivery" | "promo" };
 
@@ -85,7 +86,7 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
   promo: "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]",
 };
 
-export function ProductCard({ product, idx, contextTag }: { product: Product; idx: number; contextTag?: CardContextTag }) {
+export function ProductCard({ product, idx, contextTag, deliveryPromise }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise }) {
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
   const tags = deriveTags(product, contextTag);
@@ -194,6 +195,12 @@ export function ProductCard({ product, idx, contextTag }: { product: Product; id
                   {t.label}
                 </span>
               ))}
+            </div>
+          ) : null}
+          {deliveryPromise ? (
+            <div className={`mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-bold ${deliveryPromise === "today" ? "border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]" : "border-[#DDD6FE] bg-[#F5F3FF] text-[#6D28D9]"}`}>
+              {deliveryPromise === "today" ? <Zap className="h-3 w-3" aria-hidden="true" /> : <Clock3 className="h-3 w-3" aria-hidden="true" />}
+              {deliveryPromise === "today" ? "Bugün Hızlı Teslimat" : "Yarın Teslimat"}
             </div>
           ) : null}
           <div className="mt-auto pt-3 flex items-baseline gap-2">
