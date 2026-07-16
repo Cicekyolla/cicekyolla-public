@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer, type FooterBrand } from "@/components/Footer";
@@ -50,6 +51,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="tr">
       <body>
+        <div className="hidden md:block bg-gradient-to-r from-[#5B21B6] via-[#7C3AED] to-[#8B5CF6] text-white">
+          <div className="mx-auto flex h-10 max-w-[1440px] items-center justify-end gap-3 px-5 text-[13px] font-semibold lg:px-10 xl:px-14">
+            <Link className="transition hover:text-[#EDE9FE]" href="/giris">Giriş Yap / Üye Ol</Link>
+            <span className="text-white/55">|</span>
+            <Link className="transition hover:text-[#EDE9FE]" href="/sepet">Sepet</Link>
+            <span className="text-white/55">|</span>
+            <Link className="transition hover:text-[#EDE9FE]" href="/siparis-takibi">Sipariş Durumu</Link>
+          </div>
+        </div>
         <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
         {children}
         <MemberNewsletterBand />
