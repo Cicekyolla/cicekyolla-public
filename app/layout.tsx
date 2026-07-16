@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { CustomerActionBar } from "@/components/CustomerActionBar";
 import { Footer, type FooterBrand } from "@/components/Footer";
+import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
         <CustomerActionBar />
         {children}
+        <MemberNewsletterBand />
         <Footer categories={footerOrUndef} brand={footerBrand} />
         <WhatsAppButton />
       </body>
