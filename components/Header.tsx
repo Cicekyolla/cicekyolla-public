@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import type { MegaGroup } from "@/lib/headerNav";
+import { BrandWordmark } from "./BrandWordmark";
 
 /* ─── Mega menu data ─── */
 /* ── Extra nav links ── */
@@ -18,34 +19,6 @@ export interface HeaderBrand {
   logoUrl?: string;
   logoAlt?: string;
   logoTagline?: string;
-}
-
-function HeaderWordmark({ tagline, compact = false }: { tagline?: string; compact?: boolean }) {
-  return (
-    <div className="flex flex-col">
-      <div className="flex items-start">
-        <span
-          style={{ fontFamily: "var(--font-display)" }}
-          className={`${compact ? "text-[32px]" : "text-[36px] xl:text-[40px]"} whitespace-nowrap font-semibold leading-[0.82] tracking-[-0.045em] text-[#51247A]`}
-        >
-          ÇiçekYolla
-        </span>
-        <svg
-          viewBox="0 0 28 32"
-          aria-hidden="true"
-          className={`${compact ? "h-6 w-5" : "h-7 w-6 xl:h-8 xl:w-7"} -ml-0.5 -mt-2 flex-shrink-0`}
-        >
-          <path d="M13.8 30C13.2 22.4 14.7 15.3 19.2 9" fill="none" stroke="#5B9E3B" strokeWidth="2.1" strokeLinecap="round" />
-          <path d="M14.5 21.5C10.2 18.5 7.2 18.7 4.7 20.1c2.4 3.7 5.6 4.5 9.7 2.8" fill="#6BAA45" />
-          <path d="M18.8 10.7C13.5 7.6 13.3 3.8 14.8 1.1c4.9 1.5 6.4 4.9 4 9.6Z" fill="#5B2A86" />
-          <path d="M19.6 10.4C21.3 5.3 24.5 3.8 27 4.1c.2 4.8-2 7.4-7.4 6.3Z" fill="#7440A0" />
-        </svg>
-      </div>
-      <span className={`${compact ? "mt-1 text-[8px]" : "mt-1.5 text-[8.5px] xl:text-[9px]"} pl-0.5 font-bold uppercase leading-none tracking-[0.32em] text-[#51247A]`}>
-        {tagline || "Premium Çiçekçi"}
-      </span>
-    </div>
-  );
 }
 
 export function Header({ menu, nav, search, brand }: {
@@ -144,12 +117,13 @@ export function Header({ menu, nav, search, brand }: {
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
           background: scrolled
-            ? "rgba(255,255,255,0.92)"
-            : "rgba(255,255,255,1)",
-          backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
+            ? "rgba(10,2,22,0.96)"
+            : "linear-gradient(180deg, #0D0520 0%, #070011 100%)",
+          backdropFilter: scrolled ? "blur(20px) saturate(160%)" : "none",
+          borderBottom: "1px solid rgba(192,132,252,0.16)",
           boxShadow: scrolled
-            ? "0 1px 0 rgba(0,0,0,0.06), 0 8px 32px rgba(139,92,246,0.06)"
-            : "0 1px 0 rgba(0,0,0,0.05)",
+            ? "0 1px 0 rgba(192,132,252,0.12), 0 14px 40px rgba(7,0,17,0.28)"
+            : "0 1px 0 rgba(192,132,252,0.10)",
         }}
       >
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
@@ -158,10 +132,10 @@ export function Header({ menu, nav, search, brand }: {
             {/* ── Logo — hero tipografisiyle aynı keskin vektör marka sistemi ── */}
             <Link
               href="/"
-              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-[#FAF8FF]"
+              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-white/[0.04]"
               aria-label="ÇiçekYolla ana sayfa"
             >
-              <HeaderWordmark tagline={brand?.logoTagline} />
+              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} inverse />
             </Link>
 
             {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
@@ -176,8 +150,8 @@ export function Header({ menu, nav, search, brand }: {
                   <button
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
-                        ? "text-[#8B5CF6] bg-[#F5F3FF]"
-                        : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
+                        ? "text-[#E9D5FF] bg-white/[0.10]"
+                        : "text-[#E5E7EB] hover:text-[#E9D5FF] hover:bg-white/[0.07]"
                     }`}
                     style={{
                       padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
@@ -196,13 +170,13 @@ export function Header({ menu, nav, search, brand }: {
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
+                className="w-11 h-11 flex items-center justify-center rounded-full text-[#D1D5DB] hover:text-[#E9D5FF] hover:bg-white/[0.08] transition-all"
               >
                 {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
               </button>
 
               <Link href="/sepet">
-                <button className="relative w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all">
+                <button className="relative w-11 h-11 flex items-center justify-center rounded-full text-[#D1D5DB] hover:text-[#E9D5FF] hover:bg-white/[0.08] transition-all">
                   <ShoppingCart className="w-4.5 h-4.5" />
                   {cartCount > 0 && (
                     <span
@@ -218,7 +192,7 @@ export function Header({ menu, nav, search, brand }: {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F5F3FF] transition-all">
+                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#D1D5DB] hover:text-[#E9D5FF] hover:bg-white/[0.08] transition-all">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" d="M4 7h16M4 12h10M4 17h16" />
                     </svg>
@@ -228,7 +202,7 @@ export function Header({ menu, nav, search, brand }: {
                   <div className="flex flex-col h-full">
                     <div className="p-7 border-b border-black/[0.05]">
                       <div className="flex items-center">
-<HeaderWordmark tagline={brand?.logoTagline} compact />
+<BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} size="compact" />
                       </div>
                     </div>
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
