@@ -121,6 +121,12 @@ header a[href="/sepet"] span::after {
   line-height: 1;
 }
 
+/* Canlıda ayrı beyaz müşteri aksiyon bandı üretildiyse kaldır: aksiyonlar header içinde kalmalı. */
+body > div:has(a[href="/siparis-takibi"]):has(a[href="/giris"]):has(a[href="/sepet"]),
+body > section:has(a[href="/siparis-takibi"]):has(a[href="/giris"]):has(a[href="/sepet"]) {
+  display: none !important;
+}
+
 /* ProductImage premium skeleton shimmer (CLS-sıfır yükleme) */
 @keyframes cyImgShimmer {
   0%   { background-position: 200% 0; }
