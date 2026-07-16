@@ -39,19 +39,70 @@ function plainText(value: string): string {
     .trim();
 }
 
-function productFaqsFromDescription(description?: string | null): ProductFaq[] {
+function htmlSection(description: string, start: RegExp, end?: RegExp): string {
+  const startMatch = start.exec(description);
+  if (!startMatch) return "";
+  const from = (startMatch.index ?? 0) + startMatch[0].length;
+  const rest = description.slice(from);
+  const endMatch = end?.exec(rest);
+  return rest.slice(0, endMatch?.index ?? rest.length);
+}
+
+function headingItems(value: string): string[] {
+  return [...value.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)]
+    .map((match) => plainText(match[1]))
+    .filter(Boolean);
+}
+
+function productFaqsFromDescription(productName: string, description?: string | null): ProductFaq[] {
   if (!description) return DEFAULT_PRODUCT_FAQS;
   const headings = [...description.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)];
-  const faqs: ProductFaq[] = [];
+  const explicit: ProductFaq[] = [];
   headings.forEach((heading, index) => {
     const question = plainText(heading[1]);
     if (!question.endsWith("?")) return;
     const start = (heading.index ?? 0) + heading[0].length;
     const end = index + 1 < headings.length ? (headings[index + 1].index ?? description.length) : description.length;
     const answer = plainText(description.slice(start, end));
-    if (answer) faqs.push({ question, answer });
+    if (answer) explicit.push({ question, answer });
   });
-  return faqs.length ? faqs.slice(0, 8) : DEFAULT_PRODUCT_FAQS;
+  if (explicit.length) return explicit.slice(0, 8);
+
+  const generated: ProductFaq[] = [];
+  const content = headingItems(htmlSection(description, /Ürün İçeriği/i, /Yaklaşık Ölçüler/i)).slice(0, 10);
+  if (content.length) generated.push({
+    question: `${productName} içeriğinde neler bulunur?`,
+    answer: `${productName}; ${content.join(", ")} kullanılarak hazırlanır.`,
+  });
+
+  const text = plainText(description);
+  const height = text.match(/Yükseklik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const width = text.match(/Genişlik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  if (height || width) generated.push({
+    question: `${productName} ölçüleri nedir?`,
+    answer: [height ? `Yaklaşık yükseklik ${height}` : "", width ? `genişlik ${width}` : ""].filter(Boolean).join(", ") + ".",
+  });
+
+  const recipients = headingItems(htmlSection(description, /Kimlere Gönderilebilir\?/i, /Hangi Günlerde Gönderilebilir\?/i))
+    .filter((item) => !/:|cm/i.test(item)).slice(0, 8);
+  if (recipients.length) generated.push({
+    question: `${productName} kimlere gönderilebilir?`,
+    answer: `Bu aranjman ${recipients.join(", ")} için şık bir hediye seçeneğidir.`,
+  });
+
+  const occasions = headingItems(htmlSection(description, /Hangi Günlerde Gönderilebilir\?/i, /Çiçeklerin Anlamı/i)).slice(0, 8);
+  if (occasions.length) generated.push({
+    question: `${productName} hangi özel günler için uygundur?`,
+    answer: `${occasions.join(", ")} gibi özel günlerde gönderilebilir.`,
+  });
+
+  const care = plainText(htmlSection(description, /Bakım Talimatı/i));
+  if (care) generated.push({
+    question: `${productName} bakımı nasıl yapılır?`,
+    answer: care.length > 420 ? `${care.slice(0, 417).replace(/\s+\S*$/, "")}…` : care,
+  });
+
+  return generated.length >= 2 ? generated.slice(0, 6) : DEFAULT_PRODUCT_FAQS;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -86,7 +137,7 @@ export default async function ProductPage({ params }: PageProps) {
   const price = data.product.sale_price_minor && Number(data.product.sale_price_minor) > 0
     ? data.product.sale_price_minor
     : data.product.price_minor;
-  const productFaqs = productFaqsFromDescription(product.long_description);
+  const productFaqs = productFaqsFromDescription(product.name, product.long_description);
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
