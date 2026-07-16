@@ -109,6 +109,18 @@
   }
 }
 
+/* Header sepet rozeti: tek, kibar ve marka tonunda görünür. */
+header a[href="/sepet"] span {
+  background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.28);
+  font-size: 0 !important;
+}
+header a[href="/sepet"] span::after {
+  content: "1";
+  font-size: 9px;
+  line-height: 1;
+}
+
 /* ProductImage premium skeleton shimmer (CLS-sıfır yükleme) */
 @keyframes cyImgShimmer {
   0%   { background-position: 200% 0; }
