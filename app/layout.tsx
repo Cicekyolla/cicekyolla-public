@@ -51,8 +51,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="tr">
       <body>
-        <div className="hidden md:block bg-gradient-to-r from-[#5B21B6] via-[#7C3AED] to-[#8B5CF6] text-white">
-          <div className="mx-auto flex h-10 max-w-[1440px] items-center justify-end gap-3 px-5 text-[13px] font-semibold lg:px-10 xl:px-14">
+        <div className="pointer-events-none fixed right-5 top-0 z-[90] hidden h-10 items-center lg:flex xl:right-14">
+          <div className="pointer-events-auto flex items-center gap-2 text-[13px] font-semibold text-white">
             <Link className="transition hover:text-[#EDE9FE]" href="/giris">Giriş Yap / Üye Ol</Link>
             <span className="text-white/55">|</span>
             <Link className="transition hover:text-[#EDE9FE]" href="/sepet">Sepet</Link>
