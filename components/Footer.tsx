@@ -12,6 +12,14 @@ export interface FooterBrand {
   contactEmail?: string;
 }
 
+const FOOTER_DELIVERY_LINKS = [
+  { label: "Kadıköy", href: "/istanbul/kadikoy" },
+  { label: "Beşiktaş", href: "/istanbul/besiktas" },
+  { label: "Şişli", href: "/istanbul/sisli" },
+  { label: "Ankara", href: "/ankara/cankaya" },
+  { label: "İzmir", href: "/izmir/konak" },
+];
+
 export function Footer({
   categories,
   brand,
@@ -113,17 +121,11 @@ export function Footer({
             </ul>
             <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-4">Teslimat</h4>
             <ul className="space-y-3">
-              {[
-                { label: "Kadıköy", slug: "kadikoy" },
-                { label: "Beşiktaş", slug: "besiktas" },
-                { label: "Şişli", slug: "sisli" },
-                { label: "Ankara", slug: "ankara" },
-                { label: "İzmir", slug: "izmir" },
-              ].map((d) => (
-                <li key={d.slug}>
-                  <Link href={`/cicek-gonder/${d.slug}`} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
+              {FOOTER_DELIVERY_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                    {d.label}'e Çiçek
+                    {item.label}'e Çiçek
                   </Link>
                 </li>
               ))}
