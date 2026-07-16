@@ -150,6 +150,17 @@ export function ProductDetail({
   );
 
   const cover = gallery[active];
+  const productIntroSource = (product.short_description || product.long_description || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;|&#34;/gi, '\"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  const productIntro = productIntroSource.length > 170
+    ? `${productIntroSource.slice(0, 167).replace(/\s+\S*$/, "")}…`
+    : productIntroSource;
 
   return (
     <main className="min-h-screen bg-white">
@@ -251,8 +262,8 @@ export function ProductDetail({
         <div>
           <h1 className="text-[28px] md:text-[34px] font-bold text-[#111827] leading-tight tracking-tight">{product.name}</h1>
 
-          {product.short_description && (
-            <p className="mt-3 text-[15px] text-[#6B7280] leading-relaxed">{product.short_description}</p>
+          {productIntro && (
+            <p className="mt-3 max-w-2xl text-[15px] leading-[1.75] text-[#6B7280]">{productIntro}</p>
           )}
 
           {/* Fiyat */}
