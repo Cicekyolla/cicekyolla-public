@@ -11,6 +11,41 @@
 // ---------------------------------------------------------------------------
 
 import { mediaUrl } from "./media";
+import studioMapJson from "./studio-map.json";
+
+// ---------------------------------------------------------------------------
+// STÜDYO GÖRSEL KATMANI (additive, geri alınabilir)
+// ---------------------------------------------------------------------------
+// Tüm ürün kapakları profesyonel stüdyo standardına çekildi: saf beyaz fon,
+// korunan doğal temas gölgesi, canlı renk + keskinlik. İşlenmiş kopyalar
+// /public/studio/ altında durur; bu harita orijinal dosya adını yerel yola
+// bağlar. Haritada OLMAYAN görseller (yeni eklenen ürünler vb.) eskisi gibi
+// orijinal URL'den servis edilir — yapı/davranış DEĞİŞMEZ.
+// ---------------------------------------------------------------------------
+const STUDIO_MAP: Record<string, string> = studioMapJson as Record<string, string>;
+
+/** URL'nin dosya adını çıkarır (sorgu/parça atılır). */
+function baseName(u: string): string {
+  const clean = u.split("?")[0].split("#")[0];
+  const parts = clean.split("/");
+  return parts[parts.length - 1] || "";
+}
+
+/** İşlenmiş stüdyo kopyası varsa yerel yolunu döndürür; yoksa null. */
+export function studioOverride(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return STUDIO_MAP[baseName(url)] ?? null;
+}
+
+/** Yerel stüdyo görseli mi? (/studio/...) — ProductImage türev/blurhash'i atlar. */
+export function isStudioImage(url: string | null | undefined): boolean {
+  return typeof url === "string" && url.startsWith("/studio/");
+}
+
+/** Orijinal URL için nihai çözüm: stüdyo kopyası öncelikli, yoksa mediaUrl. */
+function resolveWithStudio(url: string): string {
+  return studioOverride(url) ?? mediaUrl(url);
+}
 
 /** Görsel taşıyabilecek gevşek kaynak tipi (liste öğesi, detay, öneri vb.). */
 export interface ImageSourceLike {
@@ -43,7 +78,7 @@ export function resolveProductImage(source: string | ImageSourceLike | null | un
 
   // Doğrudan string verildiyse
   if (typeof source === "string") {
-    return isUsable(source) ? mediaUrl(source) : null;
+    return isUsable(source) ? resolveWithStudio(source) : null;
   }
 
   const candidates: Array<string | null | undefined> = [
@@ -57,7 +92,7 @@ export function resolveProductImage(source: string | ImageSourceLike | null | un
   ];
 
   for (const c of candidates) {
-    if (isUsable(c)) return mediaUrl(c);
+    if (isUsable(c)) return resolveWithStudio(c);
   }
   return null;
 }

@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useState } from "react";
-import { resolveProductImage, type ImageSourceLike } from "@/lib/productImage";
+import { resolveProductImage, isStudioImage, type ImageSourceLike } from "@/lib/productImage";
 import { mediaDerivatives } from "@/lib/media";
 import { blurhashToDataURL } from "@/lib/blurhash";
 
@@ -92,9 +92,12 @@ export function ProductImage({
 }: ProductImageProps) {
   const resolved = useMemo(() => (src != null ? resolveProductImage(src) : resolveProductImage(source ?? null)), [src, source]);
 
+  // Stüdyo kopyası kullanılıyorsa backend türevleri (AVIF/WebP srcset) ve eski
+  // blurhash LQIP atlanır — <img> doğrudan /studio/... dosyasını gösterir.
+  const studio = isStudioImage(resolved);
   const picked = useMemo(() => pickFromSource(source), [source]);
-  const deriv = useMemo(() => mediaDerivatives(derivatives ?? picked.derivatives ?? null), [derivatives, picked.derivatives]);
-  const hash = blurhash ?? picked.blurhash ?? null;
+  const deriv = useMemo(() => (studio ? null : mediaDerivatives(derivatives ?? picked.derivatives ?? null)), [studio, derivatives, picked.derivatives]);
+  const hash = studio ? null : (blurhash ?? picked.blurhash ?? null);
 
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
