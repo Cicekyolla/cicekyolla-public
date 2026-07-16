@@ -1,0 +1,13 @@
+import type { Metadata } from "next";
+import { fetchSeoPage } from "@/lib/api";
+import { CorporateExperience, type CorporateField, type CorporateService } from "@/components/corporate/CorporateExperience";
+
+export const metadata:Metadata={title:"Kurumsal Çözümler — ÇiçekYolla",description:"İşletmelere özel çiçek aboneliği, etkinlik, toplu hediye ve VIP kurumsal çözümler."};
+const SERVICES:CorporateService[]=[
+ {title:"Ofis Aboneliği",description:"Haftalık veya aylık düzenli çiçek teslimatı ile ofisinizi her zaman canlı tutun.",badge:"Popüler",features:["Haftalık / aylık periyot","Özel faturalama","Öncelikli teslimat","Kişisel hesap yöneticisi"],price:"Aylık özel teklif"},
+ {title:"Etkinlik & Organizasyon",description:"Düğün, nişan, mezuniyet, konferans ve kurumsal etkinlikler için kapsamlı çiçek ve dekorasyon hizmeti.",badge:"Özel",features:["Kişiye özel dekorasyon","Masa aranjmanları","Sahne ve giriş dekoru","Kurulum ve söküm dahil"],price:"Proje bazlı"},
+ {title:"Toplu Hediye Siparişi",description:"Müşteri ve çalışanlarınıza özel günlerde kişiselleştirilmiş kurumsal hediyeler.",badge:"Fırsat",features:["10+ sipariş özel fiyat","Toplu kart yazımı","Çoklu adres teslimatı","Özel kurumsal ambalaj"],price:"Kurumsal indirim"},
+ {title:"VIP Müşteri Programı",description:"Düzenli kurumsal sipariş veren firmalara kişisel hesap yöneticisi ve öncelikli destek.",badge:"VIP",features:["7/24 öncelikli destek","Özel VIP fiyatlar","Kişisel hesap yöneticisi","Aylık performans raporu"],price:"Aylık 5+ sipariş ile"},
+];
+const FIELDS:CorporateField[]=[{label:"Şirket Adı",type:"text",placeholder:"Şirketinizin adı",required:true},{label:"Yetkili Kişi",type:"text",placeholder:"Adınız Soyadınız",required:true},{label:"E-posta",type:"email",placeholder:"ornek@sirket.com",required:true},{label:"Telefon",type:"tel",placeholder:"05XX XXX XX XX",required:true},{label:"İhtiyaç / Mesaj",type:"textarea",placeholder:"Kurumsal ihtiyacınızı kısaca anlatın",required:true}];
+export default async function CorporatePage(){const managed=await fetchSeoPage("/kurumsal");const services=(managed?.body_blocks??[]).filter(b=>b.type==="corporate-service"&&typeof b.title==="string").map(b=>({title:String(b.title),description:String(b.text||""),badge:String(b.kind||""),features:String(b.note||"").split("|").filter(Boolean),price:String(b.value||"Teklif alın")}));const fields=(managed?.body_blocks??[]).filter(b=>b.type==="corporate-field"&&typeof b.title==="string").map(b=>({label:String(b.title),type:String(b.kind||"text"),placeholder:String(b.note||""),required:b.value==="true"}));return <main><CorporateExperience services={services.length?services:SERVICES} fields={fields.length?fields:FIELDS}/></main>}
