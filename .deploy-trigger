@@ -1,3 +1,0 @@
-redeploy: 2026-07-16T20:20:00+03:00
-commit: 9fac7e8575e7750c5a0395f1df7178b18aafb2c0
-reason: force Vercel public rebuild after customer topbar merge
