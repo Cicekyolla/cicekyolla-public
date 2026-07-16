@@ -100,7 +100,7 @@ export function Footer({
                 { label: "Blog", href: "/blog" },
                 { label: "Kurumsal Hizmetler", href: "/kurumsal" },
                 { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
-                { label: "Sık Sorulan Sorular", href: "/sss" },
+                { label: "Sık Sorulan Sorular", href: "/sik-sorulan-sorular" },
                 { label: "İletişim", href: "/iletisim" },
               ].map((item) => (
                 <li key={item.href}>
@@ -169,7 +169,7 @@ export function Footer({
             {[
               { label: "KVKK", href: "/kvkk" },
               { label: "Mesafeli Satış", href: "/mesafeli-satis-sozlesmesi" },
-              { label: "SSS", href: "/sss" },
+              { label: "SSS", href: "/sik-sorulan-sorular" },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="text-xs text-[#4B5563] hover:text-[#9CA3AF] transition-colors">
                 {item.label}
