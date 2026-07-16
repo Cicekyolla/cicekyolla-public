@@ -16,6 +16,44 @@ import { ProductImage } from "@/components/product/ProductImage";
 
 type PageProps = { params: { slug: string } };
 
+type ProductFaq = { question: string; answer: string };
+
+const DEFAULT_PRODUCT_FAQS: ProductFaq[] = [
+  { question: "Çiçekler ne zaman teslim edilir?", answer: "Teslimat tarihi ve uygun saat aralığı sipariş adımında, seçtiğiniz bölgeye göre gösterilir." },
+  { question: "Çiçekler ne kadar taze kalır?", answer: "Doğru bakım ve ortam koşullarında çoğu aranjman yaklaşık 7–10 gün tazeliğini korur." },
+  { question: "Fotoğraftaki çiçeklerle aynı mı geliyor?", answer: "Tasarımın genel görünümü korunur. Mevsimsel tedarik durumunda eşdeğer renk ve değerde çiçeklerle küçük değişiklikler yapılabilir." },
+  { question: "Kişisel mesaj karta nasıl yazılır?", answer: "Sipariş adımlarındaki kart mesajı alanına notunuzu yazabilirsiniz; mesajınız ürünle birlikte hazırlanır." },
+  { question: "Teslimat adresi yanlışsa ne yapabilirim?", answer: "Sipariş hazırlanmadan önce iletişim sayfamızdan bize ulaşın. Uygunluk durumuna göre adresi güncelleyebiliriz." },
+  { question: "Büyük boy seçimi daha mı iyi görünür?", answer: "Büyük boy seçeneği, ürünün temel tasarımını koruyarak daha dolgun ve gösterişli bir sunum sağlar." },
+];
+
+function plainText(value: string): string {
+  return value
+    .replace(/<br\s*\/?\s*>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;|&#34;/gi, '\"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function productFaqsFromDescription(description?: string | null): ProductFaq[] {
+  if (!description) return DEFAULT_PRODUCT_FAQS;
+  const headings = [...description.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)];
+  const faqs: ProductFaq[] = [];
+  headings.forEach((heading, index) => {
+    const question = plainText(heading[1]);
+    if (!question.endsWith("?")) return;
+    const start = (heading.index ?? 0) + heading[0].length;
+    const end = index + 1 < headings.length ? (headings[index + 1].index ?? description.length) : description.length;
+    const answer = plainText(description.slice(start, end));
+    if (answer) faqs.push({ question, answer });
+  });
+  return faqs.length ? faqs.slice(0, 8) : DEFAULT_PRODUCT_FAQS;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const data = await fetchProductBySlug(params.slug);
   if (!data) return { title: "Ürün bulunamadı — Cicekyolla" };
@@ -48,6 +86,16 @@ export default async function ProductPage({ params }: PageProps) {
   const price = data.product.sale_price_minor && Number(data.product.sale_price_minor) > 0
     ? data.product.sale_price_minor
     : data.product.price_minor;
+  const productFaqs = productFaqsFromDescription(product.long_description);
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: productFaqs.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: { "@type": "Answer", text: answer },
+    })),
+  };
 
   // ── İLGİLİ ÜRÜNLER (Cross-Sell) — aynı kategoriden, canlı katalog ──
   // Admin: ürünün kategorisi → /api/products?category_id= → BURASI. Mock YOK.
@@ -94,6 +142,7 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <ProductDetail data={data} sizeProducts={sizeProducts} />
       {(() => {
         const fn = (product as { florist_note?: string | null; florist_note_status?: string | null });
@@ -229,14 +278,7 @@ export default async function ProductPage({ params }: PageProps) {
           </div>
 
           <div className="divide-y divide-[#EDE9FE]">
-            {[
-              ["Çiçekler ne zaman teslim edilir?", "Teslimat tarihi ve uygun saat aralığı sipariş adımında, seçtiğiniz bölgeye göre gösterilir."],
-              ["Çiçekler ne kadar taze kalır?", "Doğru bakım ve ortam koşullarında çoğu aranjman yaklaşık 7–10 gün tazeliğini korur."],
-              ["Fotoğraftaki çiçeklerle aynı mı geliyor?", "Tasarımın genel görünümü korunur. Mevsimsel tedarik durumunda eşdeğer renk ve değerde çiçeklerle küçük değişiklikler yapılabilir."],
-              ["Kişisel mesaj karta nasıl yazılır?", "Sipariş adımlarındaki kart mesajı alanına notunuzu yazabilirsiniz; mesajınız ürünle birlikte hazırlanır."],
-              ["Teslimat adresi yanlışsa ne yapabilirim?", "Sipariş hazırlanmadan önce iletişim sayfamızdan bize ulaşın. Uygunluk durumuna göre adresi güncelleyebiliriz."],
-              ["Büyük boy seçimi daha mı iyi görünür?", "Büyük boy seçeneği, ürünün temel tasarımını koruyarak daha dolgun ve gösterişli bir sunum sağlar."],
-            ].map(([question, answer], index) => (
+            {productFaqs.map(({ question, answer }, index) => (
               <details key={question} className="group" open={index === 0}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-5 py-6 text-[16px] font-semibold text-[#111827] outline-none transition hover:text-[#7C3AED] focus-visible:ring-2 focus-visible:ring-[#A78BFA] [&::-webkit-details-marker]:hidden">
                   <span>{question}</span>
