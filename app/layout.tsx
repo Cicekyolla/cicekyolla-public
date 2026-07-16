@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 import { Header } from "@/components/Header";
-import { CustomerActionBar } from "@/components/CustomerActionBar";
 import { Footer, type FooterBrand } from "@/components/Footer";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -52,7 +51,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="tr">
       <body>
         <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
-        <CustomerActionBar />
         {children}
         <MemberNewsletterBand />
         <Footer categories={footerOrUndef} brand={footerBrand} />
