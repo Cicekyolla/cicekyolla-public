@@ -100,6 +100,7 @@ export function ProductImage({
   const hash = studio ? null : (blurhash ?? picked.blurhash ?? null);
 
   const [loaded, setLoaded] = useState(false);
+  const [fallbackLoaded, setFallbackLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [lqip, setLqip] = useState<string | null>(null);
 
@@ -108,6 +109,10 @@ export function ProductImage({
     setLqip(blurhashToDataURL(hash, 32));
   }, [hash]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setFallbackLoaded(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
   const showImg = resolved != null && !failed;
 
   const avifSrc = deriv?.avif || null;
@@ -124,7 +129,7 @@ export function ProductImage({
     transition: hoverZoom
       ? "transform 0.5s ease-out, opacity 0.5s ease"
       : "transform 0.7s cubic-bezier(0.16,1,0.3,1), opacity 0.5s ease",
-    opacity: loaded ? 1 : 0,
+    opacity: (loaded || fallbackLoaded) ? 1 : 0,
     userSelect: "none",
     WebkitUserSelect: "none",
     WebkitTouchCallout: "none",
