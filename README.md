@@ -17,3 +17,5 @@ CICEKYOLLA public site (Next.js). Google'ın gördüğü SEO HTML.
 
 
 <!-- Deploy trigger: 06:50:36 -->
+
+<!-- Force deploy: 2026-07-18 02:10 -->
