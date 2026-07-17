@@ -13,6 +13,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
+import galleryMapJson from "@/lib/gallery-map.json";
+
+/** Ürün slug'ı → yaşam alanı galeri görselleri (/galeri/...).
+ *  KURAL: Kapak her zaman beyaz stüdyo kalır; bu görseller yalnızca
+ *  galerinin sonuna eklenir (additive, geri alınabilir). */
+const LIFESTYLE_GALLERY: Record<string, string[]> = galleryMapJson as Record<string, string[]>;
 import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
@@ -126,11 +132,20 @@ export function ProductDetail({
   sizeProducts?: AutoSizeProduct[];
 }) {
   const { product, images, variants } = data;
-  const gallery: PublicProductImage[] = [...images].sort((a, b) => {
+  const sortedImages: PublicProductImage[] = [...images].sort((a, b) => {
     if (a.role === "cover") return -1;
     if (b.role === "cover") return 1;
     return a.sort_order - b.sort_order;
   });
+  // Yaşam alanı kareleri galerinin SONUNA eklenir; kapak (beyaz stüdyo) hep ilk görsel kalır.
+  const lifestyleExtras: PublicProductImage[] = (LIFESTYLE_GALLERY[product.slug] ?? []).map((url, i) => ({
+    id: -(i + 1),
+    url,
+    alt: `${product.name} — yaşam alanında`,
+    role: "gallery",
+    sort_order: 100 + i,
+  }));
+  const gallery: PublicProductImage[] = [...sortedImages, ...lifestyleExtras];
   const [active, setActive] = useState(0);
   const [wish, setWish] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
