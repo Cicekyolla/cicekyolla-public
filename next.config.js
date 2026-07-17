@@ -27,6 +27,10 @@ const nextConfig = {
         source: "/r2/:path*",
         destination: `${R2_PUBLIC_BASE}/:path*`,
       },
+      {
+        source: "/galeri/:path*",
+        destination: `${API_ORIGIN}/galeri/:path*`,
+      },
     ];
   },
   async headers() {
