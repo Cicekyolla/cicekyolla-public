@@ -11,3 +11,6 @@ CICEKYOLLA public site (Next.js). Google'ın gördüğü SEO HTML.
 `.env.example` → Vercel Environment Variables:
 - `NEXT_PUBLIC_SITE_URL` — canonical kökü
 - `NEXT_PUBLIC_API_ORIGIN` — backend (Render)
+
+
+<!-- Gallery updated: 2026-07-18 06:40:11 -->
