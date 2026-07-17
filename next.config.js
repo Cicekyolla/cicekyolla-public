@@ -27,8 +27,8 @@ const nextConfig = {
         source: "/r2/:path*",
         destination: `${R2_PUBLIC_BASE}/:path*`,
       },
-      {
-      },
+      
+  
     ];
   },
   async headers() {
