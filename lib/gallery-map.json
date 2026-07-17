@@ -595,8 +595,33 @@
     "/galeri/premium-9-kirmizi-gul-aranjmani-antre.webp"
   ],
   "cam-vazoda-mor-beyaz-lale-aranjmani": [
-    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-salon.webp",
+    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-mutfak.webp",
     "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-ofis.webp",
-    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-mutfak.webp"
+    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-salon.webp"
+  ],
+  "cam-fanusta-gul-orkide-aranjmani": [
+    "/galeri/cam-fanusta-gul-orkide-aranjmani-mutfak.webp",
+    "/galeri/cam-fanusta-gul-orkide-aranjmani-ofis.webp",
+    "/galeri/cam-fanusta-gul-orkide-aranjmani-salon.webp"
+  ],
+  "cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani": [
+    "/galeri/cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani-mutfak.webp",
+    "/galeri/cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani-ofis.webp",
+    "/galeri/cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani-salon.webp"
+  ],
+  "orkide-ve-gul-buketiorkide-ve-gul-buketi": [
+    "/galeri/orkide-ve-gul-buketiorkide-ve-gul-buketi-mutfak.webp",
+    "/galeri/orkide-ve-gul-buketiorkide-ve-gul-buketi-ofis.webp",
+    "/galeri/orkide-ve-gul-buketiorkide-ve-gul-buketi-salon.webp"
+  ],
+  "sukulent-ve-kirmizi-gulun-ihtisami": [
+    "/galeri/sukulent-ve-kirmizi-gulun-ihtisami-mutfak.webp",
+    "/galeri/sukulent-ve-kirmizi-gulun-ihtisami-ofis.webp",
+    "/galeri/sukulent-ve-kirmizi-gulun-ihtisami-salon.webp"
+  ],
+  "yapay-simsir-topiary-agac": [
+    "/galeri/yapay-simsir-topiary-agac-mutfak.webp",
+    "/galeri/yapay-simsir-topiary-agac-ofis.webp",
+    "/galeri/yapay-simsir-topiary-agac-salon.webp"
   ]
 }
