@@ -115,6 +115,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     product.short_description ||
     `${product.name} — aynı gün teslimat ve güvenli ödeme ile Cicekyolla'da.`;
   const ogImage = seo?.og_image || data.images.find((i) => i.role === "cover")?.url || data.images[0]?.url;
+  const absoluteOgImage = ogImage
+    ? new URL(ogImage, process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app").toString()
+    : undefined;
   return {
     title,
     description,
@@ -122,7 +125,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: seo?.og_title || title,
       description: seo?.og_description || description,
-      images: ogImage ? [{ url: ogImage }] : undefined,
+      images: absoluteOgImage ? [{ url: absoluteOgImage }] : undefined,
       type: "website",
     },
   };
