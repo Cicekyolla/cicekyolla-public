@@ -13,7 +13,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
-import galleryMapJson from "@/lib/gallery-map.json";
+import galleryMapJson from "@/lib/gallery-map-v3.json";
 
 /** Ürün slug'ı → yaşam alanı galeri görselleri (/galeri/...).
  *  KURAL: Kapak her zaman beyaz stüdyo kalır; bu görseller yalnızca
