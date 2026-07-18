@@ -48,12 +48,21 @@ const DEFAULT_CARDS: FeaturedCollectionCard[] = [
   },
   {
     id: "special-days",
-    name: "Özel Günler",
-    href: "/kategori/ozel-gunler",
+    name: "Butik Aranjmanlar",
+    href: "/kategori/aranjmanlar",
     image: "/featured-collections/special-days-lifestyle.webp",
-    eyebrow: "Unutulmaz Anlar",
-    description: "En değerli günleri kalıcı bir hatıraya dönüştüren aranjmanlar.",
+    eyebrow: "Seçkin Dokunuşlar",
+    description: "Evinize imza atan seçkin tasarımlar.",
     cta: "Şimdi Keşfet",
+  },
+  {
+    id: "for-lover",
+    name: "Sevgiliye",
+    href: "/kategori/sevgiliye",
+    image: "/featured-collections/for-lover-lifestyle.webp",
+    eyebrow: "Aşkın En Zarif Hali",
+    description: "Aşkı tek bakışta anlatan güller.",
+    cta: "Sevgiliye Seç",
   },
 ];
 
@@ -77,7 +86,12 @@ function usableCard(card: FeaturedCollectionCard | undefined): card is FeaturedC
 export function FeaturedCollections({ items: _items, config }: { items?: FCItem[]; config?: FeaturedCollectionsConfig | Record<string, unknown> }) {
   const cmsConfig = (config ?? {}) as FeaturedCollectionsConfig;
   const configured = Array.isArray(cmsConfig.cards) ? cmsConfig.cards.filter(usableCard) : [];
-  const collections = (configured.length >= 3 ? configured : DEFAULT_CARDS).slice(0, 3);
+  const collections = (configured.length >= 3
+    ? configured.length >= 4
+      ? configured
+      : [...configured, DEFAULT_CARDS[3]]
+    : DEFAULT_CARDS
+  ).slice(0, 4);
   const personalized = usableCard(cmsConfig.personalized) ? cmsConfig.personalized : DEFAULT_PERSONALIZED;
   const sectionTitle = cmsConfig.sectionTitle?.trim() || "Hayatın Her Anına Özel";
   return (
@@ -99,21 +113,20 @@ export function FeaturedCollections({ items: _items, config }: { items?: FCItem[
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr_1fr] gap-4 lg:gap-5">
-          {/* Large hero card */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <Link
-              href={collections[0].href}
-              className="group block relative overflow-hidden rounded-[24px]"
-              style={{ aspectRatio: "3/4" }}
+          {/* Signature collection + lover collection */}
+          <div className="grid grid-rows-[1.55fr_1fr] gap-4 lg:gap-5 min-h-[760px]">
+            {[collections[0], collections[3]].map((col, index) => <motion.div
+              key={col.id}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="min-h-0"
             >
+            <Link href={col.href} className="group block relative overflow-hidden rounded-[24px] h-full min-h-[240px]">
               <motion.img
-                src={collections[0].image}
-                alt={collections[0].name}
+                src={col.image}
+                alt={col.name}
                 className="w-full h-full object-cover"
                 whileHover={{ scale: 1.04 }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -123,24 +136,25 @@ export function FeaturedCollections({ items: _items, config }: { items?: FCItem[
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.08) 50%, transparent 100%)" }}
               />
               <div className="absolute bottom-0 left-0 p-8">
-                <p className="text-[10px] tracking-[0.3em] text-[#D8B4FE] uppercase font-bold mb-2">{collections[0].eyebrow || "Koleksiyon"}</p>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", lineHeight: 1.1 }} className="text-white font-semibold mb-2">
-                  {collections[0].name}
+                <p className="text-[10px] tracking-[0.3em] text-[#D8B4FE] uppercase font-bold mb-2">{col.eyebrow || "Koleksiyon"}</p>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: index === 0 ? "2rem" : "1.55rem", lineHeight: 1.1 }} className="text-white font-semibold mb-2">
+                  {col.name}
                 </h3>
-                {collections[0].description ? <p className="max-w-sm text-white/80 text-sm leading-relaxed mb-4">{collections[0].description}</p> : null}
+                {col.description ? <p className="max-w-sm text-white/80 text-sm leading-relaxed mb-4">{col.description}</p> : null}
                 <span
                   className="inline-flex items-center gap-2 text-white text-xs font-semibold py-2.5 px-5 rounded-full transition-all duration-300 group-hover:bg-white group-hover:text-[#7C3AED]"
                   style={{ border: "1.5px solid rgba(255,255,255,0.35)" }}
                 >
-                  {collections[0].cta || "Keşfet"} <ArrowRight className="w-3.5 h-3.5" />
+                  {col.cta || "Keşfet"} <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </div>
             </Link>
-          </motion.div>
+            </motion.div>)}
+          </div>
 
           {/* Two smaller stacked cards */}
           <div className="grid grid-rows-2 gap-4 lg:gap-5">
-            {collections.slice(1).map((col, i) => (
+            {collections.slice(1, 3).map((col, i) => (
               <motion.div
                 key={col.id}
                 initial={{ opacity: 0, y: 24 }}
