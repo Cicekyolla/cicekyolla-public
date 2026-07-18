@@ -41,7 +41,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "hero":               return <HomeHero />;
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
-    case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} />;
+    case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} config={s.config} />;
     case "urgency_strip":       return <UrgencyStrip />;
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
