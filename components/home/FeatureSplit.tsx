@@ -78,7 +78,7 @@ export function FeatureSplit() {
               style={{ aspectRatio: "16/9" }}
             >
               <img
-                src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=675&fit=crop&auto=format&q=88"
+                src="/decor/artificial-decoration-hero.webp"
                 alt="Yapay Çiçek Dekorasyon"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />
