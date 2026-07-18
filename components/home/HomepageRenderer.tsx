@@ -63,6 +63,12 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
 export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCtx }) {
   const enabledSections = dto.sections.filter((s) => s.enabled);
   const hasCollectionRail = enabledSections.some((s) => s.type === "collection_rail");
+  const hasFeatureSplit = enabledSections.some((s) => s.type === "feature_split");
+  const fallbackAnchor = enabledSections.some((s) => s.type === "urgency_strip")
+    ? "urgency_strip"
+    : enabledSections.some((s) => s.type === "featured_collections")
+      ? "featured_collections"
+      : null;
 
   return (
     <>
@@ -73,7 +79,13 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
           <FloatingCategoryRail items={ctx.collections} />
         </section>
       ) : null}
-      {enabledSections.map((s) => <Fragment key={s.id}>{renderSection(s, ctx)}</Fragment>)}
+      {enabledSections.map((s) => (
+        <Fragment key={s.id}>
+          {renderSection(s, ctx)}
+          {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
+        </Fragment>
+      ))}
+      {!hasFeatureSplit && fallbackAnchor === null ? <FeatureSplit /> : null}
     </>
   );
 }
