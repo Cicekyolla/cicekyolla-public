@@ -150,7 +150,7 @@ export default async function HomePage() {
       };
     });
 
-  // Kurumsal referanslar admin > Mağaza Ön Yüzü > Kurumsal kaydından okunur.
+  // Kurumsal referanslar ana sayfada Instagram'ın hemen altında gösterilir ve admin > Mağaza Ön Yüzü > Kurumsal kaydından okunur.
   // Doğrulanmamış varsayılan marka/rakam yoktur; bölüm admin açana kadar gizlidir.
   const corporatePage = await fetchSeoPage("/kurumsal");
   const corporateBlocks = corporatePage?.body_blocks ?? [];
