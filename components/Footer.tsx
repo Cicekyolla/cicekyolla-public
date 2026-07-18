@@ -20,6 +20,19 @@ const FOOTER_DELIVERY_LINKS = [
   { label: "İzmir", href: "/izmir/konak" },
 ];
 
+const FALLBACK_COLLECTION_LINKS = [
+  { name: "Güller", href: "/kategori/guller" },
+  { name: "Buketler", href: "/kategori/buketler" },
+  { name: "Orkideler", href: "/kategori/orkideler" },
+  { name: "Özel Günler", href: "/kategori/ozel-gunler" },
+  { name: "Yapay Çiçekler", href: "/kategori/yapay-cicekler" },
+  { name: "Yapay Ağaçlar", href: "/kategori/yapay-agaclar" },
+  { name: "Şimşir", href: "/kategori/simsir" },
+  { name: "Çim Duvar", href: "/kategori/cim-duvar" },
+  { name: "Çim Çit", href: "/kategori/cim-cit" },
+  { name: "Peyzaj", href: "/dekorasyon" },
+];
+
 export function Footer({
   categories,
   brand,
@@ -36,7 +49,8 @@ export function Footer({
       ? `+${phoneDigits}`
       : `+90${phoneDigits}`;
   const collectionLinks = [
-    ...(categories ?? []).filter((item) => item.href !== "/kategori/turkiye-geneli-kargo"),
+    ...(categories && categories.length > 0 ? categories : FALLBACK_COLLECTION_LINKS)
+      .filter((item) => item.href !== "/kategori/turkiye-geneli-kargo"),
     { name: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
   ];
 
