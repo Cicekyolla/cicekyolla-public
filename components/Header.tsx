@@ -50,7 +50,7 @@ export function Header({ menu, nav, search, brand }: {
 }) {
   // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
-  const menuData: Record<string, MegaGroup> = menu && Object.keys(menu).length > 0 ? menu : FALLBACK_MENU;
+  const menuData: Record<string, MegaGroup> = { ...FALLBACK_MENU, ...(menu ?? {}) };
   const navItems: string[] = Object.keys(menuData);
   const isCargoNav = (label: string) => label.toLocaleLowerCase("tr").includes("kargo");
 
