@@ -49,7 +49,7 @@ const DEFAULT_CARDS: FeaturedCollectionCard[] = [
   {
     id: "special-days",
     name: "Butik Aranjmanlar",
-    href: "/kategori/aranjmanlar",
+    href: "/kategori/cicek-aranjmanlari",
     image: "/featured-collections/special-days-lifestyle.webp",
     eyebrow: "Seçkin Dokunuşlar",
     description: "Evinize imza atan seçkin tasarımlar.",
@@ -86,11 +86,15 @@ function usableCard(card: FeaturedCollectionCard | undefined): card is FeaturedC
 export function FeaturedCollections({ items: _items, config }: { items?: FCItem[]; config?: FeaturedCollectionsConfig | Record<string, unknown> }) {
   const cmsConfig = (config ?? {}) as FeaturedCollectionsConfig;
   const configured = Array.isArray(cmsConfig.cards)
-    ? cmsConfig.cards.filter(usableCard).map((card) =>
-        card.id === "for-lover" && card.href.trim() === "/kategori/sevgiliye"
-          ? { ...card, href: "/kategori/sevgiliye-cicek" }
-          : card
-      )
+    ? cmsConfig.cards.filter(usableCard).map((card) => {
+        if (card.id === "special-days" && card.href.trim() === "/kategori/aranjmanlar") {
+          return { ...card, href: "/kategori/cicek-aranjmanlari" };
+        }
+        if (card.id === "for-lover" && card.href.trim() === "/kategori/sevgiliye") {
+          return { ...card, href: "/kategori/sevgiliye-cicek" };
+        }
+        return card;
+      })
     : [];
   const collections = (configured.length >= 3
     ? configured.length >= 4
