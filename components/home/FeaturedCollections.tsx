@@ -74,11 +74,10 @@ function usableCard(card: FeaturedCollectionCard | undefined): card is FeaturedC
   return Boolean(card.id && card.name?.trim() && image && href && (/^(https?:\/\/|\/)/i.test(image)));
 }
 
-export function FeaturedCollections({ items, config }: { items?: FCItem[]; config?: FeaturedCollectionsConfig | Record<string, unknown> }) {
+export function FeaturedCollections({ items: _items, config }: { items?: FCItem[]; config?: FeaturedCollectionsConfig | Record<string, unknown> }) {
   const cmsConfig = (config ?? {}) as FeaturedCollectionsConfig;
   const configured = Array.isArray(cmsConfig.cards) ? cmsConfig.cards.filter(usableCard) : [];
-  const liveItems = (items ?? []).filter((item) => usableCard(item)).slice(0, 3);
-  const collections = (configured.length >= 3 ? configured : liveItems.length >= 3 ? liveItems : DEFAULT_CARDS).slice(0, 3);
+  const collections = (configured.length >= 3 ? configured : DEFAULT_CARDS).slice(0, 3);
   const personalized = usableCard(cmsConfig.personalized) ? cmsConfig.personalized : DEFAULT_PERSONALIZED;
   const sectionTitle = cmsConfig.sectionTitle?.trim() || "Hayatın Her Anına Özel";
   return (
