@@ -140,7 +140,7 @@ export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
   // Render/Vercel cold-start veya kısa ağ kesintilerinde ilk istek geçici olarak
   // başarısız olabilir. İlk deneme normal ISR cache sözleşmesini korur; yalnız hata
   // halinde tek bir no-store tekrar yapılır. Kategori verisi/slug/hiyerarşi değişmez.
-  const attempts: RequestInit[] = [
+  const attempts = [
     { headers: apiHeaders(), next: { revalidate: 300 } },
     { headers: apiHeaders(), cache: "no-store" },
   ];
