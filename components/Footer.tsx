@@ -35,6 +35,10 @@ export function Footer({
     : phoneDigits.startsWith("90")
       ? `+${phoneDigits}`
       : `+90${phoneDigits}`;
+  const collectionLinks = [
+    ...(categories ?? []).filter((item) => item.href !== "/kategori/turkiye-geneli-kargo"),
+    { name: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
+  ];
 
   return (
     <footer
@@ -88,7 +92,7 @@ export function Footer({
           <div>
             <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-6">Koleksiyonlar</h4>
             <ul className="space-y-3">
-              {(categories ?? []).map((item) => (
+              {collectionLinks.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
