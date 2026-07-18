@@ -32,8 +32,9 @@ function baseName(u: string): string {
 }
 
 /** İşlenmiş stüdyo kopyası varsa yerel yolunu döndürür; yoksa null. */
-export function studioOverride(_url: string | null | undefined): string | null {
-  return null;
+export function studioOverride(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return STUDIO_MAP[baseName(url)] ?? null;
 }
 
 /** Yerel stüdyo görseli mi? (/studio/...) — ProductImage türev/blurhash'i atlar. */

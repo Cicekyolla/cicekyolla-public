@@ -1,652 +1,462 @@
 {
-  "101-kirmizi-gul-buketi": [
-    "/galeri/101-kirmizi-gul-buketi-salon.webp",
-    "/galeri/101-kirmizi-gul-buketi-ofis.webp",
-    "/galeri/101-kirmizi-gul-buketi-antre.webp"
-  ],
-  "premium-kirmizi-gul-vazosu": [
-    "/galeri/premium-kirmizi-gul-vazosu-mutfak.webp",
-    "/galeri/premium-kirmizi-gul-vazosu-kafe.webp",
-    "/galeri/premium-kirmizi-gul-vazosu-yatak.webp"
-  ],
-  "2-dalli-beyaz-orkide": [
-    "/galeri/2-dalli-beyaz-orkide-ofis.webp",
-    "/galeri/2-dalli-beyaz-orkide-salon.webp",
-    "/galeri/2-dalli-beyaz-orkide-mutfak.webp"
-  ],
-  "aksida-coklu-sukulent-aranjmani": [
-    "/galeri/aksida-coklu-sukulent-aranjmani-antre.webp",
-    "/galeri/aksida-coklu-sukulent-aranjmani-yatak.webp",
-    "/galeri/aksida-coklu-sukulent-aranjmani-kafe.webp"
-  ],
-  "ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani": [
-    "/galeri/ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani-salon.webp",
-    "/galeri/ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani-mutfak.webp",
-    "/galeri/ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani-antre.webp"
-  ],
-  "aycicegi-gala-ve-gul-aranjmani": [
-    "/galeri/aycicegi-gala-ve-gul-aranjmani-kafe.webp",
-    "/galeri/aycicegi-gala-ve-gul-aranjmani-ofis.webp",
-    "/galeri/aycicegi-gala-ve-gul-aranjmani-salon.webp"
-  ],
-  "kirmizi-gul-serisi": [
-    "/galeri/kirmizi-gul-serisi-salon.webp",
-    "/galeri/kirmizi-gul-serisi-ofis.webp",
-    "/galeri/kirmizi-gul-serisi-antre.webp"
-  ],
-  "dekoratif-saksida-gul-serisi": [
-    "/galeri/dekoratif-saksida-gul-serisi-ofis.webp",
-    "/galeri/dekoratif-saksida-gul-serisi-mutfak.webp",
-    "/galeri/dekoratif-saksida-gul-serisi-yatak.webp"
-  ],
-  "pembe-bahar-senfonisi-aranjmani": [
-    "/galeri/pembe-bahar-senfonisi-aranjmani-antre.webp",
-    "/galeri/pembe-bahar-senfonisi-aranjmani-mutfak.webp",
-    "/galeri/pembe-bahar-senfonisi-aranjmani-salon.webp"
-  ],
-  "turuncu-gunes-gul-bahcesi": [
-    "/galeri/turuncu-gunes-gul-bahcesi-mutfak.webp",
-    "/galeri/turuncu-gunes-gul-bahcesi-kafe.webp",
-    "/galeri/turuncu-gunes-gul-bahcesi-yatak.webp"
-  ],
-  "gul-ve-lisyantus-aranjmani": [
-    "/galeri/gul-ve-lisyantus-aranjmani-kafe.webp",
-    "/galeri/gul-ve-lisyantus-aranjmani-yatak.webp",
-    "/galeri/gul-ve-lisyantus-aranjmani-salon.webp"
-  ],
-  "kirmizi-gul-aranjmani-2": [
-    "/galeri/kirmizi-gul-aranjmani-2-antre.webp",
-    "/galeri/kirmizi-gul-aranjmani-2-mutfak.webp",
-    "/galeri/kirmizi-gul-aranjmani-2-salon.webp"
-  ],
-  "beyaz-orkide-zarafeti-premium-aranjmani": [
-    "/galeri/beyaz-orkide-zarafeti-premium-aranjmani-mutfak.webp",
-    "/galeri/beyaz-orkide-zarafeti-premium-aranjmani-kafe.webp",
-    "/galeri/beyaz-orkide-zarafeti-premium-aranjmani-yatak.webp"
-  ],
-  "bahar-ruyasi-deluxe-gul-koleksiyonu": [
-    "/galeri/bahar-ruyasi-deluxe-gul-koleksiyonu-kafe.webp",
-    "/galeri/bahar-ruyasi-deluxe-gul-koleksiyonu-yatak.webp",
-    "/galeri/bahar-ruyasi-deluxe-gul-koleksiyonu-salon.webp"
-  ],
-  "sari-civanpercemi-ve-sukulent-dogal-aranjmani": [
-    "/galeri/sari-civanpercemi-ve-sukulent-dogal-aranjmani-yatak.webp",
-    "/galeri/sari-civanpercemi-ve-sukulent-dogal-aranjmani-salon.webp",
-    "/galeri/sari-civanpercemi-ve-sukulent-dogal-aranjmani-ofis.webp"
-  ],
-  "saf-zarafet-premium-orkide-ve-gul-aranjmani": [
-    "/galeri/saf-zarafet-premium-orkide-ve-gul-aranjmani-salon.webp",
-    "/galeri/saf-zarafet-premium-orkide-ve-gul-aranjmani-ofis.webp",
-    "/galeri/saf-zarafet-premium-orkide-ve-gul-aranjmani-antre.webp"
-  ],
-  "mor-orkide-premium-aranjmani": [
-    "/galeri/mor-orkide-premium-aranjmani-ofis.webp",
-    "/galeri/mor-orkide-premium-aranjmani-mutfak.webp",
-    "/galeri/mor-orkide-premium-aranjmani-yatak.webp"
-  ],
-  "pembe-dusler-premium-gul-kutusu": [
-    "/galeri/pembe-dusler-premium-gul-kutusu-antre.webp",
-    "/galeri/pembe-dusler-premium-gul-kutusu-mutfak.webp",
-    "/galeri/pembe-dusler-premium-gul-kutusu-salon.webp"
-  ],
-  "altin-bahce-premium-cicek-aranjmani-1": [
-    "/galeri/altin-bahce-premium-cicek-aranjmani-1-mutfak.webp",
-    "/galeri/altin-bahce-premium-cicek-aranjmani-1-kafe.webp",
-    "/galeri/altin-bahce-premium-cicek-aranjmani-1-yatak.webp"
-  ],
-  "zarafet-kutusu-premium-cicek-aranjmani": [
-    "/galeri/zarafet-kutusu-premium-cicek-aranjmani-kafe.webp",
-    "/galeri/zarafet-kutusu-premium-cicek-aranjmani-yatak.webp",
-    "/galeri/zarafet-kutusu-premium-cicek-aranjmani-salon.webp"
-  ],
-  "gunesin-renkleri-premium-cicek-aranjmani": [
-    "/galeri/gunesin-renkleri-premium-cicek-aranjmani-yatak.webp",
-    "/galeri/gunesin-renkleri-premium-cicek-aranjmani-salon.webp",
-    "/galeri/gunesin-renkleri-premium-cicek-aranjmani-ofis.webp"
-  ],
-  "lavanta-ruyasi-premium-cicek-aranjmani": [
-    "/galeri/lavanta-ruyasi-premium-cicek-aranjmani-salon.webp",
-    "/galeri/lavanta-ruyasi-premium-cicek-aranjmani-ofis.webp",
-    "/galeri/lavanta-ruyasi-premium-cicek-aranjmani-antre.webp"
-  ],
-  "premium-orkide-ve-kirmizi-gul-aranjmani": [
-    "/galeri/premium-orkide-ve-kirmizi-gul-aranjmani-ofis.webp",
-    "/galeri/premium-orkide-ve-kirmizi-gul-aranjmani-mutfak.webp",
-    "/galeri/premium-orkide-ve-kirmizi-gul-aranjmani-yatak.webp"
-  ],
-  "doganin-renkleri-premium-cicek-aranjmani": [
-    "/galeri/doganin-renkleri-premium-cicek-aranjmani-antre.webp",
-    "/galeri/doganin-renkleri-premium-cicek-aranjmani-mutfak.webp",
-    "/galeri/doganin-renkleri-premium-cicek-aranjmani-salon.webp"
-  ],
-  "kizil-ask-lale-ve-sukulent-aranjmani": [
-    "/galeri/kizil-ask-lale-ve-sukulent-aranjmani-mutfak.webp",
-    "/galeri/kizil-ask-lale-ve-sukulent-aranjmani-kafe.webp",
-    "/galeri/kizil-ask-lale-ve-sukulent-aranjmani-yatak.webp"
-  ],
-  "baharin-nesesi-papatya-ve-santini-aranjmani": [
-    "/galeri/baharin-nesesi-papatya-ve-santini-aranjmani-kafe.webp",
-    "/galeri/baharin-nesesi-papatya-ve-santini-aranjmani-yatak.webp",
-    "/galeri/baharin-nesesi-papatya-ve-santini-aranjmani-salon.webp"
-  ],
-  "kirmizi-gul-aski-premium-aranjmani": [
-    "/galeri/kirmizi-gul-aski-premium-aranjmani-yatak.webp",
-    "/galeri/kirmizi-gul-aski-premium-aranjmani-ofis.webp",
-    "/galeri/kirmizi-gul-aski-premium-aranjmani-antre.webp"
-  ],
-  "altin-bahar-sukulent-ve-lale-aranjmani": [
-    "/galeri/altin-bahar-sukulent-ve-lale-aranjmani-salon.webp",
-    "/galeri/altin-bahar-sukulent-ve-lale-aranjmani-ofis.webp",
-    "/galeri/altin-bahar-sukulent-ve-lale-aranjmani-mutfak.webp"
-  ],
-  "bahar-esintisi-papatya-aranjmani": [
-    "/galeri/bahar-esintisi-papatya-aranjmani-salon.webp",
-    "/galeri/bahar-esintisi-papatya-aranjmani-ofis.webp",
-    "/galeri/bahar-esintisi-papatya-aranjmani-mutfak.webp"
-  ],
-  "beyaz-orkide-ve-pembe-gulun-zarafeti": [
-    "/galeri/beyaz-orkide-ve-pembe-gulun-zarafeti-salon.webp",
-    "/galeri/beyaz-orkide-ve-pembe-gulun-zarafeti-ofis.webp",
-    "/galeri/beyaz-orkide-ve-pembe-gulun-zarafeti-kafe.webp"
-  ],
-  "gul-ve-lale-aranjmani": [
-    "/galeri/gul-ve-lale-aranjmani-ofis.webp",
-    "/galeri/gul-ve-lale-aranjmani-mutfak.webp",
-    "/galeri/gul-ve-lale-aranjmani-yatak.webp"
-  ],
-  "pembe-ruya-buketi": [
-    "/galeri/pembe-ruya-buketi-antre.webp",
-    "/galeri/pembe-ruya-buketi-mutfak.webp",
-    "/galeri/pembe-ruya-buketi-salon.webp"
-  ],
-  "kirmizi-gul-orkide-ve-sukulent-aranjmani": [
-    "/galeri/kirmizi-gul-orkide-ve-sukulent-aranjmani-mutfak.webp",
-    "/galeri/kirmizi-gul-orkide-ve-sukulent-aranjmani-kafe.webp",
-    "/galeri/kirmizi-gul-orkide-ve-sukulent-aranjmani-yatak.webp"
-  ],
-  "lahana-gulu-ve-pembe-karanfil-aranjmani": [
-    "/galeri/lahana-gulu-ve-pembe-karanfil-aranjmani-kafe.webp",
-    "/galeri/lahana-gulu-ve-pembe-karanfil-aranjmani-yatak.webp",
-    "/galeri/lahana-gulu-ve-pembe-karanfil-aranjmani-salon.webp"
-  ],
-  "gul-orkide-ve-sukulent-aranjmani-1": [
-    "/galeri/gul-orkide-ve-sukulent-aranjmani-1-yatak.webp",
-    "/galeri/gul-orkide-ve-sukulent-aranjmani-1-salon.webp",
-    "/galeri/gul-orkide-ve-sukulent-aranjmani-1-ofis.webp"
-  ],
-  "gunes-isigi-bahcesi-papatya-aranjmani": [
-    "/galeri/gunes-isigi-bahcesi-papatya-aranjmani-salon.webp",
-    "/galeri/gunes-isigi-bahcesi-papatya-aranjmani-ofis.webp",
-    "/galeri/gunes-isigi-bahcesi-papatya-aranjmani-antre.webp"
-  ],
-  "premium-lavanta-esintisi-cicek-aranjmani": [
-    "/galeri/premium-lavanta-esintisi-cicek-aranjmani-ofis.webp",
-    "/galeri/premium-lavanta-esintisi-cicek-aranjmani-mutfak.webp",
-    "/galeri/premium-lavanta-esintisi-cicek-aranjmani-yatak.webp"
-  ],
-  "fusya-guller-ve-pembe-papatyalar-aranjmani": [
-    "/galeri/fusya-guller-ve-pembe-papatyalar-aranjmani-antre.webp",
-    "/galeri/fusya-guller-ve-pembe-papatyalar-aranjmani-mutfak.webp",
-    "/galeri/fusya-guller-ve-pembe-papatyalar-aranjmani-salon.webp"
-  ],
-  "kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani": [
-    "/galeri/kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani-mutfak.webp",
-    "/galeri/kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani-kafe.webp",
-    "/galeri/kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani-yatak.webp"
-  ],
-  "mor-orkideli-premium-topiary-aranjmani": [
-    "/galeri/mor-orkideli-premium-topiary-aranjmani-kafe.webp",
-    "/galeri/mor-orkideli-premium-topiary-aranjmani-yatak.webp",
-    "/galeri/mor-orkideli-premium-topiary-aranjmani-salon.webp"
-  ],
-  "altin-vazoda-premium-royal-cicek-aranjmani": [
-    "/galeri/altin-vazoda-premium-royal-cicek-aranjmani-yatak.webp",
-    "/galeri/altin-vazoda-premium-royal-cicek-aranjmani-salon.webp",
-    "/galeri/altin-vazoda-premium-royal-cicek-aranjmani-ofis.webp"
-  ],
-  "mor-orkide-ve-gullerle-premium-sukulent-aranjmani": [
-    "/galeri/mor-orkide-ve-gullerle-premium-sukulent-aranjmani-salon.webp",
-    "/galeri/mor-orkide-ve-gullerle-premium-sukulent-aranjmani-ofis.webp",
-    "/galeri/mor-orkide-ve-gullerle-premium-sukulent-aranjmani-antre.webp"
-  ],
-  "altin-vazoda-premium-orkide-ve-gul-koleksiyonu": [
-    "/galeri/altin-vazoda-premium-orkide-ve-gul-koleksiyonu-ofis.webp",
-    "/galeri/altin-vazoda-premium-orkide-ve-gul-koleksiyonu-mutfak.webp",
-    "/galeri/altin-vazoda-premium-orkide-ve-gul-koleksiyonu-yatak.webp"
-  ],
-  "dogal-sari-lale-buketi": [
-    "/galeri/dogal-sari-lale-buketi-antre.webp",
-    "/galeri/dogal-sari-lale-buketi-mutfak.webp",
-    "/galeri/dogal-sari-lale-buketi-salon.webp"
-  ],
-  "altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani": [
-    "/galeri/altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani-mutfak.webp",
-    "/galeri/altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani-kafe.webp",
-    "/galeri/altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani-yatak.webp"
-  ],
-  "siyah-helen-saksida-premium-cicek-tasarimi-1": [
-    "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-1-kafe.webp",
-    "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-1-yatak.webp",
-    "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-1-salon.webp"
-  ],
-  "siyah-helen-saksida-premium-cicek-tasarimi": [
-    "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-yatak.webp",
-    "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-salon.webp",
-    "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-antre.webp"
-  ],
-  "kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani": [
-    "/galeri/kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani-salon.webp",
-    "/galeri/kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani-ofis.webp",
-    "/galeri/kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani-antre.webp"
-  ],
-  "mor-orkide-sukulent-prestige-aranjmani": [
-    "/galeri/mor-orkide-sukulent-prestige-aranjmani-ofis.webp",
-    "/galeri/mor-orkide-sukulent-prestige-aranjmani-yatak.webp",
-    "/galeri/mor-orkide-sukulent-prestige-aranjmani-mutfak.webp"
-  ],
-  "beyaz-gul-yesil-orkide-sukulent-premium-aranjmani": [
-    "/galeri/beyaz-gul-yesil-orkide-sukulent-premium-aranjmani-antre.webp",
-    "/galeri/beyaz-gul-yesil-orkide-sukulent-premium-aranjmani-mutfak.webp",
-    "/galeri/beyaz-gul-yesil-orkide-sukulent-premium-aranjmani-salon.webp"
-  ],
-  "pudra-lale-sukulent-premium-aranjmani": [
-    "/galeri/pudra-lale-sukulent-premium-aranjmani-mutfak.webp",
-    "/galeri/pudra-lale-sukulent-premium-aranjmani-kafe.webp",
-    "/galeri/pudra-lale-sukulent-premium-aranjmani-yatak.webp"
-  ],
-  "premium-beyaz-orkide-turuncu-gul-tasarimi": [
-    "/galeri/premium-beyaz-orkide-turuncu-gul-tasarimi-kafe.webp",
-    "/galeri/premium-beyaz-orkide-turuncu-gul-tasarimi-salon.webp",
-    "/galeri/premium-beyaz-orkide-turuncu-gul-tasarimi-mutfak.webp"
-  ],
-  "premium-seftali-gul-sukulent-aranjmani": [
-    "/galeri/premium-seftali-gul-sukulent-aranjmani-yatak.webp",
-    "/galeri/premium-seftali-gul-sukulent-aranjmani-salon.webp",
-    "/galeri/premium-seftali-gul-sukulent-aranjmani-ofis.webp"
-  ],
-  "ates-kirmizisi-gerbera-aranjmani": [
-    "/galeri/ates-kirmizisi-gerbera-aranjmani-salon.webp",
-    "/galeri/ates-kirmizisi-gerbera-aranjmani-mutfak.webp",
-    "/galeri/ates-kirmizisi-gerbera-aranjmani-kafe.webp"
-  ],
-  "gunes-isigi-beyaz-lilyum-aranjmani": [
-    "/galeri/gunes-isigi-beyaz-lilyum-aranjmani-ofis.webp",
-    "/galeri/gunes-isigi-beyaz-lilyum-aranjmani-yatak.webp",
-    "/galeri/gunes-isigi-beyaz-lilyum-aranjmani-mutfak.webp"
-  ],
-  "altin-bahar-sari-lale-aranjmani": [
-    "/galeri/altin-bahar-sari-lale-aranjmani-antre.webp",
-    "/galeri/altin-bahar-sari-lale-aranjmani-mutfak.webp",
-    "/galeri/altin-bahar-sari-lale-aranjmani-salon.webp"
-  ],
-  "altin-bahce-premium-cicek-aranjmani": [
-    "/galeri/altin-bahce-premium-cicek-aranjmani-mutfak.webp",
-    "/galeri/altin-bahce-premium-cicek-aranjmani-kafe.webp",
-    "/galeri/altin-bahce-premium-cicek-aranjmani-antre.webp"
-  ],
-  "gunes-isigi-premium-aranjmani": [
-    "/galeri/gunes-isigi-premium-aranjmani-yatak.webp",
-    "/galeri/gunes-isigi-premium-aranjmani-antre.webp",
-    "/galeri/gunes-isigi-premium-aranjmani-salon.webp"
-  ],
-  "altin-orkide-premium-aranjmani": [
-    "/galeri/altin-orkide-premium-aranjmani-yatak.webp",
-    "/galeri/altin-orkide-premium-aranjmani-salon.webp",
-    "/galeri/altin-orkide-premium-aranjmani-mutfak.webp"
-  ],
-  "baharin-renkleri-premium-vazolu-aranjmani": [
-    "/galeri/baharin-renkleri-premium-vazolu-aranjmani-salon.webp",
-    "/galeri/baharin-renkleri-premium-vazolu-aranjmani-antre.webp",
-    "/galeri/baharin-renkleri-premium-vazolu-aranjmani-kafe.webp"
-  ],
-  "doganin-zarafeti-premium-aranjmani": [
-    "/galeri/doganin-zarafeti-premium-aranjmani-ofis.webp",
-    "/galeri/doganin-zarafeti-premium-aranjmani-mutfak.webp",
-    "/galeri/doganin-zarafeti-premium-aranjmani-yatak.webp"
-  ],
-  "aurora-artemis-premium-tasarim": [
-    "/galeri/aurora-artemis-premium-tasarim-antre.webp",
-    "/galeri/aurora-artemis-premium-tasarim-kafe.webp",
-    "/galeri/aurora-artemis-premium-tasarim-salon.webp"
-  ],
-  "renk-senfonisi-premium-grand-aranjmani": [
-    "/galeri/renk-senfonisi-premium-grand-aranjmani-mutfak.webp",
-    "/galeri/renk-senfonisi-premium-grand-aranjmani-yatak.webp",
-    "/galeri/renk-senfonisi-premium-grand-aranjmani-ofis.webp"
-  ],
-  "sari-lale-sukulent-aranjmani-1": [
-    "/galeri/sari-lale-sukulent-aranjmani-1-kafe.webp",
-    "/galeri/sari-lale-sukulent-aranjmani-1-salon.webp",
-    "/galeri/sari-lale-sukulent-aranjmani-1-antre.webp"
-  ],
-  "saf-beyaz-papatya-bahcesi-aranjmani": [
-    "/galeri/saf-beyaz-papatya-bahcesi-aranjmani-yatak.webp",
-    "/galeri/saf-beyaz-papatya-bahcesi-aranjmani-ofis.webp",
-    "/galeri/saf-beyaz-papatya-bahcesi-aranjmani-mutfak.webp"
-  ],
-  "renklerin-zarafeti-premium-aranjmani": [
-    "/galeri/renklerin-zarafeti-premium-aranjmani-salon.webp",
-    "/galeri/renklerin-zarafeti-premium-aranjmani-antre.webp",
-    "/galeri/renklerin-zarafeti-premium-aranjmani-kafe.webp"
-  ],
-  "krem-zarafet-gul-bahcesi": [
-    "/galeri/krem-zarafet-gul-bahcesi-ofis.webp",
-    "/galeri/krem-zarafet-gul-bahcesi-mutfak.webp",
-    "/galeri/krem-zarafet-gul-bahcesi-yatak.webp"
-  ],
-  "altin-zarafet-premium-cicek-aranjmani": [
-    "/galeri/altin-zarafet-premium-cicek-aranjmani-mutfak.webp",
-    "/galeri/altin-zarafet-premium-cicek-aranjmani-yatak.webp",
-    "/galeri/altin-zarafet-premium-cicek-aranjmani-ofis.webp"
-  ],
-  "kizil-ask-sukulent-aranjmani": [
-    "/galeri/kizil-ask-sukulent-aranjmani-kafe.webp",
-    "/galeri/kizil-ask-sukulent-aranjmani-salon.webp",
-    "/galeri/kizil-ask-sukulent-aranjmani-antre.webp"
-  ],
-  "pudra-pembe-gul-aranjmani": [
-    "/galeri/pudra-pembe-gul-aranjmani-salon.webp",
-    "/galeri/pudra-pembe-gul-aranjmani-antre.webp",
-    "/galeri/pudra-pembe-gul-aranjmani-kafe.webp"
-  ],
-  "beyaz-gul-orkide-ve-sukulent-premium-aranjmani": [
-    "/galeri/beyaz-gul-orkide-ve-sukulent-premium-aranjmani-ofis.webp",
-    "/galeri/beyaz-gul-orkide-ve-sukulent-premium-aranjmani-mutfak.webp",
-    "/galeri/beyaz-gul-orkide-ve-sukulent-premium-aranjmani-yatak.webp"
-  ],
-  "lavanta-pembe-gul-ve-orkide-premium-aranjmani": [
-    "/galeri/lavanta-pembe-gul-ve-orkide-premium-aranjmani-antre.webp",
-    "/galeri/lavanta-pembe-gul-ve-orkide-premium-aranjmani-kafe.webp",
-    "/galeri/lavanta-pembe-gul-ve-orkide-premium-aranjmani-salon.webp"
-  ],
-  "kizil-beyaz-ask-premium-gul-aranjmani": [
-    "/galeri/kizil-beyaz-ask-premium-gul-aranjmani-kafe.webp",
-    "/galeri/kizil-beyaz-ask-premium-gul-aranjmani-salon.webp",
-    "/galeri/kizil-beyaz-ask-premium-gul-aranjmani-antre.webp"
-  ],
-  "kizil-ask-premium-gul-aranjmani": [
-    "/galeri/kizil-ask-premium-gul-aranjmani-yatak.webp",
-    "/galeri/kizil-ask-premium-gul-aranjmani-ofis.webp",
-    "/galeri/kizil-ask-premium-gul-aranjmani-mutfak.webp"
-  ],
-  "zarafetin-isiltisi-orkide-sukulent-premium-aranjmani": [
-    "/galeri/zarafetin-isiltisi-orkide-sukulent-premium-aranjmani-mutfak.webp",
-    "/galeri/zarafetin-isiltisi-orkide-sukulent-premium-aranjmani-yatak.webp",
-    "/galeri/zarafetin-isiltisi-orkide-sukulent-premium-aranjmani-ofis.webp"
-  ],
-  "askin-bahari-premium-lale-gul-aranjmani": [
-    "/galeri/askin-bahari-premium-lale-gul-aranjmani-salon.webp",
-    "/galeri/askin-bahari-premium-lale-gul-aranjmani-antre.webp",
-    "/galeri/askin-bahari-premium-lale-gul-aranjmani-kafe.webp"
-  ],
-  "askin-asaleti-kirmizi-gul-aranjmani": [
-    "/galeri/askin-asaleti-kirmizi-gul-aranjmani-antre.webp",
-    "/galeri/askin-asaleti-kirmizi-gul-aranjmani-kafe.webp",
-    "/galeri/askin-asaleti-kirmizi-gul-aranjmani-salon.webp"
-  ],
-  "gunes-bahcesi-sukulent-aranjmani-1": [
-    "/galeri/gunes-bahcesi-sukulent-aranjmani-1-mutfak.webp",
-    "/galeri/gunes-bahcesi-sukulent-aranjmani-1-yatak.webp",
-    "/galeri/gunes-bahcesi-sukulent-aranjmani-1-ofis.webp"
-  ],
-  "turkuaz-saksida-kalanchoe-bahcesi": [
-    "/galeri/turkuaz-saksida-kalanchoe-bahcesi-kafe.webp",
-    "/galeri/turkuaz-saksida-kalanchoe-bahcesi-salon.webp",
-    "/galeri/turkuaz-saksida-kalanchoe-bahcesi-antre.webp"
-  ],
-  "premium-kirmizi-gul-orkide-ve-sukulent-aranjmani": [
-    "/galeri/premium-kirmizi-gul-orkide-ve-sukulent-aranjmani-yatak.webp",
-    "/galeri/premium-kirmizi-gul-orkide-ve-sukulent-aranjmani-ofis.webp",
-    "/galeri/premium-kirmizi-gul-orkide-ve-sukulent-aranjmani-mutfak.webp"
-  ],
-  "pembe-gullerin-zarafeti-ahsap-sandik-aranjmani": [
-    "/galeri/pembe-gullerin-zarafeti-ahsap-sandik-aranjmani-mutfak.webp",
-    "/galeri/pembe-gullerin-zarafeti-ahsap-sandik-aranjmani-yatak.webp",
-    "/galeri/pembe-gullerin-zarafeti-ahsap-sandik-aranjmani-ofis.webp"
-  ],
-  "seni-seviyorum-harfli-premium-gul-kutusu": [
-    "/galeri/seni-seviyorum-harfli-premium-gul-kutusu-salon.webp",
-    "/galeri/seni-seviyorum-harfli-premium-gul-kutusu-antre.webp",
-    "/galeri/seni-seviyorum-harfli-premium-gul-kutusu-kafe.webp"
-  ],
-  "asaletin-kirmizi-gulleri-premium-aranjmani": [
-    "/galeri/asaletin-kirmizi-gulleri-premium-aranjmani-ofis.webp",
-    "/galeri/asaletin-kirmizi-gulleri-premium-aranjmani-mutfak.webp",
-    "/galeri/asaletin-kirmizi-gulleri-premium-aranjmani-yatak.webp"
-  ],
-  "sonsuz-ask-kirmizi-gul-kutusu-premium": [
-    "/galeri/sonsuz-ask-kirmizi-gul-kutusu-premium-antre.webp",
-    "/galeri/sonsuz-ask-kirmizi-gul-kutusu-premium-kafe.webp",
-    "/galeri/sonsuz-ask-kirmizi-gul-kutusu-premium-salon.webp"
-  ],
-  "askin-kirmizi-gulleri-premium-aranjmani": [
-    "/galeri/askin-kirmizi-gulleri-premium-aranjmani-kafe.webp",
-    "/galeri/askin-kirmizi-gulleri-premium-aranjmani-salon.webp",
-    "/galeri/askin-kirmizi-gulleri-premium-aranjmani-antre.webp"
-  ],
-  "beyaz-zambak-ve-ortanca-premium-aranjmani": [
-    "/galeri/beyaz-zambak-ve-ortanca-premium-aranjmani-yatak.webp",
-    "/galeri/beyaz-zambak-ve-ortanca-premium-aranjmani-ofis.webp",
-    "/galeri/beyaz-zambak-ve-ortanca-premium-aranjmani-mutfak.webp"
-  ],
-  "lavanta-esintisi-premium-cicek-aranjmani-1": [
-    "/galeri/lavanta-esintisi-premium-cicek-aranjmani-1-ofis.webp",
-    "/galeri/lavanta-esintisi-premium-cicek-aranjmani-1-mutfak.webp",
-    "/galeri/lavanta-esintisi-premium-cicek-aranjmani-1-yatak.webp"
-  ],
-  "altin-isiltisi-premium-bahce-aranjmani": [
-    "/galeri/altin-isiltisi-premium-bahce-aranjmani-antre.webp",
-    "/galeri/altin-isiltisi-premium-bahce-aranjmani-kafe.webp",
-    "/galeri/altin-isiltisi-premium-bahce-aranjmani-salon.webp"
-  ],
-  "beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani": [
-    "/galeri/beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani-yatak.webp",
-    "/galeri/beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani-ofis.webp",
-    "/galeri/beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani-mutfak.webp"
-  ],
-  "lavanta-gulleri-premium-kutu-aranjmani": [
-    "/galeri/lavanta-gulleri-premium-kutu-aranjmani-salon.webp",
-    "/galeri/lavanta-gulleri-premium-kutu-aranjmani-antre.webp",
-    "/galeri/lavanta-gulleri-premium-kutu-aranjmani-kafe.webp"
-  ],
-  "siyah-vazoda-sukulent-ve-kirmizi-gul-aranjmani": [
-    "/galeri/siyah-vazoda-sukulent-ve-kirmizi-gul-aranjmani-ofis.webp",
-    "/galeri/siyah-vazoda-sukulent-ve-kirmizi-gul-aranjmani-mutfak.webp",
-    "/galeri/siyah-vazoda-sukulent-ve-kirmizi-gul-aranjmani-yatak.webp"
-  ],
-  "kizil-guller-ve-sukulent-doga-bahcesi": [
-    "/galeri/kizil-guller-ve-sukulent-doga-bahcesi-mutfak.webp",
-    "/galeri/kizil-guller-ve-sukulent-doga-bahcesi-yatak.webp",
-    "/galeri/kizil-guller-ve-sukulent-doga-bahcesi-ofis.webp"
-  ],
-  "beyaz-orkide-ve-sukulent-tasarim-aranjmani": [
-    "/galeri/beyaz-orkide-ve-sukulent-tasarim-aranjmani-kafe.webp",
-    "/galeri/beyaz-orkide-ve-sukulent-tasarim-aranjmani-salon.webp",
-    "/galeri/beyaz-orkide-ve-sukulent-tasarim-aranjmani-antre.webp"
-  ],
-  "turuncu-guller-ve-orkideli-sukulent-bahcesi": [
-    "/galeri/turuncu-guller-ve-orkideli-sukulent-bahcesi-yatak.webp",
-    "/galeri/turuncu-guller-ve-orkideli-sukulent-bahcesi-ofis.webp",
-    "/galeri/turuncu-guller-ve-orkideli-sukulent-bahcesi-mutfak.webp"
-  ],
-  "beyaz-lilyum-orkide-ve-sari-laleli-aranjman": [
-    "/galeri/beyaz-lilyum-orkide-ve-sari-laleli-aranjman-salon.webp",
-    "/galeri/beyaz-lilyum-orkide-ve-sari-laleli-aranjman-antre.webp",
-    "/galeri/beyaz-lilyum-orkide-ve-sari-laleli-aranjman-kafe.webp"
-  ],
-  "ask-sandigi-premium-gul": [
-    "/galeri/ask-sandigi-premium-gul-ofis.webp",
-    "/galeri/ask-sandigi-premium-gul-mutfak.webp",
-    "/galeri/ask-sandigi-premium-gul-yatak.webp"
-  ],
-  "gunes-bahcesi-sukulent-aranjmani": [
-    "/galeri/gunes-bahcesi-sukulent-aranjmani-antre.webp",
-    "/galeri/gunes-bahcesi-sukulent-aranjmani-kafe.webp",
-    "/galeri/gunes-bahcesi-sukulent-aranjmani-salon.webp"
-  ],
-  "mor-orkide-premium-gul-buketi": [
-    "/galeri/mor-orkide-premium-gul-buketi-mutfak.webp",
-    "/galeri/mor-orkide-premium-gul-buketi-yatak.webp",
-    "/galeri/mor-orkide-premium-gul-buketi-ofis.webp"
-  ],
-  "mor-orkide-dokunuslu-premium-gul-buketi": [
-    "/galeri/mor-orkide-dokunuslu-premium-gul-buketi-kafe.webp",
-    "/galeri/mor-orkide-dokunuslu-premium-gul-buketi-salon.webp",
-    "/galeri/mor-orkide-dokunuslu-premium-gul-buketi-antre.webp"
-  ],
-  "lavanta-esintisi-orkide-ve-pembe-gul-aranjmani": [
-    "/galeri/lavanta-esintisi-orkide-ve-pembe-gul-aranjmani-salon.webp",
-    "/galeri/lavanta-esintisi-orkide-ve-pembe-gul-aranjmani-antre.webp",
-    "/galeri/lavanta-esintisi-orkide-ve-pembe-gul-aranjmani-kafe.webp"
-  ],
-  "beyaz-orkide-ve-kirmizi-gul-premium-aranjmani": [
-    "/galeri/beyaz-orkide-ve-kirmizi-gul-premium-aranjmani-ofis.webp",
-    "/galeri/beyaz-orkide-ve-kirmizi-gul-premium-aranjmani-mutfak.webp",
-    "/galeri/beyaz-orkide-ve-kirmizi-gul-premium-aranjmani-yatak.webp"
-  ],
-  "kraliyet-senfonisi-premium-cicek-aranjmani": [
-    "/galeri/kraliyet-senfonisi-premium-cicek-aranjmani-antre.webp",
-    "/galeri/kraliyet-senfonisi-premium-cicek-aranjmani-kafe.webp",
-    "/galeri/kraliyet-senfonisi-premium-cicek-aranjmani-salon.webp"
-  ],
-  "imparatorluk-orkideleri-premium-vip-tasarimi": [
-    "/galeri/imparatorluk-orkideleri-premium-vip-tasarimi-kafe.webp",
-    "/galeri/imparatorluk-orkideleri-premium-vip-tasarimi-salon.webp",
-    "/galeri/imparatorluk-orkideleri-premium-vip-tasarimi-antre.webp"
-  ],
-  "premium-lilyum-ve-gul-tasarimi": [
-    "/galeri/premium-lilyum-ve-gul-tasarimi-yatak.webp",
-    "/galeri/premium-lilyum-ve-gul-tasarimi-ofis.webp",
-    "/galeri/premium-lilyum-ve-gul-tasarimi-mutfak.webp"
-  ],
-  "mor-huzur-premium-sukulent-ve-lisyantus-aranjmani": [
-    "/galeri/mor-huzur-premium-sukulent-ve-lisyantus-aranjmani-salon.webp",
-    "/galeri/mor-huzur-premium-sukulent-ve-lisyantus-aranjmani-antre.webp",
-    "/galeri/mor-huzur-premium-sukulent-ve-lisyantus-aranjmani-kafe.webp"
-  ],
-  "ates-ve-zarafet-premium-gul-sukulent-aranjmani": [
-    "/galeri/ates-ve-zarafet-premium-gul-sukulent-aranjmani-ofis.webp",
-    "/galeri/ates-ve-zarafet-premium-gul-sukulent-aranjmani-mutfak.webp",
-    "/galeri/ates-ve-zarafet-premium-gul-sukulent-aranjmani-yatak.webp"
-  ],
-  "pembe-dusler-deluxe-cicek-kutusu": [
-    "/galeri/pembe-dusler-deluxe-cicek-kutusu-antre.webp",
-    "/galeri/pembe-dusler-deluxe-cicek-kutusu-kafe.webp",
-    "/galeri/pembe-dusler-deluxe-cicek-kutusu-salon.webp"
-  ],
-  "mor-orkide-ve-sukulent-tasarimi": [
-    "/galeri/mor-orkide-ve-sukulent-tasarimi-mutfak.webp",
-    "/galeri/mor-orkide-ve-sukulent-tasarimi-yatak.webp",
-    "/galeri/mor-orkide-ve-sukulent-tasarimi-ofis.webp"
-  ],
-  "turuncu-gerbera-ve-civanpercemi-aranjmani": [
-    "/galeri/turuncu-gerbera-ve-civanpercemi-aranjmani-yatak.webp",
-    "/galeri/turuncu-gerbera-ve-civanpercemi-aranjmani-ofis.webp",
-    "/galeri/turuncu-gerbera-ve-civanpercemi-aranjmani-mutfak.webp"
-  ],
-  "gul-ve-karanfil-aranjmani": [
-    "/galeri/gul-ve-karanfil-aranjmani-salon.webp",
-    "/galeri/gul-ve-karanfil-aranjmani-antre.webp",
-    "/galeri/gul-ve-karanfil-aranjmani-kafe.webp"
-  ],
-  "cift-dal-benekli-orkide-aranjmani": [
-    "/galeri/cift-dal-benekli-orkide-aranjmani-ofis.webp",
-    "/galeri/cift-dal-benekli-orkide-aranjmani-mutfak.webp",
-    "/galeri/cift-dal-benekli-orkide-aranjmani-yatak.webp"
-  ],
-  "premium-orkide-ve-gul-aranjmani": [
-    "/galeri/premium-orkide-ve-gul-aranjmani-antre.webp",
-    "/galeri/premium-orkide-ve-gul-aranjmani-kafe.webp",
-    "/galeri/premium-orkide-ve-gul-aranjmani-salon.webp"
-  ],
-  "orkide-gul-ve-sukulent-premium-aranjmani": [
-    "/galeri/orkide-gul-ve-sukulent-premium-aranjmani-mutfak.webp",
-    "/galeri/orkide-gul-ve-sukulent-premium-aranjmani-yatak.webp",
-    "/galeri/orkide-gul-ve-sukulent-premium-aranjmani-ofis.webp"
-  ],
-  "sukulent-ve-renk-cumbusu-aranjmani": [
-    "/galeri/sukulent-ve-renk-cumbusu-aranjmani-kafe.webp",
-    "/galeri/sukulent-ve-renk-cumbusu-aranjmani-salon.webp",
-    "/galeri/sukulent-ve-renk-cumbusu-aranjmani-antre.webp"
-  ],
-  "kirmizi-gullu-sukulent-aranjmani": [
-    "/galeri/kirmizi-gullu-sukulent-aranjmani-yatak.webp",
-    "/galeri/kirmizi-gullu-sukulent-aranjmani-ofis.webp",
-    "/galeri/kirmizi-gullu-sukulent-aranjmani-mutfak.webp"
-  ],
-  "altin-vazo-bahar-senfonisi": [
-    "/galeri/altin-vazo-bahar-senfonisi-antre.webp",
-    "/galeri/altin-vazo-bahar-senfonisi-kafe.webp",
-    "/galeri/altin-vazo-bahar-senfonisi-salon.webp"
-  ],
-  "sonbahar-zarafeti-premium-gul-buketi": [
-    "/galeri/sonbahar-zarafeti-premium-gul-buketi-yatak.webp",
-    "/galeri/sonbahar-zarafeti-premium-gul-buketi-ofis.webp",
-    "/galeri/sonbahar-zarafeti-premium-gul-buketi-mutfak.webp"
-  ],
-  "pembe-lale-ve-beyaz-orkide-aranjman": [
-    "/galeri/pembe-lale-ve-beyaz-orkide-aranjman-mutfak.webp",
-    "/galeri/pembe-lale-ve-beyaz-orkide-aranjman-yatak.webp",
-    "/galeri/pembe-lale-ve-beyaz-orkide-aranjman-ofis.webp"
-  ],
-  "premium-9-kirmizi-gul-aranjmani": [
-    "/galeri/premium-9-kirmizi-gul-aranjmani-kafe.webp",
-    "/galeri/premium-9-kirmizi-gul-aranjmani-salon.webp",
-    "/galeri/premium-9-kirmizi-gul-aranjmani-antre.webp"
-  ],
-  "cam-vazoda-mor-beyaz-lale-aranjmani": [
-    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-mutfak.webp",
-    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-ofis.webp",
-    "/galeri/cam-vazoda-mor-beyaz-lale-aranjmani-salon.webp"
-  ],
-  "cam-fanusta-gul-orkide-aranjmani": [
-    "/galeri/cam-fanusta-gul-orkide-aranjmani-mutfak.webp",
-    "/galeri/cam-fanusta-gul-orkide-aranjmani-ofis.webp",
-    "/galeri/cam-fanusta-gul-orkide-aranjmani-salon.webp"
-  ],
-  "cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani": [
-    "/galeri/cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani-mutfak.webp",
-    "/galeri/cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani-ofis.webp",
-    "/galeri/cam-vazoda-kirmizi-pembe-ve-beyaz-gul-aranjmani-salon.webp"
-  ],
-  "orkide-ve-gul-buketiorkide-ve-gul-buketi": [
-    "/galeri/orkide-ve-gul-buketiorkide-ve-gul-buketi-mutfak.webp",
-    "/galeri/orkide-ve-gul-buketiorkide-ve-gul-buketi-ofis.webp",
-    "/galeri/orkide-ve-gul-buketiorkide-ve-gul-buketi-salon.webp"
-  ],
-  "sukulent-ve-kirmizi-gulun-ihtisami": [
-    "/galeri/sukulent-ve-kirmizi-gulun-ihtisami-mutfak.webp",
-    "/galeri/sukulent-ve-kirmizi-gulun-ihtisami-ofis.webp",
-    "/galeri/sukulent-ve-kirmizi-gulun-ihtisami-salon.webp"
-  ],
-  "yapay-simsir-topiary-agac": [
-    "/galeri/yapay-simsir-topiary-agac-mutfak.webp",
-    "/galeri/yapay-simsir-topiary-agac-ofis.webp",
-    "/galeri/yapay-simsir-topiary-agac-salon.webp"
-  ],
-  "asaletin-dokunusu-premium-gul-ve-orkide-aranjmani": [
-    "/galeri/asaletin-dokunusu-premium-gul-ve-orkide-aranjmani-mutfak.webp",
-    "/galeri/asaletin-dokunusu-premium-gul-ve-orkide-aranjmani-ofis.webp",
-    "/galeri/asaletin-dokunusu-premium-gul-ve-orkide-aranjmani-salon.webp"
-  ],
-  "ay-isigi-premium-lilyum-kutusu": [
-    "/galeri/ay-isigi-premium-lilyum-kutusu-mutfak.webp",
-    "/galeri/ay-isigi-premium-lilyum-kutusu-ofis.webp",
-    "/galeri/ay-isigi-premium-lilyum-kutusu-salon.webp"
-  ],
-  "gunesin-isiltisi-aycicegi-aranjmani": [
-    "/galeri/gunesin-isiltisi-aycicegi-aranjmani-mutfak.webp",
-    "/galeri/gunesin-isiltisi-aycicegi-aranjmani-ofis.webp",
-    "/galeri/gunesin-isiltisi-aycicegi-aranjmani-salon.webp"
-  ],
-  "pembe-orkide-aranjmani": [
-    "/galeri/pembe-orkide-aranjmani-mutfak.webp",
-    "/galeri/pembe-orkide-aranjmani-ofis.webp",
-    "/galeri/pembe-orkide-aranjmani-salon.webp"
-  ],
-  "renk-cumbusu-premium-cicek-aranjmani": [
-    "/galeri/renk-cumbusu-premium-cicek-aranjmani-mutfak.webp",
-    "/galeri/renk-cumbusu-premium-cicek-aranjmani-ofis.webp",
-    "/galeri/renk-cumbusu-premium-cicek-aranjmani-salon.webp"
-  ]
+ "101-kirmizi-gul-buketi": [
+  "/galeri/101-kirmizi-gul-buketi-salon.webp",
+  "/galeri/101-kirmizi-gul-buketi-ofis.webp",
+  "/galeri/101-kirmizi-gul-buketi-antre.webp"
+ ],
+ "premium-kirmizi-gul-vazosu": [
+  "/galeri/premium-kirmizi-gul-vazosu-mutfak.webp",
+  "/galeri/premium-kirmizi-gul-vazosu-kafe.webp",
+  "/galeri/premium-kirmizi-gul-vazosu-yatak.webp"
+ ],
+ "2-dalli-beyaz-orkide": [
+  "/galeri/2-dalli-beyaz-orkide-ofis.webp",
+  "/galeri/2-dalli-beyaz-orkide-salon.webp",
+  "/galeri/2-dalli-beyaz-orkide-mutfak.webp"
+ ],
+ "aksida-coklu-sukulent-aranjmani": [
+  "/galeri/aksida-coklu-sukulent-aranjmani-antre.webp",
+  "/galeri/aksida-coklu-sukulent-aranjmani-yatak.webp",
+  "/galeri/aksida-coklu-sukulent-aranjmani-kafe.webp"
+ ],
+ "ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani": [
+  "/galeri/ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani-salon.webp",
+  "/galeri/ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani-mutfak.webp",
+  "/galeri/ahsap-kutuda-pembe-ve-kirmizi-gul-aranjmani-antre.webp"
+ ],
+ "aycicegi-gala-ve-gul-aranjmani": [
+  "/galeri/aycicegi-gala-ve-gul-aranjmani-kafe.webp",
+  "/galeri/aycicegi-gala-ve-gul-aranjmani-ofis.webp",
+  "/galeri/aycicegi-gala-ve-gul-aranjmani-salon.webp"
+ ],
+ "kirmizi-gul-serisi": [
+  "/galeri/kirmizi-gul-serisi-salon.webp",
+  "/galeri/kirmizi-gul-serisi-ofis.webp",
+  "/galeri/kirmizi-gul-serisi-antre.webp"
+ ],
+ "dekoratif-saksida-gul-serisi": [
+  "/galeri/dekoratif-saksida-gul-serisi-ofis.webp",
+  "/galeri/dekoratif-saksida-gul-serisi-mutfak.webp",
+  "/galeri/dekoratif-saksida-gul-serisi-yatak.webp"
+ ],
+ "pembe-bahar-senfonisi-aranjmani": [
+  "/galeri/pembe-bahar-senfonisi-aranjmani-antre.webp",
+  "/galeri/pembe-bahar-senfonisi-aranjmani-mutfak.webp",
+  "/galeri/pembe-bahar-senfonisi-aranjmani-salon.webp"
+ ],
+ "turuncu-gunes-gul-bahcesi": [
+  "/galeri/turuncu-gunes-gul-bahcesi-mutfak.webp",
+  "/galeri/turuncu-gunes-gul-bahcesi-kafe.webp",
+  "/galeri/turuncu-gunes-gul-bahcesi-yatak.webp"
+ ],
+ "gul-ve-lisyantus-aranjmani": [
+  "/galeri/gul-ve-lisyantus-aranjmani-kafe.webp",
+  "/galeri/gul-ve-lisyantus-aranjmani-yatak.webp",
+  "/galeri/gul-ve-lisyantus-aranjmani-salon.webp"
+ ],
+ "kirmizi-gul-aranjmani-2": [
+  "/galeri/kirmizi-gul-aranjmani-2-antre.webp",
+  "/galeri/kirmizi-gul-aranjmani-2-mutfak.webp",
+  "/galeri/kirmizi-gul-aranjmani-2-salon.webp"
+ ],
+ "beyaz-orkide-zarafeti-premium-aranjmani": [
+  "/galeri/beyaz-orkide-zarafeti-premium-aranjmani-mutfak.webp",
+  "/galeri/beyaz-orkide-zarafeti-premium-aranjmani-kafe.webp",
+  "/galeri/beyaz-orkide-zarafeti-premium-aranjmani-yatak.webp"
+ ],
+ "bahar-ruyasi-deluxe-gul-koleksiyonu": [
+  "/galeri/bahar-ruyasi-deluxe-gul-koleksiyonu-kafe.webp",
+  "/galeri/bahar-ruyasi-deluxe-gul-koleksiyonu-yatak.webp",
+  "/galeri/bahar-ruyasi-deluxe-gul-koleksiyonu-salon.webp"
+ ],
+ "sari-civanpercemi-ve-sukulent-dogal-aranjmani": [
+  "/galeri/sari-civanpercemi-ve-sukulent-dogal-aranjmani-yatak.webp",
+  "/galeri/sari-civanpercemi-ve-sukulent-dogal-aranjmani-salon.webp",
+  "/galeri/sari-civanpercemi-ve-sukulent-dogal-aranjmani-ofis.webp"
+ ],
+ "saf-zarafet-premium-orkide-ve-gul-aranjmani": [
+  "/galeri/saf-zarafet-premium-orkide-ve-gul-aranjmani-salon.webp",
+  "/galeri/saf-zarafet-premium-orkide-ve-gul-aranjmani-ofis.webp",
+  "/galeri/saf-zarafet-premium-orkide-ve-gul-aranjmani-antre.webp"
+ ],
+ "mor-orkide-premium-aranjmani": [
+  "/galeri/mor-orkide-premium-aranjmani-ofis.webp",
+  "/galeri/mor-orkide-premium-aranjmani-mutfak.webp",
+  "/galeri/mor-orkide-premium-aranjmani-yatak.webp"
+ ],
+ "pembe-dusler-premium-gul-kutusu": [
+  "/galeri/pembe-dusler-premium-gul-kutusu-antre.webp",
+  "/galeri/pembe-dusler-premium-gul-kutusu-mutfak.webp",
+  "/galeri/pembe-dusler-premium-gul-kutusu-salon.webp"
+ ],
+ "altin-bahce-premium-cicek-aranjmani-1": [
+  "/galeri/altin-bahce-premium-cicek-aranjmani-1-mutfak.webp",
+  "/galeri/altin-bahce-premium-cicek-aranjmani-1-kafe.webp",
+  "/galeri/altin-bahce-premium-cicek-aranjmani-1-yatak.webp"
+ ],
+ "zarafet-kutusu-premium-cicek-aranjmani": [
+  "/galeri/zarafet-kutusu-premium-cicek-aranjmani-kafe.webp",
+  "/galeri/zarafet-kutusu-premium-cicek-aranjmani-yatak.webp",
+  "/galeri/zarafet-kutusu-premium-cicek-aranjmani-salon.webp"
+ ],
+ "gunesin-renkleri-premium-cicek-aranjmani": [
+  "/galeri/gunesin-renkleri-premium-cicek-aranjmani-yatak.webp",
+  "/galeri/gunesin-renkleri-premium-cicek-aranjmani-salon.webp",
+  "/galeri/gunesin-renkleri-premium-cicek-aranjmani-ofis.webp"
+ ],
+ "lavanta-ruyasi-premium-cicek-aranjmani": [
+  "/galeri/lavanta-ruyasi-premium-cicek-aranjmani-salon.webp",
+  "/galeri/lavanta-ruyasi-premium-cicek-aranjmani-ofis.webp",
+  "/galeri/lavanta-ruyasi-premium-cicek-aranjmani-antre.webp"
+ ],
+ "premium-orkide-ve-kirmizi-gul-aranjmani": [
+  "/galeri/premium-orkide-ve-kirmizi-gul-aranjmani-ofis.webp",
+  "/galeri/premium-orkide-ve-kirmizi-gul-aranjmani-mutfak.webp",
+  "/galeri/premium-orkide-ve-kirmizi-gul-aranjmani-yatak.webp"
+ ],
+ "doganin-renkleri-premium-cicek-aranjmani": [
+  "/galeri/doganin-renkleri-premium-cicek-aranjmani-antre.webp",
+  "/galeri/doganin-renkleri-premium-cicek-aranjmani-mutfak.webp",
+  "/galeri/doganin-renkleri-premium-cicek-aranjmani-salon.webp"
+ ],
+ "kizil-ask-lale-ve-sukulent-aranjmani": [
+  "/galeri/kizil-ask-lale-ve-sukulent-aranjmani-mutfak.webp",
+  "/galeri/kizil-ask-lale-ve-sukulent-aranjmani-kafe.webp",
+  "/galeri/kizil-ask-lale-ve-sukulent-aranjmani-yatak.webp"
+ ],
+ "baharin-nesesi-papatya-ve-santini-aranjmani": [
+  "/galeri/baharin-nesesi-papatya-ve-santini-aranjmani-kafe.webp",
+  "/galeri/baharin-nesesi-papatya-ve-santini-aranjmani-yatak.webp",
+  "/galeri/baharin-nesesi-papatya-ve-santini-aranjmani-salon.webp"
+ ],
+ "kirmizi-gul-aski-premium-aranjmani": [
+  "/galeri/kirmizi-gul-aski-premium-aranjmani-yatak.webp",
+  "/galeri/kirmizi-gul-aski-premium-aranjmani-ofis.webp",
+  "/galeri/kirmizi-gul-aski-premium-aranjmani-antre.webp"
+ ],
+ "altin-bahar-sukulent-ve-lale-aranjmani": [
+  "/galeri/altin-bahar-sukulent-ve-lale-aranjmani-salon.webp",
+  "/galeri/altin-bahar-sukulent-ve-lale-aranjmani-ofis.webp",
+  "/galeri/altin-bahar-sukulent-ve-lale-aranjmani-antre.webp"
+ ],
+ "bahar-esintisi-papatya-aranjmani": [
+  "/galeri/bahar-esintisi-papatya-aranjmani-salon.webp",
+  "/galeri/bahar-esintisi-papatya-aranjmani-ofis.webp",
+  "/galeri/bahar-esintisi-papatya-aranjmani-mutfak.webp"
+ ],
+ "beyaz-orkide-ve-pembe-gulun-zarafeti": [
+  "/galeri/beyaz-orkide-ve-pembe-gulun-zarafeti-salon.webp",
+  "/galeri/beyaz-orkide-ve-pembe-gulun-zarafeti-ofis.webp",
+  "/galeri/beyaz-orkide-ve-pembe-gulun-zarafeti-kafe.webp"
+ ],
+ "gul-ve-lale-aranjmani": [
+  "/galeri/gul-ve-lale-aranjmani-ofis.webp",
+  "/galeri/gul-ve-lale-aranjmani-mutfak.webp",
+  "/galeri/gul-ve-lale-aranjmani-yatak.webp"
+ ],
+ "pembe-ruya-buketi": [
+  "/galeri/pembe-ruya-buketi-antre.webp",
+  "/galeri/pembe-ruya-buketi-mutfak.webp",
+  "/galeri/pembe-ruya-buketi-salon.webp"
+ ],
+ "kirmizi-gul-orkide-ve-sukulent-aranjmani": [
+  "/galeri/kirmizi-gul-orkide-ve-sukulent-aranjmani-mutfak.webp",
+  "/galeri/kirmizi-gul-orkide-ve-sukulent-aranjmani-kafe.webp",
+  "/galeri/kirmizi-gul-orkide-ve-sukulent-aranjmani-yatak.webp"
+ ],
+ "lahana-gulu-ve-pembe-karanfil-aranjmani": [
+  "/galeri/lahana-gulu-ve-pembe-karanfil-aranjmani-kafe.webp",
+  "/galeri/lahana-gulu-ve-pembe-karanfil-aranjmani-yatak.webp",
+  "/galeri/lahana-gulu-ve-pembe-karanfil-aranjmani-salon.webp"
+ ],
+ "gul-orkide-ve-sukulent-aranjmani-1": [
+  "/galeri/gul-orkide-ve-sukulent-aranjmani-1-yatak.webp",
+  "/galeri/gul-orkide-ve-sukulent-aranjmani-1-salon.webp",
+  "/galeri/gul-orkide-ve-sukulent-aranjmani-1-ofis.webp"
+ ],
+ "gunes-isigi-bahcesi-papatya-aranjmani": [
+  "/galeri/gunes-isigi-bahcesi-papatya-aranjmani-salon.webp",
+  "/galeri/gunes-isigi-bahcesi-papatya-aranjmani-ofis.webp",
+  "/galeri/gunes-isigi-bahcesi-papatya-aranjmani-antre.webp"
+ ],
+ "premium-lavanta-esintisi-cicek-aranjmani": [
+  "/galeri/premium-lavanta-esintisi-cicek-aranjmani-ofis.webp",
+  "/galeri/premium-lavanta-esintisi-cicek-aranjmani-mutfak.webp",
+  "/galeri/premium-lavanta-esintisi-cicek-aranjmani-yatak.webp"
+ ],
+ "fusya-guller-ve-pembe-papatyalar-aranjmani": [
+  "/galeri/fusya-guller-ve-pembe-papatyalar-aranjmani-antre.webp",
+  "/galeri/fusya-guller-ve-pembe-papatyalar-aranjmani-mutfak.webp",
+  "/galeri/fusya-guller-ve-pembe-papatyalar-aranjmani-salon.webp"
+ ],
+ "kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani": [
+  "/galeri/kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani-mutfak.webp",
+  "/galeri/kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani-kafe.webp",
+  "/galeri/kalp-saksida-premium-gul-orkide-ve-sukulent-aranjmani-yatak.webp"
+ ],
+ "mor-orkideli-premium-topiary-aranjmani": [
+  "/galeri/mor-orkideli-premium-topiary-aranjmani-kafe.webp",
+  "/galeri/mor-orkideli-premium-topiary-aranjmani-yatak.webp",
+  "/galeri/mor-orkideli-premium-topiary-aranjmani-salon.webp"
+ ],
+ "altin-vazoda-premium-royal-cicek-aranjmani": [
+  "/galeri/altin-vazoda-premium-royal-cicek-aranjmani-yatak.webp",
+  "/galeri/altin-vazoda-premium-royal-cicek-aranjmani-salon.webp",
+  "/galeri/altin-vazoda-premium-royal-cicek-aranjmani-ofis.webp"
+ ],
+ "mor-orkide-ve-gullerle-premium-sukulent-aranjmani": [
+  "/galeri/mor-orkide-ve-gullerle-premium-sukulent-aranjmani-salon.webp",
+  "/galeri/mor-orkide-ve-gullerle-premium-sukulent-aranjmani-ofis.webp",
+  "/galeri/mor-orkide-ve-gullerle-premium-sukulent-aranjmani-antre.webp"
+ ],
+ "altin-vazoda-premium-orkide-ve-gul-koleksiyonu": [
+  "/galeri/altin-vazoda-premium-orkide-ve-gul-koleksiyonu-ofis.webp",
+  "/galeri/altin-vazoda-premium-orkide-ve-gul-koleksiyonu-mutfak.webp",
+  "/galeri/altin-vazoda-premium-orkide-ve-gul-koleksiyonu-yatak.webp"
+ ],
+ "dogal-sari-lale-buketi": [
+  "/galeri/dogal-sari-lale-buketi-antre.webp",
+  "/galeri/dogal-sari-lale-buketi-mutfak.webp",
+  "/galeri/dogal-sari-lale-buketi-salon.webp"
+ ],
+ "altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani": [
+  "/galeri/altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani-mutfak.webp",
+  "/galeri/altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani-kafe.webp",
+  "/galeri/altin-civanpercemi-ve-mor-lisyantus-premium-aranjmani-yatak.webp"
+ ],
+ "siyah-helen-saksida-premium-cicek-tasarimi-1": [
+  "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-1-kafe.webp",
+  "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-1-yatak.webp",
+  "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-1-salon.webp"
+ ],
+ "siyah-helen-saksida-premium-cicek-tasarimi": [
+  "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-yatak.webp",
+  "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-salon.webp",
+  "/galeri/siyah-helen-saksida-premium-cicek-tasarimi-antre.webp"
+ ],
+ "kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani": [
+  "/galeri/kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani-salon.webp",
+  "/galeri/kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani-ofis.webp",
+  "/galeri/kirmizi-gul-beyaz-papatya-dogal-premium-aranjmani-antre.webp"
+ ],
+ "mor-orkide-sukulent-prestige-aranjmani": [
+  "/galeri/mor-orkide-sukulent-prestige-aranjmani-ofis.webp",
+  "/galeri/mor-orkide-sukulent-prestige-aranjmani-yatak.webp",
+  "/galeri/mor-orkide-sukulent-prestige-aranjmani-mutfak.webp"
+ ],
+ "beyaz-gul-yesil-orkide-sukulent-premium-aranjmani": [
+  "/galeri/beyaz-gul-yesil-orkide-sukulent-premium-aranjmani-antre.webp",
+  "/galeri/beyaz-gul-yesil-orkide-sukulent-premium-aranjmani-mutfak.webp",
+  "/galeri/beyaz-gul-yesil-orkide-sukulent-premium-aranjmani-salon.webp"
+ ],
+ "pudra-lale-sukulent-premium-aranjmani": [
+  "/galeri/pudra-lale-sukulent-premium-aranjmani-mutfak.webp",
+  "/galeri/pudra-lale-sukulent-premium-aranjmani-kafe.webp",
+  "/galeri/pudra-lale-sukulent-premium-aranjmani-yatak.webp"
+ ],
+ "premium-beyaz-orkide-turuncu-gul-tasarimi": [
+  "/galeri/premium-beyaz-orkide-turuncu-gul-tasarimi-kafe.webp",
+  "/galeri/premium-beyaz-orkide-turuncu-gul-tasarimi-salon.webp",
+  "/galeri/premium-beyaz-orkide-turuncu-gul-tasarimi-mutfak.webp"
+ ],
+ "premium-seftali-gul-sukulent-aranjmani": [
+  "/galeri/premium-seftali-gul-sukulent-aranjmani-yatak.webp",
+  "/galeri/premium-seftali-gul-sukulent-aranjmani-salon.webp",
+  "/galeri/premium-seftali-gul-sukulent-aranjmani-ofis.webp"
+ ],
+ "ates-kirmizisi-gerbera-aranjmani": [
+  "/galeri/ates-kirmizisi-gerbera-aranjmani-salon.webp",
+  "/galeri/ates-kirmizisi-gerbera-aranjmani-mutfak.webp",
+  "/galeri/ates-kirmizisi-gerbera-aranjmani-kafe.webp"
+ ],
+ "gunes-isigi-beyaz-lilyum-aranjmani": [
+  "/galeri/gunes-isigi-beyaz-lilyum-aranjmani-ofis.webp",
+  "/galeri/gunes-isigi-beyaz-lilyum-aranjmani-yatak.webp",
+  "/galeri/gunes-isigi-beyaz-lilyum-aranjmani-mutfak.webp"
+ ],
+ "altin-bahar-sari-lale-aranjmani": [
+  "/galeri/altin-bahar-sari-lale-aranjmani-antre.webp",
+  "/galeri/altin-bahar-sari-lale-aranjmani-mutfak.webp",
+  "/galeri/altin-bahar-sari-lale-aranjmani-salon.webp"
+ ],
+ "altin-bahce-premium-cicek-aranjmani": [
+  "/galeri/altin-bahce-premium-cicek-aranjmani-mutfak.webp",
+  "/galeri/altin-bahce-premium-cicek-aranjmani-kafe.webp",
+  "/galeri/altin-bahce-premium-cicek-aranjmani-antre.webp"
+ ],
+ "gunes-isigi-premium-aranjmani": [
+  "/galeri/gunes-isigi-premium-aranjmani-yatak.webp",
+  "/galeri/gunes-isigi-premium-aranjmani-antre.webp",
+  "/galeri/gunes-isigi-premium-aranjmani-kafe.webp"
+ ],
+ "altin-orkide-premium-aranjmani": [
+  "/galeri/altin-orkide-premium-aranjmani-yatak.webp",
+  "/galeri/altin-orkide-premium-aranjmani-salon.webp",
+  "/galeri/altin-orkide-premium-aranjmani-mutfak.webp"
+ ],
+ "baharin-renkleri-premium-vazolu-aranjmani": [
+  "/galeri/baharin-renkleri-premium-vazolu-aranjmani-salon.webp",
+  "/galeri/baharin-renkleri-premium-vazolu-aranjmani-ofis.webp",
+  "/galeri/baharin-renkleri-premium-vazolu-aranjmani-antre.webp"
+ ],
+ "doganin-zarafeti-premium-aranjmani": [
+  "/galeri/doganin-zarafeti-premium-aranjmani-ofis.webp",
+  "/galeri/doganin-zarafeti-premium-aranjmani-mutfak.webp",
+  "/galeri/doganin-zarafeti-premium-aranjmani-yatak.webp"
+ ],
+ "asaletin-dokunusu-premium-gul-ve-orkide-aranjmani": [
+  "/galeri/asaletin-dokunusu-premium-gul-ve-orkide-aranjmani-ofis.webp",
+  "/galeri/asaletin-dokunusu-premium-gul-ve-orkide-aranjmani-mutfak.webp",
+  "/galeri/asaletin-dokunusu-premium-gul-ve-orkide-aranjmani-yatak.webp"
+ ],
+ "aurora-artemis-premium-tasarim": [
+  "/galeri/aurora-artemis-premium-tasarim-antre.webp",
+  "/galeri/aurora-artemis-premium-tasarim-mutfak.webp",
+  "/galeri/aurora-artemis-premium-tasarim-salon.webp"
+ ],
+ "renk-senfonisi-premium-grand-aranjmani": [
+  "/galeri/renk-senfonisi-premium-grand-aranjmani-mutfak.webp",
+  "/galeri/renk-senfonisi-premium-grand-aranjmani-kafe.webp",
+  "/galeri/renk-senfonisi-premium-grand-aranjmani-yatak.webp"
+ ],
+ "sari-lale-sukulent-aranjmani-1": [
+  "/galeri/sari-lale-sukulent-aranjmani-1-kafe.webp",
+  "/galeri/sari-lale-sukulent-aranjmani-1-yatak.webp",
+  "/galeri/sari-lale-sukulent-aranjmani-1-salon.webp"
+ ],
+ "saf-beyaz-papatya-bahcesi-aranjmani": [
+  "/galeri/saf-beyaz-papatya-bahcesi-aranjmani-yatak.webp",
+  "/galeri/saf-beyaz-papatya-bahcesi-aranjmani-salon.webp",
+  "/galeri/saf-beyaz-papatya-bahcesi-aranjmani-ofis.webp"
+ ],
+ "renklerin-zarafeti-premium-aranjmani": [
+  "/galeri/renklerin-zarafeti-premium-aranjmani-salon.webp",
+  "/galeri/renklerin-zarafeti-premium-aranjmani-ofis.webp",
+  "/galeri/renklerin-zarafeti-premium-aranjmani-antre.webp"
+ ],
+ "krem-zarafet-gul-bahcesi": [
+  "/galeri/krem-zarafet-gul-bahcesi-ofis.webp",
+  "/galeri/krem-zarafet-gul-bahcesi-mutfak.webp",
+  "/galeri/krem-zarafet-gul-bahcesi-yatak.webp"
+ ],
+ "altin-isiltisi-premium-bahce-aranjmani": [
+  "/galeri/altin-isiltisi-premium-bahce-aranjmani-antre.webp",
+  "/galeri/altin-isiltisi-premium-bahce-aranjmani-mutfak.webp",
+  "/galeri/altin-isiltisi-premium-bahce-aranjmani-salon.webp"
+ ],
+ "altin-zarafet-premium-cicek-aranjmani": [
+  "/galeri/altin-zarafet-premium-cicek-aranjmani-mutfak.webp",
+  "/galeri/altin-zarafet-premium-cicek-aranjmani-kafe.webp",
+  "/galeri/altin-zarafet-premium-cicek-aranjmani-yatak.webp"
+ ],
+ "kizil-ask-sukulent-aranjmani": [
+  "/galeri/kizil-ask-sukulent-aranjmani-kafe.webp",
+  "/galeri/kizil-ask-sukulent-aranjmani-yatak.webp",
+  "/galeri/kizil-ask-sukulent-aranjmani-salon.webp"
+ ],
+ "premium-kirmizi-gul-orkide-ve-sukulent-aranjmani": [
+  "/galeri/premium-kirmizi-gul-orkide-ve-sukulent-aranjmani-yatak.webp",
+  "/galeri/premium-kirmizi-gul-orkide-ve-sukulent-aranjmani-salon.webp",
+  "/galeri/premium-kirmizi-gul-orkide-ve-sukulent-aranjmani-ofis.webp"
+ ],
+ "pudra-pembe-gul-aranjmani": [
+  "/galeri/pudra-pembe-gul-aranjmani-salon.webp",
+  "/galeri/pudra-pembe-gul-aranjmani-ofis.webp",
+  "/galeri/pudra-pembe-gul-aranjmani-antre.webp"
+ ],
+ "beyaz-gul-orkide-ve-sukulent-premium-aranjmani": [
+  "/galeri/beyaz-gul-orkide-ve-sukulent-premium-aranjmani-ofis.webp",
+  "/galeri/beyaz-gul-orkide-ve-sukulent-premium-aranjmani-mutfak.webp",
+  "/galeri/beyaz-gul-orkide-ve-sukulent-premium-aranjmani-yatak.webp"
+ ],
+ "lavanta-pembe-gul-ve-orkide-premium-aranjmani": [
+  "/galeri/lavanta-pembe-gul-ve-orkide-premium-aranjmani-antre.webp",
+  "/galeri/lavanta-pembe-gul-ve-orkide-premium-aranjmani-mutfak.webp",
+  "/galeri/lavanta-pembe-gul-ve-orkide-premium-aranjmani-salon.webp"
+ ],
+ "pembe-gullerin-zarafeti-ahsap-sandik-aranjmani": [
+  "/galeri/pembe-gullerin-zarafeti-ahsap-sandik-aranjmani-mutfak.webp",
+  "/galeri/pembe-gullerin-zarafeti-ahsap-sandik-aranjmani-kafe.webp",
+  "/galeri/pembe-gullerin-zarafeti-ahsap-sandik-aranjmani-yatak.webp"
+ ],
+ "kizil-beyaz-ask-premium-gul-aranjmani": [
+  "/galeri/kizil-beyaz-ask-premium-gul-aranjmani-kafe.webp",
+  "/galeri/kizil-beyaz-ask-premium-gul-aranjmani-yatak.webp",
+  "/galeri/kizil-beyaz-ask-premium-gul-aranjmani-salon.webp"
+ ],
+ "kizil-ask-premium-gul-aranjmani": [
+  "/galeri/kizil-ask-premium-gul-aranjmani-yatak.webp",
+  "/galeri/kizil-ask-premium-gul-aranjmani-salon.webp",
+  "/galeri/kizil-ask-premium-gul-aranjmani-ofis.webp"
+ ],
+ "seni-seviyorum-harfli-premium-gul-kutusu": [
+  "/galeri/seni-seviyorum-harfli-premium-gul-kutusu-salon.webp",
+  "/galeri/seni-seviyorum-harfli-premium-gul-kutusu-ofis.webp",
+  "/galeri/seni-seviyorum-harfli-premium-gul-kutusu-antre.webp"
+ ],
+ "asaletin-kirmizi-gulleri-premium-aranjmani": [
+  "/galeri/asaletin-kirmizi-gulleri-premium-aranjmani-ofis.webp",
+  "/galeri/asaletin-kirmizi-gulleri-premium-aranjmani-mutfak.webp",
+  "/galeri/asaletin-kirmizi-gulleri-premium-aranjmani-yatak.webp"
+ ],
+ "sonsuz-ask-kirmizi-gul-kutusu-premium": [
+  "/galeri/sonsuz-ask-kirmizi-gul-kutusu-premium-antre.webp",
+  "/galeri/sonsuz-ask-kirmizi-gul-kutusu-premium-mutfak.webp",
+  "/galeri/sonsuz-ask-kirmizi-gul-kutusu-premium-salon.webp"
+ ],
+ "zarafetin-isiltisi-orkide-sukulent-premium-aranjmani": [
+  "/galeri/zarafetin-isiltisi-orkide-sukulent-premium-aranjmani-mutfak.webp",
+  "/galeri/zarafetin-isiltisi-orkide-sukulent-premium-aranjmani-kafe.webp",
+  "/galeri/zarafetin-isiltisi-orkide-sukulent-premium-aranjmani-yatak.webp"
+ ],
+ "askin-kirmizi-gulleri-premium-aranjmani": [
+  "/galeri/askin-kirmizi-gulleri-premium-aranjmani-kafe.webp",
+  "/galeri/askin-kirmizi-gulleri-premium-aranjmani-yatak.webp",
+  "/galeri/askin-kirmizi-gulleri-premium-aranjmani-salon.webp"
+ ],
+ "beyaz-zambak-ve-ortanca-premium-aranjmani": [
+  "/galeri/beyaz-zambak-ve-ortanca-premium-aranjmani-yatak.webp",
+  "/galeri/beyaz-zambak-ve-ortanca-premium-aranjmani-salon.webp",
+  "/galeri/beyaz-zambak-ve-ortanca-premium-aranjmani-ofis.webp"
+ ],
+ "askin-bahari-premium-lale-gul-aranjmani": [
+  "/galeri/askin-bahari-premium-lale-gul-aranjmani-salon.webp",
+  "/galeri/askin-bahari-premium-lale-gul-aranjmani-ofis.webp",
+  "/galeri/askin-bahari-premium-lale-gul-aranjmani-antre.webp"
+ ],
+ "lavanta-esintisi-premium-cicek-aranjmani-1": [
+  "/galeri/lavanta-esintisi-premium-cicek-aranjmani-1-ofis.webp",
+  "/galeri/lavanta-esintisi-premium-cicek-aranjmani-1-mutfak.webp",
+  "/galeri/lavanta-esintisi-premium-cicek-aranjmani-1-yatak.webp"
+ ],
+ "askin-asaleti-kirmizi-gul-aranjmani": [
+  "/galeri/askin-asaleti-kirmizi-gul-aranjmani-antre.webp",
+  "/galeri/askin-asaleti-kirmizi-gul-aranjmani-mutfak.webp",
+  "/galeri/askin-asaleti-kirmizi-gul-aranjmani-salon.webp"
+ ],
+ "gunes-bahcesi-sukulent-aranjmani-1": [
+  "/galeri/gunes-bahcesi-sukulent-aranjmani-1-mutfak.webp",
+  "/galeri/gunes-bahcesi-sukulent-aranjmani-1-kafe.webp",
+  "/galeri/gunes-bahcesi-sukulent-aranjmani-1-yatak.webp"
+ ],
+ "turkuaz-saksida-kalanchoe-bahcesi": [
+  "/galeri/turkuaz-saksida-kalanchoe-bahcesi-kafe.webp",
+  "/galeri/turkuaz-saksida-kalanchoe-bahcesi-yatak.webp",
+  "/galeri/turkuaz-saksida-kalanchoe-bahcesi-salon.webp"
+ ],
+ "beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani": [
+  "/galeri/beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani-yatak.webp",
+  "/galeri/beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani-salon.webp",
+  "/galeri/beyaz-orkide-ve-kirmizi-gerbera-premium-aranjmani-ofis.webp"
+ ],
+ "asaletin-izleri-orkide-gul-premium-aranjmani": [
+  "/galeri/asaletin-izleri-orkide-gul-premium-aranjmani-salon.webp",
+  "/galeri/asaletin-izleri-orkide-gul-premium-aranjmani-ofis.webp",
+  "/galeri/asaletin-izleri-orkide-gul-premium-aranjmani-antre.webp"
+ ],
+ "pastel-bahce-premium-cicek-aranjmani": [
+  "/galeri/pastel-bahce-premium-cicek-aranjmani-mutfak.webp",
+  "/galeri/pastel-bahce-premium-cicek-aranjmani-ofis.webp",
+  "/galeri/pastel-bahce-premium-cicek-aranjmani-yatak.webp"
+ ]
 }
