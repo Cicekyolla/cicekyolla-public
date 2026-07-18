@@ -8,6 +8,27 @@ import { motion, AnimatePresence } from "motion/react";
 import type { MegaGroup } from "@/lib/headerNav";
 import { BrandWordmark } from "./BrandWordmark";
 
+const fallbackGroup = (label: string, href: string): MegaGroup => ({
+  href,
+  featured: { title: label, href, image: null },
+  columns: [{ title: `Tüm ${label}`, href, links: [] }],
+  categories: [],
+});
+
+// Category Center kısa süreli yanıt veremediğinde canlı navigasyonun tamamen
+// kaybolmasını önler. API yeniden geldiği anda canlı ağaç yine önceliklidir.
+const FALLBACK_MENU: Record<string, MegaGroup> = {
+  Güller: fallbackGroup("Güller", "/kategori/guller"),
+  Buketler: fallbackGroup("Buketler", "/kategori/buketler"),
+  Orkideler: fallbackGroup("Orkideler", "/kategori/orkideler"),
+  "Özel Günler": fallbackGroup("Özel Günler", "/kategori/ozel-gunler"),
+  "Kargo Gönderim": fallbackGroup("Kargo Gönderim", "/kategori/turkiye-geneli-kargo"),
+  "Yapay & Peyzaj": fallbackGroup("Yapay & Peyzaj", "/dekorasyon"),
+  Teslimat: fallbackGroup("Teslimat", "/teslimat-bolgeleri"),
+  Hakkımızda: fallbackGroup("Hakkımızda", "/hakkimizda"),
+  Blog: fallbackGroup("Blog", "/blog"),
+};
+
 /* ─── Mega menu data ─── */
 /* ── Extra nav links ── */
 
@@ -29,7 +50,7 @@ export function Header({ menu, nav, search, brand }: {
 }) {
   // TEK KAYNAK: canlı kategori ağacından türetilen menü; verilmezse/boşsa mevcut
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
-  const menuData: Record<string, MegaGroup> = menu ?? {}; // TEK KAYNAK: yalnız canlı kategori ağacı; hardcoded/fallback YOK
+  const menuData: Record<string, MegaGroup> = menu && Object.keys(menu).length > 0 ? menu : FALLBACK_MENU;
   const navItems: string[] = Object.keys(menuData);
   const isCargoNav = (label: string) => label.toLocaleLowerCase("tr").includes("kargo");
 
