@@ -12,25 +12,86 @@ import { motion } from "motion/react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 
-// TEK KAYNAK: canlı kategori ağacından gelen vitrin kategorileri (hardcoded YOK).
-type FCItem = { id: string; name: string; href: string; image: string };
-export function FeaturedCollections({ items }: { items?: FCItem[] }) {
-  const collections = (items ?? []).slice(0, 3);
-  if (collections.length < 3) return null; // yeterli görselli kategori yoksa bölüm gizli
+export type FCItem = { id: string; name: string; href: string; image: string };
+export type FeaturedCollectionCard = FCItem & {
+  eyebrow?: string;
+  description?: string;
+  cta?: string;
+  enabled?: boolean;
+};
+export type FeaturedCollectionsConfig = {
+  sectionLabel?: string;
+  sectionTitle?: string;
+  allHref?: string;
+  cards?: FeaturedCollectionCard[];
+  personalized?: FeaturedCollectionCard;
+};
+
+const DEFAULT_CARDS: FeaturedCollectionCard[] = [
+  {
+    id: "flowers",
+    name: "Çiçekler",
+    href: "/kategori/cicekler",
+    image: "/featured-collections/flowers-lifestyle.webp",
+    eyebrow: "İmza Koleksiyon",
+    description: "Zarafeti tek bakışta hissettiren seçkin çiçek tasarımları.",
+    cta: "Koleksiyonu Keşfet",
+  },
+  {
+    id: "purpose",
+    name: "Gönderim Amacına Göre",
+    href: "/kategori/gonderim-amacina-gore",
+    image: "/featured-collections/orchid-hotel-lifestyle.webp",
+    eyebrow: "Her Duyguya Özel",
+    description: "Kutlamadan teşekküre, duygunuza en doğru tasarımı bulun.",
+    cta: "Seçenekleri Gör",
+  },
+  {
+    id: "special-days",
+    name: "Özel Günler",
+    href: "/kategori/ozel-gunler",
+    image: "/featured-collections/special-days-lifestyle.webp",
+    eyebrow: "Unutulmaz Anlar",
+    description: "En değerli günleri kalıcı bir hatıraya dönüştüren aranjmanlar.",
+    cta: "Şimdi Keşfet",
+  },
+];
+
+const DEFAULT_PERSONALIZED: FeaturedCollectionCard = {
+  id: "personalized",
+  name: "Kişiye Özel Tasarım",
+  href: "https://wa.me/905074413474?text=Merhaba%2C%20ki%C5%9Fiye%20%C3%B6zel%20bir%20tasar%C4%B1m%20haz%C4%B1rlatmak%20istiyorum",
+  image: "/featured-collections/personalized-terrarium-lifestyle.webp",
+  eyebrow: "Sadece Size Özel",
+  description: "Hayalinizdeki hikâyeyi, size özel hazırlanan yaşayan bir tasarıma dönüştürelim.",
+  cta: "Tasarımını Oluştur",
+};
+
+function usableCard(card: FeaturedCollectionCard | undefined): card is FeaturedCollectionCard {
+  if (!card || card.enabled === false) return false;
+  const image = card.image?.trim();
+  const href = card.href?.trim();
+  return Boolean(card.id && card.name?.trim() && image && href && (/^(https?:\/\/|\/)/i.test(image)));
+}
+
+export function FeaturedCollections({ items: _items, config }: { items?: FCItem[]; config?: FeaturedCollectionsConfig | Record<string, unknown> }) {
+  const cmsConfig = (config ?? {}) as FeaturedCollectionsConfig;
+  const configured = Array.isArray(cmsConfig.cards) ? cmsConfig.cards.filter(usableCard) : [];
+  const collections = (configured.length >= 3 ? configured : DEFAULT_CARDS).slice(0, 3);
+  const personalized = usableCard(cmsConfig.personalized) ? cmsConfig.personalized : DEFAULT_PERSONALIZED;
+  const sectionTitle = cmsConfig.sectionTitle?.trim() || "Hayatın Her Anına Özel";
   return (
     <section className="py-20">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
         <div className="flex items-end justify-between mb-12">
           <div>
-            <SectionLabel>Koleksiyonlar</SectionLabel>
+            <SectionLabel>{cmsConfig.sectionLabel?.trim() || "Özel Koleksiyonlar"}</SectionLabel>
             <SectionTitle>
-              Öne Çıkan
-              <br />
-              Koleksiyonlar
+              {sectionTitle}
             </SectionTitle>
           </div>
           <Link
-            href="/kategori/buketler"
+            href={cmsConfig.allHref?.trim() || "/kategori/cicekler"}
             className="hidden md:flex items-center gap-2 text-sm text-[#8B5CF6] font-semibold hover:gap-3 transition-all"
           >
             Tümünü Gör <ArrowRight className="w-4 h-4" />
@@ -62,15 +123,16 @@ export function FeaturedCollections({ items }: { items?: FCItem[] }) {
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.08) 50%, transparent 100%)" }}
               />
               <div className="absolute bottom-0 left-0 p-8">
-                <p className="text-[10px] tracking-[0.3em] text-[#C084FC] uppercase font-bold mb-2">"Koleksiyon"</p>
+                <p className="text-[10px] tracking-[0.3em] text-[#D8B4FE] uppercase font-bold mb-2">{collections[0].eyebrow || "Koleksiyon"}</p>
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", lineHeight: 1.1 }} className="text-white font-semibold mb-2">
                   {collections[0].name}
                 </h3>
+                {collections[0].description ? <p className="max-w-sm text-white/80 text-sm leading-relaxed mb-4">{collections[0].description}</p> : null}
                 <span
                   className="inline-flex items-center gap-2 text-white text-xs font-semibold py-2.5 px-5 rounded-full transition-all duration-300 group-hover:bg-white group-hover:text-[#7C3AED]"
                   style={{ border: "1.5px solid rgba(255,255,255,0.35)" }}
                 >
-                  Keşfet <ArrowRight className="w-3.5 h-3.5" />
+                  {collections[0].cta || "Keşfet"} <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </div>
             </Link>
@@ -99,10 +161,11 @@ export function FeaturedCollections({ items }: { items?: FCItem[] }) {
                     style={{ background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)" }}
                   />
                   <div className="absolute bottom-0 left-0 p-6">
-                    <p className="text-[10px] tracking-[0.25em] text-[#C084FC] uppercase font-bold mb-1">"Koleksiyon"</p>
+                    <p className="text-[10px] tracking-[0.25em] text-[#D8B4FE] uppercase font-bold mb-1">{col.eyebrow || "Koleksiyon"}</p>
                     <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.35rem" }} className="text-white font-semibold">
                       {col.name}
                     </h3>
+                    {col.description ? <p className="mt-1 max-w-xs text-white/75 text-xs leading-relaxed">{col.description}</p> : null}
                   </div>
                 </Link>
               </motion.div>
@@ -115,30 +178,35 @@ export function FeaturedCollections({ items }: { items?: FCItem[] }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.25, duration: 0.7 }}
-            className="hidden lg:flex flex-col rounded-[24px] overflow-hidden"
-            style={{ background: "linear-gradient(160deg, #3B0764 0%, #6D28D9 45%, #9333EA 75%, #A855F7 100%)" }}
+            className="hidden lg:flex relative flex-col rounded-[24px] overflow-hidden min-h-[520px]"
           >
-            <div className="flex-1 p-8 flex flex-col">
+            <motion.img
+              src={personalized.image}
+              alt={personalized.name}
+              className="absolute inset-0 h-full w-full object-cover"
+              whileHover={{ scale: 1.04 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#21052f] via-[#4C1D95]/65 to-[#2E1065]/10" />
+            <div className="relative flex-1 p-8 flex flex-col">
               <div className="mb-auto">
-                <p className="text-[10px] tracking-[0.32em] text-[#DDD6FE]/70 uppercase font-bold mb-6">Özel Hizmet</p>
+                <p className="text-[10px] tracking-[0.32em] text-[#E9D5FF] uppercase font-bold mb-6">{personalized.eyebrow || "Özel Hizmet"}</p>
                 <h3
                   style={{ fontFamily: "var(--font-display)", lineHeight: 1.1, fontSize: "1.7rem" }}
                   className="text-white font-semibold mb-4"
                 >
-                  Kişiye Özel
-                  <br />
-                  Tasarım
+                  {personalized.name}
                 </h3>
                 <p className="text-[#DDD6FE]/70 text-sm leading-relaxed">
-                  Uzman tasarımcılarımızla tamamen size özel aranjmanlar. Her bütçeye, her duyguya.
+                  {personalized.description}
                 </p>
               </div>
               <a
-                href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
+                href={personalized.href}
                 className="mt-8 flex items-center gap-2 py-3.5 px-6 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition-colors border border-white/15"
               >
                 <MessageCircle className="w-4 h-4" />
-                WhatsApp&apos;tan Yazın
+                {personalized.cta || "WhatsApp'tan Yazın"}
                 <ArrowRight className="w-3.5 h-3.5 ml-auto" />
               </a>
             </div>
