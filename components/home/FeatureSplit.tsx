@@ -14,6 +14,25 @@ export function FeatureSplit() {
   return (
     <section className="py-16 bg-white">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
+        <div className="mb-9 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
+              81 İle Güvenli Gönderim
+            </p>
+            <h2
+              className="mt-3 max-w-3xl text-3xl font-semibold text-[#130724] md:text-4xl lg:text-5xl"
+              style={{ fontFamily: "var(--font-display)", lineHeight: 1.08 }}
+            >
+              Mesafeler Uzak, Sevginiz Hep Yakın
+            </h2>
+          </div>
+          <Link
+            href="/kategori/turkiye-geneli-kargo"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-[#DDD2F5] px-5 py-3 text-sm font-bold text-[#6D28D9] transition-colors hover:border-[#8B5CF6] hover:bg-[#F5F3FF]"
+          >
+            Kargo ve Teslimatı Keşfet <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
         <div className="grid md:grid-cols-2 gap-5">
           {/* Türkiye Kargo card */}
           <Link href="/kategori/turkiye-geneli-kargo" className="group block">
