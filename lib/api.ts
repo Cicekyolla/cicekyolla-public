@@ -142,7 +142,7 @@ export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
   // halinde tek bir no-store tekrar yapılır. Kategori verisi/slug/hiyerarşi değişmez.
   const attempts = [
     { headers: apiHeaders(), next: { revalidate: 300 } },
-    { headers: apiHeaders(), cache: "no-store" },
+    { headers: apiHeaders(), cache: "no-store" as const },
   ];
 
   for (const init of attempts) {
