@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { fetchProducts, fetchSeoPage, toCardProduct, type BodyBlock, type SeoPublicPage } from "@/lib/api";
@@ -162,10 +162,16 @@ function absoluteUrl(path: string): string {
   return SITE_URL + (path.startsWith("/") ? path : "/" + path);
 }
 
+const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = {
+  "/cicekler": "/kategori/cicekler",
+  "/orkideler": "/kategori/orkideler",
+};
+
 type PageProps = { params: { slug?: string[] }; searchParams?: { [k: string]: string | string[] | undefined } };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const path = slugToPath(params.slug);
+  const requestedPath = slugToPath(params.slug);
+  const path = LEGACY_CATEGORY_REDIRECTS[requestedPath] || requestedPath;
   const page = await resolvePage(path);
   if (!page) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
   const indexable = page.index_state === "index";
@@ -187,7 +193,10 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 }
 
 export default async function Page({ params, searchParams }: PageProps) {
-  const path = slugToPath(params.slug);
+  const requestedPath = slugToPath(params.slug);
+  const redirectTarget = LEGACY_CATEGORY_REDIRECTS[requestedPath];
+  if (redirectTarget) redirect(redirectTarget);
+  const path = requestedPath;
   const page = await resolvePage(path);
   if (!page) notFound();
   const faqLd = faqJsonLd(page);

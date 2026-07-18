@@ -137,35 +137,43 @@ export function isCategoryVisible(node: { status?: unknown }): boolean {
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
   const url = `${API_ORIGIN}${CATEGORIES_PATH}`;
 
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 300 } });
-  } catch {
-    return null;
+  // Render/Vercel cold-start veya kısa ağ kesintilerinde ilk istek geçici olarak
+  // başarısız olabilir. İlk deneme normal ISR cache sözleşmesini korur; yalnız hata
+  // halinde tek bir no-store tekrar yapılır. Kategori verisi/slug/hiyerarşi değişmez.
+  const attempts = [
+    { headers: apiHeaders(), next: { revalidate: 300 } },
+    { headers: apiHeaders(), cache: "no-store" as const },
+  ];
+
+  for (const init of attempts) {
+    let res: Response;
+    try {
+      res = await fetch(url, init);
+    } catch {
+      continue;
+    }
+    if (!res.ok) continue;
+
+    let json: unknown;
+    try {
+      json = await res.json();
+    } catch {
+      continue;
+    }
+
+    // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
+    const payload = (json as { data?: unknown } | null)?.data ?? json;
+    if (!Array.isArray(payload)) continue;
+
+    const nodes = payload.filter(
+      (n): n is CategoryNode =>
+        !!n &&
+        typeof (n as CategoryNode).name === "string" &&
+        typeof (n as CategoryNode).slug === "string"
+    );
+    if (nodes.length > 0) return nodes;
   }
-
-  if (!res.ok) return null;
-
-  let json: unknown;
-  try {
-    json = await res.json();
-  } catch {
-    return null;
-  }
-
-  // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
-  const payload =
-    (json as { data?: unknown } | null)?.data ?? (json as unknown);
-  if (!Array.isArray(payload)) return null;
-
-  // Yalnız geçerli düğümleri (name + slug) al; şema-dışı alanlar korunur.
-  const nodes = payload.filter(
-    (n): n is CategoryNode =>
-      !!n &&
-      typeof (n as CategoryNode).name === "string" &&
-      typeof (n as CategoryNode).slug === "string"
-  );
-  return nodes.length > 0 ? nodes : null;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

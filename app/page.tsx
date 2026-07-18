@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchProducts, toCardProduct } from "@/lib/api";
+import { fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
@@ -18,7 +18,7 @@ import { EditorsPicks, type EditorPick } from "../components/home/EditorsPicks";
 import { BrandStory } from "../components/home/BrandStory";
 import { Testimonials } from "../components/home/Testimonials";
 import { InstagramGallery } from "../components/home/InstagramGallery";
-import { CorporateReferences } from "../components/home/CorporateReferences";
+import { CorporateReferences, type CorporateClients } from "../components/home/CorporateReferences";
 import { DistrictDelivery } from "../components/home/DistrictDelivery";
 import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
@@ -150,6 +150,26 @@ export default async function HomePage() {
       };
     });
 
+  // Kurumsal referanslar ana sayfada Instagram'ın hemen altında gösterilir ve
+  // admin > Mağaza Ön Yüzü > Kurumsal kaydından okunur.
+  const corporatePage = await fetchSeoPage("/kurumsal");
+  const corporateBlocks = corporatePage?.body_blocks ?? [];
+  const corporateSettings = corporateBlocks.find((b) => b.type === "corporate-clients-settings");
+  const corporateClients: CorporateClients = {
+    enabled: corporateSettings?.value === "true",
+    eyebrow: String(corporateSettings?.label || "Kurumsal Müşterilerimiz"),
+    title: String(corporateSettings?.title || "İş Ortaklarımız ve Kurumsal Çözümlerimiz"),
+    description: String(corporateSettings?.text || ""),
+    stats: corporateBlocks
+      .filter((b) => b.type === "corporate-stat")
+      .map((b) => ({ value: String(b.value || ""), label: String(b.title || "") }))
+      .filter((item) => item.value && item.label),
+    references: corporateBlocks
+      .filter((b) => b.type === "corporate-reference" && b.value !== "false")
+      .map((b) => ({ title: String(b.title || ""), description: String(b.text || ""), category: String(b.kind || ""), imageUrl: String(b.note || "") }))
+      .filter((item) => item.title),
+  };
+
   // CMS: yayınlanan snapshot varsa onu render et (sıra/enabled/zaman penceresi
   // API tarafında uygulanır; ürün bölümleri DTO ürünleriyle ProductCard olarak
   // gelir). Yayın yoksa VEYA API hatasında aşağıdaki mevcut (temizlenmiş)
@@ -182,6 +202,7 @@ export default async function HomePage() {
         <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections }} />
         {showTestimonials && <Testimonials />}
         {showInstagram && <InstagramGallery config={instagramSection?.config} />}
+        <CorporateReferences clients={corporateClients} />
       </>
     );
   }
@@ -212,7 +233,7 @@ export default async function HomePage() {
       <BrandStory />
       <Testimonials />
       <InstagramGallery />
-      <CorporateReferences />
+      <CorporateReferences clients={corporateClients} />
       <DistrictDelivery />
       <WhatsAppCTA />
       <Newsletter />
