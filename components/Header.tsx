@@ -31,6 +31,7 @@ export function Header({ menu, nav, search, brand }: {
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
   const menuData: Record<string, MegaGroup> = menu ?? {}; // TEK KAYNAK: yalnız canlı kategori ağacı; hardcoded/fallback YOK
   const navItems: string[] = Object.keys(menuData);
+  const isCargoNav = (label: string) => label.toLocaleLowerCase("tr").includes("kargo");
 
   // Mobil menü kategori kısmı: canlı nav (fallback: menü anahtarları / hardcoded).
   const mobileCats: { label: string; href: string }[] =
@@ -107,9 +108,13 @@ export function Header({ menu, nav, search, brand }: {
         className="text-white"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
-          <p className="hidden lg:block text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap">
+          <Link
+            href="/kategori/turkiye-geneli-kargo"
+            className="hidden lg:block text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap text-white/90 hover:text-white transition-colors"
+            aria-label="Türkiye geneli kargo sayfasına git"
+          >
             Bugün 14:00'a kadar sipariş verin &nbsp;—&nbsp; Aynı Gün Teslimat &nbsp;·&nbsp; Türkiye Geneli Ücretsiz Kargo
-          </p>
+          </Link>
           <nav aria-label="Müşteri işlemleri" className="flex items-center justify-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
             <Link href="/giris" className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
               <UserRound className="w-3.5 h-3.5" />
@@ -171,6 +176,24 @@ export function Header({ menu, nav, search, brand }: {
                   onMouseEnter={() => handleMouseEnter(key)}
                   onMouseLeave={handleMouseLeave}
                 >
+                  {isCargoNav(key) ? (
+                  <Link
+                    href={menuData[key].href ?? "/kategori/turkiye-geneli-kargo"}
+                    className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
+                      activeMenu === key
+                        ? "text-[#E9D5FF] bg-white/[0.10]"
+                        : "text-[#E5E7EB] hover:text-[#E9D5FF] hover:bg-white/[0.07]"
+                    }`}
+                    style={{
+                      padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
+                      fontSize: "clamp(10px, 1vw, 11.5px)",
+                      letterSpacing: "clamp(0.02em, 0.04em, 0.05em)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {key}
+                  </Link>
+                  ) : (
                   <button
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
@@ -186,6 +209,7 @@ export function Header({ menu, nav, search, brand }: {
                   >
                     {key}
                   </button>
+                  )}
                 </div>
               ))}
             </nav>
