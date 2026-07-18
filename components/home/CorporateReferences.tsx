@@ -1,12 +1,10 @@
 "use client";
 
-/**
- * §11b KURUMSAL REFERANSLAR.
- * Örnek/şablon referanslar (otel/restoran/marka isimleri, "500+ kurumsal müşteri",
- * "%100 memnuniyet", "12.000+ aylık teslimat" vb.) KALDIRILDI — doğrulanmamış içerik.
- * Bu bölüm YALNIZ gerçek, doğrulanmış kurumsal referans verisi bağlandığında (Homepage
- * CMS / gerçek kaynak) gösterilecektir. Kaynak yokken güvenli biçimde gizli (null).
- */
-export function CorporateReferences() {
-  return null;
+export type CorporateStat={value:string;label:string};
+export type CorporateReference={title:string;description:string;category:string;imageUrl:string};
+export type CorporateClients={enabled:boolean;eyebrow:string;title:string;description:string;stats:CorporateStat[];references:CorporateReference[]};
+
+export function CorporateReferences({clients}:{clients:CorporateClients}) {
+  if(!clients.enabled) return null;
+  return <section className="bg-white px-6 py-20 lg:px-14 lg:py-28"><div className="mx-auto max-w-[1370px]"><div className="mx-auto max-w-4xl text-center"><p className="text-xs font-bold uppercase tracking-[.28em] text-[#8b5cf6]">{clients.eyebrow}</p><h2 className="mt-5 font-serif text-4xl font-semibold leading-tight text-[#111827] md:text-6xl">{clients.title}</h2>{clients.description&&<p className="mx-auto mt-6 max-w-3xl text-base leading-7 text-[#9b92a7] md:text-lg">{clients.description}</p>}</div>{clients.stats.length>0&&<div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{clients.stats.map((stat,i)=><div key={`${stat.label}-${i}`} className="rounded-[24px] border border-[#e4dcff] bg-[#f5f1ff] px-5 py-9 text-center"><strong className="block font-serif text-4xl text-[#8b5cf6] md:text-5xl">{stat.value}</strong><span className="mt-3 block text-sm text-[#675d72]">{stat.label}</span></div>)}</div>}{clients.references.length>0&&<div className="mt-16 grid gap-7 md:grid-cols-2 xl:grid-cols-3">{clients.references.map((reference,i)=><article key={`${reference.title}-${i}`} className="overflow-hidden rounded-[26px] border border-[#eee8f5] bg-white shadow-[0_18px_55px_rgba(45,22,72,.07)]">{reference.imageUrl?<div className="flex aspect-[16/9] items-center justify-center overflow-hidden bg-[#faf8fc]"><img src={reference.imageUrl} alt={reference.title} className="h-full w-full object-contain" loading="lazy" referrerPolicy="no-referrer"/></div>:<div className="grid aspect-[16/9] place-items-center bg-[#faf8fc] text-sm text-[#a59bad]">Görsel admin panelinden eklenebilir</div>}<div className="p-7"><p className="text-xs font-bold uppercase tracking-[.22em] text-[#8b5cf6]">{reference.category}</p><h3 className="mt-3 font-serif text-2xl font-semibold text-[#111827]">{reference.title}</h3>{reference.description&&<p className="mt-4 leading-7 text-[#746b80]">{reference.description}</p>}</div></article>)}</div>}</div></section>;
 }
