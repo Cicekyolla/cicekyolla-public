@@ -48,9 +48,11 @@ export function Footer({
     : phoneDigits.startsWith("90")
       ? `+${phoneDigits}`
       : `+90${phoneDigits}`;
+  const categoryLinks = Array.from(
+    new Map([...FALLBACK_COLLECTION_LINKS, ...(categories ?? [])].map((item) => [item.href, item])).values(),
+  );
   const collectionLinks = [
-    ...(categories && categories.length > 0 ? categories : FALLBACK_COLLECTION_LINKS)
-      .filter((item) => item.href !== "/kategori/turkiye-geneli-kargo"),
+    ...categoryLinks.filter((item) => item.href !== "/kategori/turkiye-geneli-kargo"),
     { name: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
   ];
 
