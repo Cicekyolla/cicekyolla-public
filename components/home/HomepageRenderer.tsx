@@ -47,7 +47,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
     case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
-    case "best_sellers":        return <ProductShowcase title={s.title ?? "Çok Satanlar"} products={s.products} />;
+    case "best_sellers":        return <ProductShowcase title={s.title?.trim() && s.title.trim() !== "Çok Satanlar" ? s.title : "En Çok Tercih Edilenler"} subtitle={s.subtitle ?? "Müşterilerimizin favori çiçekleri."} products={s.products} />;
     case "editors_picks":       return <EditorsPicks title={s.title} subtitle={s.subtitle} config={s.config} />;
     case "brand_story":         return <BrandStory />;
     case "testimonials":        return <Testimonials />;
@@ -56,7 +56,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "district_delivery":   return <DistrictDelivery />;
     case "whatsapp_cta":        return <WhatsAppCTA />;
     case "newsletter":          return <Newsletter />;
-    case "product_showcase":    return <ProductShowcase title={s.title} subtitle={s.subtitle} products={s.products} />;
+    case "product_showcase":    return <ProductShowcase title={s.title?.trim() ? s.title : "Sizin İçin Seçtiklerimiz"} subtitle={s.subtitle?.trim() ? s.subtitle : "Her ana yakışan, özenle seçilmiş tasarımlar."} products={s.products} limit={16} />;
     default:                    return null;
   }
 }
