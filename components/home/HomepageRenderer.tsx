@@ -64,6 +64,7 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
   const enabledSections = dto.sections.filter((s) => s.enabled);
   const hasCollectionRail = enabledSections.some((s) => s.type === "collection_rail");
   const hasFeatureSplit = enabledSections.some((s) => s.type === "feature_split");
+  const hasUrgencyStrip = enabledSections.some((s) => s.type === "urgency_strip");
   const fallbackAnchor = enabledSections.some((s) => s.type === "urgency_strip")
     ? "urgency_strip"
     : enabledSections.some((s) => s.type === "featured_collections")
@@ -82,6 +83,7 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
       {enabledSections.map((s) => (
         <Fragment key={s.id}>
           {renderSection(s, ctx)}
+          {!hasUrgencyStrip && s.type === "featured_collections" ? <UrgencyStrip /> : null}
           {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
         </Fragment>
       ))}
