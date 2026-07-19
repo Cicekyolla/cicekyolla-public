@@ -66,6 +66,12 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
   const hasCollectionRail = enabledSections.some((s) => s.type === "collection_rail");
   const hasFeatureSplit = enabledSections.some((s) => s.type === "feature_split");
   const hasUrgencyStrip = enabledSections.some((s) => s.type === "urgency_strip");
+  const hasEditorsPicks = enabledSections.some((s) => s.type === "editors_picks");
+  const editorFallbackAnchor = enabledSections.some((s) => s.type === "best_sellers")
+    ? "best_sellers"
+    : enabledSections.some((s) => s.type === "occasion_shopping")
+      ? "occasion_shopping"
+      : null;
   const fallbackAnchor = enabledSections.some((s) => s.type === "urgency_strip")
     ? "urgency_strip"
     : enabledSections.some((s) => s.type === "featured_collections")
@@ -85,9 +91,11 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
         <Fragment key={s.id}>
           {renderSection(s, ctx)}
           {!hasUrgencyStrip && s.type === "featured_collections" ? <UrgencyStrip /> : null}
+          {!hasEditorsPicks && s.type === editorFallbackAnchor ? <EditorsPicks config={{}} /> : null}
           {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
         </Fragment>
       ))}
+      {!hasEditorsPicks && editorFallbackAnchor === null ? <EditorsPicks config={{}} /> : null}
       {!hasFeatureSplit && fallbackAnchor === null ? <FeatureSplit /> : null}
     </>
   );
