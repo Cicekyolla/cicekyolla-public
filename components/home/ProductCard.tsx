@@ -6,7 +6,7 @@
  * Adaptasyon: react-router <Link to=…> → next/link <Link href=…>. Görsel/etkileşim birebir.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
@@ -89,7 +89,20 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 export function ProductCard({ product, idx, contextTag, deliveryPromise }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise }) {
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [hoverImage, setHoverImage] = useState<string | null>(null);
+  const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
+  const hoverRequested = useRef(false);
   const tags = deriveTags(product, contextTag);
+
+  const requestHoverImage = () => {
+    setHovered(true);
+    if (hoverRequested.current) return;
+    hoverRequested.current = true;
+    void fetch(`/api/product-hover/${encodeURIComponent(product.slug)}`)
+      .then((response) => response.ok ? response.json() as Promise<{ image?: string | null }> : null)
+      .then((data) => { if (data?.image) setHoverImage(data.image); })
+      .catch(() => undefined);
+  };
 
   return (
     <motion.div
@@ -102,8 +115,10 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
       <Link
         href={`/urun/${product.slug}`}
         className="group flex flex-col h-full rounded-[20px] border border-[#F1F0F5] bg-white overflow-hidden transition-all duration-300 hover:shadow-[0_14px_36px_rgba(124,58,237,0.10)] hover:border-[#EDE9FE]"
-        onMouseEnter={() => setHovered(true)}
+        onMouseEnter={requestHoverImage}
+        onFocus={requestHoverImage}
         onMouseLeave={() => setHovered(false)}
+        onBlur={() => setHovered(false)}
       >
         {/* Image container — beyaz stüdyo zemini, kırpma yok (object-contain), merkezi ProductImage */}
         <div className="relative overflow-hidden bg-white" style={{ aspectRatio: "4/5" }}>
@@ -115,7 +130,21 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
             derivatives={product.derivatives}
             blurhash={product.blurhash}
             sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
+            className={`transition-opacity duration-500 ${hovered && hoverImageLoaded ? "opacity-0" : "opacity-100"}`}
           />
+          {hoverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={hoverImage}
+              alt={`${product.name} yaşam alanında`}
+              draggable={false}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setHoverImageLoaded(true)}
+              onError={() => setHoverImage(null)}
+              className={`absolute inset-0 h-full w-full object-contain bg-white transition-[opacity,transform] duration-500 ease-out ${hovered && hoverImageLoaded ? "scale-[1.03] opacity-100" : "scale-100 opacity-0"}`}
+            />
+          ) : null}
           {/* Gradient overlay */}
           <div
             className="absolute inset-0 transition-opacity duration-500"
