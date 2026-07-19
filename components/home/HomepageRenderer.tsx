@@ -45,7 +45,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "urgency_strip":       return <UrgencyStrip />;
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
-    case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} />;
+    case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
     case "best_sellers":        return <ProductShowcase title={s.title ?? "Çok Satanlar"} products={s.products} />;
     case "editors_picks":       return <ProductShowcase title={s.title ?? "Editör Seçimleri"} products={s.products} />;
     case "brand_story":         return <BrandStory />;
