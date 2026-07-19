@@ -42,7 +42,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
     case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} config={s.config} />;
-    case "urgency_strip":       return <UrgencyStrip />;
+    case "urgency_strip":       return <UrgencyStrip title={s.title} subtitle={s.subtitle} config={s.config} />;
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
     case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
