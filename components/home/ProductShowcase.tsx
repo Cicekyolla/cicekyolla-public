@@ -57,8 +57,8 @@ function toCard(p: HpProduct): Product {
   };
 }
 
-export function ProductShowcase({ title, subtitle, products }: { title?: string | null; subtitle?: string | null; products?: HpProduct[] }) {
-  const items = (products ?? []).map(toCard);
+export function ProductShowcase({ title, subtitle, products, limit }: { title?: string | null; subtitle?: string | null; products?: HpProduct[]; limit?: number }) {
+  const items = (limit ? (products ?? []).slice(0, limit) : (products ?? [])).map(toCard);
   const [deliveryPromise, setDeliveryPromise] = useState<ProductDeliveryPromise>();
 
   useEffect(() => {
