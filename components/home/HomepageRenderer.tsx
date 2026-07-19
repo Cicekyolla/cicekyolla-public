@@ -27,6 +27,7 @@ import { DistrictDelivery } from "./DistrictDelivery";
 import { WhatsAppCTA } from "./WhatsAppCTA";
 import { Newsletter } from "./Newsletter";
 import { ProductShowcase } from "./ProductShowcase";
+import { EditorsPicks } from "./EditorsPicks";
 
 export interface RenderCtx {
   collections: ComponentProps<typeof FloatingCategoryRail>["items"];
@@ -47,7 +48,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "same_day_delivery":   return <SameDayDelivery />;
     case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
     case "best_sellers":        return <ProductShowcase title={s.title ?? "Çok Satanlar"} products={s.products} />;
-    case "editors_picks":       return <ProductShowcase title={s.title ?? "Editör Seçimleri"} products={s.products} />;
+    case "editors_picks":       return <EditorsPicks title={s.title} subtitle={s.subtitle} config={s.config} />;
     case "brand_story":         return <BrandStory />;
     case "testimonials":        return <Testimonials />;
     case "instagram_gallery":   return <InstagramGallery config={s.config} />;
