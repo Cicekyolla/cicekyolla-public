@@ -213,6 +213,10 @@ export interface PublicProductDetail {
   variants: PublicProductVariant[];
 }
 
+export interface PublicProductSeoContent {
+  faq_json?: Array<{ q?: string | null; a?: string | null }> | null;
+}
+
 /** Tek ürünü slug ile çeker. 404/hata veya 'active' değilse null (public gizler). */
 export async function fetchProductBySlug(slug: string): Promise<PublicProductDetail | null> {
   const url = `${API_ORIGIN}/api/products/slug/${encodeURIComponent(slug)}`;
@@ -232,6 +236,20 @@ export async function fetchProductBySlug(slug: string): Promise<PublicProductDet
     data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url), derivatives: mediaDerivatives(im.derivatives) }));
   }
   return data;
+}
+
+/** Ürün SEO sekmesinde kaydedilmiş müşteri-facing SSS içeriği. */
+export async function fetchProductSeoById(id: string | number): Promise<PublicProductSeoContent | null> {
+  try {
+    const res = await fetch(`${API_ORIGIN}/api/products/${encodeURIComponent(String(id))}/seo`, {
+      headers: apiHeaders(),
+      next: { revalidate: 120 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as PublicProductSeoContent;
+  } catch {
+    return null;
+  }
 }
 
 /** minor (kuruş) → "₺1.240" biçimi (TR). */
