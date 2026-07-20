@@ -102,11 +102,10 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
 }
 
 async function resolvePage(path: string): Promise<SeoPublicPage | null> {
-  const seo = await fetchSeoPage(path);
-  if (seo) return seo;
   if (path.startsWith("/kategori/")) {
+    const [seo, tree] = await Promise.all([fetchSeoPage(path), getCategoryTree()]);
+    if (seo) return seo;
     const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
-    const tree = await getCategoryTree();
     const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
     if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
     // Render/API kısa süreli erişilemezse geçerli kategori URL'lerini 404 olarak
@@ -116,6 +115,8 @@ async function resolvePage(path: string): Promise<SeoPublicPage | null> {
       return syntheticCategoryPage(path, { name: prettySlug(slug) });
     }
   }
+  const seo = await fetchSeoPage(path);
+  if (seo) return seo;
   const location = deliveryParts(path);
   if (location) return syntheticDeliveryPage(path, location);
   return null;
