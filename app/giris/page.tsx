@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Eye, Lock, Mail, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { Check, Eye, Lock, Mail, Phone, Shield, Sparkles, UserRound } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Üye Girişi ve Kayıt — ÇiçekYolla",
@@ -73,7 +73,7 @@ export default function LoginPage() {
           <h1 className="mt-10 font-serif text-5xl font-semibold leading-tight md:text-6xl">Müşteri hesabınızı oluşturun, siparişleriniz hep elinizin altında olsun.</h1>
           <p className="mt-7 max-w-xl text-lg leading-8 text-[#e9d5ff]">Üye olarak hızlı sipariş verebilir, teslimat adreslerinizi saklayabilir ve size özel çiçek önerilerini hesabınızda görebilirsiniz.</p>
           <div className="mt-10 space-y-4">
-            {benefits.map((item) => <div key={item} className="flex items-center gap-3 text-[#f5f3ff]"><CheckCircle2 className="h-5 w-5 text-[#d8b4fe]" />{item}</div>)}
+            {benefits.map((item) => <div key={item} className="flex items-center gap-3 text-[#f5f3ff]"><Check className="h-5 w-5 text-[#d8b4fe]" />{item}</div>)}
           </div>
           <div className="mt-12 rounded-[24px] border border-white/15 bg-white/10 p-6">
             <p className="text-sm font-bold uppercase tracking-[.18em] text-[#ddd6fe]">Güvenli müşteri alanı</p>
@@ -116,7 +116,7 @@ export default function LoginPage() {
               <button type="submit" disabled={registerLoading} className="rounded-full bg-[#111827] px-8 py-4 text-lg font-bold text-white md:col-span-2">{registerLoading ? "Hesap oluşturuluyor…" : "Hesap Oluştur"}</button>
               {registerMessage && <p role="status" className="text-sm text-[#667085] md:col-span-2">{registerMessage}</p>}
             </form>
-            <div className="mt-6 flex items-center gap-3 rounded-[18px] bg-[#f7f5fc] p-4 text-sm text-[#667085]"><ShieldCheck className="h-5 w-5 text-[#8b5cf6]" /> Sipariş ve üyelik verileri güvenli bağlantı üzerinden işlenir.</div>
+            <div className="mt-6 flex items-center gap-3 rounded-[18px] bg-[#f7f5fc] p-4 text-sm text-[#667085]"><Shield className="h-5 w-5 text-[#8b5cf6]" /> Sipariş ve üyelik verileri güvenli bağlantı üzerinden işlenir.</div>
           </div>
         </section>
       </div>
