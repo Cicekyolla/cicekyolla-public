@@ -1,7 +1,7 @@
 "use client";
 
 import type { Metadata } from "next";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Eye, Lock, Mail, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
@@ -37,7 +37,7 @@ export default function LoginPage() {
     if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "İşlem sırasında bir hata oluştu.");
   }
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleLogin(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setLoginLoading(true); setLoginMessage(null);
     const form = new FormData(event.currentTarget);
