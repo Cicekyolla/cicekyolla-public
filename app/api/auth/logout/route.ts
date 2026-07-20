@@ -11,10 +11,12 @@ export async function POST(request: Request) {
       cache: "no-store",
     });
     const data = await upstream.text();
-    const response = new NextResponse(data, {
-      status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
-    });
+    const response = upstream.status === 204
+      ? new NextResponse(null, { status: 204 })
+      : new NextResponse(data, {
+          status: upstream.status,
+          headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
+        });
     const setCookie = upstream.headers.get("set-cookie");
     if (setCookie) response.headers.set("set-cookie", setCookie);
     return response;
