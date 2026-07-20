@@ -11,6 +11,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
+import { useCart } from "@/lib/cart";
 
 export type Product = {
   id: number;
@@ -87,6 +88,7 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 };
 
 export function ProductCard({ product, idx, contextTag, deliveryPromise }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise }) {
+  const { addItem } = useCart();
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [hoverImage, setHoverImage] = useState<string | null>(null);
@@ -191,6 +193,10 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
             className="absolute bottom-0 left-0 right-0 p-4"
           >
             <button
+              onClick={(e) => {
+                e.preventDefault();
+                addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: null, variantTitle: null, unitPriceMinor: Math.round(product.price * 100), image: product.image });
+              }}
               className="w-full py-3 rounded-xl text-white text-sm font-semibold tracking-wide"
               style={{
                 background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
