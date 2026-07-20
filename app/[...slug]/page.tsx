@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
@@ -110,7 +111,10 @@ async function resolvePage(path: string): Promise<SeoPublicPage | null> {
     if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
     // Render/API kısa süreli erişilemezse geçerli kategori URL'lerini 404 olarak
     // önbelleğe alma. Ağaç geri geldiğinde admin verisi yeniden tek kaynak olur.
-    if (!tree && slug) return syntheticCategoryPage(path, { name: prettySlug(slug) });
+    if (!tree && slug) {
+      noStore();
+      return syntheticCategoryPage(path, { name: prettySlug(slug) });
+    }
   }
   const location = deliveryParts(path);
   if (location) return syntheticDeliveryPage(path, location);
