@@ -34,24 +34,32 @@ export default function GirisForm() {
     event.preventDefault();
     setLoginLoading(true); setLoginMessage(null);
     const form = new FormData(event.currentTarget);
+    const identifier = String(form.get("identifier") ?? "").trim();
+    const loginPassword = String(form.get("password") ?? "");
+    if (!identifier || !loginPassword) { setLoginMessage("E-posta/telefon ve şifre zorunludur."); setLoginLoading(false); return; }
     try {
-      await submitAuth("login", { identifier: form.get("identifier"), password: form.get("password") });
+      await submitAuth("login", { identifier, password: loginPassword });
       setLoginMessage("Giriş başarılı, yönlendiriliyorsunuz…");
       router.push("/");
     } catch (error) { setLoginMessage(error instanceof Error ? error.message : "Giriş yapılamadı."); }
     finally { setLoginLoading(false); }
   }
 
-  async function handleRegister(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleRegister(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setRegisterLoading(true); setRegisterMessage(null);
     const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
+    const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const passwordAgain = String(form.get("password_again") ?? "");
+    if (!name || !phone || !email || !password || !passwordAgain) { setRegisterMessage("Tüm alanları doldurun."); setRegisterLoading(false); return; }
+    if (password.length < 8) { setRegisterMessage("Şifre en az 8 karakter olmalıdır."); setRegisterLoading(false); return; }
     if (password !== passwordAgain) { setRegisterMessage("Şifreler eşleşmiyor."); setRegisterLoading(false); return; }
     if (form.get("kvkk_onay") !== "on") { setRegisterMessage("KVKK onayı zorunludur."); setRegisterLoading(false); return; }
     try {
-      await submitAuth("register", { name: form.get("name"), phone: form.get("phone"), email: form.get("email"), password, kvkk_onay: true });
+      await submitAuth("register", { name, phone, email, password, kvkk_onay: true });
       setRegisterMessage("Hesabınız oluşturuldu, yönlendiriliyorsunuz…");
       router.push("/");
     } catch (error) { setRegisterMessage(error instanceof Error ? error.message : "Kayıt oluşturulamadı."); }
@@ -83,7 +91,7 @@ export default function GirisForm() {
               </div>
               <span className="grid h-16 w-16 place-items-center rounded-full bg-[#f3edff] text-[#8b5cf6]"><UserRound className="h-7 w-7" /></span>
             </div>
-            <form onSubmit={handleLogin} className="mt-8 grid gap-4">
+            <form noValidate onSubmit={handleLogin} className="mt-8 grid gap-4">
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">E-posta veya telefon
                 <span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Mail className="h-5 w-5 text-[#8b5cf6]" /><input name="identifier" required type="text" placeholder="info@ornek.com veya 05XX" className="h-14 flex-1 bg-transparent outline-none" /></span>
               </label>
@@ -99,7 +107,7 @@ export default function GirisForm() {
           <div className="rounded-[30px] border border-[#ede9fe] bg-white p-8 shadow-[0_24px_70px_rgba(45,22,72,.07)]">
             <p className="text-xs font-bold uppercase tracking-[.28em] text-[#8b5cf6]">Yeni müşteri</p>
             <h2 className="mt-3 font-serif text-4xl font-semibold">Üye olun</h2>
-            <form onSubmit={handleRegister} className="mt-8 grid gap-4 md:grid-cols-2">
+            <form noValidate onSubmit={handleRegister} className="mt-8 grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">Ad Soyad<input name="name" required type="text" placeholder="Adınız Soyadınız" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">Telefon<span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Phone className="h-5 w-5 text-[#8b5cf6]" /><input name="phone" required type="tel" placeholder="0507 441 34 74" className="h-14 flex-1 bg-transparent outline-none" /></span></label>
               <label className="grid gap-2 text-sm font-semibold text-[#344054] md:col-span-2">E-posta<input name="email" required type="email" placeholder="ornek@email.com" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
