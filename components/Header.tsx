@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import type { MegaGroup } from "@/lib/headerNav";
 import { BrandWordmark } from "./BrandWordmark";
+import { useCart } from "@/lib/cart";
 
 const fallbackGroup = (label: string, href: string): MegaGroup => ({
   href,
@@ -60,7 +61,7 @@ export function Header({ menu, nav, search, brand }: {
       ? nav.map((c) => ({ label: c.name, href: c.href }))
       : navItems.map((k) => ({ label: k, href: menuData[k].href ?? menuData[k].categories[0]?.href ?? "/" }));
 
-  const [cartCount] = useState(2);
+  const { itemCount: cartCount } = useCart();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
