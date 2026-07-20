@@ -1,4 +1,8 @@
+"use client";
+
 import type { Metadata } from "next";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Eye, Lock, Mail, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 
@@ -16,6 +20,51 @@ const benefits = [
 ];
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [loginMessage, setLoginMessage] = useState<string | null>(null);
+  const [registerMessage, setRegisterMessage] = useState<string | null>(null);
+
+  async function submitAuth(endpoint: "login" | "register", payload: Record<string, unknown>): Promise<void> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com"}/api/auth/${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({} as { error?: string }));
+    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "İşlem sırasında bir hata oluştu.");
+  }
+
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setLoginLoading(true); setLoginMessage(null);
+    const form = new FormData(event.currentTarget);
+    try {
+      await submitAuth("login", { identifier: form.get("identifier"), password: form.get("password") });
+      setLoginMessage("Giriş başarılı, yönlendiriliyorsunuz…");
+      router.push("/");
+    } catch (error) { setLoginMessage(error instanceof Error ? error.message : "Giriş yapılamadı."); }
+    finally { setLoginLoading(false); }
+  }
+
+  async function handleRegister(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setRegisterLoading(true); setRegisterMessage(null);
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") ?? "");
+    const passwordAgain = String(form.get("password_again") ?? "");
+    if (password !== passwordAgain) { setRegisterMessage("Şifreler eşleşmiyor."); setRegisterLoading(false); return; }
+    if (form.get("kvkk_onay") !== "on") { setRegisterMessage("KVKK onayı zorunludur."); setRegisterLoading(false); return; }
+    try {
+      await submitAuth("register", { name: form.get("name"), phone: form.get("phone"), email: form.get("email"), password, kvkk_onay: true });
+      setRegisterMessage("Hesabınız oluşturuldu, yönlendiriliyorsunuz…");
+      router.push("/");
+    } catch (error) { setRegisterMessage(error instanceof Error ? error.message : "Kayıt oluşturulamadı."); }
+    finally { setRegisterLoading(false); }
+  }
+
   return (
     <main className="bg-[#fbfafc] px-6 py-16 text-[#111827] lg:px-14 lg:py-24">
       <div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[.95fr_1.05fr]">
@@ -41,29 +90,31 @@ export default function LoginPage() {
               </div>
               <span className="grid h-16 w-16 place-items-center rounded-full bg-[#f3edff] text-[#8b5cf6]"><UserRound className="h-7 w-7" /></span>
             </div>
-            <form className="mt-8 grid gap-4">
+            <form onSubmit={handleLogin} className="mt-8 grid gap-4">
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">E-posta veya telefon
-                <span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Mail className="h-5 w-5 text-[#8b5cf6]" /><input type="text" placeholder="info@ornek.com veya 05XX" className="h-14 flex-1 bg-transparent outline-none" /></span>
+                <span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Mail className="h-5 w-5 text-[#8b5cf6]" /><input name="identifier" required type="text" placeholder="info@ornek.com veya 05XX" className="h-14 flex-1 bg-transparent outline-none" /></span>
               </label>
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre
-                <span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Lock className="h-5 w-5 text-[#8b5cf6]" /><input type="password" placeholder="Şifreniz" className="h-14 flex-1 bg-transparent outline-none" /><Eye className="h-5 w-5 text-[#98a2b3]" /></span>
+                <span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Lock className="h-5 w-5 text-[#8b5cf6]" /><input name="password" required type="password" placeholder="Şifreniz" className="h-14 flex-1 bg-transparent outline-none" /><Eye className="h-5 w-5 text-[#98a2b3]" /></span>
               </label>
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><label className="flex items-center gap-2 text-[#667085]"><input type="checkbox" className="h-4 w-4 accent-[#8b5cf6]" /> Beni hatırla</label><Link href="/sifremi-unuttum" className="font-semibold text-[#8b5cf6]">Şifremi unuttum</Link></div>
-              <button className="mt-2 rounded-full bg-[#8b5cf6] px-8 py-4 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]">Giriş Yap</button>
+              <button type="submit" disabled={loginLoading} className="mt-2 rounded-full bg-[#8b5cf6] px-8 py-4 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]">{loginLoading ? "Giriş yapılıyor…" : "Giriş Yap"}</button>
+              {loginMessage && <p role="status" className="text-sm text-[#667085]">{loginMessage}</p>}
             </form>
           </div>
 
           <div className="rounded-[30px] border border-[#ede9fe] bg-white p-8 shadow-[0_24px_70px_rgba(45,22,72,.07)]">
             <p className="text-xs font-bold uppercase tracking-[.28em] text-[#8b5cf6]">Yeni müşteri</p>
             <h2 className="mt-3 font-serif text-4xl font-semibold">Üye olun</h2>
-            <form className="mt-8 grid gap-4 md:grid-cols-2">
-              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Ad Soyad<input type="text" placeholder="Adınız Soyadınız" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
-              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Telefon<span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Phone className="h-5 w-5 text-[#8b5cf6]" /><input type="tel" placeholder="0507 441 34 74" className="h-14 flex-1 bg-transparent outline-none" /></span></label>
-              <label className="grid gap-2 text-sm font-semibold text-[#344054] md:col-span-2">E-posta<input type="email" placeholder="ornek@email.com" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
-              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre<input type="password" placeholder="En az 8 karakter" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
-              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre Tekrar<input type="password" placeholder="Şifrenizi tekrar girin" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
-              <label className="flex items-start gap-3 text-sm leading-6 text-[#667085] md:col-span-2"><input type="checkbox" className="mt-1 h-4 w-4 accent-[#8b5cf6]" /> KVKK aydınlatma metnini ve üyelik koşullarını okudum, kabul ediyorum.</label>
-              <button className="rounded-full bg-[#111827] px-8 py-4 text-lg font-bold text-white md:col-span-2">Hesap Oluştur</button>
+            <form onSubmit={handleRegister} className="mt-8 grid gap-4 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Ad Soyad<input name="name" required type="text" placeholder="Adınız Soyadınız" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
+              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Telefon<span className="flex items-center gap-3 rounded-2xl border border-[#e5dbfb] px-4"><Phone className="h-5 w-5 text-[#8b5cf6]" /><input name="phone" required type="tel" placeholder="0507 441 34 74" className="h-14 flex-1 bg-transparent outline-none" /></span></label>
+              <label className="grid gap-2 text-sm font-semibold text-[#344054] md:col-span-2">E-posta<input name="email" required type="email" placeholder="ornek@email.com" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
+              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre<input name="password" required type="password" minLength={8} placeholder="En az 8 karakter" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
+              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre Tekrar<input name="password_again" required type="password" minLength={8} placeholder="Şifrenizi tekrar girin" className="h-14 rounded-2xl border border-[#e5dbfb] px-4 outline-none" /></label>
+              <label className="flex items-start gap-3 text-sm leading-6 text-[#667085] md:col-span-2"><input name="kvkk_onay" type="checkbox" className="mt-1 h-4 w-4 accent-[#8b5cf6]" /> KVKK aydınlatma metnini ve üyelik koşullarını okudum, kabul ediyorum.</label>
+              <button type="submit" disabled={registerLoading} className="rounded-full bg-[#111827] px-8 py-4 text-lg font-bold text-white md:col-span-2">{registerLoading ? "Hesap oluşturuluyor…" : "Hesap Oluştur"}</button>
+              {registerMessage && <p role="status" className="text-sm text-[#667085] md:col-span-2">{registerMessage}</p>}
             </form>
             <div className="mt-6 flex items-center gap-3 rounded-[18px] bg-[#f7f5fc] p-4 text-sm text-[#667085]"><ShieldCheck className="h-5 w-5 text-[#8b5cf6]" /> Sipariş ve üyelik verileri güvenli bağlantı üzerinden işlenir.</div>
           </div>
