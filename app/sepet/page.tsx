@@ -27,12 +27,15 @@ export default function CartPage() {
     setCouponMessage(null);
     setCouponError(false);
     try {
+      const storedCustomerId = window.localStorage.getItem("cicekyolla.customer_id");
+      const customerId = storedCustomerId && /^\\d+$/.test(storedCustomerId) ? Number(storedCustomerId) : undefined;
       const response = await fetch("/api/public/coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
           items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+          ...(customerId ? { customer_id: customerId } : {}),
         }),
       });
       const body = await response.json() as { data?: { valid?: boolean; discount_minor?: number; total_minor?: number; message?: string }; error?: string; message?: string };
