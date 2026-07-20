@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { fetchCategoryTree, isCategoryVisible, type CategoryNode } from "./api";
+import { CATEGORY_TREE_FALLBACK } from "./categoryFallback";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — TEK KATEGORİ KAYNAĞI (CategoryTree single source)
@@ -10,7 +11,7 @@ import { fetchCategoryTree, isCategoryVisible, type CategoryNode } from "./api";
    ============================================================================ */
 
 export const getCategoryTree = cache(async (): Promise<CategoryNode[] | null> => {
-  return fetchCategoryTree();
+  return (await fetchCategoryTree()) ?? CATEGORY_TREE_FALLBACK;
 });
 
 const isActive = (n: CategoryNode) =>
