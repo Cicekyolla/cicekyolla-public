@@ -1,6 +1,5 @@
 "use client";
 
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Gift, Minus, Plus, ShoppingBag, Tag, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
