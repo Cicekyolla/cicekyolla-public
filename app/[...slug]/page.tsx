@@ -108,6 +108,9 @@ async function resolvePage(path: string): Promise<SeoPublicPage | null> {
     const tree = await getCategoryTree();
     const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
     if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
+    // Render/API kısa süreli erişilemezse geçerli kategori URL'lerini 404 olarak
+    // önbelleğe alma. Ağaç geri geldiğinde admin verisi yeniden tek kaynak olur.
+    if (!tree && slug) return syntheticCategoryPage(path, { name: prettySlug(slug) });
   }
   const location = deliveryParts(path);
   if (location) return syntheticDeliveryPage(path, location);
