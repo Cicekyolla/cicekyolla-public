@@ -20,7 +20,7 @@ export default function GirisForm() {
   const [registerMessage, setRegisterMessage] = useState<string | null>(null);
 
   async function submitAuth(endpoint: "login" | "register", payload: Record<string, unknown>): Promise<void> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com"}/api/auth/${endpoint}`, {
+    const response = await fetch(`/api/auth/${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
