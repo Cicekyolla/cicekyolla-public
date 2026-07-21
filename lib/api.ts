@@ -137,35 +137,43 @@ export function isCategoryVisible(node: { status?: unknown }): boolean {
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
   const url = `${API_ORIGIN}${CATEGORIES_PATH}`;
 
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 300 } });
-  } catch {
-    return null;
+  // Render/Vercel cold-start veya kısa ağ kesintilerinde ilk istek geçici olarak
+  // başarısız olabilir. İlk deneme normal ISR cache sözleşmesini korur; yalnız hata
+  // halinde tek bir no-store tekrar yapılır. Kategori verisi/slug/hiyerarşi değişmez.
+  const attempts = [
+    { headers: apiHeaders(), next: { revalidate: 300 } },
+    { headers: apiHeaders(), cache: "no-store" as const },
+  ];
+
+  for (const init of attempts) {
+    let res: Response;
+    try {
+      res = await fetch(url, init);
+    } catch {
+      continue;
+    }
+    if (!res.ok) continue;
+
+    let json: unknown;
+    try {
+      json = await res.json();
+    } catch {
+      continue;
+    }
+
+    // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
+    const payload = (json as { data?: unknown } | null)?.data ?? json;
+    if (!Array.isArray(payload)) continue;
+
+    const nodes = payload.filter(
+      (n): n is CategoryNode =>
+        !!n &&
+        typeof (n as CategoryNode).name === "string" &&
+        typeof (n as CategoryNode).slug === "string"
+    );
+    if (nodes.length > 0) return nodes;
   }
-
-  if (!res.ok) return null;
-
-  let json: unknown;
-  try {
-    json = await res.json();
-  } catch {
-    return null;
-  }
-
-  // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
-  const payload =
-    (json as { data?: unknown } | null)?.data ?? (json as unknown);
-  if (!Array.isArray(payload)) return null;
-
-  // Yalnız geçerli düğümleri (name + slug) al; şema-dışı alanlar korunur.
-  const nodes = payload.filter(
-    (n): n is CategoryNode =>
-      !!n &&
-      typeof (n as CategoryNode).name === "string" &&
-      typeof (n as CategoryNode).slug === "string"
-  );
-  return nodes.length > 0 ? nodes : null;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -205,25 +213,46 @@ export interface PublicProductDetail {
   variants: PublicProductVariant[];
 }
 
+export interface PublicProductSeoContent {
+  faq_json?: Array<{ q?: string | null; a?: string | null }> | null;
+}
+
 /** Tek ürünü slug ile çeker. 404/hata veya 'active' değilse null (public gizler). */
 export async function fetchProductBySlug(slug: string): Promise<PublicProductDetail | null> {
   const url = `${API_ORIGIN}/api/products/slug/${encodeURIComponent(slug)}`;
-  let res: Response;
+  const attempts = [
+    { headers: apiHeaders(), next: { revalidate: 120 } },
+    { headers: apiHeaders(), cache: "no-store" as const },
+  ];
+  for (const init of attempts) {
+    try {
+      const res = await fetch(url, init);
+      if (!res.ok) continue;
+      const data = (await res.json()) as PublicProductDetail;
+      if (!data?.product || data.product.status !== "active") return null;
+      if (Array.isArray(data.images)) {
+        data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url), derivatives: mediaDerivatives(im.derivatives) }));
+      }
+      return data;
+    } catch {
+      // Render'ın geçici 502/cold-start hatasında no-store tekrarını dene.
+    }
+  }
+  return null;
+}
+
+/** Ürün SEO sekmesinde kaydedilmiş müşteri-facing SSS içeriği. */
+export async function fetchProductSeoById(id: string | number): Promise<PublicProductSeoContent | null> {
   try {
-    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 120 } });
+    const res = await fetch(`${API_ORIGIN}/api/products/${encodeURIComponent(String(id))}/seo`, {
+      headers: apiHeaders(),
+      next: { revalidate: 120 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as PublicProductSeoContent;
   } catch {
     return null;
   }
-  if (!res.ok) return null;
-  const data = (await res.json()) as PublicProductDetail;
-  if (!data?.product) return null;
-  // Public yalnız yayında (active) ürünü gösterir.
-  if (data.product.status !== "active") return null;
-  // R2 (r2.dev) galeri görsel/video URL'lerini same-origin /r2 proxy'sine çevir (TR erişim fix'i).
-  if (Array.isArray(data.images)) {
-    data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url), derivatives: mediaDerivatives(im.derivatives) }));
-  }
-  return data;
 }
 
 /** minor (kuruş) → "₺1.240" biçimi (TR). */
@@ -285,21 +314,23 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.same_day_available) q.set("same_day_available", "true");
   if (params.sort) q.set("sort", params.sort);
   const url = `${API_ORIGIN}/api/products?${q.toString()}`;
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: apiHeaders(), next: { revalidate: 120 } });
-  } catch {
-    return empty;
+  const attempts = [
+    { headers: apiHeaders(), next: { revalidate: 120 } },
+    { headers: apiHeaders(), cache: "no-store" as const },
+  ];
+  for (const init of attempts) {
+    try {
+      const res = await fetch(url, init);
+      if (!res.ok) continue;
+      const json = (await res.json()) as ProductPage;
+      const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
+      const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
+      return { items, pagination: json?.pagination ?? empty.pagination };
+    } catch {
+      // Başarısız cevap önbelleğe alınmadan ikinci canlı okumayı dene.
+    }
   }
-  if (!res.ok) return empty;
-  const json = (await res.json()) as ProductPage;
-  const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
-  // R2 (r2.dev) kapak URL'lerini same-origin /r2 proxy'sine çevir (TR erişim fix'i).
-  const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
-  return {
-    items,
-    pagination: json?.pagination ?? empty.pagination,
-  };
+  return empty;
 }
 
 // ---------------------------------------------------------------------------

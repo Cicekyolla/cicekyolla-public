@@ -20,6 +20,19 @@ const FOOTER_DELIVERY_LINKS = [
   { label: "İzmir", href: "/izmir/konak" },
 ];
 
+const FALLBACK_COLLECTION_LINKS = [
+  { name: "Güller", href: "/kategori/guller" },
+  { name: "Buketler", href: "/kategori/buketler" },
+  { name: "Orkideler", href: "/kategori/orkideler" },
+  { name: "Özel Günler", href: "/kategori/ozel-gunler" },
+  { name: "Yapay Çiçekler", href: "/kategori/yapay-cicekler" },
+  { name: "Yapay Ağaçlar", href: "/kategori/yapay-agaclar" },
+  { name: "Şimşir", href: "/kategori/simsir" },
+  { name: "Çim Duvar", href: "/kategori/cim-duvar" },
+  { name: "Çim Çit", href: "/kategori/cim-cit" },
+  { name: "Peyzaj", href: "/dekorasyon" },
+];
+
 export function Footer({
   categories,
   brand,
@@ -35,6 +48,11 @@ export function Footer({
     : phoneDigits.startsWith("90")
       ? `+${phoneDigits}`
       : `+90${phoneDigits}`;
+  const collectionLinks = [
+    ...(categories && categories.length > 0 ? categories : FALLBACK_COLLECTION_LINKS)
+      .filter((item) => item.href !== "/kategori/turkiye-geneli-kargo"),
+    { name: "🚚 Türkiye Geneli Kargo", href: "/kategori/turkiye-geneli-kargo" },
+  ];
 
   return (
     <footer
@@ -88,7 +106,7 @@ export function Footer({
           <div>
             <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-6">Koleksiyonlar</h4>
             <ul className="space-y-3">
-              {(categories ?? []).map((item) => (
+              {collectionLinks.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />

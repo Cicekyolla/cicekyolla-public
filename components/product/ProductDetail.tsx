@@ -24,6 +24,7 @@ import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery } from "@/lib/pendingDelivery";
+import { useCart } from "@/lib/cart";
 
 const WHATSAPP = "905074413474";
 
@@ -147,6 +148,7 @@ export function ProductDetail({
   }));
   const gallery: PublicProductImage[] = [...sortedImages, ...lifestyleExtras];
   const [active, setActive] = useState(0);
+  const { addItem } = useCart();
   const [wish, setWish] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
@@ -404,6 +406,13 @@ export function ProductDetail({
 
           {/* CTA — ana buton CICEKYOLLA mor; WhatsApp yeşil; favori */}
           <div className="mt-7 flex gap-3">
+            <button
+              type="button"
+              onClick={() => addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "" })}
+              className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl border border-[#7C3AED] bg-white text-[#7C3AED] text-[15px] font-bold transition-all hover:bg-[#F5F3FF]"
+            >
+              <ShoppingBag className="w-5 h-5" /> Sepete Ekle
+            </button>
             <Link
               href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`}
               className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#7C3AED] text-white text-[15px] font-bold transition-all hover:bg-[#6D28D9] hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]"
