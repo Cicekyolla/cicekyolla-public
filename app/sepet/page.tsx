@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Gift, Minus, Plus, ShoppingBag, Tag, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { readPendingDelivery } from "@/lib/pendingDelivery";
 
 const checkoutSteps = ["Sepet", "Ek Ürünler", "Alıcı", "Teslimat", "Ödeme"];
 
@@ -13,12 +15,31 @@ function money(minor: number) {
 
 export default function CartPage() {
   const { items, subtotalMinor, setQuantity, removeItem } = useCart();
+  const router = useRouter();
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [couponError, setCouponError] = useState(false);
   const [discountMinor, setDiscountMinor] = useState(0);
   const totalMinor = Math.max(0, subtotalMinor - discountMinor);
+
+  function goToCheckout() {
+    const item = items[0];
+    const delivery = readPendingDelivery();
+    const hasDelivery = Boolean(delivery?.address && delivery?.district && delivery?.date && delivery?.slotLabel);
+    if (items.length !== 1 || !item?.productSlug) {
+      setCouponError(true);
+      setCouponMessage("Checkout testi tek ürün ve teslimat seçimiyle başlatılabilir.");
+      return;
+    }
+    if (!hasDelivery) {
+      setCouponError(true);
+      setCouponMessage("Önce teslimat bölgesi, günü ve saat slotunu seçin.");
+      router.push(`/urun/${encodeURIComponent(item.productSlug)}`);
+      return;
+    }
+    router.push(`/hizli-siparis?product=${encodeURIComponent(item.productSlug)}`);
+  }
 
   async function applyCoupon() {
     const code = couponCode.trim();
@@ -119,7 +140,7 @@ export default function CartPage() {
                   <div className="mt-8 space-y-4 text-lg"><div className="flex justify-between"><span className="text-[#6f7482]">Ara Toplam</span><strong>{money(subtotalMinor)}</strong></div>{discountMinor > 0 ? <div className="flex justify-between text-[#047857]"><span>İndirim</span><strong>-{money(discountMinor)}</strong></div> : null}<div className="flex justify-between"><span className="text-[#6f7482]">Kargo</span><strong className="text-[#059669]">Ücretsiz</strong></div></div>
                   <div className="my-8 h-px bg-[#ede9fe]" />
                   <div className="flex items-end justify-between"><span className="text-xl font-bold">Toplam</span><strong className="font-serif text-5xl font-semibold">{money(totalMinor)}</strong></div>
-                  <Link href={items.length === 1 ? `/hizli-siparis?product=${encodeURIComponent(items[0].productSlug)}` : "/hizli-siparis"} className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Ödeme Adımına Geç</Link>
+                  <button type="button" onClick={goToCheckout} className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Ödeme Adımına Geç</button>
                   <p className="mt-5 text-center text-sm text-[#8b94a6]">Güvenli ödeme, ücretsiz teslimat ve taze çiçek garantisi.</p>
                 </div>
               </aside>
