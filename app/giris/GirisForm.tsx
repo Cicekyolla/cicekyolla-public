@@ -40,7 +40,7 @@ export default function GirisForm() {
     try {
       await submitAuth("login", { identifier, password: loginPassword });
       setLoginMessage("Giriş başarılı, yönlendiriliyorsunuz…");
-      router.push("/");
+      router.push("/hesabim");
     } catch (error) { setLoginMessage(error instanceof Error ? error.message : "Giriş yapılamadı."); }
     finally { setLoginLoading(false); }
   }
