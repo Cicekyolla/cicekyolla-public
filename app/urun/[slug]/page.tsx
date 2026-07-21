@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
+import { fetchProductBySlug, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductImage } from "@/components/product/ProductImage";
@@ -137,15 +137,7 @@ export default async function ProductPage({ params }: PageProps) {
   const price = data.product.sale_price_minor && Number(data.product.sale_price_minor) > 0
     ? data.product.sale_price_minor
     : data.product.price_minor;
-  const savedSeo = await fetchProductSeoById(product.id);
-  const savedFaqs: ProductFaq[] = (savedSeo?.faq_json ?? []).flatMap((item) => {
-    const question = item.q?.trim();
-    const answer = item.a?.trim();
-    return question && answer ? [{ question, answer }] : [];
-  });
-  const productFaqs = savedFaqs.length > 0
-    ? savedFaqs.slice(0, 8)
-    : productFaqsFromDescription(product.name, product.long_description);
+  const productFaqs = productFaqsFromDescription(product.name, product.long_description);
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

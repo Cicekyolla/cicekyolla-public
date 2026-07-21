@@ -6,12 +6,11 @@
  * Adaptasyon: react-router <Link to=…> → next/link <Link href=…>. Görsel/etkileşim birebir.
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
-import { useCart } from "@/lib/cart";
 
 export type Product = {
   id: number;
@@ -88,23 +87,9 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 };
 
 export function ProductCard({ product, idx, contextTag, deliveryPromise }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise }) {
-  const { addItem } = useCart();
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const [hoverImage, setHoverImage] = useState<string | null>(null);
-  const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
-  const hoverRequested = useRef(false);
   const tags = deriveTags(product, contextTag);
-
-  const requestHoverImage = () => {
-    setHovered(true);
-    if (hoverRequested.current) return;
-    hoverRequested.current = true;
-    void fetch(`/api/product-hover/${encodeURIComponent(product.slug)}`)
-      .then((response) => response.ok ? response.json() as Promise<{ image?: string | null }> : null)
-      .then((data) => { if (data?.image) setHoverImage(data.image); })
-      .catch(() => undefined);
-  };
 
   return (
     <motion.div
@@ -117,10 +102,8 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
       <Link
         href={`/urun/${product.slug}`}
         className="group flex flex-col h-full rounded-[20px] border border-[#F1F0F5] bg-white overflow-hidden transition-all duration-300 hover:shadow-[0_14px_36px_rgba(124,58,237,0.10)] hover:border-[#EDE9FE]"
-        onMouseEnter={requestHoverImage}
-        onFocus={requestHoverImage}
+        onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onBlur={() => setHovered(false)}
       >
         {/* Image container — beyaz stüdyo zemini, kırpma yok (object-contain), merkezi ProductImage */}
         <div className="relative overflow-hidden bg-white" style={{ aspectRatio: "4/5" }}>
@@ -132,21 +115,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
             derivatives={product.derivatives}
             blurhash={product.blurhash}
             sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
-            className={`transition-opacity duration-500 ${hovered && hoverImageLoaded ? "opacity-0" : "opacity-100"}`}
           />
-          {hoverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={hoverImage}
-              alt={`${product.name} yaşam alanında`}
-              draggable={false}
-              loading="lazy"
-              decoding="async"
-              onLoad={() => setHoverImageLoaded(true)}
-              onError={() => setHoverImage(null)}
-              className={`absolute inset-0 h-full w-full object-contain bg-white transition-[opacity,transform] duration-500 ease-out ${hovered && hoverImageLoaded ? "scale-[1.03] opacity-100" : "scale-100 opacity-0"}`}
-            />
-          ) : null}
           {/* Gradient overlay */}
           <div
             className="absolute inset-0 transition-opacity duration-500"
@@ -193,10 +162,6 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
             className="absolute bottom-0 left-0 right-0 p-4"
           >
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: null, variantTitle: null, unitPriceMinor: Math.round(product.price * 100), image: product.image });
-              }}
               className="w-full py-3 rounded-xl text-white text-sm font-semibold tracking-wide"
               style={{
                 background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",

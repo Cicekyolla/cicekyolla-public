@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { fetchProducts, fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
+import { fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import {
   mapTreeToItems,
@@ -11,7 +11,6 @@ import {
 import { FloatingCategoryRail } from "@/components/home/FloatingCategoryRail";
 import { FilterBar } from "@/components/category/FilterBar";
 import { CategoryProductGrid } from "@/components/category/CategoryProductGrid";
-import { CargoCategoryExperience } from "@/components/category/CargoCategoryExperience";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -143,32 +142,6 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
   const totalProducts = productPage?.pagination.total ?? 0;
-
-  // Türkiye Geneli Kargo vitrini: yalnız canlı katalog. Kategoriye bağlı kuru
-  // çiçekler + kargoya uygun plant/artificial/gift tipleri birleştirilir.
-  // Admin `cargo-product` blokları eklediyse vitrin seçimi/sırası onlardan gelir.
-  const cargoSettings = page.body_blocks?.find((b) => b.type === "cargo-settings") as ({ value?: unknown; enabled?: unknown } | undefined);
-  if (slug === "turkiye-geneli-kargo" && cargoSettings?.value !== "false" && cargoSettings?.enabled !== false) {
-    const cargoLists = await Promise.all([
-      Promise.resolve(productPage?.items ?? []),
-      fetchProducts({ product_type: "plant", page_size: 60, sort }),
-      fetchProducts({ product_type: "artificial", page_size: 60, sort }),
-      fetchProducts({ product_type: "gift", page_size: 60, sort }),
-    ]);
-    const unique = new Map<number, PublicProductListItem>();
-    cargoLists.flat().forEach((product) => {
-      if (product.cover_image_url && product.status === "active") unique.set(product.id, product);
-    });
-    const selectedIds = (page.body_blocks ?? [])
-      .filter((b) => b.type === "cargo-product" && b.enabled !== false && b.value !== "false")
-      .map((b) => Number(b.product_id ?? b.value))
-      .filter(Number.isFinite);
-    const liveProducts = [...unique.values()];
-    const ordered = selectedIds.length
-      ? selectedIds.map((id) => unique.get(id)).filter((p): p is PublicProductListItem => Boolean(p))
-      : liveProducts;
-    return <CargoCategoryExperience products={ordered.map(toCardProduct)} blocks={page.body_blocks ?? []} />;
-  }
 
   return (
     <>

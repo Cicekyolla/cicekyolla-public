@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { unstable_noStore as noStore } from "next/cache";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { fetchProducts, fetchSeoPage, toCardProduct, type BodyBlock, type SeoPublicPage } from "@/lib/api";
@@ -102,21 +101,14 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
 }
 
 async function resolvePage(path: string): Promise<SeoPublicPage | null> {
-  if (path.startsWith("/kategori/")) {
-    const [seo, tree] = await Promise.all([fetchSeoPage(path), getCategoryTree()]);
-    if (seo) return seo;
-    const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
-    const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
-    if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
-    // Render/API kısa süreli erişilemezse geçerli kategori URL'lerini 404 olarak
-    // önbelleğe alma. Ağaç geri geldiğinde admin verisi yeniden tek kaynak olur.
-    if (!tree && slug) {
-      noStore();
-      return syntheticCategoryPage(path, { name: prettySlug(slug) });
-    }
-  }
   const seo = await fetchSeoPage(path);
   if (seo) return seo;
+  if (path.startsWith("/kategori/")) {
+    const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
+    const tree = await getCategoryTree();
+    const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
+    if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
+  }
   const location = deliveryParts(path);
   if (location) return syntheticDeliveryPage(path, location);
   return null;
@@ -170,16 +162,10 @@ function absoluteUrl(path: string): string {
   return SITE_URL + (path.startsWith("/") ? path : "/" + path);
 }
 
-const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = {
-  "/cicekler": "/kategori/cicekler",
-  "/orkideler": "/kategori/orkideler",
-};
-
 type PageProps = { params: { slug?: string[] }; searchParams?: { [k: string]: string | string[] | undefined } };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const requestedPath = slugToPath(params.slug);
-  const path = LEGACY_CATEGORY_REDIRECTS[requestedPath] || requestedPath;
+  const path = slugToPath(params.slug);
   const page = await resolvePage(path);
   if (!page) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
   const indexable = page.index_state === "index";
@@ -201,10 +187,7 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 }
 
 export default async function Page({ params, searchParams }: PageProps) {
-  const requestedPath = slugToPath(params.slug);
-  const redirectTarget = LEGACY_CATEGORY_REDIRECTS[requestedPath];
-  if (redirectTarget) redirect(redirectTarget);
-  const path = requestedPath;
+  const path = slugToPath(params.slug);
   const page = await resolvePage(path);
   if (!page) notFound();
   const faqLd = faqJsonLd(page);

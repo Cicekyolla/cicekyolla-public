@@ -27,7 +27,6 @@ import { DistrictDelivery } from "./DistrictDelivery";
 import { WhatsAppCTA } from "./WhatsAppCTA";
 import { Newsletter } from "./Newsletter";
 import { ProductShowcase } from "./ProductShowcase";
-import { EditorsPicks } from "./EditorsPicks";
 
 export interface RenderCtx {
   collections: ComponentProps<typeof FloatingCategoryRail>["items"];
@@ -42,13 +41,13 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "hero":               return <HomeHero />;
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
-    case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} config={s.config} />;
-    case "urgency_strip":       return <UrgencyStrip title={s.title} subtitle={s.subtitle} config={s.config} />;
+    case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} />;
+    case "urgency_strip":       return <UrgencyStrip />;
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
-    case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
-    case "best_sellers":        return <ProductShowcase title={s.title?.trim() && s.title.trim() !== "Çok Satanlar" ? s.title : "En Çok Tercih Edilenler"} subtitle={s.subtitle ?? "Müşterilerimizin favori çiçekleri."} products={s.products} />;
-    case "editors_picks":       return <EditorsPicks title={s.title} subtitle={s.subtitle} config={s.config} />;
+    case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} />;
+    case "best_sellers":        return <ProductShowcase title={s.title ?? "Çok Satanlar"} products={s.products} />;
+    case "editors_picks":       return <ProductShowcase title={s.title ?? "Editör Seçimleri"} products={s.products} />;
     case "brand_story":         return <BrandStory />;
     case "testimonials":        return <Testimonials />;
     case "instagram_gallery":   return <InstagramGallery config={s.config} />;
@@ -56,7 +55,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "district_delivery":   return <DistrictDelivery />;
     case "whatsapp_cta":        return <WhatsAppCTA />;
     case "newsletter":          return <Newsletter />;
-    case "product_showcase":    return <ProductShowcase title={s.title?.trim() ? s.title : "Sizin İçin Seçtiklerimiz"} subtitle={s.subtitle?.trim() ? s.subtitle : "Her ana yakışan, özenle seçilmiş tasarımlar."} products={s.products} limit={16} />;
+    case "product_showcase":    return <ProductShowcase title={s.title} subtitle={s.subtitle} products={s.products} />;
     default:                    return null;
   }
 }
@@ -64,19 +63,6 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
 export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCtx }) {
   const enabledSections = dto.sections.filter((s) => s.enabled);
   const hasCollectionRail = enabledSections.some((s) => s.type === "collection_rail");
-  const hasFeatureSplit = enabledSections.some((s) => s.type === "feature_split");
-  const hasUrgencyStrip = enabledSections.some((s) => s.type === "urgency_strip");
-  const hasEditorsPicks = enabledSections.some((s) => s.type === "editors_picks");
-  const editorFallbackAnchor = enabledSections.some((s) => s.type === "best_sellers")
-    ? "best_sellers"
-    : enabledSections.some((s) => s.type === "occasion_shopping")
-      ? "occasion_shopping"
-      : null;
-  const fallbackAnchor = enabledSections.some((s) => s.type === "urgency_strip")
-    ? "urgency_strip"
-    : enabledSections.some((s) => s.type === "featured_collections")
-      ? "featured_collections"
-      : null;
 
   return (
     <>
@@ -87,16 +73,7 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
           <FloatingCategoryRail items={ctx.collections} />
         </section>
       ) : null}
-      {enabledSections.map((s) => (
-        <Fragment key={s.id}>
-          {renderSection(s, ctx)}
-          {!hasUrgencyStrip && s.type === "featured_collections" ? <UrgencyStrip /> : null}
-          {!hasEditorsPicks && s.type === editorFallbackAnchor ? <EditorsPicks config={{}} /> : null}
-          {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
-        </Fragment>
-      ))}
-      {!hasEditorsPicks && editorFallbackAnchor === null ? <EditorsPicks config={{}} /> : null}
-      {!hasFeatureSplit && fallbackAnchor === null ? <FeatureSplit /> : null}
+      {enabledSections.map((s) => <Fragment key={s.id}>{renderSection(s, ctx)}</Fragment>)}
     </>
   );
 }
