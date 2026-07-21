@@ -40,7 +40,7 @@ export default function GirisForm() {
     try {
       await submitAuth("login", { identifier, password: loginPassword });
       setLoginMessage("Giriş başarılı, yönlendiriliyorsunuz…");
-      router.push("/");
+      router.push("/hesabim");
     } catch (error) { setLoginMessage(error instanceof Error ? error.message : "Giriş yapılamadı."); }
     finally { setLoginLoading(false); }
   }
@@ -61,7 +61,7 @@ export default function GirisForm() {
     try {
       await submitAuth("register", { name, phone, email, password, kvkk_onay: true });
       setRegisterMessage("Hesabınız oluşturuldu, yönlendiriliyorsunuz…");
-      router.push("/");
+      router.push("/hesabim");
     } catch (error) { setRegisterMessage(error instanceof Error ? error.message : "Kayıt oluşturulamadı."); }
     finally { setRegisterLoading(false); }
   }
