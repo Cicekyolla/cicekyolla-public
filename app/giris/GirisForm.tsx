@@ -1,19 +1,24 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Eye, Lock, Mail, Phone, Shield, Sparkles, UserRound } from "lucide-react";
 
 const benefits = [
   "Siparişlerinizi tek ekrandan takip edin",
-  "Adreslerinizi ve alıcı bilgilerinizi kaydedin",
-  "Doğum günü ve özel gün hatırlatmaları alın",
-  "Sadakat puanı ve özel müşteri fırsatlarını görün",
+  "Hazırlanıyor, yolda ve teslim edildi zamanlarını görün",
+  "Teslim edilen siparişlerden sadakat puanı kazanın",
+  "Hesabınıza tanımlanan kuponları görün",
 ];
 
 export default function GirisForm() {
   const router = useRouter();
+  const [nextPath, setNextPath] = useState("/hesabim");
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("next");
+    if (requested?.startsWith("/") && !requested.startsWith("//")) setNextPath(requested);
+  }, []);
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
@@ -40,7 +45,7 @@ export default function GirisForm() {
     try {
       await submitAuth("login", { identifier, password: loginPassword });
       setLoginMessage("Giriş başarılı, yönlendiriliyorsunuz…");
-      router.push("/hesabim");
+      router.push(nextPath);
     } catch (error) { setLoginMessage(error instanceof Error ? error.message : "Giriş yapılamadı."); }
     finally { setLoginLoading(false); }
   }
@@ -61,7 +66,7 @@ export default function GirisForm() {
     try {
       await submitAuth("register", { name, phone, email, password, kvkk_onay: true });
       setRegisterMessage("Hesabınız oluşturuldu, yönlendiriliyorsunuz…");
-      router.push("/hesabim");
+      router.push(nextPath);
     } catch (error) { setRegisterMessage(error instanceof Error ? error.message : "Kayıt oluşturulamadı."); }
     finally { setRegisterLoading(false); }
   }
@@ -72,7 +77,7 @@ export default function GirisForm() {
         <section className="overflow-hidden rounded-[34px] bg-gradient-to-br from-[#160723] via-[#4c1d95] to-[#8b5cf6] p-10 text-white shadow-[0_30px_90px_rgba(45,22,72,.18)] lg:p-14">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-2 text-xs font-bold uppercase tracking-[.24em] text-[#ede9fe]"><Sparkles className="h-4 w-4" /> ÇiçekYolla üyeliği</div>
           <h1 className="mt-10 font-serif text-5xl font-semibold leading-tight md:text-6xl">Müşteri hesabınızı oluşturun, siparişleriniz hep elinizin altında olsun.</h1>
-          <p className="mt-7 max-w-xl text-lg leading-8 text-[#e9d5ff]">Üye olarak hızlı sipariş verebilir, teslimat adreslerinizi saklayabilir ve size özel çiçek önerilerini hesabınızda görebilirsiniz.</p>
+          <p className="mt-7 max-w-xl text-lg leading-8 text-[#e9d5ff]">Üye olarak sipariş durumlarını tarih ve saatleriyle takip edebilir, teslim edilen siparişlerden kazandığınız puanları ve gerçek kuponlarınızı görebilirsiniz.</p>
           <div className="mt-10 space-y-4">
             {benefits.map((item) => <div key={item} className="flex items-center gap-3 text-[#f5f3ff]"><Check className="h-5 w-5 text-[#d8b4fe]" />{item}</div>)}
           </div>
@@ -104,7 +109,7 @@ export default function GirisForm() {
             </form>
           </div>
 
-          <div className="rounded-[30px] border border-[#ede9fe] bg-white p-8 shadow-[0_24px_70px_rgba(45,22,72,.07)]">
+          <div id="uye-ol" className="scroll-mt-6 rounded-[30px] border border-[#ede9fe] bg-white p-8 shadow-[0_24px_70px_rgba(45,22,72,.07)]">
             <p className="text-xs font-bold uppercase tracking-[.28em] text-[#8b5cf6]">Yeni müşteri</p>
             <h2 className="mt-3 font-serif text-4xl font-semibold">Üye olun</h2>
             <form noValidate onSubmit={handleRegister} className="mt-8 grid gap-4 md:grid-cols-2">

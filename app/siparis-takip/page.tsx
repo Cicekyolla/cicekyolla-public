@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const STATUS_TR: Record<string, string> = {
   new: "Yeni", confirmed: "Onaylandı", preparing: "Hazırlanıyor", designing: "Tasarımda",
@@ -11,7 +11,7 @@ export default function SiparisTakipPage() {
   const [no, setNo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ order_number: string; status: string; delivery_date: string | null; delivery_time_slot: string | null } | null>(null);
+  const [result, setResult] = useState<{ order_number: string; status: string; delivery_date: string | null; delivery_time_slot: string | null; timeline: { new_status: string; note: string | null; created_at: string }[] } | null>(null);
 
   const track = async () => {
     if (!no.trim()) return;
@@ -24,6 +24,11 @@ export default function SiparisTakipPage() {
     } catch { setError("Sipariş bulunamadı. Numarayı kontrol edin."); }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    const order = new URLSearchParams(window.location.search).get("order");
+    if (order) setNo(order);
+  }, []);
 
   return (
     <main className="min-h-screen bg-white">
@@ -44,6 +49,7 @@ export default function SiparisTakipPage() {
             <p className="text-lg font-bold text-[#7C3AED] mb-4">{result.order_number}</p>
             <div className="flex justify-between py-2 border-t border-black/5"><span className="text-[#6B7280]">Durum</span><span className="font-semibold text-[#111827]">{STATUS_TR[result.status] ?? result.status}</span></div>
             {result.delivery_date && <div className="flex justify-between py-2 border-t border-black/5"><span className="text-[#6B7280]">Teslimat</span><span className="font-semibold text-[#111827]">{result.delivery_date} {result.delivery_time_slot ?? ""}</span></div>}
+            {result.timeline?.length > 0 && <div className="mt-5 border-t border-black/5 pt-4"><p className="mb-3 text-[12px] font-bold uppercase tracking-[.14em] text-[#8B5CF6]">Durum zamanları</p><ol className="space-y-3">{result.timeline.map((entry, index) => <li key={`${entry.new_status}-${entry.created_at}-${index}`} className="flex items-start justify-between gap-4 text-sm"><div><strong className="text-[#111827]">{STATUS_TR[entry.new_status] ?? entry.new_status}</strong>{entry.note && <p className="mt-1 text-[#6B7280]">{entry.note}</p>}</div><time className="shrink-0 text-right text-[12px] text-[#6B7280]">{new Date(entry.created_at).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</time></li>)}</ol></div>}
           </div>
         )}
       </div>

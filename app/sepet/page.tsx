@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Gift, Minus, Plus, ShoppingBag, Tag, X } from "l
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
 
-const checkoutSteps = ["Sepet", "Ek Ürünler", "Alıcı", "Teslimat", "Ödeme"];
+const checkoutSteps = ["Sepet", "Ek Ürünler", "Alıcı", "Teslimat", "Onay"];
 
 function money(minor: number) {
   return `₺${(minor / 100).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
@@ -119,8 +119,8 @@ export default function CartPage() {
                   <div className="mt-8 space-y-4 text-lg"><div className="flex justify-between"><span className="text-[#6f7482]">Ara Toplam</span><strong>{money(subtotalMinor)}</strong></div>{discountMinor > 0 ? <div className="flex justify-between text-[#047857]"><span>İndirim</span><strong>-{money(discountMinor)}</strong></div> : null}<div className="flex justify-between"><span className="text-[#6f7482]">Kargo</span><strong className="text-[#059669]">Ücretsiz</strong></div></div>
                   <div className="my-8 h-px bg-[#ede9fe]" />
                   <div className="flex items-end justify-between"><span className="text-xl font-bold">Toplam</span><strong className="font-serif text-5xl font-semibold">{money(totalMinor)}</strong></div>
-                  <Link href="/checkout" className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Ödeme Adımına Geç</Link>
-                  <p className="mt-5 text-center text-sm text-[#8b94a6]">Güvenli ödeme, ücretsiz teslimat ve taze çiçek garantisi.</p>
+                  <Link href="/checkout" className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</Link>
+                  <p className="mt-5 text-center text-sm text-[#8b94a6]">Teslimat bilgileri doğrulanarak sipariş kaydı oluşturulur.</p>
                 </div>
               </aside>
             </div>

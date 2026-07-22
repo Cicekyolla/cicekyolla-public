@@ -58,9 +58,9 @@ function mapToSlot(start?: string, label?: string): string {
   return SLOTS[0];
 }
 
-type Props = { productName: string; productId: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[] };
+type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; quantity?: number; initialAddonQty?: Record<number, number>; onComplete?: () => void };
 
-export default function CheckoutWizard({ productName, productId, priceMinor, productSlug, coverUrl, addons = [] }: Props) {
+export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, onComplete }: Props) {
   const steps = useMemo(() => {
     const base = [
       { key: "urun", label: "Ürün" },
@@ -68,7 +68,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
       { key: "alici", label: "Alıcı" },
       { key: "kart", label: "Kart Mesajı" },
       { key: "gonderen", label: "Gönderen" },
-      { key: "odeme", label: "Ödeme" },
+      { key: "odeme", label: "Onay" },
     ];
     if (addons.length > 0) base.splice(4, 0, { key: "ekurun", label: "Ek Ürünler" });
     return base;
@@ -92,13 +92,13 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
   const [senderEmail, setSenderEmail] = useState("");
   const [visibility, setVisibility] = useState<"show" | "anonymous" | "hidden">("show");
   const [surprise, setSurprise] = useState(false);
-  const [addonQty, setAddonQty] = useState<Record<number, number>>({});
+  const [addonQty, setAddonQty] = useState<Record<number, number>>(initialAddonQty ?? {});
   // Kupon (indirim daima backend /api/public/coupon motorundan gelir; frontend hesap yapmaz)
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; discount_minor: number } | null>(null);
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
-  const qty = 1;
+  const qty = Math.max(1, Math.round(quantity));
 
   // --- Checkout taslağı (sessionStorage): yenilemede ödeme-dışı bilgiler korunur ---
   const DRAFT_KEY = `cy_checkout_draft_${productSlug ?? "default"}`;
@@ -138,6 +138,19 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productSlug]);
 
+  // Gerçek üye oturumu varsa gönderen alanlarını hesaptan doldur; misafir akışı değişmez.
+  useEffect(() => {
+    fetch("/api/account", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((account) => {
+        if (!account?.customer) return;
+        setSenderName((current) => current || account.customer.name || "");
+        setSenderPhone((current) => current || account.customer.phone || "");
+        setSenderEmail((current) => current || account.customer.email || "");
+      })
+      .catch(() => undefined);
+  }, []);
+
   // Taslağı otomatik kaydet (ödeme-dışı bilgiler). Sipariş tamamlanınca temizlenir.
   useEffect(() => {
     if (typeof window === "undefined" || !draftLoaded.v || done) return;
@@ -168,7 +181,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
     try {
       const items = [
         { product_id: productId != null ? Number(productId) : null, quantity: qty },
-        ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => ({ product_id: Number(a.id), quantity: addonQty[a.id] })),
+        ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => ({ product_id: Number(a.productId ?? a.id), quantity: addonQty[a.id] })),
       ].filter((it) => it.product_id != null);
       // Not: bölgesel kupon için ileride pd'ye sayısal city_id/district_id eklenince
       // buraya geçirilecek. Şu an bölge gönderilmez → backend bölgesiz kuponu her yerde geçerli sayar.
@@ -216,6 +229,9 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
 
   const submit = async () => {
     setError(null);
+    if (!pd?.date || !address.trim() || (pd.mode === "sameday" && !pd.slotId && !pd.slotLabel && !pd.slotStart)) {
+      setError("Teslimat adresi, tarihi ve uygun saat aralığı olmadan sipariş oluşturulamaz."); return;
+    }
     if (!senderName.trim() || !recipientName.trim()) {
       setError("Lütfen gönderen ve alıcı adını tamamlayın."); return;
     }
@@ -242,13 +258,14 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
       // API'den string gelen id/priceMinor, Zod (z.number().int()) tarafından
       // reddediliyordu. Geçersiz/pozitif olmayan id → null (şema nullable kabul eder).
       const items = [
-        { product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) },
+        { product_id: productId != null ? Number(productId) : null, variant_id: variantId != null ? Number(variantId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) },
         ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => {
-          const pid = Math.round(Number(a.id));
+          const pid = Math.round(Number(a.productId ?? a.id));
           const q = Math.max(1, Math.round(Number(addonQty[a.id]) || 1));
           const price = Math.max(0, Math.round(Number(a.priceMinor) || 0));
           return {
             product_id: Number.isFinite(pid) && pid > 0 ? pid : null,
+            variant_id: a.variantId != null ? Number(a.variantId) : null,
             product_name: a.name,
             quantity: q,
             unit_price_minor: price,
@@ -266,10 +283,12 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
           delivery_address: address || null, delivery_district: pd?.district || null,
           delivery_city: pd?.city || null,
           delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
+          delivery_slot_id: pd?.slotId ?? null,
           card_message: composedCard, source: "web",
           occasion: occasion || null,
           sender_visibility: visibility,
           is_surprise: surprise,
+          coupon_code: coupon?.code ?? null,
           delivery_notes: deliveryNotes,
           place_id: pd?.placeId || null,
           place_name: pd?.placeName || null,
@@ -285,6 +304,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
       setDone({ order_number: json.data.order_number });
       clearPendingDelivery();
       try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+      onComplete?.();
     } catch {
       setError("Sipariş oluşturulamadı. Lütfen tekrar deneyin.");
     } finally {
@@ -337,7 +357,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
               {stepKey === "ekurun" && <StepAddons addons={addons} addonQty={addonQty} setAddon={setAddon} />}
               {stepKey === "odeme" && (
                 <StepOdeme
-                  productName={productName} productPrice={priceMinor} total={total} subtotal={subtotal}
+                  productName={productName} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal}
                   addons={addons} addonQty={addonQty}
                   recipientName={recipientName} occasion={occasion}
                   address={address} region={`${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
@@ -374,7 +394,7 @@ export default function CheckoutWizard({ productName, productId, priceMinor, pro
 
         <div className="order-2">
           <LivingReceipt
-            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} total={total} subtotal={subtotal} productSlug={productSlug}
+            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug}
             addons={addons} addonQty={addonQty} coupon={coupon}
             regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
             placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
@@ -799,7 +819,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
         {[
           { icon: Sparkles, title: "Taze Çiçek Garantisi", text: "7–10 gün taze kalma garantisi." },
           { icon: Truck, title: "Aynı Gün Teslimat", text: "Uygun bölgelerde 14:00'a kadar." },
-          { icon: ShieldCheck, title: "Güvenli Ödeme", text: "256-bit SSL ile korunan işlem." },
+          { icon: ShieldCheck, title: "Güvenli Sipariş", text: "SSL ile korunan sipariş bağlantısı." },
           { icon: Package, title: "Özel Paketleme", text: "Özenli sunum ve hediye notu." },
         ].map(({ icon: Icon, title, text }) => (
           <div key={title} className="flex gap-3 border-white/10 px-5 py-4 sm:[&:nth-child(odd)]:border-r lg:border-r lg:last:border-r-0">
@@ -820,7 +840,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
 
 /* ---------------------------- Adım: Ödeme/Özet -------------------------- */
 function StepOdeme(p: {
-  productName: string; productPrice: number; total: number; subtotal: number;
+  productName: string; productPrice: number; productQty: number; total: number; subtotal: number;
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
   recipientName: string; occasion: string | null;
   address: string; region: string; dateStr: string | null; slotStr: string | null; typeStr: string | null; cardMessage: string;
@@ -833,7 +853,7 @@ function StepOdeme(p: {
   return (
     <Card title="Siparişinizi onaylayın" subtitle="Her şey hazır. Onayladığınızda siparişiniz oluşturulur.">
       <div className="space-y-2.5">
-        <LineItem name={p.productName} qty={1} price={p.productPrice} />
+        <LineItem name={p.productName} qty={p.productQty} price={p.productPrice * p.productQty} />
         {selected.map((a) => <LineItem key={a.id} name={a.name} qty={p.addonQty[a.id]} price={a.priceMinor * p.addonQty[a.id]} addon />)}
       </div>
 
@@ -921,7 +941,7 @@ function RevRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ clas
 
 /* ---------------------------- Yaşayan Fiş ------------------------------- */
 function LivingReceipt(p: {
-  productName: string; coverUrl?: string | null; productPrice: number; total: number; subtotal: number; productSlug?: string;
+  productName: string; coverUrl?: string | null; productPrice: number; productQty: number; total: number; subtotal: number; productSlug?: string;
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
   coupon: { code: string; discount_minor: number } | null;
   regionLabel: string; placeName: string | null; dateStr: string | null; slotStr: string | null; typeStr: string | null;
@@ -945,8 +965,8 @@ function LivingReceipt(p: {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold text-[#1F2937] leading-snug line-clamp-2">{p.productName}</p>
-          <p className="text-[12.5px] text-[#6B7280] mt-1">Adet: 1</p>
-          <p className="text-[15px] font-bold text-[#111827] mt-1">{money(p.productPrice)}</p>
+          <p className="text-[12.5px] text-[#6B7280] mt-1">Adet: {p.productQty}</p>
+          <p className="text-[15px] font-bold text-[#111827] mt-1">{money(p.productPrice * p.productQty)}</p>
         </div>
       </div>
 

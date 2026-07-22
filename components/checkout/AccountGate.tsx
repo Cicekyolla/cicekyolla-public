@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil } from "lucide-react";
+import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil, LogIn, UserPlus } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 
@@ -29,12 +29,12 @@ const TRUST = [
   { icon: Truck, label: "Aynı Gün Teslimat" },
   { icon: Lock, label: "SSL Koruması" },
   { icon: FileCheck, label: "KVKK Uyumlu" },
-  { icon: CreditCard, label: "Güvenli Ödeme" },
+  { icon: CreditCard, label: "Güvenli Sipariş" },
   { icon: Sparkles, label: "Profesyonel Floristler" },
   { icon: Users, label: "Binlerce Mutlu Müşteri" },
 ];
 
-const STEPS = ["Teslimat", "Hesap", "Alıcı", "Kart Mesajı", "Ödeme"];
+const STEPS = ["Teslimat", "Hesap", "Alıcı", "Kart Mesajı", "Onay"];
 
 function ProgressBar({ active }: { active: number }) {
   return (
@@ -69,15 +69,28 @@ type Props = {
   priceMinor: number;
   coverUrl?: string | null;
   productSlug: string;
+  quantity?: number;
+  totalMinor?: number;
+  returnPath?: string;
   onContinue: () => void;
 };
 
-export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, onContinue }: Props) {
+export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, onContinue }: Props) {
   const [pd, setPd] = useState<PendingDelivery | null>(null);
-  useEffect(() => { setPd(readPendingDelivery()); }, []);
+  const [member, setMember] = useState<{ name: string; email: string } | null>(null);
+  const [accountLoading, setAccountLoading] = useState(true);
+  useEffect(() => {
+    setPd(readPendingDelivery());
+    fetch("/api/account", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((account) => setMember(account?.customer ?? null))
+      .catch(() => setMember(null))
+      .finally(() => setAccountLoading(false));
+  }, []);
 
   const dateStr = formatDate(pd?.date);
   const typeStr = pd?.mode === "cargo" ? "Ücretsiz Kargo" : pd?.mode === "sameday" ? "Aynı Gün Teslimat" : null;
+  const loginReturnPath = returnPath ?? `/hizli-siparis?product=${encodeURIComponent(productSlug)}`;
 
   const Summary = (
     <motion.aside
@@ -99,8 +112,8 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
         </div>
         <div className="min-w-0">
           <p className="text-[14px] font-semibold text-[#1F2937] leading-snug line-clamp-2">{productName}</p>
-          <p className="text-[13px] text-[#6B7280] mt-1">Adet: 1</p>
-          <p className="text-[16px] font-bold text-[#111827] mt-1.5">{money(priceMinor)}</p>
+          <p className="text-[13px] text-[#6B7280] mt-1">Adet: {quantity}</p>
+          <p className="text-[16px] font-bold text-[#111827] mt-1.5">{money(priceMinor * quantity)}</p>
         </div>
       </div>
 
@@ -123,7 +136,7 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
 
       <div className="mt-4 pt-4 border-t border-[#F4F3F7] flex items-center justify-between">
         <span className="text-[13px] font-semibold text-[#6B7280]">Toplam</span>
-        <span className="text-[19px] font-bold text-[#111827]">{money(priceMinor)}</span>
+        <span className="text-[19px] font-bold text-[#111827]">{money(totalMinor ?? priceMinor * quantity)}</span>
       </div>
     </motion.aside>
   );
@@ -155,29 +168,19 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="rounded-[22px] border border-[#EDE9FE] bg-gradient-to-b from-white to-[#FBFAFF] p-6 lg:p-8"
           >
-            <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Misafir Olarak Devam Et</h2>
-            <p className="text-[14px] text-[#6B7280] mt-2 leading-relaxed">
-              En hızlı sipariş yöntemi. Hesap oluşturmanıza gerek yok — siparişinizi yaklaşık 2 dakikada tamamlayabilirsiniz.
-            </p>
-
-            <button
-              onClick={onContinue}
-              className="group mt-5 w-full flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.99] text-white text-[15px] font-bold py-4 transition-all shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)]"
-            >
-              Misafir Olarak Devam Et
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
-
-            {/* Küçük bilgi — V1'de login YOK, sahte alan YOK. Sadece bilgilendirme. */}
-            <p className="text-center text-[12.5px] text-[#9CA3AF] mt-4">
-              Daha önce sipariş verdiyseniz, üyelik girişi yakında aktif olacak.
-            </p>
-
-            {/*
-              GELECEK ENTEGRASYON NOKTASI (V2+): burada auth eklenince
-              Google / Apple / Microsoft / Magic Link / OTP butonları render edilecek.
-              V1'de bilinçli olarak BOŞ — sahte login üretilmez.
-            */}
+            {accountLoading ? <p className="text-[14px] text-[#6B7280]">Üyelik durumunuz kontrol ediliyor…</p> : member ? <>
+              <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>{member.name} olarak devam edin</h2>
+              <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">{member.email} hesabıyla verilen sipariş, müşteri panelinizde tarih, saat, durum ve puan hareketleriyle görünür.</p>
+              <button onClick={onContinue} className="group mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] py-4 text-[15px] font-bold text-white shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)] hover:bg-[#6D28D9]">Üye Olarak Devam Et <ArrowRight className="h-4 w-4" /></button>
+            </> : <>
+              <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Nasıl devam etmek istersiniz?</h2>
+              <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">Üye siparişleri müşteri panelinde görünür ve teslimattan sonra puan kazanır. Hesap oluşturmadan da devam edebilirsiniz.</p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <Link href={`/giris?next=${encodeURIComponent(loginReturnPath)}`} className="flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-4 py-4 text-[14px] font-bold text-white hover:bg-[#6D28D9]"><LogIn className="h-4 w-4" /> Giriş Yap</Link>
+                <Link href={`/giris?next=${encodeURIComponent(loginReturnPath)}#uye-ol`} className="flex items-center justify-center gap-2 rounded-2xl border border-[#C4B5FD] bg-white px-4 py-4 text-[14px] font-bold text-[#7C3AED] hover:bg-[#F5F3FF]"><UserPlus className="h-4 w-4" /> Üye Ol</Link>
+              </div>
+              <button onClick={onContinue} className="group mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white py-4 text-[14px] font-bold text-[#4B5563] hover:border-[#C4B5FD] hover:text-[#7C3AED]">Misafir Olarak Devam Et <ArrowRight className="h-4 w-4" /></button>
+            </>}
           </motion.div>
 
           {/* Güven bloğu */}

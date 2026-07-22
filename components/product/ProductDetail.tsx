@@ -23,7 +23,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
-import { savePendingDelivery } from "@/lib/pendingDelivery";
+import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 
 const WHATSAPP = "905074413474";
@@ -152,6 +152,7 @@ export function ProductDetail({
   const [wish, setWish] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
+  const [deliverySelection, setDeliverySelection] = useState<PendingDelivery | null>(null);
 
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
@@ -358,8 +359,8 @@ export function ProductDetail({
               delivery_scope: product.delivery_scope,
               categoryId: data.categories?.find((c) => c.is_primary)?.category_id ?? data.categories?.[0]?.category_id ?? null,
             }}
-            onSelect={(sel) =>
-              savePendingDelivery({
+            onSelect={(sel) => {
+              const selectedDelivery: PendingDelivery = {
                 productSlug: product.slug,
                 productName: product.name,
                 categoryId: data.categories?.find((c) => c.is_primary)?.category_id ?? data.categories?.[0]?.category_id ?? null,
@@ -379,8 +380,10 @@ export function ProductDetail({
                 lat: sel.address.lat ?? null,
                 lng: sel.address.lng ?? null,
                 band: sel.band ?? null,
-              })
-            }
+              };
+              savePendingDelivery(selectedDelivery);
+              setDeliverySelection(selectedDelivery);
+            }}
           />
 
           {/* Varyantlar */}
@@ -408,17 +411,20 @@ export function ProductDetail({
           <div className="mt-7 flex gap-3">
             <button
               type="button"
-              onClick={() => addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "" })}
-              className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl border border-[#7C3AED] bg-white text-[#7C3AED] text-[15px] font-bold transition-all hover:bg-[#F5F3FF]"
+              disabled={!deliverySelection}
+              onClick={() => deliverySelection && addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "", delivery: deliverySelection })}
+              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl border text-[15px] font-bold transition-all ${deliverySelection ? "border-[#7C3AED] bg-white text-[#7C3AED] hover:bg-[#F5F3FF]" : "cursor-not-allowed border-[#E5E7EB] bg-[#F9FAFB] text-[#9CA3AF]"}`}
             >
               <ShoppingBag className="w-5 h-5" /> Sepete Ekle
             </button>
-            <Link
-              href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`}
-              className="flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-[#7C3AED] text-white text-[15px] font-bold transition-all hover:bg-[#6D28D9] hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]"
+            <button
+              type="button"
+              disabled={!deliverySelection}
+              onClick={() => { if (deliverySelection) window.location.href = `/hizli-siparis?product=${encodeURIComponent(product.slug)}`; }}
+              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-[15px] font-bold transition-all ${deliverySelection ? "bg-[#7C3AED] text-white hover:bg-[#6D28D9] hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]" : "cursor-not-allowed bg-[#DDD6FE] text-white"}`}
             >
               <ShoppingBag className="w-5 h-5" /> Hemen Sipariş Ver
-            </Link>
+            </button>
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
               target="_blank"
@@ -436,13 +442,14 @@ export function ProductDetail({
               <Heart className={`w-5 h-5 ${wish ? "fill-[#E11D48]" : ""}`} />
             </button>
           </div>
+          {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">Sepete eklemek veya siparişe geçmek için önce teslimat adresi, tarihi ve uygun saat aralığını seçin.</p>}
 
           {/* Güven ikonları — gerçek özellikler (sahte yorum/yıldız/satış YOK) */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
             {[
               { icon: Camera, t: "Fotoğraftaki ürün gönderilir", show: true },
               { icon: Leaf, t: "Taze hazırlanır", show: true },
-              { icon: ShieldCheck, t: "Güvenli ödeme", show: true },
+              { icon: ShieldCheck, t: "Güvenli bağlantı", show: true },
               { icon: Zap, t: "Aynı gün teslimat", show: product.same_day_available },
               { icon: Gift, t: "Hediye notu eklenebilir", show: true },
               { icon: Check, t: "Görsel onay desteği", show: true },

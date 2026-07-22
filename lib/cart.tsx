@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { PendingDelivery } from "@/lib/pendingDelivery";
 
 export type CartItem = {
   key: string;
@@ -12,22 +13,28 @@ export type CartItem = {
   quantity: number;
   unitPriceMinor: number;
   image: string;
+  delivery?: PendingDelivery;
 };
 
 type CartContextValue = {
   items: CartItem[];
+  hydrated: boolean;
   itemCount: number;
   subtotalMinor: number;
   addItem: (item: Omit<CartItem, "key" | "quantity">, quantity?: number) => void;
   setQuantity: (key: string, quantity: number) => void;
   removeItem: (key: string) => void;
+  clearCart: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = "cicekyolla.cart.v1";
 
-function itemKey(item: Pick<CartItem, "productId" | "variantId">) {
-  return `${item.productId}:${item.variantId ?? "base"}`;
+function itemKey(item: Pick<CartItem, "productId" | "variantId" | "delivery">) {
+  const deliveryKey = item.delivery
+    ? `${item.delivery.date ?? "date"}:${item.delivery.slotId ?? item.delivery.slotLabel ?? item.delivery.mode ?? "delivery"}:${item.delivery.placeId ?? item.delivery.address ?? "address"}`
+    : "legacy";
+  return `${item.productId}:${item.variantId ?? "base"}:${deliveryKey}`;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -54,6 +61,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(() => ({
     items,
+    hydrated,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
     subtotalMinor: items.reduce((sum, item) => sum + item.unitPriceMinor * item.quantity, 0),
     addItem(item, quantity = 1) {
@@ -72,7 +80,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     removeItem(key) {
       setItems((current) => current.filter((entry) => entry.key !== key));
     },
-  }), [items]);
+    clearCart() {
+      setItems([]);
+    },
+  }), [hydrated, items]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
