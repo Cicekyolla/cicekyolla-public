@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const STATUS_TR: Record<string, string> = {
   new: "Yeni", confirmed: "Onaylandı", preparing: "Hazırlanıyor", designing: "Tasarımda",
@@ -13,21 +13,28 @@ export default function SiparisTakipPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ order_number: string; status: string; delivery_date: string | null; delivery_time_slot: string | null; timeline: { new_status: string; note: string | null; created_at: string }[] } | null>(null);
 
-  const track = async () => {
-    if (!no.trim()) return;
+  const track = useCallback(async (requested?: string) => {
+    const orderNumber = (requested ?? no).trim();
+    if (!orderNumber) return;
     setLoading(true); setError(null); setResult(null);
     try {
-      const res = await fetch(`/api/orders/track/${encodeURIComponent(no.trim())}`);
+      const res = await fetch(`/api/orders/track/${encodeURIComponent(orderNumber)}`);
       if (!res.ok) throw new Error();
       const json = await res.json();
       setResult(json.data);
     } catch { setError("Sipariş bulunamadı. Numarayı kontrol edin."); }
     finally { setLoading(false); }
-  };
+  }, [no]);
 
   useEffect(() => {
-    const order = new URLSearchParams(window.location.search).get("order");
-    if (order) setNo(order);
+    const params = new URLSearchParams(window.location.search);
+    const order = params.get("order") ?? params.get("no") ?? params.get("tracking");
+    if (order) {
+      setNo(order);
+      void track(order);
+    }
+    // Query yalnız ilk açılışta okunur; kullanıcı sonraki sorguları butonla yapar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -38,7 +45,7 @@ export default function SiparisTakipPage() {
         <div className="flex gap-2">
           <input value={no} onChange={(e) => setNo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && track()}
             placeholder="Sipariş numarası" className="flex-1 px-4 py-3 rounded-xl border border-[#E5E7EB] focus:outline-none focus:border-[#C4B5FD]" />
-          <button onClick={track} disabled={loading} className="px-6 py-3 rounded-xl bg-[#7C3AED] text-white font-semibold hover:bg-[#6D28D9] disabled:opacity-60">
+          <button onClick={() => void track()} disabled={loading} className="px-6 py-3 rounded-xl bg-[#7C3AED] text-white font-semibold hover:bg-[#6D28D9] disabled:opacity-60">
             {loading ? "…" : "Sorgula"}
           </button>
         </div>

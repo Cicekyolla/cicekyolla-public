@@ -58,9 +58,9 @@ function mapToSlot(start?: string, label?: string): string {
   return SLOTS[0];
 }
 
-type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; quantity?: number; initialAddonQty?: Record<number, number>; onComplete?: () => void };
+type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; quantity?: number; initialAddonQty?: Record<number, number>; delivery?: PendingDelivery; onComplete?: () => void };
 
-export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, onComplete }: Props) {
+export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete }: Props) {
   const steps = useMemo(() => {
     const base = [
       { key: "urun", label: "Ürün" },
@@ -78,7 +78,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const [done, setDone] = useState<{ order_number: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pd, setPd] = useState<PendingDelivery | null>(null);
+  const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
 
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -129,14 +129,14 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   }, []);
 
   useEffect(() => {
-    const p = readPendingDelivery();
+    const p = delivery ?? readPendingDelivery();
     if (!p) return;
     if (productSlug && p.productSlug && p.productSlug !== productSlug) return;
     setPd(p);
     if (p.address && !address) setAddress(p.address);
     if (p.occasion && !occasion) setOccasion(p.occasion as string);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productSlug]);
+  }, [delivery, productSlug]);
 
   // Gerçek üye oturumu varsa gönderen alanlarını hesaptan doldur; misafir akışı değişmez.
   useEffect(() => {
@@ -299,14 +299,20 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           items,
         }),
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        const failure = await res.json().catch(() => null);
+        throw new Error(typeof failure?.error === "string" ? failure.error : String(res.status));
+      }
       const json = await res.json();
       setDone({ order_number: json.data.order_number });
       clearPendingDelivery();
       try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
       onComplete?.();
-    } catch {
-      setError("Sipariş oluşturulamadı. Lütfen tekrar deneyin.");
+    } catch (failure) {
+      const reason = failure instanceof Error ? failure.message : "";
+      setError(reason === "delivery slot is no longer available"
+        ? "Seçtiğiniz saat aralığı artık dolu veya kapanmış. Lütfen ürün sayfasından yeni bir saat seçin."
+        : "Sipariş oluşturulamadı. Bilgileriniz korunuyor; lütfen tekrar deneyin.");
     } finally {
       setLoading(false);
     }
@@ -321,7 +327,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         <h1 className="text-2xl font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Siparişiniz alındı!</h1>
         <p className="text-[#6B7280] mt-2">Sipariş numaranız</p>
         <p className="text-[22px] font-bold text-[#7C3AED] mt-1 tracking-wide">{done.order_number}</p>
-        <Link href={`/siparis-takip?no=${encodeURIComponent(done.order_number)}`} className="inline-block mt-6 rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
+        <Link href={`/siparis-takip?order=${encodeURIComponent(done.order_number)}`} className="inline-block mt-6 rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
           Siparişi Takip Et
         </Link>
       </div>

@@ -9,6 +9,7 @@
 import { useState } from "react";
 import AccountGate from "./AccountGate";
 import CheckoutWizard from "./CheckoutWizard";
+import type { PendingDelivery } from "@/lib/pendingDelivery";
 
 export interface CheckoutAddon { id: number; productId?: number; variantId?: number | null; name: string; priceMinor: number; image: string | null; category: string }
 
@@ -24,10 +25,11 @@ type Props = {
   initialAddonQty?: Record<number, number>;
   totalMinor?: number;
   returnPath?: string;
+  delivery?: PendingDelivery;
   onComplete?: () => void;
 };
 
-export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, onComplete }: Props) {
+export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete }: Props) {
   const [phase, setPhase] = useState<"gate" | "form">("gate");
 
   if (phase === "gate") {
@@ -40,11 +42,12 @@ export default function CheckoutFlow({ productName, productId, variantId, priceM
         quantity={quantity}
         totalMinor={totalMinor}
         returnPath={returnPath}
+        delivery={delivery}
         onContinue={() => setPhase("form")}
       />
     );
   }
 
   // Premium sipariş hazırlama deneyimi (Alıcı → Kart → Gönderen → Özet).
-  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} onComplete={onComplete} />;
+  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} />;
 }

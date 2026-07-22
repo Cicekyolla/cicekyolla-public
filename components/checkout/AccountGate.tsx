@@ -72,21 +72,22 @@ type Props = {
   quantity?: number;
   totalMinor?: number;
   returnPath?: string;
+  delivery?: PendingDelivery;
   onContinue: () => void;
 };
 
-export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, onContinue }: Props) {
-  const [pd, setPd] = useState<PendingDelivery | null>(null);
+export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, delivery, onContinue }: Props) {
+  const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
   const [member, setMember] = useState<{ name: string; email: string } | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);
   useEffect(() => {
-    setPd(readPendingDelivery());
+    setPd(delivery ?? readPendingDelivery());
     fetch("/api/account", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : null)
       .then((account) => setMember(account?.customer ?? null))
       .catch(() => setMember(null))
       .finally(() => setAccountLoading(false));
-  }, []);
+  }, [delivery]);
 
   const dateStr = formatDate(pd?.date);
   const typeStr = pd?.mode === "cargo" ? "Ücretsiz Kargo" : pd?.mode === "sameday" ? "Aynı Gün Teslimat" : null;
