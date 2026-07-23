@@ -29,6 +29,10 @@ import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WH
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
+// Kart (PayTR) yalnız açık anahtar varken gösterilir. PayTR production anahtarı
+// gelince public Vercel'de NEXT_PUBLIC_PAYTR_ENABLED=true → kart görünür. Şimdilik
+// (sandbox) kapalı → müşteriye yalnız Havale/EFT gösterilir.
+const CARD_ENABLED = process.env.NEXT_PUBLIC_PAYTR_ENABLED === "true";
 
 // --- Doğrulama (API sözleşmesiyle uyumlu) ---
 // E-posta: backend Zod .email() ile birebir (Response "Invalid email" = Zod default).
@@ -81,7 +85,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const [error, setError] = useState<string | null>(null);
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
   // Ödeme yöntemi (Kart = PayTR iframe · Havale = IBAN, "ödeme bekliyor").
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "havale">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "havale">(CARD_ENABLED ? "card" : "havale");
   const [bankAccounts, setBankAccounts] = useState<BankAccountPublic[]>([]);
   useEffect(() => { fetchBankAccounts().then(setBankAccounts).catch(() => { /* yok say */ }); }, []);
 
@@ -406,7 +410,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
                   couponInput={couponInput} setCouponInput={setCouponInput}
                   coupon={coupon} couponMsg={couponMsg} couponBusy={couponBusy}
                   applyCoupon={applyCoupon} removeCoupon={removeCoupon}
-                  paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} bankAccounts={bankAccounts}
+                  paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} bankAccounts={bankAccounts} cardEnabled={CARD_ENABLED}
                 />
               )}
             </motion.div>
@@ -892,20 +896,21 @@ function StepOdeme(p: {
   couponInput: string; setCouponInput: (v: string) => void;
   coupon: { code: string; discount_minor: number } | null; couponMsg: string | null; couponBusy: boolean;
   applyCoupon: () => void; removeCoupon: () => void;
-  paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[];
+  paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[]; cardEnabled: boolean;
 }) {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
+  const methods = ([
+    { key: "card" as const, icon: CreditCard, title: "Kredi / Banka Kartı", sub: "Visa, Mastercard · 3D Secure" },
+    { key: "havale" as const, icon: Landmark, title: "Havale / EFT", sub: "IBAN'a transfer · onaylı" },
+  ]).filter((m) => m.key !== "card" || p.cardEnabled);
   const hasDiscount = !!p.coupon && p.coupon.discount_minor > 0;
   return (
     <Card title="Ödeme" subtitle="Ödeme yönteminizi seçin ve siparişinizi tamamlayın.">
       {/* Ödeme yöntemi seçici */}
       <div className="mb-5">
         <div className="text-[11px] font-semibold text-[#8B5CF6] uppercase tracking-wide mb-2.5">Ödeme Yöntemi</div>
-        <div className="grid grid-cols-2 gap-2.5">
-          {([
-            { key: "card" as const, icon: CreditCard, title: "Kredi / Banka Kartı", sub: "Visa, Mastercard · 3D Secure" },
-            { key: "havale" as const, icon: Landmark, title: "Havale / EFT", sub: "IBAN'a transfer · onaylı" },
-          ]).map((m) => {
+        <div className={`grid ${methods.length > 1 ? "grid-cols-2" : "grid-cols-1"} gap-2.5`}>
+          {methods.map((m) => {
             const on = p.paymentMethod === m.key;
             const Icon = m.icon;
             return (
