@@ -18,13 +18,14 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Check, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Package, User,
   Heart, MessageSquareText, ShieldCheck, Truck, Pencil, Plus, Minus, ShoppingBag, Gift,
-  Sparkles, Star, RefreshCw, TicketPercent,
+  Sparkles, Star, RefreshCw, TicketPercent, CreditCard, Landmark, MessageCircle,
 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
+import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
@@ -79,6 +80,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
+  // Ödeme yöntemi (Kart = PayTR iframe · Havale = IBAN, "ödeme bekliyor").
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "havale">("card");
+  const [bankAccounts, setBankAccounts] = useState<BankAccountPublic[]>([]);
+  useEffect(() => { fetchBankAccounts().then(setBankAccounts).catch(() => { /* yok say */ }); }, []);
 
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -273,41 +278,43 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         }),
       ];
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer_name: senderName, customer_phone: senderPhone,
-          customer_email: senderEmail || null,
-          recipient_name: recipientName, recipient_phone: recipientPhone || null,
-          delivery_address: address || null, delivery_district: pd?.district || null,
-          delivery_city: pd?.city || null,
-          delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
-          delivery_slot_id: pd?.slotId ?? null,
-          card_message: composedCard, source: "web",
-          occasion: occasion || null,
-          sender_visibility: visibility,
-          is_surprise: surprise,
-          coupon_code: coupon?.code ?? null,
-          delivery_notes: deliveryNotes,
-          place_id: pd?.placeId || null,
-          place_name: pd?.placeName || null,
-          formatted_address: pd?.address || null,
-          lat: pd?.lat ?? null,
-          lng: pd?.lng ?? null,
-          delivery_neighborhood: pd?.neighborhood || null,
-          items,
-        }),
-      });
-      if (!res.ok) {
-        const failure = await res.json().catch(() => null);
-        throw new Error(typeof failure?.error === "string" ? failure.error : String(res.status));
+      const orderBody = {
+        customer_name: senderName, customer_phone: senderPhone,
+        customer_email: senderEmail || null,
+        recipient_name: recipientName, recipient_phone: recipientPhone || null,
+        delivery_address: address || null, delivery_district: pd?.district || null,
+        delivery_city: pd?.city || null,
+        delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
+        delivery_slot_id: pd?.slotId ?? null,
+        card_message: composedCard, source: "web",
+        occasion: occasion || null,
+        sender_visibility: visibility,
+        is_surprise: surprise,
+        coupon_code: coupon?.code ?? null,
+        delivery_notes: deliveryNotes,
+        place_id: pd?.placeId || null,
+        place_name: pd?.placeName || null,
+        formatted_address: pd?.address || null,
+        lat: pd?.lat ?? null,
+        lng: pd?.lng ?? null,
+        delivery_neighborhood: pd?.neighborhood || null,
+        items,
+      };
+
+      if (paymentMethod === "havale") {
+        // Havale: sipariş 'ödeme bekliyor' oluşur; dönen numara = havale referansı.
+        const r = await createHavaleOrder(orderBody);
+        setDone({ order_number: r.order_number });
+        clearPendingDelivery();
+        try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+        onComplete?.();
+      } else {
+        // Kart: PayTR güvenli sayfasına yönlendir. Ödeme TAMAMLANMADAN sepet/taslak
+        // TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
+        const r = await initPaytr(orderBody);
+        window.location.href = r.iframe_url;
+        return;
       }
-      const json = await res.json();
-      setDone({ order_number: json.data.order_number });
-      clearPendingDelivery();
-      try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
-      onComplete?.();
     } catch (failure) {
       const reason = failure instanceof Error ? failure.message : "";
       setError(reason === "delivery slot is no longer available"
@@ -327,9 +334,37 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         <h1 className="text-2xl font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Siparişiniz alındı!</h1>
         <p className="text-[#6B7280] mt-2">Sipariş numaranız</p>
         <p className="text-[22px] font-bold text-[#7C3AED] mt-1 tracking-wide">{done.order_number}</p>
-        <Link href={`/siparis-takip?order=${encodeURIComponent(done.order_number)}`} className="inline-block mt-6 rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
-          Siparişi Takip Et
-        </Link>
+
+        {/* Havale ödemesi: numara referans; ödeme onaylanınca hazırlanır */}
+        <div className="mt-6 text-left rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-5">
+          <div className="text-[13px] font-bold text-[#6D28D9] mb-1">Havale / EFT ile ödeme</div>
+          <div className="text-[12.5px] text-[#6B7280] mb-3">
+            Aşağıdaki hesaba <b>{money(total)}</b> transfer edin. Açıklamaya sipariş numaranızı
+            (<b>{done.order_number}</b>) yazmayı unutmayın. Ödemeniz onaylanınca siparişiniz hazırlanır.
+          </div>
+          {bankAccounts.length === 0 ? (
+            <div className="text-[12px] text-[#9CA3AF]">Hesap bilgisi için bizimle iletişime geçin.</div>
+          ) : (
+            <div className="space-y-2.5">
+              {bankAccounts.map((b) => (
+                <div key={b.public_id} className="rounded-xl bg-white border border-[#EDE9FE] px-3.5 py-2.5">
+                  <div className="text-[12.5px] font-bold text-[#1F2937]">{b.bank_name}{b.branch_name ? ` · ${b.branch_name}` : ""}</div>
+                  <div className="text-[13px] font-mono text-[#4B5563] tracking-wide mt-0.5">{ibanPretty(b.iban)}</div>
+                  <div className="text-[11.5px] text-[#9CA3AF] mt-0.5">{b.account_holder}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+          <Link href={`/siparis-takip?order=${encodeURIComponent(done.order_number)}`} className="rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
+            Siparişi Takip Et
+          </Link>
+          <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-[#25D366] text-[#128C7E] font-bold px-7 py-3.5 hover:bg-[#F0FFF4] transition-colors">
+            <MessageCircle className="w-4 h-4" /> WhatsApp Destek
+          </a>
+        </div>
       </div>
     );
   }
@@ -371,6 +406,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
                   couponInput={couponInput} setCouponInput={setCouponInput}
                   coupon={coupon} couponMsg={couponMsg} couponBusy={couponBusy}
                   applyCoupon={applyCoupon} removeCoupon={removeCoupon}
+                  paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} bankAccounts={bankAccounts}
                 />
               )}
             </motion.div>
@@ -392,7 +428,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
             ) : (
               <button onClick={submit} disabled={loading}
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.99] text-white text-[15px] font-bold py-4 transition-all shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)] disabled:opacity-70">
-                {loading ? "Gönderiliyor…" : "Siparişi Tamamla"}
+                <ShieldCheck className="w-4 h-4" />
+                {loading
+                  ? (paymentMethod === "card" ? "Yönlendiriliyor…" : "Gönderiliyor…")
+                  : (paymentMethod === "card" ? "Güvenli Ödemeye Geç" : "Siparişi Tamamla")}
               </button>
             )}
           </div>
@@ -853,11 +892,65 @@ function StepOdeme(p: {
   couponInput: string; setCouponInput: (v: string) => void;
   coupon: { code: string; discount_minor: number } | null; couponMsg: string | null; couponBusy: boolean;
   applyCoupon: () => void; removeCoupon: () => void;
+  paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[];
 }) {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const hasDiscount = !!p.coupon && p.coupon.discount_minor > 0;
   return (
-    <Card title="Siparişinizi onaylayın" subtitle="Her şey hazır. Onayladığınızda siparişiniz oluşturulur.">
+    <Card title="Ödeme" subtitle="Ödeme yönteminizi seçin ve siparişinizi tamamlayın.">
+      {/* Ödeme yöntemi seçici */}
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold text-[#8B5CF6] uppercase tracking-wide mb-2.5">Ödeme Yöntemi</div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {([
+            { key: "card" as const, icon: CreditCard, title: "Kredi / Banka Kartı", sub: "Visa, Mastercard · 3D Secure" },
+            { key: "havale" as const, icon: Landmark, title: "Havale / EFT", sub: "IBAN'a transfer · onaylı" },
+          ]).map((m) => {
+            const on = p.paymentMethod === m.key;
+            const Icon = m.icon;
+            return (
+              <button key={m.key} type="button" onClick={() => p.setPaymentMethod(m.key)}
+                className={`flex items-start gap-3 text-left p-3.5 rounded-2xl border transition-all ${on ? "border-[#C4B5FD] bg-[#FBFAFF] shadow-[0_10px_28px_-18px_rgba(124,58,237,0.5)]" : "border-[#E9E7F0] bg-white hover:border-[#DDD6FE]"}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${on ? "bg-[#7C3AED] text-white" : "bg-[#F5F3FF] text-[#7C3AED]"}`}><Icon className="w-4 h-4" /></div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-bold text-[#1F2937]">{m.title}</div>
+                  <div className="text-[11.5px] text-[#9CA3AF]">{m.sub}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {p.paymentMethod === "card" && (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#6B7280] bg-[#F9FAFB] border border-[#F1F0F5] rounded-xl px-3.5 py-2.5">
+            <ShieldCheck className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
+            Kart bilgileriniz güvenli PayTR ekranında alınır; bizim sunucumuza iletilmez.
+          </div>
+        )}
+
+        {p.paymentMethod === "havale" && (
+          <div className="mt-3 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-4">
+            {p.bankAccounts.length === 0 ? (
+              <div className="text-[12.5px] text-[#6B7280]">Havale/EFT hesabı şu an tanımlı değil. Lütfen kart ile ödeyin veya bizimle iletişime geçin.</div>
+            ) : (
+              <>
+                <div className="text-[12px] font-semibold text-[#6D28D9] mb-2">Aşağıdaki hesaba transfer edin; açıklamaya sipariş numaranızı yazın:</div>
+                <div className="space-y-2.5">
+                  {p.bankAccounts.map((b) => (
+                    <div key={b.public_id} className="rounded-xl bg-white border border-[#EDE9FE] px-3.5 py-2.5">
+                      <div className="text-[12.5px] font-bold text-[#1F2937]">{b.bank_name}{b.branch_name ? ` · ${b.branch_name}` : ""}</div>
+                      <div className="text-[13px] font-mono text-[#4B5563] tracking-wide mt-0.5">{ibanPretty(b.iban)}</div>
+                      <div className="text-[11.5px] text-[#9CA3AF] mt-0.5">{b.account_holder}{b.note ? ` · ${b.note}` : ""}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[11.5px] text-[#9CA3AF] mt-2.5">Siparişiniz "ödeme bekliyor" olarak oluşturulur; transferiniz onaylanınca hazırlanır.</div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-2.5">
         <LineItem name={p.productName} qty={p.productQty} price={p.productPrice * p.productQty} />
         {selected.map((a) => <LineItem key={a.id} name={a.name} qty={p.addonQty[a.id]} price={a.priceMinor * p.addonQty[a.id]} addon />)}
@@ -917,7 +1010,12 @@ function StepOdeme(p: {
           <span className="text-[22px] font-bold text-[#111827]">{money(p.total)}</span>
         </div>
       </div>
-      <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" /> Güvenli ödeme adımı yakında entegre edilecektir.</p>
+      <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
+        <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
+        {p.paymentMethod === "card"
+          ? "Ödemeye geçtiğinizde güvenli PayTR ekranına yönlendirilirsiniz."
+          : "Sipariş numaranız havale açıklamasına yazılmak üzere size verilecektir."}
+      </p>
     </Card>
   );
 }
