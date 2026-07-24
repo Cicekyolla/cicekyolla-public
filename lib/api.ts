@@ -93,6 +93,42 @@ export async function fetchSeoPage(
 }
 
 // ---------------------------------------------------------------------------
+// DELIVERY ZONES — canlı teslimat bölgeleri (ADDITIVE).
+// Admin Delivery Motor'daki aktif bölgeler; anasayfa "Teslimat Bölgeleri"
+// bölümü ve /{il}/{ilçe} SEO landing'leri tüketir. Auth GEREKMEZ (public uç).
+// ---------------------------------------------------------------------------
+export interface DeliveryZoneDistrict {
+  name: string;
+  slug: string;
+  same_day: boolean;
+}
+export interface DeliveryZoneCity {
+  city: string;
+  city_slug: string;
+  same_day: boolean;
+  districts: DeliveryZoneDistrict[];
+}
+
+export async function fetchDeliveryZones(): Promise<DeliveryZoneCity[]> {
+  const url = `${API_ORIGIN}/api/public/delivery/zones`;
+  let res: Response;
+  try {
+    res = await fetch(url, { next: { revalidate: 300 } });
+  } catch {
+    return [];
+  }
+  if (!res.ok) return [];
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    return [];
+  }
+  const data = (json as { data?: DeliveryZoneCity[] } | null)?.data;
+  return Array.isArray(data) ? data : [];
+}
+
+// ---------------------------------------------------------------------------
 // CATEGORY TREE — canlı Category Center okuması
 // ---------------------------------------------------------------------------
 // MEVCUT okuma mekanizmasının BİREBİR aynısını kullanır (aynı API_ORIGIN, aynı

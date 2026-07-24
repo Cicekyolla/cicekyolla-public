@@ -2,26 +2,36 @@
 
 /**
  * §12 DISTRICT DELIVERY — ZIP Homepage.tsx birebir port.
- * Sol: ilçe/il listesi → programmatic /cicek-gonder/{slug} iç linkleri (SEO District Pages).
- * Not: sahte sipariş sayıları ve doğrulanmamış süre vaatleri kaldırıldı; yalnız gerçek SEO kapsama linkleri.
+ * Sol: ilçe/il listesi → /{il}/{ilçe} SEO landing iç linkleri (çalışan route'lar).
+ * Veri: admin Delivery Motor'daki aktif bölgeler (zones prop — app/page.tsx
+ * fetchDeliveryZones ile server'da çeker). API erişilemezse FALLBACK_ZONES
+ * (yalnız çalışan linkler) devreye girer. İstanbul = aynı gün teslimat,
+ * diğer iller = 1–3 iş günü kargo. Altta açılır (details) tüm il/ilçe listesi.
  * Sağ: animasyonlu soyut harita (dönen halkalar + şehir noktaları, ping efekti).
- * Adaptasyon: react-router <Link to=…> → next/link <Link href=…>. districts verisi co-located.
  */
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { MapPin, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight, ChevronDown } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
+import type { DeliveryZoneCity } from "@/lib/api";
 
-const districts = [
-  { name: "Kadıköy" },
-  { name: "Beşiktaş" },
-  { name: "Şişli" },
-  { name: "Üsküdar" },
-  { name: "Ataşehir" },
-  { name: "Maltepe" },
-  { name: "Ankara" },
-  { name: "İzmir" },
+// API erişilemezse: [...slug] hardcoded DELIVERY_DATA ile birebir çalışan linkler.
+const FALLBACK_ZONES: DeliveryZoneCity[] = [
+  { city: "İstanbul", city_slug: "istanbul", same_day: true, districts: [
+    { name: "Kadıköy", slug: "kadikoy", same_day: true },
+    { name: "Beşiktaş", slug: "besiktas", same_day: true },
+    { name: "Şişli", slug: "sisli", same_day: true },
+    { name: "Üsküdar", slug: "uskudar", same_day: true },
+  ] },
+  { city: "Ankara", city_slug: "ankara", same_day: false, districts: [
+    { name: "Çankaya", slug: "cankaya", same_day: false },
+    { name: "Keçiören", slug: "kecioren", same_day: false },
+  ] },
+  { city: "İzmir", city_slug: "izmir", same_day: false, districts: [
+    { name: "Konak", slug: "konak", same_day: false },
+    { name: "Karşıyaka", slug: "karsiyaka", same_day: false },
+  ] },
 ];
 
 const cityDots = [
@@ -31,19 +41,29 @@ const cityDots = [
   { x: "72%", y: "60%", label: "Antalya", delay: 0.45 },
 ];
 
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/\s/g, "")
-    .replace(/ı/g, "i")
-    .replace(/ş/g, "s")
-    .replace(/ğ/g, "g")
-    .replace(/ç/g, "c")
-    .replace(/ö/g, "o")
-    .replace(/ü/g, "u");
+/** Ana listedeki satır: İstanbul ilçeleri + diğer iller (il satırı ilk ilçesine gider). */
+function buildRows(source: DeliveryZoneCity[]) {
+  const ist = source.find((c) => c.city_slug === "istanbul");
+  const others = source.filter((c) => c.city_slug !== "istanbul");
+  const rows: { key: string; name: string; href: string; badge: string }[] = [];
+  for (const d of (ist?.districts ?? []).slice(0, 6)) {
+    rows.push({ key: `istanbul-${d.slug}`, name: d.name, href: `/istanbul/${d.slug}`, badge: "Aynı Gün Teslimat" });
+  }
+  for (const c of others) {
+    if (rows.length >= 8) break;
+    rows.push({
+      key: c.city_slug,
+      name: c.city,
+      href: c.districts[0] ? `/${c.city_slug}/${c.districts[0].slug}` : "/teslimat-bolgeleri",
+      badge: "1–3 İş Günü Kargo",
+    });
+  }
+  return rows;
 }
 
-export function DistrictDelivery() {
+export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
+  const source = zones && zones.length > 0 ? zones : FALLBACK_ZONES;
+  const rows = buildRows(source);
   return (
     <section className="py-24" style={{ background: "linear-gradient(180deg, #FAFAFA 0%, #F5F3FF 60%, #FAFAFA 100%)" }}>
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
@@ -56,21 +76,21 @@ export function DistrictDelivery() {
               Köşesine Teslimat
             </SectionTitle>
             <p className="text-[#6B7280] text-[16px] leading-relaxed mt-6 mb-10">
-              İstanbul, Ankara ve İzmir başta olmak üzere birçok bölgeye teslimat.
-              Teslimat süresi ve aynı gün uygunluğu, adres ve saat seçimine göre
-              sipariş adımında belirlenir.
+              İstanbul içi siparişlerde aynı gün teslimat; İstanbul dışındaki
+              illere 1–3 iş günü içinde özenli kargo ile teslim. 14:00&apos;a kadar
+              verilen İstanbul siparişleri bugün teslim edilir.
             </p>
             <div className="grid grid-cols-1 gap-2.5">
-              {districts.map((d, idx) => (
+              {rows.map((d, idx) => (
                 <motion.div
-                  key={d.name}
+                  key={d.key}
                   initial={{ opacity: 0, x: -16 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.06, duration: 0.5 }}
                 >
                   <Link
-                    href={`/cicek-gonder/${slugify(d.name)}`}
+                    href={d.href}
                     className="group flex items-center justify-between px-5 py-4 rounded-[14px] transition-all duration-200"
                     style={{
                       background: "rgba(255,255,255,0.8)",
@@ -98,11 +118,57 @@ export function DistrictDelivery() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      <span className="text-[11px] font-semibold text-[#8B5CF6] whitespace-nowrap">{d.badge}</span>
                       <ArrowRight className="w-3.5 h-3.5 text-[#DDD6FE] group-hover:text-[#8B5CF6] group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </Link>
                 </motion.div>
               ))}
+            </div>
+
+            {/* Açılır tüm il/ilçe listesi — kompakt, SEO iç linkleme (details: JS'siz) */}
+            <div className="mt-8 grid grid-cols-1 gap-2">
+              {source.map((c) => (
+                <details
+                  key={c.city_slug}
+                  className="group rounded-[14px] overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.8)", border: "1px solid rgba(139,92,246,0.08)" }}
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3.5 [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center gap-2.5 text-sm font-semibold text-[#111827]">
+                      <MapPin className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                      {c.city}
+                      {c.districts.length > 0 && (
+                        <span className="text-[11px] font-medium text-[#9CA3AF]">{c.districts.length} ilçe</span>
+                      )}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="text-[11px] font-semibold text-[#8B5CF6]">
+                        {c.city_slug === "istanbul" ? "Aynı Gün Teslimat" : "1–3 İş Günü Kargo"}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-[#DDD6FE] transition-transform group-open:rotate-180" />
+                    </span>
+                  </summary>
+                  <div className="flex flex-wrap gap-2 px-5 pb-4 pt-1">
+                    {c.districts.map((d) => (
+                      <Link
+                        key={d.slug}
+                        href={`/${c.city_slug}/${d.slug}`}
+                        className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-[#374151] transition-colors hover:text-[#8B5CF6]"
+                        style={{ background: "#F5F3FF", border: "1px solid rgba(139,92,246,0.1)" }}
+                      >
+                        {d.name}
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+              ))}
+              <Link
+                href="/teslimat-bolgeleri"
+                className="mt-1 inline-flex items-center gap-2 px-1 text-sm font-semibold text-[#8B5CF6] hover:text-[#7C3AED]"
+              >
+                Tüm teslimat bölgelerini gör <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
 

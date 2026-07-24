@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
+import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
@@ -150,6 +150,10 @@ export default async function HomePage() {
       };
     });
 
+  // Teslimat Bölgeleri: admin Delivery Motor'daki aktif bölgeler (additive).
+  // API erişilemezse [] döner → DistrictDelivery kendi fallback'iyle çalışır.
+  const deliveryZones = await fetchDeliveryZones();
+
   // Kurumsal referanslar ana sayfada Instagram'ın hemen altında gösterilir ve
   // admin > Mağaza Ön Yüzü > Kurumsal kaydından okunur.
   const corporatePage = await fetchSeoPage("/kurumsal");
@@ -199,7 +203,7 @@ export default async function HomePage() {
     return (
       <>
         <HomeJsonLd />
-        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections }} />
+        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones }} />
         {showTestimonials && <Testimonials />}
         {showInstagram && <InstagramGallery config={instagramSection?.config} />}
         <CorporateReferences clients={corporateClients} />
@@ -234,7 +238,7 @@ export default async function HomePage() {
       <Testimonials />
       <InstagramGallery />
       <CorporateReferences clients={corporateClients} />
-      <DistrictDelivery />
+      <DistrictDelivery zones={deliveryZones} />
       <WhatsAppCTA />
       <Newsletter />
     </>

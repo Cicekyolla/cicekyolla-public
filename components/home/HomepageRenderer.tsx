@@ -8,6 +8,7 @@
 import { Fragment } from "react";
 import type { ComponentProps } from "react";
 import type { HomepageDTO, HpSection } from "@/lib/homepage";
+import type { DeliveryZoneCity } from "@/lib/api";
 
 import { FloatingCategoryRail } from "./FloatingCategoryRail";
 import HeroDeliveryBar from "./HeroDeliveryBar";
@@ -32,6 +33,8 @@ import { EditorsPicks } from "./EditorsPicks";
 export interface RenderCtx {
   collections: ComponentProps<typeof FloatingCategoryRail>["items"];
   imagedCollections: ComponentProps<typeof FeaturedCollections>["items"];
+  /** Teslimat bölgeleri (admin Delivery Motor) — DistrictDelivery tüketir (additive, opsiyonel). */
+  zones?: DeliveryZoneCity[];
 }
 
 function renderSection(s: HpSection, ctx: RenderCtx) {
@@ -53,7 +56,7 @@ function renderSection(s: HpSection, ctx: RenderCtx) {
     case "testimonials":        return <Testimonials />;
     case "instagram_gallery":   return <InstagramGallery config={s.config} />;
     case "corporate_references":return <CorporateReferences />;
-    case "district_delivery":   return <DistrictDelivery />;
+    case "district_delivery":   return <DistrictDelivery zones={ctx.zones} />;
     case "whatsapp_cta":        return <WhatsAppCTA />;
     case "newsletter":          return <Newsletter />;
     case "product_showcase":    return <ProductShowcase title={s.title?.trim() ? s.title : "Sizin İçin Seçtiklerimiz"} subtitle={s.subtitle?.trim() ? s.subtitle : "Her ana yakışan, özenle seçilmiş tasarımlar."} products={s.products} limit={16} />;
