@@ -91,9 +91,10 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
     lang: "tr",
     index_state: "index",
     canonical_url: path,
-    title_tag: `${place} Çiçek Gönder — ÇiçekYolla`,
-    meta_description: district?.description || `${place} bölgesine taze çiçek ve premium aranjmanları güvenle gönderin. Uygun aynı gün teslimat seçeneklerini inceleyin.`,
-    h1: `${titlePlace}'e Çiçek Gönder`,
+    // SEO: "çiçekçi" + "çiçek siparişi" arama kalıpları — il/ilçe/mahalle aynı mantık.
+    title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi | ÇiçekYolla`,
+    meta_description: district?.description || `${titlePlace} çiçekçi mi arıyorsunuz? ${place} bölgesine aynı gün çiçek siparişi: taze buketler, orkideler ve premium aranjmanlar güvenle teslim edilir.`,
+    h1: `${titlePlace} Çiçekçi — Çiçek Siparişi`,
     intro_html: `<p>${district?.description || `${place} için özenle hazırlanan taze çiçekler ve premium aranjmanlar.`}</p>`,
     body_blocks: [],
     faq: [],
@@ -125,7 +126,7 @@ function syntheticDynamicDeliveryPage(path: string, dyn: DynDelivery): SeoPublic
   const place = [neighborhood, dyn.districtName, dyn.cityName].filter(Boolean).join(", ");
   const titlePlace = neighborhood || dyn.districtName;
   const deliveryNote = dyn.sameDay
-    ? "Uygun aynı gün teslimat seçeneklerini inceleyin."
+    ? "Aynı gün teslimat seçenekleriyle bugün teslim edilir."
     : "Siparişiniz 1–3 iş günü içinde özenli kargo ile teslim edilir.";
   return {
     url_path: path,
@@ -133,9 +134,10 @@ function syntheticDynamicDeliveryPage(path: string, dyn: DynDelivery): SeoPublic
     lang: "tr",
     index_state: "index",
     canonical_url: path,
-    title_tag: `${place} Çiçek Gönder — ÇiçekYolla`,
-    meta_description: `${place} bölgesine taze çiçek ve premium aranjmanları güvenle gönderin. ${deliveryNote}`,
-    h1: `${titlePlace}'e Çiçek Gönder`,
+    // SEO: "çiçekçi" + "çiçek siparişi" arama kalıpları — il/ilçe/mahalle aynı mantık.
+    title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi | ÇiçekYolla`,
+    meta_description: `${titlePlace} çiçek siparişi: ${place} bölgesine taze buketler, orkideler ve premium aranjmanlar. ${deliveryNote}`,
+    h1: `${titlePlace} Çiçekçi — Çiçek Siparişi`,
     intro_html: `<p>${place} için özenle hazırlanan taze çiçekler ve premium aranjmanlar.</p>`,
     body_blocks: [],
     faq: [],
@@ -184,7 +186,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     <section className="bg-white px-6 pb-16 pt-20 lg:px-14 lg:pb-24 lg:pt-28">
       <div className="mx-auto max-w-[1320px]">
         <div className="inline-flex items-center gap-2 rounded-full bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#7c3aed]"><Sparkles className="h-4 w-4" /> {cargoMode ? "1–3 iş günü kargo" : "Aynı gün teslimat"} — {place}</div>
-        <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{place}'e<br /><span className="text-[#8b5cf6]">Çiçek Gönderin</span></h1>
+        <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{place} Çiçekçi<br /><span className="text-[#8b5cf6]">Çiçek Siparişi</span></h1>
         <p className="mt-8 max-w-2xl text-xl leading-9 text-[#667085]">{page.meta_description}</p>
         <div className="mt-12 grid max-w-3xl gap-5 md:grid-cols-2">
           <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Clock3 className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{deliveryTime}</div><div className="mt-1 text-sm text-[#9b94a8]">Ortalama teslimat süresi</div></div></div>
