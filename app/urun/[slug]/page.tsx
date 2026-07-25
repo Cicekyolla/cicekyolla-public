@@ -118,7 +118,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    alternates: seo?.canonical_url ? { canonical: seo.canonical_url } : undefined,
+       alternates: { canonical: `${(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.cicekyolla.com.tr").replace(/\/$/, "")}/urun/${params.slug}` },
     openGraph: {
       title: seo?.og_title || title,
       description: seo?.og_description || description,
