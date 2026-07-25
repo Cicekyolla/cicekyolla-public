@@ -33,6 +33,8 @@ const nodeImage = (n: CategoryNode): string => {
 
 const toItem = (n: CategoryNode): CategoryItem => ({
   id: n.slug, name: n.name, href: `/kategori/${n.slug}`, image: nodeImage(n),
+  // ADDITIVE: gerçek ürün adedi (API tree product_count) — 0/yoksa gösterilmez.
+  count: typeof n.product_count === "number" && n.product_count > 0 ? n.product_count : undefined,
 });
 
 /** Agaci duzlestirir (gorunur dugumler). */
