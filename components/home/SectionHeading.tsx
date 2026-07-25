@@ -5,10 +5,10 @@
 
 import type { ReactNode } from "react";
 
-export function SectionLabel({ children }: { children: ReactNode }) {
+export function SectionLabel({ children, light = false }: { children: ReactNode; light?: boolean }) {
   return (
     <p
-      className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-4"
+      className={`text-[10px] tracking-[0.3em] uppercase font-bold mb-4 ${light ? "text-[#C084FC]" : "text-[#8B5CF6]"}`}
       style={{ letterSpacing: "0.28em" }}
     >
       {children}

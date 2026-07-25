@@ -43,10 +43,7 @@ export interface RenderCtx {
   showcaseFills?: ShowcaseFill[];
 }
 
-// V65 unique tema: dolgu sırasına göre zemin varyantı (yalnız beyaz/lila ailesi).
-const FILL_TONES: Array<"white" | "lilac"> = ["white", "lilac", "white", "lilac"];
-
-function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill, fillIdx?: number) {
+function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
   switch (s.type) {
     case "collection_rail":
       return <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0"><FloatingCategoryRail items={ctx.collections} /></section>;
@@ -80,7 +77,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill, fillId
             limit={16}
             ctaLabel={fill.ctaLabel}
             ctaHref={fill.ctaHref}
-            tone={FILL_TONES[(fillIdx ?? 0) % FILL_TONES.length]}
+            theme={fill.theme}
           />
         );
       }
@@ -94,13 +91,11 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
   // V65 vitrin dolguları: yayındaki BOŞ product_showcase bölümlerine DTO
   // sırasıyla eşlenir (A Orkide → B Fırsat → C Saksı → D Premium).
   const pendingFills = [...(ctx.showcaseFills ?? [])];
-  const fillAssign = new Map<number, { fill: ShowcaseFill; idx: number }>();
-  let assignedFillCount = 0;
+  const fillAssign = new Map<number, ShowcaseFill>();
   for (const s of enabledSections) {
     if (s.type === "product_showcase" && (!s.products || s.products.length === 0)) {
       const fill = pendingFills.shift();
-      if (fill) fillAssign.set(s.id, { fill, idx: assignedFillCount });
-      assignedFillCount += 1;
+      if (fill) fillAssign.set(s.id, fill);
     }
   }
   // V65 premium bölüm çapaları: Atölyeden Bugün hero'nun hemen ardından,
@@ -137,7 +132,7 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
       ) : null}
       {enabledSections.map((s) => (
         <Fragment key={s.id}>
-          {renderSection(s, ctx, fillAssign.get(s.id)?.fill, fillAssign.get(s.id)?.idx)}
+          {renderSection(s, ctx, fillAssign.get(s.id))}
           {s.type === "hero" ? <WorkshopToday /> : null}
           {moodAnchor && s.type === moodAnchor ? <MoodPicker /> : null}
           {!hasUrgencyStrip && s.type === "featured_collections" ? <UrgencyStrip /> : null}

@@ -11,11 +11,15 @@ import { fetchProducts, type CategoryNode, type PublicProductListItem } from "./
 import { findCategoryIdBySlug } from "./catalog";
 import type { HpProduct } from "./homepage";
 
+/** V65 cila: vitrin başına premium renk atmosferi (yalnız görsel — veri bağlantısına etkisi yok). */
+export type ShowcaseTheme = "orchid" | "deal" | "botanic" | "noir";
+
 export interface ShowcaseFill {
   title: string;
   subtitle: string;
   ctaLabel: string;
   ctaHref: string;
+  theme: ShowcaseTheme;
   products: HpProduct[];
 }
 
@@ -24,6 +28,7 @@ interface ShowcaseSpec {
   subtitle: string;
   ctaLabel: string;
   ctaHref: string;
+  theme: ShowcaseTheme;
   /** Canlı ağaçta sırayla denenecek kategori slug'ları (doğrudan bağ arar). */
   categorySlugs: string[];
   /** Kategoriler yetersiz kalırsa güvenli tamamlama stratejisi. */
@@ -39,6 +44,7 @@ const SPECS: ShowcaseSpec[] = [
     subtitle: "Kalıcı, asil ve etkileyici orkide aranjmanlarıyla özel anlara değer katın.",
     ctaLabel: "Orkideleri Keşfet",
     ctaHref: "/kategori/orkideler",
+    theme: "orchid",
     categorySlugs: ["orkideler", "beyaz-orkide", "mor-orkide", "pembe-orkide", "saksida-orkide", "premium-orkide"],
   },
   {
@@ -46,6 +52,7 @@ const SPECS: ShowcaseSpec[] = [
     subtitle: "Premium çiçekleri özel fiyatlarla bugün teslim avantajıyla gönderin.",
     ctaLabel: "Fırsatları Gör",
     ctaHref: "/kategori/kampanyalar",
+    theme: "deal",
     categorySlugs: ["kampanyalar", "indirimli-urunler", "haftanin-firsatlari"],
     topup: "sale",
   },
@@ -54,6 +61,7 @@ const SPECS: ShowcaseSpec[] = [
     subtitle: "Ev, ofis ve özel alanlar için uzun ömürlü, şık ve bakımı kolay çiçekler.",
     ctaLabel: "Saksı Çiçeklerini İncele",
     ctaHref: "/kategori/saksi-bitkileri",
+    theme: "botanic",
     categorySlugs: ["saksi-bitkileri", "cicekli-saksi-bitkileri", "salon-bitkileri", "saksida-orkide"],
     topup: "plant",
   },
@@ -62,6 +70,7 @@ const SPECS: ShowcaseSpec[] = [
     subtitle: "Özel tasarım buketler, lüks aranjmanlar ve unutulmaz hediye seçenekleri.",
     ctaLabel: "Premium Koleksiyonu Keşfet",
     ctaHref: "/kategori/premium-koleksiyon",
+    theme: "noir",
     categorySlugs: ["premium-koleksiyon", "luks-koleksiyon", "premium-buketler", "luks-aranjmanlar", "koleksiyonlar"],
     topup: "price_desc",
   },
@@ -116,7 +125,7 @@ async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promi
     push(await fetchProducts({ page_size: 60, sort: "price_desc" }));
   }
 
-  return { title: spec.title, subtitle: spec.subtitle, ctaLabel: spec.ctaLabel, ctaHref: spec.ctaHref, products: rows.map(toHpProduct) };
+  return { title: spec.title, subtitle: spec.subtitle, ctaLabel: spec.ctaLabel, ctaHref: spec.ctaHref, theme: spec.theme, products: rows.map(toHpProduct) };
 }
 
 /** 4 vitrini paralel doldurur. API hatasında ilgili vitrin boş kalır → gizlenir. */

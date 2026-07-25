@@ -87,7 +87,7 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
   promo: "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]",
 };
 
-export function ProductCard({ product, idx, contextTag, deliveryPromise }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise }) {
+export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean }) {
   const { addItem } = useCart();
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -116,7 +116,11 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
     >
       <Link
         href={`/urun/${product.slug}`}
-        className="group flex flex-col h-full rounded-[20px] border border-[#F1F0F5] bg-white overflow-hidden transition-all duration-300 hover:shadow-[0_14px_36px_rgba(124,58,237,0.10)] hover:border-[#EDE9FE]"
+        className={`group flex flex-col h-full rounded-[20px] border bg-white overflow-hidden transition-all duration-300 hover:border-[#EDE9FE] ${
+          polish
+            ? "border-[#EDE9FE] shadow-[0_8px_24px_rgba(17,12,34,0.06)] hover:shadow-[0_18px_44px_rgba(124,58,237,0.14)]"
+            : "border-[#F1F0F5] hover:shadow-[0_14px_36px_rgba(124,58,237,0.10)]"
+        }`}
         onMouseEnter={requestHoverImage}
         onFocus={requestHoverImage}
         onMouseLeave={() => setHovered(false)}
@@ -152,6 +156,17 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
             className="absolute inset-0 transition-opacity duration-500"
             style={{ background: "linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 50%)", opacity: hovered ? 1 : 0 }}
           />
+          {/* V65 cila: kalıcı çok yumuşak üst/alt geçiş — stüdyo görselini karta oturtur */}
+          {polish ? (
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to bottom, rgba(10,1,24,0.04) 0%, transparent 18%, transparent 78%, rgba(10,1,24,0.07) 100%)",
+                pointerEvents: "none",
+              }}
+            />
+          ) : null}
 
           {/* Badge — glassmorphism */}
           {product.badge ? (
@@ -197,11 +212,21 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
                 e.preventDefault();
                 addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: null, variantTitle: null, unitPriceMinor: Math.round(product.price * 100), image: product.image });
               }}
-              className="w-full py-3 rounded-xl text-white text-sm font-semibold tracking-wide"
-              style={{
-                background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
-                boxShadow: "0 8px 24px rgba(139,92,246,0.5)",
-              }}
+              className={`w-full py-3 text-white text-sm font-semibold tracking-wide ${polish ? "rounded-full" : "rounded-xl"}`}
+              style={
+                polish
+                  ? {
+                      // V65 cila: Figma'daki premium his — cam kenar + iç ışık + derin mor gölge
+                      background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
+                      border: "1px solid rgba(255,255,255,0.28)",
+                      backdropFilter: "blur(8px)",
+                      boxShadow: "0 12px 32px rgba(139,92,246,0.55), inset 0 1px 0 rgba(255,255,255,0.25)",
+                    }
+                  : {
+                      background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
+                      boxShadow: "0 8px 24px rgba(139,92,246,0.5)",
+                    }
+              }
             >
               Sepete Ekle
             </button>
@@ -220,11 +245,12 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise }: { pro
             {product.name}
           </h3>
           {tags.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            // V65 cila (polish): etiketler TEK satırda hizalı kalır, taşan zarifçe kırpılır
+            <div className={`gap-1.5 mt-2 ${polish ? "flex flex-nowrap overflow-hidden" : "flex flex-wrap"}`}>
               {tags.map((t, i) => (
                 <span
                   key={i}
-                  className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-[3px] rounded-full border ${TAG_TONE[t.tone]}`}
+                  className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-[3px] rounded-full border whitespace-nowrap ${polish ? "shrink-0" : ""} ${TAG_TONE[t.tone]}`}
                 >
                   <span aria-hidden="true">{t.icon}</span>
                   {t.label}
