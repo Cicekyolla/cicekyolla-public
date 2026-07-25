@@ -2,6 +2,8 @@
 // DTO ürün bölümü (best_sellers/editors_picks/product_showcase) → gerçek ProductCard grid.
 // Manuel ürün sırası DTO'dan gelen sırayla korunur. Boşsa güvenli gizlenir (null).
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { ProductCard, type Product, type ProductDeliveryPromise } from "./ProductCard";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 import type { HpProduct } from "@/lib/homepage";
@@ -57,7 +59,11 @@ function toCard(p: HpProduct): Product {
   };
 }
 
-export function ProductShowcase({ title, subtitle, products, limit }: { title?: string | null; subtitle?: string | null; products?: HpProduct[]; limit?: number }) {
+export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ctaHref, tone }: {
+  title?: string | null; subtitle?: string | null; products?: HpProduct[]; limit?: number;
+  /** V65 vitrin teması (additive, opsiyonel): CTA + zemin varyantı. Mevcut kullanım değişmez. */
+  ctaLabel?: string; ctaHref?: string; tone?: "white" | "lilac";
+}) {
   const items = (limit ? (products ?? []).slice(0, limit) : (products ?? [])).map(toCard);
   const [deliveryPromise, setDeliveryPromise] = useState<ProductDeliveryPromise>();
 
@@ -70,7 +76,7 @@ export function ProductShowcase({ title, subtitle, products, limit }: { title?: 
   }, []);
   if (items.length === 0) return null;
   return (
-    <section className="py-16 bg-white">
+    <section className={`py-16 ${tone === "lilac" ? "bg-[#F5F3FF]" : "bg-white"}`}>
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
         <div className="mb-8">
           {subtitle && <SectionLabel>{subtitle}</SectionLabel>}
@@ -79,6 +85,21 @@ export function ProductShowcase({ title, subtitle, products, limit }: { title?: 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {items.map((product, idx) => <ProductCard key={product.id} product={product} idx={idx} deliveryPromise={deliveryPromise} />)}
         </div>
+        {ctaLabel && ctaHref ? (
+          <div className="mt-10 text-center">
+            <Link
+              href={ctaHref}
+              className="inline-flex items-center gap-2.5 rounded-full px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              style={{
+                background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
+                boxShadow: "0 10px 30px rgba(139,92,246,0.35)",
+              }}
+            >
+              {ctaLabel}
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          </div>
+        ) : null}
       </div>
     </section>
   );

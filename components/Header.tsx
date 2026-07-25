@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingCart, Search, X, ArrowRight, ChevronDown, UserRound, PackageCheck } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
@@ -62,6 +63,7 @@ export function Header({ menu, nav, search, brand }: {
       : navItems.map((k) => ({ label: k, href: menuData[k].href ?? menuData[k].categories[0]?.href ?? "/" }));
 
   const { itemCount: cartCount } = useCart();
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
@@ -386,6 +388,17 @@ export function Header({ menu, nav, search, brand }: {
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      // V65 (onaylı ek): Enter → gerçek arama sayfası. Dropdown davranışı AYNEN korunur.
+                      if (e.key === "Enter" && query.trim().length >= 2) {
+                        e.preventDefault();
+                        const term = query.trim();
+                        setSearchOpen(false);
+                        setQuery("");
+                        setProductResults([]);
+                        router.push(`/arama?q=${encodeURIComponent(term)}`);
+                      }
+                    }}
                     placeholder="Gül, orkide, buket, özel gün ara..."
                     className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
                   />

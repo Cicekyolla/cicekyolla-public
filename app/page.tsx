@@ -24,6 +24,9 @@ import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { HomepageRenderer } from "../components/home/HomepageRenderer";
+import { buildShowcaseFills } from "@/lib/homepageShowcase";
+import { WorkshopToday } from "../components/home/WorkshopToday";
+import { MoodPicker } from "../components/home/MoodPicker";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -68,15 +71,17 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-/** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir. */
-function HomeJsonLd() {
+/** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir.
+ *  V65 fix: logo artık kırık /logo.png yerine GERÇEK logo URL'sine bağlanır
+ *  (CMS hero config.logo_url — admin'in yüklediği logo; yoksa repo'daki marka SVG'si). */
+function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
   const schema = [
     {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: "Çiçekyolla",
       url: SITE_URL,
-      logo: `${SITE_URL}/logo.png`,
+      logo: logoUrl,
       description:
         "Premium çiçek ve hediye markası. Aynı gün teslimat seçenekleri.",
       contactPoint: {
@@ -179,6 +184,20 @@ export default async function HomePage() {
   // gelir). Yayın yoksa VEYA API hatasında aşağıdaki mevcut (temizlenmiş)
   // tasarım güvenli biçimde çalışmaya devam eder. Draft ASLA public'e çıkmaz.
   const publishedHomepage = await getPublishedHomepage();
+
+  // V65: Organization schema logosu — CMS hero'daki gerçek logo (admin yüklemesi);
+  // yayın/DTO yoksa repo'daki marka SVG'sine düşer. Kırık /logo.png bağı kalktı.
+  const heroSection = publishedHomepage?.sections.find((s) => s.type === "hero");
+  const cmsLogoUrl = typeof heroSection?.config?.logo_url === "string" ? (heroSection.config.logo_url as string) : null;
+  const schemaLogoUrl = cmsLogoUrl ?? `${SITE_URL}/brand/cicekyolla-brand.svg`;
+
+  // V65: yayındaki BOŞ product_showcase vitrinleri için canlı katalog dolguları.
+  // Boş vitrin yoksa hiç istek atılmaz; API hatasında dolgu boş kalır → vitrin gizli.
+  const needsShowcaseFills = publishedHomepage?.sections.some(
+    (s) => s.enabled && s.type === "product_showcase" && (!s.products || s.products.length === 0)
+  ) ?? false;
+  const showcaseFills = needsShowcaseFills ? await buildShowcaseFills(tree) : [];
+
   if (publishedHomepage && publishedHomepage.sections.length > 0) {
     // Google yorumları + Instagram, kullanıcı kararına göre ana akışın sonunda
     // daima bu sırada yaşar. CMS kaydı varsa config/enabled korunur; iki bölüm
@@ -202,8 +221,8 @@ export default async function HomePage() {
 
     return (
       <>
-        <HomeJsonLd />
-        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones }} />
+        <HomeJsonLd logoUrl={schemaLogoUrl} />
+        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills }} />
         {showTestimonials && <Testimonials />}
         {showInstagram && <InstagramGallery config={instagramSection?.config} />}
         <CorporateReferences clients={corporateClients} />
@@ -213,7 +232,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <HomeJsonLd />
+      <HomeJsonLd logoUrl={schemaLogoUrl} />
 
       {/* §Koleksiyonlar — bağımsız section: Header'dan sonra, Hero'dan önce (TazeÇiçek düzeni).
           Hero'ya absolute/floating bağlı DEĞİL; normal akışta yatay slider.
@@ -225,6 +244,8 @@ export default async function HomePage() {
 
       <HeroDeliveryBar />
       <HomeHero />
+      {/* V65: Atölyeden Bugün — hero'nun hemen ardından (CMS'siz fallback'te de) */}
+      <WorkshopToday />
       <TrustBar />
       <Manifesto />
       <FeaturedCollections items={imagedCollections} />
@@ -232,6 +253,8 @@ export default async function HomePage() {
       <FeatureSplit />
       <SameDayDelivery />
       <OccasionShopping items={imagedCollections} />
+      {/* V65: Duyguna Göre Seç — occasion_shopping'in ardından (CMS'siz fallback'te de) */}
+      <MoodPicker />
       <BestSellers products={bestSellers} />
       <EditorsPicks products={editorPicks} />
       <BrandStory />

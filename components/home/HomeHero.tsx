@@ -17,7 +17,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
-import { Truck, ArrowRight, MessageCircle } from "lucide-react";
+import { Truck, ArrowRight, MessageCircle, Clock3, Package, Headset, Gem } from "lucide-react";
 
 export function HomeHero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -186,6 +186,35 @@ export function HomeHero() {
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp Sipariş
               </motion.a>
+            </motion.div>
+
+            {/* V65: 4 mini güven kartı — hero içinde, CTA'ların altında (additive).
+                Cam chip dili hero'nun mevcut badge/CTA yüzeyleriyle aynı ailede. */}
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9, duration: 0.6 }}
+              className="mt-10 flex flex-wrap gap-2.5"
+            >
+              {([
+                { Icon: Clock3, label: "Bugün hazırlanır" },
+                { Icon: Package, label: "Özenli paketleme" },
+                { Icon: Headset, label: "Canlı destek" },
+                { Icon: Gem, label: "Premium seçki" },
+              ] as const).map((item) => (
+                <span
+                  key={item.label}
+                  className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[11px] font-semibold text-white/75"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    backdropFilter: "blur(16px)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <item.Icon className="w-3.5 h-3.5 text-[#C084FC]" aria-hidden="true" />
+                  {item.label}
+                </span>
+              ))}
             </motion.div>
           </div>
         </div>
