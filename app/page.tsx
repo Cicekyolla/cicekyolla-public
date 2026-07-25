@@ -27,6 +27,7 @@ import { HomepageRenderer } from "../components/home/HomepageRenderer";
 import { buildShowcaseFills } from "@/lib/homepageShowcase";
 import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
+import { FlowerJourney } from "../components/home/FlowerJourney";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -226,6 +227,8 @@ export default async function HomePage() {
         {showTestimonials && <Testimonials />}
         {showInstagram && <InstagramGallery config={instagramSection?.config} />}
         <CorporateReferences clients={corporateClients} />
+        {/* Çiçeğin Yolculuğu — vitrinlerden sonra, footer'dan hemen önce (Figma Servis Deneyimi) */}
+        <FlowerJourney />
       </>
     );
   }
@@ -264,6 +267,8 @@ export default async function HomePage() {
       <DistrictDelivery zones={deliveryZones} />
       <WhatsAppCTA />
       <Newsletter />
+      {/* Çiçeğin Yolculuğu — footer'dan hemen önce (CMS'siz fallback'te de aynı konum) */}
+      <FlowerJourney />
     </>
   );
 }
