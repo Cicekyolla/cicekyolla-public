@@ -94,13 +94,13 @@ const nextConfig = {
       { source: '/:id(\\d+)-:slug(.+)\\.html', destination: '/urun/:slug', permanent: true },
 
       // KATEGORİ: /guller-24 → /kategori/guller
-      { source: '/:kategori([a-z]+)-:id(\\d+)', destination: '/kategori/:kategori', permanent: true },
+      { source: '/:kategori([a-z-]+)-:id(\\d+)', destination: '/kategori/:kategori', permanent: true },
 
       // ÖZEL GÜN: /anneler-gunu-cicekleri-45 → /kategori/anneler-gunu
-      { source: '/:gun([a-z]+)-cicekleri-:id(\\d+)', destination: '/kategori/:gun', permanent: true },
+      { source: '/:gun([a-z-]+)-cicekleri-:id(\\d+)', destination: '/kategori/:gun', permanent: true },
 
       // KATEGORİ (cicek): /sevgiliye-cicek-13 → /kategori/sevgiliye
-      { source: '/:kategori([a-z]+)-cicek-:id(\\d+)', destination: '/kategori/:kategori', permanent: true },
+      { source: '/:kategori([a-z-]+)-cicek-:id(\\d+)', destination: '/kategori/:kategori', permanent: true },
     ];
   },
 };
