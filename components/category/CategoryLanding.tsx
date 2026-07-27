@@ -12,6 +12,7 @@ import { FloatingCategoryRail } from "@/components/home/FloatingCategoryRail";
 import { FilterBar } from "@/components/category/FilterBar";
 import { CategoryProductGrid } from "@/components/category/CategoryProductGrid";
 import { CargoCategoryExperience } from "@/components/category/CargoCategoryExperience";
+import { absoluteUrl } from "@/lib/site-config";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -25,10 +26,6 @@ import { CargoCategoryExperience } from "@/components/category/CargoCategoryExpe
  * JSON-LD: backend schema_jsonld + FAQPage route'ta basılır → burada TEKRAR ÜRETİLMEZ.
  *          Yalnızca additive BreadcrumbList JSON-LD eklenir (mevcut schema ile çakışmaz).
  */
-
-const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app"
-).replace(/\/$/, "");
 
 const WHATSAPP_URL =
   "https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum";
@@ -62,17 +59,17 @@ function breadcrumbJsonLd(
 ): string {
   const itemListElement = trail.length
     ? [
-        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: SITE_URL + "/" },
+        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: absoluteUrl("/") },
         ...trail.map((t, i) => ({
           "@type": "ListItem",
           position: i + 2,
           name: t.name,
-          item: `${SITE_URL}/kategori/${t.slug}`,
+          item: absoluteUrl(`/kategori/${t.slug}`),
         })),
       ]
     : [
-        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: SITE_URL + "/" },
-        { "@type": "ListItem", position: 2, name: h1, item: SITE_URL + path },
+        { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: absoluteUrl("/") },
+        { "@type": "ListItem", position: 2, name: h1, item: absoluteUrl(path) },
       ];
   return JSON.stringify({
     "@context": "https://schema.org",

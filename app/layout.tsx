@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { Header } from "@/components/Header";
@@ -8,6 +9,12 @@ import { CartProvider } from "@/lib/cart";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
+import { indexRobots, SITE_URL } from "@/lib/site-config";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  robots: indexRobots(),
+};
 
 // TEK KAYNAK: layout kategori ağacını getCategoryTree (React cache) ile bir kez çeker;
 // Header (mega menu + mobil) ve Footer aynı canlı veriden beslenir. İkinci liste YOK.

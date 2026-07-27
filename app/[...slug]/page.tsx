@@ -7,6 +7,7 @@ import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct, type Bo
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
+import { absoluteUrl, indexRobots } from "@/lib/site-config";
 
 function syntheticCategoryPage(path: string, node: Record<string, unknown>): SeoPublicPage {
   const name = typeof node.name === "string" ? node.name : "Koleksiyon";
@@ -206,7 +207,6 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   </main>;
 }
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app").replace(/\/$/, "");
 export const revalidate = 300;
 export const dynamicParams = true;
 
@@ -214,10 +214,6 @@ function slugToPath(slug: string[] | undefined): string {
   if (!slug || slug.length === 0) return "/";
   return "/" + slug.map((s) => decodeURIComponent(s)).join("/");
 }
-function absoluteUrl(path: string): string {
-  return SITE_URL + (path.startsWith("/") ? path : "/" + path);
-}
-
 const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = {
   "/cicekler": "/kategori/cicekler",
   "/orkideler": "/kategori/orkideler",
@@ -230,8 +226,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const path = LEGACY_CATEGORY_REDIRECTS[requestedPath] || requestedPath;
   const page = await resolvePage(path);
   if (!page) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
-  const indexable = page.index_state === "index";
-  return { title: page.title_tag, description: page.meta_description, alternates: { canonical: absoluteUrl(page.canonical_url || path) }, robots: indexable ? { index: true, follow: true } : { index: false, follow: false }, openGraph: { title: page.title_tag, description: page.meta_description, url: absoluteUrl(page.canonical_url || path), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
+  return { title: page.title_tag, description: page.meta_description, alternates: { canonical: absoluteUrl(page.canonical_url || path) }, robots: indexRobots(page.index_state), openGraph: { title: page.title_tag, description: page.meta_description, url: absoluteUrl(page.canonical_url || path), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
 }
 
 function renderBlock(block: BodyBlock, i: number) {

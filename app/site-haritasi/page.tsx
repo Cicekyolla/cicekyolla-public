@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import { ArrowDown, BadgeCheck, Globe2, Map, Sparkles } from "lucide-react";
 import { SiteMapExplorer } from "@/components/sitemap/SiteMapExplorer";
-import { fetchSeoInventory } from "@/lib/api";
+import { absoluteUrl, indexRobots } from "@/lib/site-config";
+import { getIndexableInventory } from "@/lib/sitemap";
 
 export const metadata: Metadata = {
   title: "Site Haritası | Çiçek Yolla",
   description:
     "Çiçek Yolla ürünleri, koleksiyonları, özel günleri ve teslimat bölgelerini tek sayfadan keşfedin.",
   alternates: { canonical: "/site-haritasi" },
-  robots: { index: true, follow: true },
+  robots: indexRobots(),
 };
 
 export default async function SiteHaritasiPage() {
-  const inventory = await fetchSeoInventory();
-  const indexableCount = inventory.filter((item) => item.index_state === "index").length;
+  const inventory = await getIndexableInventory();
+  const indexableCount = inventory.length;
   const updatedAt = inventory.reduce<string | null>((latest, item) => {
     if (!item.updated_at) return latest;
     return !latest || item.updated_at > latest ? item.updated_at : latest;
@@ -24,7 +25,7 @@ export default async function SiteHaritasiPage() {
     "@type": "CollectionPage",
     name: "Çiçek Yolla Site Haritası",
     description: "Yayındaki ürün, kategori, özel gün ve teslimat sayfalarının canlı dizini.",
-    url: "https://www.cicekyolla.com.tr/site-haritasi",
+    url: absoluteUrl("/site-haritasi"),
     mainEntity: {
       "@type": "ItemList",
       numberOfItems: inventory.length,
@@ -32,7 +33,7 @@ export default async function SiteHaritasiPage() {
         "@type": "ListItem",
         position: index + 1,
         name: item.title || item.url_path,
-        url: `https://www.cicekyolla.com.tr${item.url_path}`,
+        url: absoluteUrl(item.url_path),
       })),
     },
   };

@@ -5,6 +5,7 @@ import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct, 
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductImage } from "@/components/product/ProductImage";
+import { absoluteUrl, indexRobots } from "@/lib/site-config";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -118,11 +119,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-       alternates: { canonical: `${(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.cicekyolla.com.tr").replace(/\/$/, "")}/urun/${params.slug}` },
+    alternates: { canonical: absoluteUrl(`/urun/${params.slug}`) },
+    robots: indexRobots(),
     openGraph: {
       title: seo?.og_title || title,
       description: seo?.og_description || description,
       images: ogImage ? [{ url: ogImage }] : undefined,
+      url: absoluteUrl(`/urun/${params.slug}`),
       type: "website",
     },
   };

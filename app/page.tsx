@@ -28,6 +28,7 @@ import { buildShowcaseFills } from "@/lib/homepageShowcase";
 import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
+import { indexRobots, SITE_URL } from "@/lib/site-config";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -44,10 +45,6 @@ import { FlowerJourney } from "../components/home/FlowerJourney";
  * - Header/Footer BURADA render EDİLMEZ; app/layout.tsx sarıyor (8B-2.1, LOCKED).
  * - Koleksiyon slider artık Hero'ya bağlı DEĞİL; kendi section'ında bağımsız akışta.
  */
-
-const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app"
-).replace(/\/$/, "");
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -69,7 +66,7 @@ export const metadata: Metadata = {
     title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
     description: "Premium aranjmanlar, zarif paketleme, aynı gün teslimat.",
   },
-  robots: { index: true, follow: true },
+  robots: indexRobots(),
 };
 
 /** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir.

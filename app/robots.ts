@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — robots.txt (Next metadata route, additive).
@@ -7,9 +8,13 @@ import type { MetadataRoute } from "next";
    (bkz. DEVIR-NOTU canlıya geçiş checklist'i).
    ============================================================================ */
 
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://cicekyolla-public.vercel.app").replace(/\/$/, "");
-
 export default function robots(): MetadataRoute.Robots {
+  if (!SITE_INDEXABLE) {
+    return {
+      rules: [{ userAgent: "*", disallow: "/" }],
+    };
+  }
+
   return {
     rules: [
       {
@@ -28,6 +33,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: `${SITE}/sitemap.xml`,
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }
