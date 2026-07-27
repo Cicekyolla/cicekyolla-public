@@ -25,6 +25,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let footerNav: ReturnType<typeof getCategoryNav> = [];
   let search: { name: string; href: string }[] = [];
   let footerBrand: FooterBrand | undefined;
+  let headerColors: { bg: string; text: string; promoBar: string } | undefined;
   try {
     const tree = await getCategoryTree();
     const built = buildHeaderMenu(tree);
@@ -47,16 +48,26 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         contactPhone: typeof heroConfig.contact_phone === "string" && heroConfig.contact_phone.trim() ? heroConfig.contact_phone : "0507 441 34 74",
         contactEmail: typeof heroConfig.contact_email === "string" && heroConfig.contact_email.trim() ? heroConfig.contact_email : "info@cicekyolla.com.tr",
       };
+      headerColors = {
+        bg: typeof heroConfig.header_bg_color === "string" ? heroConfig.header_bg_color : "#0f0a1f",
+        text: typeof heroConfig.header_text_color === "string" ? heroConfig.header_text_color : "#f0f0f0",
+        promoBar: typeof heroConfig.promo_bar_color === "string" ? heroConfig.promo_bar_color : "#7c3aed",
+      };
     }
   } catch {
     footerBrand = undefined;
+    headerColors = undefined;
   }
 
   const navOrUndef = nav.length > 0 ? nav : undefined;
   const footerOrUndef = footerNav.length > 0 ? footerNav : undefined;
 
   return (
-    <html lang="tr">
+    <html lang="tr" style={headerColors ? {
+      "--header-bg-color": headerColors.bg,
+      "--header-text-color": headerColors.text,
+      "--promo-bar-color": headerColors.promoBar,
+    } as React.CSSProperties : undefined}>
       <body>
         <CartProvider>
           <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />

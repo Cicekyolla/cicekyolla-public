@@ -128,7 +128,7 @@ export function Header({ menu, nav, search, brand }: {
     <>
       {/* ── Live ticker ── */}
       <div
-        style={{ background: "linear-gradient(90deg, #5B21B6 0%, #7C3AED 40%, #9333EA 70%, #8B5CF6 100%)" }}
+        style={{ background: `var(--promo-bar-color, #7c3aed)` }}
         className="text-white"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
@@ -170,8 +170,8 @@ export function Header({ menu, nav, search, brand }: {
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
           background: scrolled
-            ? "rgba(10,2,22,0.96)"
-            : "linear-gradient(180deg, #0D0520 0%, #070011 100%)",
+            ? `rgba(${parseInt((getComputedStyle(document.documentElement).getPropertyValue('--header-bg-color') || '#0f0a1f').substring(1), 16) >> 16 & 255}, ${parseInt((getComputedStyle(document.documentElement).getPropertyValue('--header-bg-color') || '#0f0a1f').substring(1), 16) >> 8 & 255}, ${parseInt((getComputedStyle(document.documentElement).getPropertyValue('--header-bg-color') || '#0f0a1f').substring(1), 16) & 255}, 0.96)`
+            : `var(--header-bg-color, linear-gradient(180deg, #0D0520 0%, #070011 100%))`,
           backdropFilter: scrolled ? "blur(20px) saturate(160%)" : "none",
           borderBottom: "1px solid rgba(192,132,252,0.16)",
           boxShadow: scrolled
