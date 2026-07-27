@@ -170,8 +170,8 @@ export function Header({ menu, nav, search, brand }: {
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
           background: scrolled
-            ? `rgba(${parseInt((getComputedStyle(document.documentElement).getPropertyValue('--header-bg-color') || '#0f0a1f').substring(1), 16) >> 16 & 255}, ${parseInt((getComputedStyle(document.documentElement).getPropertyValue('--header-bg-color') || '#0f0a1f').substring(1), 16) >> 8 & 255}, ${parseInt((getComputedStyle(document.documentElement).getPropertyValue('--header-bg-color') || '#0f0a1f').substring(1), 16) & 255}, 0.96)`
-            : `var(--header-bg-color, linear-gradient(180deg, #0D0520 0%, #070011 100%))`,
+            ? "rgba(15, 10, 31, 0.96)"
+            : "var(--header-bg-color, linear-gradient(180deg, #0D0520 0%, #070011 100%))",
           backdropFilter: scrolled ? "blur(20px) saturate(160%)" : "none",
           borderBottom: "1px solid rgba(192,132,252,0.16)",
           boxShadow: scrolled
