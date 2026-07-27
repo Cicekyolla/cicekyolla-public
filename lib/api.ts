@@ -93,6 +93,33 @@ export async function fetchSeoPage(
 }
 
 // ---------------------------------------------------------------------------
+// PUBLIC HTML SITE MAP — yalnız yayındaki gerçek SEO envanteri.
+// ---------------------------------------------------------------------------
+export type SeoInventoryPageType =
+  | "city" | "district" | "neighborhood" | "category" | "product"
+  | "category_location" | "product_location" | "special_day" | "brand" | "delivery_info";
+
+export interface SeoInventoryItem {
+  page_type: SeoInventoryPageType;
+  url_path: string;
+  index_state: "index" | "noindex";
+  updated_at: string;
+  title: string | null;
+}
+
+export async function fetchSeoInventory(): Promise<SeoInventoryItem[]> {
+  const url = `${API_ORIGIN}/api/public/seo/inventory`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return [];
+    const json = await res.json() as { data?: SeoInventoryItem[] };
+    return Array.isArray(json?.data) ? json.data : [];
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DELIVERY ZONES — canlı teslimat bölgeleri (ADDITIVE).
 // Admin Delivery Motor'daki aktif bölgeler; anasayfa "Teslimat Bölgeleri"
 // bölümü ve /{il}/{ilçe} SEO landing'leri tüketir. Auth GEREKMEZ (public uç).
