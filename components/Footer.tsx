@@ -127,7 +127,7 @@ export function Footer({
                 { label: "Kurumsal Hizmetler", href: "/kurumsal" },
                 { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
                 { label: "Sık Sorulan Sorular", href: "/sik-sorulan-sorular" },
-                { label: "İletişim", href: "/iletisim" },
+                { label: "İletişim", href: "/iletisim" },\n                { label: "Site Haritası", href: "/site-haritasi" },
               ].map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
