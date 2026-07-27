@@ -6,14 +6,17 @@ function normalizeSiteUrl(value: string | undefined): string {
   const candidate = value?.trim() || PRODUCTION_SITE_URL;
   try {
     const url = new URL(candidate);
-    return `${url.protocol}//${url.host}`.replace(/\/$/, "");
+    const normalized = `${url.protocol}//${url.host}`.replace(/\/$/, "");
+    return normalized === PRODUCTION_SITE_URL ? normalized : PRODUCTION_SITE_URL;
   } catch {
     return PRODUCTION_SITE_URL;
   }
 }
 
 export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
-export const SITE_INDEXABLE = process.env.SITE_INDEXABLE === "true";
+export const SITE_INDEXABLE =
+  process.env.SITE_INDEXABLE === "true" &&
+  process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") === PRODUCTION_SITE_URL;
 
 export function absoluteUrl(path = "/"): string {
   if (/^https?:\/\//i.test(path)) {
