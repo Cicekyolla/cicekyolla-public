@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock3, MapPin, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { fetchSeoPage } from "@/lib/api";
+import { absoluteUrl } from "@/lib/site-config";
 
 export const metadata:Metadata={title:"Teslimat Bölgeleri — ÇiçekYolla",description:"ÇiçekYolla il, ilçe ve mahalle teslimat bölgeleri ile güncel teslimat süreleri."};
 export const revalidate=300;
@@ -27,7 +28,7 @@ export default async function DeliveryRegionsPage(){
  const regions=saved.length?saved:FALLBACK;
  const cities=[...new Set(regions.map(r=>r.city))];
  const benefits=[{Icon:Truck,label:"Aynı Gün Teslimat"},{Icon:ShieldCheck,label:"Özenli Taşıma"},{Icon:Sparkles,label:"Taze Garantisi"},{Icon:MapPin,label:`${regions.length}+ Bölge`}];
- const itemList={"@context":"https://schema.org","@type":"ItemList",name:"ÇiçekYolla teslimat bölgeleri",itemListElement:regions.map((r,i)=>({"@type":"ListItem",position:i+1,name:`${r.city} ${r.district} çiçek teslimatı`,url:`https://cicekyolla.com.tr/${slug(r.city)}/${slug(r.district)}`}))};
+ const itemList={"@context":"https://schema.org","@type":"ItemList",name:"ÇiçekYolla teslimat bölgeleri",itemListElement:regions.map((r,i)=>({"@type":"ListItem",position:i+1,name:`${r.city} ${r.district} çiçek teslimatı`,url:absoluteUrl(`/${slug(r.city)}/${slug(r.district)}`)}))};
  return <main className="bg-[#fcfbfd] text-[#111827]"><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(itemList)}}/>
   <section className="relative overflow-hidden bg-[#0b0319] px-6 py-24 lg:px-14 lg:py-32"><div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_28%,rgba(168,85,247,.35),transparent_34%),radial-gradient(circle_at_22%_80%,rgba(76,29,149,.32),transparent_38%)]"/><div className="relative mx-auto max-w-[1320px]"><div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-5 py-2 text-xs font-bold uppercase tracking-[.24em] text-[#ddd6fe]"><span className="h-2 w-2 rounded-full bg-[#c084fc]"/>Teslimat Bölgeleri</div><h1 className="max-w-4xl font-serif text-5xl font-semibold leading-[.98] text-white md:text-7xl lg:text-8xl">Türkiye'nin Her<br/><span className="text-[#c084fc]">Köşesine Ulaşıyoruz</span></h1><p className="mt-8 max-w-2xl text-lg leading-8 text-[#c4b5d4]">İlinizi, ilçenizi ve mahallenizi seçin; teslimat süresini görün ve size özel koleksiyona ulaşın.</p></div></section>
   <section className="border-b border-[#ede9fe] bg-white"><div className="mx-auto grid max-w-[1320px] grid-cols-2 gap-px px-6 lg:grid-cols-4 lg:px-14">{benefits.map(({Icon,label})=><div key={label} className="flex items-center gap-4 px-4 py-7"><span className="grid h-11 w-11 place-items-center rounded-full bg-[#f5f3ff]"><Icon className="h-5 w-5 text-[#8b5cf6]"/></span><span className="font-semibold">{label}</span></div>)}</div></section>

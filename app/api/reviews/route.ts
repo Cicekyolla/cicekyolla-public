@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
+import { absoluteUrl } from "@/lib/site-config";
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
 
-// Kullanıcının doğruladığı Çiçek Yolla Google işletme kaydı.
-// Place ID gizli değildir; API anahtarı yalnız ortam değişkeninden okunur.
-const GOOGLE_PLACE_ID =
-  process.env.GOOGLE_PLACE_ID ?? "ChIJt-IisKbGyhQRABzV6TIKFhY";
+// İşletme kaydı ve API anahtarı yalnız ortam değişkenlerinden okunur.
+const GOOGLE_PLACE_ID = process.env.GOOGLE_PLACE_ID;
 const GOOGLE_MAPS_API_KEY =
   process.env.GOOGLE_PLACES_API_KEY ??
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const GOOGLE_MAPS_REFERRER =
   process.env.GOOGLE_MAPS_REFERRER ??
-  "https://cicekyolla-public.vercel.app/";
+  absoluteUrl("/");
 
 const GOOGLE_FIELDS = [
   "id",
@@ -61,7 +60,7 @@ export const revalidate = 3600;
  * - API yoksa sahte fallback üretmez.
  */
 export async function GET() {
-  if (!GOOGLE_MAPS_API_KEY) {
+  if (!GOOGLE_MAPS_API_KEY || !GOOGLE_PLACE_ID) {
     return NextResponse.json(
       { error: "google_reviews_not_configured" },
       { status: 503 }

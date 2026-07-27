@@ -17,6 +17,7 @@ const R2_PUBLIC_BASE =
 
 const nextConfig = {
   reactStrictMode: true,
+
   async rewrites() {
     return [
       {
@@ -29,6 +30,7 @@ const nextConfig = {
       },
     ];
   },
+
   async headers() {
     return [
       {
@@ -41,6 +43,22 @@ const nextConfig = {
           { key: "CDN-Cache-Control", value: "public, s-maxage=31536000, stale-while-revalidate=86400" },
         ],
       },
+    ];
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ESKİ URL'LERDEN YENİ URL'LERE 301 REDIRECT
+  // Konum URL'leri gerçek 81 il / 973 ilçe lookup'ıyla middleware'de çözülür.
+  // ═══════════════════════════════════════════════════════════════
+  async redirects() {
+    return [
+      // ÜRÜN: /52604-Renkli-Lavantali.html → /urun/renkli-lavantali
+      { source: '/:id(\\d+)-:slug(.+)\\.html', destination: '/urun/:slug', permanent: true },
+
+      // ÖZEL GÜN: /anneler-gunu-cicekleri-45 → /kategori/anneler-gunu
+      { source: '/:gun([a-z-]+)-cicekleri-:id(\\d+)', destination: '/kategori/:gun', permanent: true },
+      { source: '/:gun([a-z-]+)-cicekleri', destination: '/kategori/:gun', permanent: true },
+
     ];
   },
 };
