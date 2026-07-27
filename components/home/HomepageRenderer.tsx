@@ -65,23 +65,69 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "district_delivery":   return <DistrictDelivery zones={ctx.zones} />;
     case "whatsapp_cta":        return <WhatsAppCTA />;
     case "newsletter":          return <Newsletter />;
-    case "product_showcase":
-      // V65: DTO ürünü boşsa ve dolgu varsa → unique temalı vitrin (canlı katalog).
-      // DTO'da ürün varsa mevcut davranış AYNEN korunur (admin üstünlüğü).
-      if ((!s.products || s.products.length === 0) && fill && fill.products.length > 0) {
-        return (
-          <ProductShowcase
-            title={s.title?.trim() ? s.title : fill.title}
-            subtitle={s.subtitle?.trim() ? s.subtitle : fill.subtitle}
-            products={fill.products}
-            limit={16}
-            ctaLabel={fill.ctaLabel}
-            ctaHref={fill.ctaHref}
-            theme={fill.theme}
-          />
-        );
+    case "product_showcase": {
+      const normalizeLimit = (v: unknown): number => {
+        const n = Number(v);
+        return [4, 8, 12].includes(n) ? n : 12;
+      };
+      const rule = s.config?.rule as { limit?: number } | undefined;
+      const limit = normalizeLimit(rule?.limit ?? 12);
+      const mode = s.selection_mode as 'manual' | 'rule' | 'hybrid' | undefined;
+
+      let products = s.products ?? [];
+      let theme = undefined;
+      let title = s.title?.trim() ? s.title : undefined;
+      let subtitle = s.subtitle?.trim() ? s.subtitle : undefined;
+      let ctaLabel = undefined;
+      let ctaHref = undefined;
+
+      // manual: sadece DTO ürünleri, limit kadar
+      if (mode === 'manual') {
+        products = (s.products ?? []).slice(0, limit);
       }
-      return <ProductShowcase title={s.title?.trim() ? s.title : "Sizin İçin Seçtiklerimiz"} subtitle={s.subtitle?.trim() ? s.subtitle : "Her ana yakışan, özenle seçilmiş tasarımlar."} products={s.products} limit={16} />;
+      // rule: sadece auto-fill, limit kadar
+      else if (mode === 'rule' && fill && fill.products.length > 0) {
+        products = fill.products.slice(0, limit);
+        theme = fill.theme;
+        title ??= fill.title;
+        subtitle ??= fill.subtitle;
+        ctaLabel = fill.ctaLabel;
+        ctaHref = fill.ctaHref;
+      }
+      // hybrid: manual first, then fill tamamlanır
+      else if (mode === 'hybrid' && fill && fill.products.length > 0) {
+        const seen = new Set((s.products ?? []).map(p => p.id));
+        const manual = (s.products ?? []).slice(0, limit);
+        const auto = fill.products.filter(p => !seen.has(p.id)).slice(0, limit - manual.length);
+        products = [...manual, ...auto];
+        theme = fill.theme;
+        title ??= fill.title;
+        subtitle ??= fill.subtitle;
+        ctaLabel = fill.ctaLabel;
+        ctaHref = fill.ctaHref;
+      }
+      // fallback (no mode / boş): rule-like behavior
+      else if (fill && fill.products.length > 0) {
+        products = fill.products.slice(0, limit);
+        theme = fill.theme;
+        title ??= fill.title;
+        subtitle ??= fill.subtitle;
+        ctaLabel = fill.ctaLabel;
+        ctaHref = fill.ctaHref;
+      }
+
+      return (
+        <ProductShowcase
+          title={title ?? "Sizin İçin Seçtiklerimiz"}
+          subtitle={subtitle ?? "Her ana yakışan, özenle seçilmiş tasarımlar."}
+          products={products}
+          limit={limit}
+          ctaLabel={ctaLabel}
+          ctaHref={ctaHref}
+          theme={theme}
+        />
+      );
+    }
     default:                    return null;
   }
 }
