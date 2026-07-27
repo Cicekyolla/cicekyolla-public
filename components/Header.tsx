@@ -128,7 +128,7 @@ export function Header({ menu, nav, search, brand }: {
     <>
       {/* ── Live ticker ── */}
       <div
-        style={{ background: `var(--promo-bar-color, #7c3aed)` }}
+        style={{ background: "#7c3aed" }}
         className="text-white"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
@@ -171,7 +171,7 @@ export function Header({ menu, nav, search, brand }: {
         style={{
           background: scrolled
             ? "rgba(15, 10, 31, 0.96)"
-            : "var(--header-bg-color, linear-gradient(180deg, #0D0520 0%, #070011 100%))",
+            : "linear-gradient(180deg, #0f0a1f 0%, #0f0a1f 100%)",
           backdropFilter: scrolled ? "blur(20px) saturate(160%)" : "none",
           borderBottom: "1px solid rgba(192,132,252,0.16)",
           boxShadow: scrolled
