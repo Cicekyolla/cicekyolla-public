@@ -1,4 +1,5 @@
 import locationMap from "@/lib/legacy-location-map.json";
+import publicLocationTargets from "@/lib/legacy-location-public-targets.json";
 
 const SUFFIXES = [
   "cicek-gonderme",
@@ -19,14 +20,17 @@ const PAIR_ALIASES: Record<string, string> = {
 };
 
 const cities = new Set(Object.keys(locationMap));
+const publicTargets = new Set(publicLocationTargets);
 const cityDistrictTargets = new Map<string, string>();
 const districtTargets = new Map<string, string[]>();
 
 for (const [city, districts] of Object.entries(locationMap)) {
   for (const district of districts) {
     const target = `/${city}/${district}`;
-    cityDistrictTargets.set(`${city}-${district}`, target);
-    districtTargets.set(district, [...(districtTargets.get(district) ?? []), target]);
+    if (publicTargets.has(target)) {
+      cityDistrictTargets.set(`${city}-${district}`, target);
+      districtTargets.set(district, [...(districtTargets.get(district) ?? []), target]);
+    }
   }
 }
 
@@ -77,12 +81,12 @@ export function resolveLegacyLocation(pathname: string): LegacyLocationResult {
   }
 
   const pairAlias = PAIR_ALIASES[base];
-  if (pairAlias) {
+  if (pairAlias && publicTargets.has(pairAlias)) {
     return { matched: true, destination: pairAlias, normalizedBase: base, suffix };
   }
 
   base = CITY_ALIASES[base] ?? base;
-  if (cities.has(base)) {
+  if (cities.has(base) && publicTargets.has(`/${base}`)) {
     return {
       matched: true,
       destination: `/${base}`,
