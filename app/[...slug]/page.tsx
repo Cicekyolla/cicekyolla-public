@@ -79,8 +79,6 @@ function getDeliveryInfo(parts: string[]) {
   const district = parts[1] ? city?.districts[parts[1]] : undefined;
   return { city, district };
 }
-const LOCATION_PAGE_TYPES = new Set(["city", "district", "neighborhood", "delivery_info"]);
-
 function locationLabel(page: SeoPublicPage, fallback: string): string {
   const fromHeading = page.h1
     ?.replace(/\s+Mahallesi.*$/i, "")
@@ -285,7 +283,7 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 
 async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<Pick<Metadata, "title" | "description"> | null> {
   const fixedParts = deliveryParts(path);
-  const dyn = !fixedParts && LOCATION_PAGE_TYPES.has(page.page_type) ? await dynamicDeliveryParts(path) : null;
+  const dyn = !fixedParts ? await dynamicDeliveryParts(path) : null;
   const parts = fixedParts || dyn?.parts;
   if (!parts) return null;
   const { city, district } = fixedParts ? getDeliveryInfo(fixedParts) : { city: undefined, district: undefined };
@@ -312,11 +310,8 @@ export default async function Page({ params, searchParams }: PageProps) {
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
   if (path.startsWith("/kategori/")) return <><CategoryLanding page={page} path={path} searchParams={searchParams} />{jsonLd}</>;
   if (deliveryParts(path)) return <><DeliveryLanding page={page} path={path} />{jsonLd}</>;
-  // Dinamik teslimat landing'i (admin bölgeleri — additive): seo sayfası yoksa
-  // ve slug bir bölgeye eşleşiyorsa aynı landing şablonu kargo/aynı-gün moduyla döner.
-  if (LOCATION_PAGE_TYPES.has(page.page_type)) {
-    const dyn = await dynamicDeliveryParts(path);
-    if (dyn) return <><DeliveryLanding page={page} path={path} dyn={dyn} />{jsonLd}</>;
-  }
+  // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
+  const dyn = await dynamicDeliveryParts(path);
+  if (dyn) return <><DeliveryLanding page={page} path={path} dyn={dyn} />{jsonLd}</>;
   return <main><h1>{page.h1}</h1>{page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{page.body_blocks?.map((b, i) => renderBlock(b, i))}{page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;
 }
