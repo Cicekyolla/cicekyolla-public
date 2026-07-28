@@ -4,8 +4,9 @@
 // katalogdan doldurulur. DTO'da ürün VARSA DTO kazanır (admin üstünlüğü) —
 // bkz. HomepageRenderer. Mock YOK: tüm ürünler /api/products'tan gelir;
 // hiç ürün bulunamazsa vitrin gizli kalır (boş kart/skeleton YOK).
-// Sıra sözleşmesi: yayındaki boş vitrinler sırayla A) Orkide, B) Fırsat,
-// C) Saksı, D) Premium olarak eşlenir.
+// Sıra sözleşmesi: product_showcase vitrinleri sırayla A) Genel Seçki,
+// B) Orkide, C) Fırsat, D) Saksı, E) Premium olarak eşlenir. İlk genel
+// vitrindeki Admin ürünleri ve manuel sırası aynen korunur.
 // ============================================================================
 import { fetchProducts, type CategoryNode, type PublicProductListItem } from "./api";
 import { findCategoryIdBySlug } from "./catalog";
@@ -39,6 +40,14 @@ interface ShowcaseSpec {
 const LIMIT = 12;
 
 const SPECS: ShowcaseSpec[] = [
+  {
+    title: "Sizin İçin Seçtiklerimiz",
+    subtitle: "Her ana yakışan, özenle seçilmiş premium tasarımlar.",
+    ctaLabel: "Tüm Ürünleri Keşfet",
+    ctaHref: "/urunler",
+    theme: "orchid",
+    categorySlugs: [],
+  },
   {
     title: "Zarafetin En Saf Hali: Orkideler",
     subtitle: "Kalıcı, asil ve etkileyici orkide aranjmanlarıyla özel anlara değer katın.",
@@ -128,7 +137,7 @@ async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promi
   return { title: spec.title, subtitle: spec.subtitle, ctaLabel: spec.ctaLabel, ctaHref: spec.ctaHref, theme: spec.theme, products: rows.map(toHpProduct) };
 }
 
-/** 4 vitrini paralel doldurur. API hatasında ilgili vitrin boş kalır → gizlenir. */
+/** 5 vitrini paralel hazırlar. API hatasında ilgili vitrin boş kalır → gizlenir. */
 export async function buildShowcaseFills(tree: CategoryNode[] | null): Promise<ShowcaseFill[]> {
   return Promise.all(SPECS.map((spec) => buildFill(spec, tree)));
 }
