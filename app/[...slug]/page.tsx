@@ -131,6 +131,21 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
 // iller varsayılan 1–3 iş günü kargo olarak sunulur (same_day admin verisi).
 type DynDelivery = { parts: string[]; cityName: string; districtName: string; sameDay: boolean };
 
+function fallbackLocationParts(page: SeoPublicPage, path: string): DynDelivery | null {
+  const type = page.page_type.toLowerCase();
+  const locationType = ["city", "district", "neighborhood", "delivery_info"]
+    .some((prefix) => type === prefix || type.startsWith(`${prefix}_`));
+  const parts = path.split("/").filter(Boolean);
+  if (!locationType || parts.length < 1 || parts.length > 3 || path.startsWith("/kategori/")) return null;
+  const pageLabel = locationLabel(page, prettySlug(parts.at(-1) || parts[0]));
+  return {
+    parts,
+    cityName: parts.length === 1 ? pageLabel : prettySlug(parts[0]),
+    districtName: parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "",
+    sameDay: parts[0] === "istanbul",
+  };
+}
+
 async function dynamicDeliveryParts(path: string): Promise<DynDelivery | null> {
   const parts = path.split("/").filter(Boolean);
   if (parts.length < 1 || parts.length > 3) return null;
@@ -283,7 +298,7 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 
 async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<Pick<Metadata, "title" | "description"> | null> {
   const fixedParts = deliveryParts(path);
-  const dyn = !fixedParts ? await dynamicDeliveryParts(path) : null;
+  const dyn = !fixedParts ? (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path) : null;
   const parts = fixedParts || dyn?.parts;
   if (!parts) return null;
   const { city, district } = fixedParts ? getDeliveryInfo(fixedParts) : { city: undefined, district: undefined };
@@ -311,7 +326,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   if (path.startsWith("/kategori/")) return <><CategoryLanding page={page} path={path} searchParams={searchParams} />{jsonLd}</>;
   if (deliveryParts(path)) return <><DeliveryLanding page={page} path={path} />{jsonLd}</>;
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
-  const dyn = await dynamicDeliveryParts(path);
+  const dyn = (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
   if (dyn) return <><DeliveryLanding page={page} path={path} dyn={dyn} />{jsonLd}</>;
   return <main><h1>{page.h1}</h1>{page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{page.body_blocks?.map((b, i) => renderBlock(b, i))}{page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;
 }
