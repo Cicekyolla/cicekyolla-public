@@ -13,20 +13,23 @@ export const metadata: Metadata = {
 };
 
 export default async function NationwideCargoPage() {
-  const [managed, tree, plants, artificial, gifts] = await Promise.all([
+  const [managed, tree, flowers, plants, artificial, gifts] = await Promise.all([
     fetchSeoPage("/kategori/turkiye-geneli-kargo"),
     getCategoryTree(),
-    fetchProducts({ product_type: "plant", page_size: 60, sort: "created_at_desc" }),
-    fetchProducts({ product_type: "artificial", page_size: 60, sort: "created_at_desc" }),
-    fetchProducts({ product_type: "gift", page_size: 60, sort: "created_at_desc" }),
+    fetchProducts({ product_type: "flower", delivery_scope: "turkiye", page_size: 100, sort: "created_at_desc" }),
+    fetchProducts({ product_type: "plant", delivery_scope: "turkiye", page_size: 100, sort: "created_at_desc" }),
+    fetchProducts({ product_type: "artificial", delivery_scope: "turkiye", page_size: 100, sort: "created_at_desc" }),
+    fetchProducts({ product_type: "gift", delivery_scope: "turkiye", page_size: 100, sort: "created_at_desc" }),
   ]);
   const categoryId = tree ? findCategoryIdBySlug(tree, "turkiye-geneli-kargo") : null;
   const categoryProducts = categoryId
-    ? await fetchProducts({ category_id: categoryId, page_size: 60, sort: "created_at_desc" })
+    ? await fetchProducts({ category_id: categoryId, delivery_scope: "turkiye", page_size: 100, sort: "created_at_desc" })
     : [];
   const unique = new Map<number, PublicProductListItem>();
-  [...categoryProducts, ...plants, ...artificial, ...gifts].forEach((product) => {
-    if (product.status === "active" && product.cover_image_url) unique.set(product.id, product);
+  [...categoryProducts, ...flowers, ...plants, ...artificial, ...gifts].forEach((product) => {
+    if (product.status === "active" && product.delivery_scope === "turkiye" && product.cover_image_url) {
+      unique.set(product.id, product);
+    }
   });
   const selectedIds = (managed?.body_blocks ?? [])
     .filter((block) => block.type === "cargo-product" && block.enabled !== false && block.value !== "false")
