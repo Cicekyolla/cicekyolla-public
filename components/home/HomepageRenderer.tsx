@@ -38,7 +38,7 @@ export interface RenderCtx {
   imagedCollections: ComponentProps<typeof FeaturedCollections>["items"];
   /** Teslimat bölgeleri (admin Delivery Motor) — DistrictDelivery tüketir (additive, opsiyonel). */
   zones?: DeliveryZoneCity[];
-  /** V65: BOŞ product_showcase bölümleri için canlı katalog dolguları (sırayla eşlenir).
+  /** V65: product_showcase bölümlerinin sıralı tema ailesi ve boş vitrin dolguları.
       DTO'da ürün VARSA DTO kazanır — admin üstünlüğü korunur. */
   showcaseFills?: ShowcaseFill[];
 }
@@ -75,11 +75,17 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
       const mode = s.selection_mode as 'manual' | 'rule' | 'hybrid' | undefined;
 
       let products = s.products ?? [];
-      let theme = undefined;
+      // V65 görsel ailesi vitrin sırasına aittir; ürün kaynağına değil.
+      // Böylece Admin'den manuel seçilen gerçek ürünler de Orkide/Fırsat/
+      // Botanik/Premium atmosferini korur. Ürün ve sıra üstünlüğü yine DTO'dadır.
+      let theme = fill?.theme;
       let title = s.title?.trim() ? s.title : undefined;
       let subtitle = s.subtitle?.trim() ? s.subtitle : undefined;
-      let ctaLabel = undefined;
-      let ctaHref = undefined;
+      let ctaLabel = fill?.ctaLabel;
+      let ctaHref = fill?.ctaHref;
+
+      title ??= fill?.title;
+      subtitle ??= fill?.subtitle;
 
       // manual: sadece DTO ürünleri, limit kadar
       if (mode === 'manual') {
@@ -134,12 +140,13 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
 
 export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCtx }) {
   const enabledSections = dto.sections.filter((s) => s.enabled);
-  // V65 vitrin dolguları: yayındaki BOŞ product_showcase bölümlerine DTO
-  // sırasıyla eşlenir (A Orkide → B Fırsat → C Saksı → D Premium).
+  // V65 vitrin ailesi tüm product_showcase bölümlerine sırayla eşlenir
+  // (A Orkide → B Fırsat → C Saksı → D Premium). Admin'de ürün varsa
+  // yalnız ürün kaynağı DTO olur; görsel tema ve güvenli başlık fallback'i kalır.
   const pendingFills = [...(ctx.showcaseFills ?? [])];
   const fillAssign = new Map<number, ShowcaseFill>();
   for (const s of enabledSections) {
-    if (s.type === "product_showcase" && (!s.products || s.products.length === 0)) {
+    if (s.type === "product_showcase") {
       const fill = pendingFills.shift();
       if (fill) fillAssign.set(s.id, fill);
     }
