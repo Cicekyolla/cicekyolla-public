@@ -24,7 +24,7 @@ import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { HomepageRenderer } from "../components/home/HomepageRenderer";
-import { buildShowcaseFills } from "@/lib/homepageShowcase";
+import { buildShowcaseFills, getShowcaseSlots } from "@/lib/homepageShowcase";
 import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
@@ -189,12 +189,20 @@ export default async function HomePage() {
   const cmsLogoUrl = typeof heroSection?.config?.logo_url === "string" ? (heroSection.config.logo_url as string) : null;
   const schemaLogoUrl = cmsLogoUrl ?? `${SITE_URL}/brand/cicekyolla-brand.svg`;
 
-  // V65: yayındaki BOŞ product_showcase vitrinleri için canlı katalog dolguları.
-  // Boş vitrin yoksa hiç istek atılmaz; API hatasında dolgu boş kalır → vitrin gizli.
-  const needsShowcaseFills = publishedHomepage?.sections.some(
+  // V65: her product_showcase başlık/CTA/tema slotunu alır. Yalnız boş vitrin
+  // varsa canlı katalog dolgusu için ürün istekleri atılır; tamamı manuelse
+  // salt slot metadata'sı kullanılır ve ürün/sıra Admin DTO'sundan aynen kalır.
+  const hasShowcases = publishedHomepage?.sections.some(
+    (s) => s.enabled && s.type === "product_showcase"
+  ) ?? false;
+  const needsShowcaseProducts = publishedHomepage?.sections.some(
     (s) => s.enabled && s.type === "product_showcase" && (!s.products || s.products.length === 0)
   ) ?? false;
-  const showcaseFills = needsShowcaseFills ? await buildShowcaseFills(tree) : [];
+  const showcaseFills = needsShowcaseProducts
+    ? await buildShowcaseFills(tree)
+    : hasShowcases
+      ? getShowcaseSlots()
+      : [];
 
   if (publishedHomepage && publishedHomepage.sections.length > 0) {
     // Google yorumları + Instagram, kullanıcı kararına göre ana akışın sonunda
