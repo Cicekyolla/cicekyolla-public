@@ -79,10 +79,20 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
       // Böylece Admin'den manuel seçilen gerçek ürünler de Orkide/Fırsat/
       // Botanik/Premium atmosferini korur. Ürün ve sıra üstünlüğü yine DTO'dadır.
       let theme = fill?.theme;
-      let title = s.title?.trim() ? s.title : undefined;
-      let subtitle = s.subtitle?.trim() ? s.subtitle : undefined;
+      let title = s.title?.trim() ? s.title.trim() : undefined;
+      let subtitle = s.subtitle?.trim() ? s.subtitle.trim() : undefined;
       let ctaLabel = fill?.ctaLabel;
       let ctaHref = fill?.ctaHref;
+
+      // Eski CMS genel placeholder'ı ilk seçki dışında V65 vitrin adını ezmesin.
+      // Gerçek, özel Admin başlıkları değişmeden öncelikli kalır.
+      const isGeneralFill = fill?.title === "Sizin İçin Seçtiklerimiz";
+      if (fill && !isGeneralFill && title === "Sizin İçin Seçtiklerimiz") title = undefined;
+      if (
+        fill && !isGeneralFill &&
+        (subtitle === "Her ana yakışan, özenle seçilmiş tasarımlar." ||
+         subtitle === "Her ana yakışan, özenle seçilmiş premium tasarımlar.")
+      ) subtitle = undefined;
 
       title ??= fill?.title;
       subtitle ??= fill?.subtitle;
