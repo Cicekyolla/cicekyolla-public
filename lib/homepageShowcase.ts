@@ -141,3 +141,15 @@ async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promi
 export async function buildShowcaseFills(tree: CategoryNode[] | null): Promise<ShowcaseFill[]> {
   return Promise.all(SPECS.map((spec) => buildFill(spec, tree)));
 }
+
+/** Manuel vitrinlerde ürün sorgusu yapmadan V65 başlık/CTA/tema sırasını sağlar. */
+export function getShowcaseSlots(): ShowcaseFill[] {
+  return SPECS.map((spec) => ({
+    title: spec.title,
+    subtitle: spec.subtitle,
+    ctaLabel: spec.ctaLabel,
+    ctaHref: spec.ctaHref,
+    theme: spec.theme,
+    products: [],
+  }));
+}
