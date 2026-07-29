@@ -78,10 +78,14 @@ function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: "Çiçekyolla",
+     foundingDate: "1986",
+      slogan: "1986'dan beri, her çiçekte bir usta dokunuşu.",
+      knowsAbout: ["Çiçek tasarımı", "Özel tasarım buket ve aranjman", "Saksı bitkileri toptan ve perakende", "Canlı ve yapay çiçek dekorasyonu", "Peyzaj tasarım ve bakım", "Düğün, davet ve kurumsal organizasyon çiçekçiliği", "Online çiçek gönderimi"],
+      areaServed: [{ "@type": "City", name: "İstanbul" }, { "@type": "Country", name: "Türkiye" }],
       url: SITE_URL,
       logo: logoUrl,
       description:
-        "Premium çiçek ve hediye markası. Aynı gün teslimat seçenekleri.",
+        "Çiçekyolla, 1986 yılında kurulan, çiçekçilik sektöründe kırk yıla yaklaşan tecrübeye sahip köklü bir markadır. Özel tasarım buket ve aranjmanlar, saksı bitkileri, düğün ve kurumsal organizasyon çiçekçiliği ile peyzaj tasarımı sunar. İstanbul'da aynı gün, Türkiye genelinde güvenli kargo ile teslimat.",
       contactPoint: {
         "@type": "ContactPoint",
         telephone: "+90-507-441-3474",
