@@ -6,10 +6,9 @@ import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
    CICEKYOLLA PUBLIC — Legacy 404 Kurtarma (ADDITIVE).
    1 Mayıs URL değişiminde orfan kalan eski adresleri güvenli hedefe 301'ler.
    TEMEL KURAL: asla var olmayan bir sayfaya 301 verme (301→404 zinciri YOK).
-   Bir hedefi ancak (a) whitelist'te (yayınlanmış konum) VEYA (b) garanti-200
-   statik rota (/urunler) ise döndürürüz. Backend ilçe sayfalarını yayınlayıp
-   legacy-location-public-targets.json genişledikçe hedefler otomatik /il/ilce'ye
-   YÜKSELİR — bu dosyada değişiklik gerekmez.
+   Fallback hedefleri repoda GERÇEKTEN var olan rotalardır (/ ve /kategori/cicekler).
+   Backend ilçe sayfalarını yayınlayıp legacy-location-public-targets.json
+   genişledikçe konum hedefleri otomatik /il/ilce'ye YÜKSELİR.
    ============================================================================ */
 
 const CITY_ALIASES: Record<string, string> = {
@@ -17,8 +16,11 @@ const CITY_ALIASES: Record<string, string> = {
   tuncel: "tunceli",
 };
 
-// Garanti-200 son emniyet hedefi (tüm ürünler sayfası — her zaman vardır).
-export const SAFE_FALLBACK = "/urunler";
+// Garanti-200 son emniyet hedefleri (repoda GERÇEKTEN var olan rotalar).
+// Konum bulunamazsa anasayfa (kesin 200, yerel niyete en yakın güvenli hedef).
+export const SAFE_FALLBACK = "/";
+// Kategori bulunamazsa geniş, gerçek çiçek koleksiyonu (anasayfadan daha alakalı).
+export const CATEGORY_FALLBACK = "/kategori/cicekler";
 
 const cities = new Set(Object.keys(locationMap));
 const publicTargets = new Set(publicLocationTargets as string[]);
@@ -56,7 +58,7 @@ function normalizePath(pathname: string): string {
 }
 
 // Bir konum "base"i (örn. "aydin-karacasu" veya "aydin") için whitelist'te
-// yayınlanmış en iyi mevcut hedefi verir; yoksa güvenli /urunler.
+// yayınlanmış en iyi mevcut hedefi verir; yoksa güvenli anasayfa.
 function locationSafeTarget(base: string): string {
   const parts = base.split("-");
   // il-ilçe kombinasyonu yayınlanmış mı?
@@ -71,7 +73,7 @@ function locationSafeTarget(base: string): string {
   if (cities.has(city) && publicTargets.has(`/${city}`)) return `/${city}`;
   const firstCity = CITY_ALIASES[parts[0]] ?? parts[0];
   if (cities.has(firstCity) && publicTargets.has(`/${firstCity}`)) return `/${firstCity}`;
-  // konum ama henüz sayfa yok → güvenli (backend yayınlayınca yükselir)
+  // konum ama henüz sayfa yok → güvenli anasayfa (backend yayınlayınca yükselir)
   return SAFE_FALLBACK;
 }
 
@@ -94,10 +96,10 @@ export function locationFallback(normalizedBase: string): string {
 
 /* /{slug}-{id} genel kalıbı için GUARDED kategori hedefi:
    kategori gerçekten varsa /kategori/{slug}; "-cicegi" ekini düşünce varsa ona;
-   yoksa güvenli /urunler. Var olmayan kategoriye ASLA 301 verilmez. */
+   yoksa gerçek /kategori/cicekler. Var olmayan kategoriye ASLA 301 verilmez. */
 export function guardedCategoryTarget(slug: string): string {
   if (categorySlugs.has(slug)) return `/kategori/${slug}`;
   const stem = slug.replace(/-cicegi$/, "");
   if (stem !== slug && categorySlugs.has(stem)) return `/kategori/${stem}`;
-  return SAFE_FALLBACK;
+  return CATEGORY_FALLBACK;
 }
