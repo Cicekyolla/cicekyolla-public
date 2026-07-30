@@ -15,6 +15,18 @@ import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
 
+function isLegacyPleskMedia(url: string): boolean {
+  try {
+    const parsed = new URL(url, "https://www.cicekyolla.com.tr");
+    return (
+      (parsed.hostname === "cicekyolla.com.tr" || parsed.hostname === "www.cicekyolla.com.tr") &&
+      parsed.pathname.startsWith("/storage/products/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function FloatingCategoryRail({
   items,
   variant = "dark",
@@ -116,7 +128,10 @@ export function FloatingCategoryRail({
             <div className="flex gap-4 sm:gap-5 lg:gap-6">
             {cats.map((cat) => {
               const badge = categoryBadges[cat.id];
-              const showImage = Boolean(cat.image) && !failedImages.has(cat.id);
+              const showImage =
+                Boolean(cat.image) &&
+                !isLegacyPleskMedia(cat.image) &&
+                !failedImages.has(cat.id);
               return (
                 <Link
                   key={cat.id}
