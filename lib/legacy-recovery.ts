@@ -103,3 +103,29 @@ export function guardedCategoryTarget(slug: string): string {
   if (stem !== slug && categorySlugs.has(stem)) return `/kategori/${stem}`;
   return CATEGORY_FALLBACK;
 }
+/* /sayfa/{slug} eski (Laravel) URL yapısı. İki tür içerir:
+   1) Kurumsal/statik: /sayfa/hakkimizda → /hakkimizda
+   2) Konum: /sayfa/pendik-cicekci → /istanbul/pendik
+   Hiçbirine uymazsa güvenli anasayfa (asla 404 bırakma). Additive. */
+const SAYFA_STATIK_ROTALAR = new Set([
+  "hakkimizda", "iletisim", "kurumsal", "kvkk", "sss",
+  "sik-sorulan-sorular", "mesafeli-satis-sozlesmesi",
+  "teslimat-bolgeleri", "blog", "site-haritasi",
+]);
+
+export function resolveSayfaLegacy(pathname: string): string | null {
+  const clean = normalizePath(pathname);
+  const match = clean.match(/^sayfa\/(.+)$/);
+  if (!match) return null;
+  const raw = match[1].replace(/\/+$/, "");
+  if (SAYFA_STATIK_ROTALAR.has(raw)) return `/${raw}`;
+  const slug = raw.replace(/-\d+$/, "");
+  const SUFFIXES = [
+    "cicek-gonderme", "cicek-siparisi", "cicek-siparsi",
+    "cicek-yolla", "cicekci", "cicek",
+  ];
+  const suffix = SUFFIXES.find((s) => slug.endsWith(`-${s}`));
+  const base = suffix ? slug.slice(0, -(suffix.length + 1)) : slug;
+  if (!base) return SAFE_FALLBACK;
+  return locationSafeTarget(base);
+}
