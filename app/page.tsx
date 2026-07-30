@@ -61,11 +61,20 @@ export const metadata: Metadata = {
     title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
     description:
       "Premium aranjmanlar, zarif paketleme, aynı gün teslimat. Her duygu bir çiçekle anlam kazanır.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ÇiçekYolla — Premium Çiçekçi",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
     description: "Premium aranjmanlar, zarif paketleme, aynı gün teslimat.",
+    images: ["/twitter-image"],
   },
   robots: indexRobots(),
 };
