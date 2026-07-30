@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
-import { mapTreeToItems } from "@/lib/catalog";
+import { findCategoryIdBySlug, mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
 import { HomeHero } from "../components/home/HomeHero";
 import HeroDeliveryBar from "../components/home/HeroDeliveryBar";
@@ -29,6 +29,7 @@ import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
+import { isLegacyPleskMedia } from "@/lib/media";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -128,7 +129,21 @@ export default async function HomePage() {
   const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
   // Rail: Hero'dan bağımsız SATIŞ-ODAKLI slider (root+child+grandchild, ≤50).
-  const collections = buildCollectionSlider(tree, 50);
+  const collectionItems = buildCollectionSlider(tree, 50);
+  // Kategori kayıtlarında Vercel cutover öncesinden kalan Plesk görseli varsa,
+  // aynı kategorideki ilk aktif ve görselli ürünün gerçek CDN/R2 kapağını otomatik
+  // kullan. Hardcoded eşleme yoktur; kategori adı/sırası/linki aynen korunur.
+  // fetchProducts ISR cache kullanır; ürün bulunamazsa premium placeholder kalır.
+  const collections = await Promise.all(
+    collectionItems.map(async (item) => {
+      if (item.image && !isLegacyPleskMedia(item.image)) return item;
+      const categoryId = findCategoryIdBySlug(tree ?? [], item.id);
+      if (!categoryId) return { ...item, image: "" };
+      const candidates = await fetchProducts({ category_id: categoryId, page_size: 1 });
+      const image = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+      return { ...item, image: image ?? "" };
+    })
+  );
   const imagedCollections = liveItems.filter((c) => c.image); // Featured/Occasion görsel ister
 
   // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).
