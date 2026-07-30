@@ -128,6 +128,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: absoluteUrl(`/urun/${params.slug}`),
       type: "website",
     },
+    twitter: {
+      card: "summary_large_image",
+      title: seo?.og_title || title,
+      description: seo?.og_description || description,
+      images: ogImage ? [ogImage] : [absoluteUrl("/twitter-image")],
+    },
   };
 }
 
