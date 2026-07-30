@@ -12,6 +12,10 @@ import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 const categorySlugs = new Set(legacyCategorySlugs);
 
 export function middleware(req: NextRequest) {
+const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
+  if (sayfaTarget) {
+    return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);
+  }
   const legacyLocation = resolveLegacyLocation(req.nextUrl.pathname);
   if (legacyLocation.matched && legacyLocation.destination) {
     return NextResponse.redirect(
