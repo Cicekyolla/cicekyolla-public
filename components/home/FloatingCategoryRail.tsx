@@ -14,18 +14,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
-
-function isLegacyPleskMedia(url: string): boolean {
-  try {
-    const parsed = new URL(url, "https://www.cicekyolla.com.tr");
-    return (
-      (parsed.hostname === "cicekyolla.com.tr" || parsed.hostname === "www.cicekyolla.com.tr") &&
-      parsed.pathname.startsWith("/storage/products/")
-    );
-  } catch {
-    return false;
-  }
-}
+import { isLegacyPleskMedia } from "@/lib/media";
 
 export function FloatingCategoryRail({
   items,
