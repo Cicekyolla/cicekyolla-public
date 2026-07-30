@@ -194,7 +194,7 @@ export function InstagramGallery({
           <a
             href={profileUrl}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="nofollow noopener noreferrer"
             className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-[#E4DDED] bg-white px-4 py-2.5 text-sm font-semibold text-[#7C3AED] shadow-[0_8px_24px_rgba(72,49,105,0.06)] transition-all hover:-translate-y-0.5 hover:border-[#CBBBE0] hover:shadow-[0_12px_30px_rgba(72,49,105,0.10)] sm:px-5"
             aria-label={`Instagram'da @${handle} hesabını takip et`}
           >
@@ -219,7 +219,7 @@ export function InstagramGallery({
                   key={post.id}
                   href={post.permalink}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="nofollow noopener noreferrer"
                   className="group relative min-w-0 flex-[0_0_74%] overflow-hidden rounded-[18px] bg-[#F6F3F8] shadow-[0_10px_28px_rgba(43,31,62,0.07)] sm:flex-[0_0_calc((100%-2rem)/3)] md:flex-[0_0_calc((100%-3rem)/4)] lg:flex-[0_0_calc((100%-4rem)/5)] xl:flex-[0_0_calc((100%-5rem)/6)] 2xl:flex-[0_0_calc((100%-6rem)/7)]"
                   style={{ aspectRatio: "1 / 1" }}
                   aria-label={`Instagram gönderisini aç: ${alt}`}
