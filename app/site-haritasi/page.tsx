@@ -2,16 +2,7 @@ import type { Metadata } from "next";
 import { BadgeCheck, Globe2, Map, Sparkles } from "lucide-react";
 import { SiteMapContent } from "./SiteMapContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
-import type { SiteMapCategory } from "@/app/api/site-map/route";
-
-async function getSiteMapData(): Promise<{ categories: SiteMapCategory[]; total: number }> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/site-map`, { next: { revalidate: 3600 } });
-  if (!res.ok) throw new Error("Site map data fetch failed");
-  return res.json();
-}
+import { categories } from "@/app/api/site-map/data";
 
 export const metadata: Metadata = {
   title: "Site Haritası | ÇiçekYolla",
@@ -21,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SiteHaritasiPage() {
-  const { categories, total } = await getSiteMapData();
+  const total = categories.length;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
