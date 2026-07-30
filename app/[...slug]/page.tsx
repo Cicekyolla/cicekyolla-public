@@ -279,7 +279,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const locationMetadata = await getLocationMetadata(page, path);
   const title = locationMetadata?.title || page.title_tag;
   const description = locationMetadata?.description || page.meta_description;
-  return { title, description, alternates: { canonical: absoluteUrl(page.canonical_url || path) }, robots: indexRobots(page.index_state), openGraph: { title, description, url: absoluteUrl(page.canonical_url || path), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
+  // Category pages are served from /kategori/{slug}; stale catalog canonicals
+  // may still point at retired /cicekler/* paths that now return 404.
+  const canonicalPath = path.startsWith("/kategori/") ? path : (page.canonical_url || path);
+  return { title, description, alternates: { canonical: absoluteUrl(canonicalPath) }, robots: indexRobots(page.index_state), openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
 }
 
 function renderBlock(block: BodyBlock, i: number) {
