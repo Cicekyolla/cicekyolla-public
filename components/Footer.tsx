@@ -78,10 +78,16 @@ export function Footer({
 
             {/* Social icons */}
             <div className="flex gap-3">
-              {[Instagram, Facebook].map((Icon, i) => (
+              {[
+                { name: "Instagram", href: "https://www.instagram.com/cicekyolla/", Icon: Instagram },
+                { name: "Facebook", href: "https://www.facebook.com/cicekyolla", Icon: Facebook },
+              ].map(({ name, href, Icon }) => (
                 <a
-                  key={i}
-                  href="#"
+                  key={name}
+                  href={href}
+                  target="_blank"
+                  rel="nofollow noopener noreferrer"
+                  aria-label={`ÇiçekYolla ${name} hesabını aç`}
                   className="w-10 h-10 rounded-full flex items-center justify-center text-[#6B7280] hover:text-white transition-all duration-200"
                   style={{
                     background: "rgba(255,255,255,0.04)",
