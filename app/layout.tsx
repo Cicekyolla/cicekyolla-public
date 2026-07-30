@@ -13,6 +13,33 @@ import { indexRobots, SITE_URL } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  applicationName: "ÇiçekYolla",
+  title: {
+    default: "ÇiçekYolla | Online Çiçek Siparişi",
+    template: "%s | ÇiçekYolla",
+  },
+  description:
+    "1986'dan beri premium çiçek tasarımları. İstanbul'da aynı gün teslimat, Türkiye genelinde 1–3 iş günü kargo.",
+  authors: [{ name: "ÇiçekYolla", url: SITE_URL }],
+  creator: "ÇiçekYolla",
+  publisher: "ÇiçekYolla",
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    siteName: "ÇiçekYolla",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ÇiçekYolla — Premium Çiçekçi",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/twitter-image"],
+  },
   robots: indexRobots(),
 };
 
