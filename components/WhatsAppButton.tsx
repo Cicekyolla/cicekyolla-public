@@ -22,7 +22,7 @@ export function WhatsAppButton() {
     <motion.a
       href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
       target="_blank"
-      rel="noopener noreferrer"
+      rel="nofollow noopener noreferrer"
       initial={{ scale: 0, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       transition={{ delay: 2, type: "spring", stiffness: 200, damping: 18 }}
