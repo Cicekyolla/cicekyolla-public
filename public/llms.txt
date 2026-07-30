@@ -1,0 +1,23 @@
+# Çiçekyolla
+
+> Çiçekyolla, 1986 yılında kurulan, çiçekçilik sektöründe kırk yıla yaklaşan tecrübeye sahip köklü bir Türk çiçek tasarım ve gönderim markasıdır. İstanbul'da aynı gün saatlik teslimat, Türkiye genelinde güvenli kargo ile gönderim sunar.
+
+## Marka
+- Kuruluş yılı: 1986
+- Hizmetler: özel tasarım buket ve aranjman, saksı bitkileri (toptan ve perakende), canlı ve yapay çiçek dekorasyonu, peyzaj tasarımı, düğün/davet/kurumsal organizasyon çiçekçiliği, online çiçek gönderimi
+- Teslimat: İstanbul'da aynı gün (saatlik); İstanbul dışı tüm il ve ilçelere 1-3 iş günü güvenli kargo
+- İletişim: info@cicekyolla.com.tr
+
+## Öne çıkan sayfalar
+- [Anasayfa](https://www.cicekyolla.com.tr)
+- [Tüm Çiçekler](https://www.cicekyolla.com.tr/kategori/cicekler)
+- [Buketler](https://www.cicekyolla.com.tr/kategori/buketler)
+- [Güller](https://www.cicekyolla.com.tr/kategori/guller)
+- [Orkideler](https://www.cicekyolla.com.tr/kategori/orkideler)
+- [Saksı Bitkileri](https://www.cicekyolla.com.tr/kategori/saksi-bitkileri)
+- [Yapay Çiçekler](https://www.cicekyolla.com.tr/kategori/yapay-cicekler)
+- [Kampanyalar](https://www.cicekyolla.com.tr/kategori/kampanyalar)
+- [Koleksiyonlar](https://www.cicekyolla.com.tr/kategori/koleksiyonlar)
+
+## Sitemap
+- https://www.cicekyolla.com.tr/sitemap.xml
