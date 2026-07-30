@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { BookOpen, CalendarHeart, Flower2, MapPin, Search, Truck, X } from "lucide-react";
-import type { SiteMapCategory } from "@/app/api/site-map/route";
+import type { SiteMapCategory } from "@/app/api/site-map/data";
 
 const ICONS = {
   "Koleksiyonlar": Flower2,
