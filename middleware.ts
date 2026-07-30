@@ -4,6 +4,7 @@ import { SITE_INDEXABLE } from "@/lib/site-config";
 import { resolveLegacyLocation } from "@/lib/legacy-location-redirect";
 import {
   resolveMidCicek,
+  resolveSayfaLegacy,
   locationFallback,
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
