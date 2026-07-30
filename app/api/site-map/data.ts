@@ -62,17 +62,17 @@ export const categories: SiteMapCategory[] = [
   { title: "Kurban Bayramı", slug: "kurban-bayrami", desc: "Bayram sevincini paylaşmak için zarif çiçek seçenekleri.", section: "Özel Günler" },
 
   { title: "İstanbul Aynı Gün Teslimat", slug: "istanbul-teslimat", desc: "İstanbul'un seçili bölgelerine uygun ürünlerde aynı gün teslimat.", section: "Teslimat Bölgeleri" },
-  { title: "Ankara Teslimat", slug: "ankara-teslimat", desc: "Ankara için uygun çiçek ve hediye teslimat seçenekleri.", section: "Teslimat Bölgeleri" },
-  { title: "İzmir Teslimat", slug: "izmir-teslimat", desc: "İzmir'e gönderilebilen çiçek ve hediyeleri keşfedin.", section: "Teslimat Bölgeleri" },
+  { title: "Ankara Teslimat", slug: "teslimat-bolgeleri", desc: "Ankara için uygun çiçek ve hediye teslimat seçeneklerini genel teslimat rehberimizde inceleyin.", section: "Teslimat Bölgeleri", isPage: true },
+  { title: "İzmir Teslimat", slug: "teslimat-bolgeleri", desc: "İzmir'e gönderilebilen çiçek ve hediyeleri genel teslimat rehberimizde keşfedin.", section: "Teslimat Bölgeleri", isPage: true },
   { title: "Türkiye Geneli Kargo", slug: "turkiye-geneli-kargo", desc: "Uygun ürünlerde Türkiye geneline 1–3 iş günü kargo.", section: "Teslimat Bölgeleri" },
 
   { title: "Hakkımızda", slug: "hakkimizda", desc: "1986'dan beri İstanbul'da çiçekçilik tutkumuzu ve hikâyemizi keşfedin.", section: "Bilgi Sayfaları", isPage: true },
   { title: "İletişim", slug: "iletisim", desc: "ÇiçekYolla ekibine ulaşın; sipariş ve hizmetler hakkında destek alın.", section: "Bilgi Sayfaları", isPage: true },
   { title: "Blog", slug: "blog", desc: "Çiçek bakımı, hediye önerileri ve özel gün fikirlerini okuyun.", section: "Bilgi Sayfaları", isPage: true },
   { title: "Sıkça Sorulan Sorular", slug: "blog", desc: "Sipariş, teslimat ve ürünler hakkında faydalı yanıtlara ulaşın.", section: "Bilgi Sayfaları", isPage: true },
-  { title: "KVKK Aydınlatma Metni", slug: "kvkk-aydinlatma-metni", desc: "Kişisel verilerin korunmasına ilişkin bilgilendirme metnimizi inceleyin.", section: "Bilgi Sayfaları", isPage: true },
+  { title: "KVKK Aydınlatma Metni", slug: "kvkk", desc: "Kişisel verilerin korunmasına ilişkin bilgilendirme metnimizi inceleyin.", section: "Bilgi Sayfaları", isPage: true },
   { title: "Mesafeli Satış Sözleşmesi", slug: "mesafeli-satis-sozlesmesi", desc: "Online alışverişlerin sözleşme koşullarını inceleyin.", section: "Bilgi Sayfaları", isPage: true },
-  { title: "İptal ve İade Koşulları", slug: "iptal-ve-iade-kosullari", desc: "Sipariş iptali ve iade süreçleri hakkında bilgi alın.", section: "Bilgi Sayfaları", isPage: true },
-  { title: "Gizlilik Politikası", slug: "gizlilik-politikasi", desc: "Gizlilik ve veri güvenliği uygulamalarımızı inceleyin.", section: "Bilgi Sayfaları", isPage: true },
+  { title: "İptal ve İade Koşulları", slug: "mesafeli-satis-sozlesmesi", desc: "Sipariş iptali ve iade süreçleriyle ilgili geçerli sözleşme koşullarını inceleyin.", section: "Bilgi Sayfaları", isPage: true },
+  { title: "Gizlilik Politikası", slug: "kvkk", desc: "Gizlilik ve veri güvenliği uygulamalarımızı KVKK aydınlatma metninde inceleyin.", section: "Bilgi Sayfaları", isPage: true },
 ];
 
