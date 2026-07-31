@@ -146,3 +146,28 @@ export function resolveSayfaLegacy(pathname: string): string | null {
   if (!base) return SAFE_FALLBACK;
   return locationSafeTarget(base);
 }
+/* ============================================================================
+   EK (KATEGORİ KONUM KURTARMA) — ADDITIVE
+   v1, konum sayfalarını /kategori/{il}-{ilce}-cicek-yolla yapısıyla da
+   indexletmiş (örn. /kategori/van-baskale-cicek-yolla). Bunlar v2'de 404 verir.
+   resolveSayfaLegacy ile BİREBİR aynı mantık, tek fark prefix "/kategori/".
+   Konum çözülemezse null → dokunma (gerçek kategori sayfaları etkilenmez).
+   ============================================================================ */
+export function resolveKategoriLegacy(pathname: string): string | null {
+  const clean = normalizePath(pathname);
+  const match = clean.match(/^kategori\/(.+)$/);
+  if (!match) return null;
+  const raw = match[1].replace(/\/+$/, "");
+  const slug = raw.replace(/-\d+$/, "");
+  const SUFFIXES = [
+    "cicek-gonderme", "cicek-siparisi", "cicek-siparsi",
+    "cicek-yolla", "cicekci", "cicek",
+  ];
+  const suffix = SUFFIXES.find((s) => slug.endsWith(`-${s}`));
+  const base = suffix ? slug.slice(0, -(suffix.length + 1)) : slug;
+  if (!base) return null;
+  const target = locationSafeTarget(base);
+  // Konum çözülemediyse (SAFE_FALLBACK döndüyse) DOKUNMA: gerçek kategori
+  // sayfaları (yapay-cicek-dekor vb.) yanlışlıkla anasayfaya yönlendirilmesin.
+  return target === SAFE_FALLBACK ? null : target;
+}
