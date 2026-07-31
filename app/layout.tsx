@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer, type FooterBrand } from "@/components/Footer";
@@ -10,6 +11,8 @@ import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/catego
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
+
+const GTM_ID = "GTM-54FJNMT2";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -95,7 +98,27 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       "--header-text-color": headerColors.text,
       "--promo-bar-color": headerColors.promoBar,
     } as React.CSSProperties : undefined}>
+      <head>
+        <Script id="google-tag-manager" strategy="beforeInteractive">
+          {`
+            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+            })(window,document,'script','dataLayer','${GTM_ID}');
+          `}
+        </Script>
+      </head>
       <body>
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+            title="Google Tag Manager"
+          />
+        </noscript>
         <CartProvider>
           <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
           {children}
