@@ -8,6 +8,8 @@ import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
+import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
+import { EcommercePaymentInfoTracker } from "@/components/analytics/EcommercePaymentInfoTracker";
 import { CartProvider } from "@/lib/cart";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
@@ -124,6 +126,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <EcommerceViewItemTracker />
         <CartProvider>
           <EcommerceCartViewTracker />
+          <EcommerceCheckoutTracker />
+          <EcommercePaymentInfoTracker />
           <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
           {children}
         </CartProvider>
