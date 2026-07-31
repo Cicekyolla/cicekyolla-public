@@ -1,7 +1,6 @@
 import locationMap from "@/lib/legacy-location-map.json";
 import publicLocationTargets from "@/lib/legacy-location-public-targets.json";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-
 /* ============================================================================
    CICEKYOLLA PUBLIC — Legacy 404 Kurtarma (ADDITIVE).
    1 Mayıs URL değişiminde orfan kalan eski adresleri güvenli hedefe 301'ler.
@@ -10,22 +9,18 @@ import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
    Backend ilçe sayfalarını yayınlayıp legacy-location-public-targets.json
    genişledikçe konum hedefleri otomatik /il/ilce'ye YÜKSELİR.
    ============================================================================ */
-
 const CITY_ALIASES: Record<string, string> = {
   afyon: "afyonkarahisar",
   tuncel: "tunceli",
 };
-
 // Garanti-200 son emniyet hedefleri (repoda GERÇEKTEN var olan rotalar).
 // Konum bulunamazsa anasayfa (kesin 200, yerel niyete en yakın güvenli hedef).
 export const SAFE_FALLBACK = "/";
 // Kategori bulunamazsa geniş, gerçek çiçek koleksiyonu (anasayfadan daha alakalı).
 export const CATEGORY_FALLBACK = "/kategori/cicekler";
-
 const cities = new Set(Object.keys(locationMap));
 const publicTargets = new Set(publicLocationTargets as string[]);
 const categorySlugs = new Set(legacyCategorySlugs as string[]);
-
 // Yalnız YAYINLANMIŞ (whitelist'te olan) il/ilçe hedefleri.
 const cityDistrictTarget = new Map<string, string>();
 for (const [city, districts] of Object.entries(locationMap as Record<string, string[]>)) {
@@ -34,7 +29,24 @@ for (const [city, districts] of Object.entries(locationMap as Record<string, str
     if (publicTargets.has(target)) cityDistrictTarget.set(`${city}-${district}`, target);
   }
 }
-
+// ============================================================================
+// EK (İSTANBUL İLÇE DÜZELTMESI) — Ekleme 1/2  [ADDITIVE, hiçbir şey silinmedi]
+// İlçe adından il çözümü. Bir ilçe adı YALNIZ TEK ile aitse güvenle çözülür;
+// birden çok ilde geçen adlar (merkez, yenipazar, kemalpasa, aksu…) belirsiz
+// kabul edilip çözülmez → yanlış-il 301 riski SIFIR. locationMap'ten türetilir,
+// kendini günceller (yeni il/ilçe eklenince otomatik kapsar).
+// ============================================================================
+const districtToUniqueCity = (() => {
+  const seen = new Map<string, string | null>();
+  for (const [city, districts] of Object.entries(locationMap as Record<string, string[]>)) {
+    for (const district of districts) {
+      seen.set(district, seen.has(district) ? null : city);
+    }
+  }
+  const out = new Map<string, string>();
+  for (const [district, city] of seen) if (city) out.set(district, city);
+  return out;
+})();
 // Not: legacy-location-redirect.ts'teki normalize ile BİREBİR aynı (drift yok).
 function normalizePath(pathname: string): string {
   let value = pathname;
@@ -56,7 +68,6 @@ function normalizePath(pathname: string): string {
     .replaceAll("ü", "u")
     .replace(/^\/+|\/+$/g, "");
 }
-
 // Bir konum "base"i (örn. "aydin-karacasu" veya "aydin") için whitelist'te
 // yayınlanmış en iyi mevcut hedefi verir; yoksa güvenli anasayfa.
 function locationSafeTarget(base: string): string {
@@ -73,10 +84,19 @@ function locationSafeTarget(base: string): string {
   if (cities.has(city) && publicTargets.has(`/${city}`)) return `/${city}`;
   const firstCity = CITY_ALIASES[parts[0]] ?? parts[0];
   if (cities.has(firstCity) && publicTargets.has(`/${firstCity}`)) return `/${firstCity}`;
+  // ==========================================================================
+  // EK (İSTANBUL İLÇE DÜZELTMESI) — Ekleme 2/2  [ADDITIVE, mevcut satırlar korundu]
+  // base yalın bir ilçe adıysa (il verilmemiş, örn. "sisli", "maltepe", "tuzla"),
+  // benzersiz ilçe→il eşlemesinden çöz; YALNIZCA whitelist'te yayınlanmışsa
+  // /il/ilce'ye yönlendir. Yayınlanmamışsa aşağıdaki mevcut SAFE_FALLBACK korunur.
+  // ==========================================================================
+  const uniqueCity = districtToUniqueCity.get(base);
+  if (uniqueCity && publicTargets.has(`/${uniqueCity}/${base}`)) {
+    return `/${uniqueCity}/${base}`;
+  }
   // konum ama henüz sayfa yok → güvenli anasayfa (backend yayınlayınca yükselir)
   return SAFE_FALLBACK;
 }
-
 /* {il}-cicek-{ilce}-{id} "ortada cicek" formatı (örn. afyon-cicek-iscehisar-104).
    Ana resolver bunu (sonek sonda olmadığı için) kaçırır. */
 export function resolveMidCicek(pathname: string): string | null {
@@ -87,13 +107,11 @@ export function resolveMidCicek(pathname: string): string | null {
   if (!mid) return null;
   return locationSafeTarget(`${mid[1]}-${mid[2]}`);
 }
-
 /* Ana resolver "eşleşti ama whitelist'te hedef yok" (destination null) dediğinde
    çağrılır. 404'e düşmek yerine güvenli konum hedefine 301. */
 export function locationFallback(normalizedBase: string): string {
   return locationSafeTarget(normalizedBase);
 }
-
 /* /{slug}-{id} genel kalıbı için GUARDED kategori hedefi:
    kategori gerçekten varsa /kategori/{slug}; "-cicegi" ekini düşünce varsa ona;
    yoksa gerçek /kategori/cicekler. Var olmayan kategoriye ASLA 301 verilmez. */
@@ -112,7 +130,6 @@ const SAYFA_STATIK_ROTALAR = new Set([
   "sik-sorulan-sorular", "mesafeli-satis-sozlesmesi",
   "teslimat-bolgeleri", "blog", "site-haritasi",
 ]);
-
 export function resolveSayfaLegacy(pathname: string): string | null {
   const clean = normalizePath(pathname);
   const match = clean.match(/^sayfa\/(.+)$/);
