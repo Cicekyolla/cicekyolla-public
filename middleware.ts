@@ -5,17 +5,22 @@ import { resolveLegacyLocation } from "@/lib/legacy-location-redirect";
 import {
   resolveMidCicek,
   resolveSayfaLegacy,
+  resolveKategoriLegacy,
   locationFallback,
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-
 const categorySlugs = new Set(legacyCategorySlugs);
-
 export function middleware(req: NextRequest) {
 const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
     return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);
+  }
+  // EK (KATEGORİ KONUM KURTARMA): /kategori/{il}-{ilce}-cicek-yolla → /il/ilce 301.
+  // Yalnızca konum çözülürse yönlendirir; gerçek kategori sayfaları etkilenmez.
+  const kategoriTarget = resolveKategoriLegacy(req.nextUrl.pathname);
+  if (kategoriTarget) {
+    return NextResponse.redirect(new URL(kategoriTarget, req.nextUrl.origin), 301);
   }
   const legacyLocation = resolveLegacyLocation(req.nextUrl.pathname);
   if (legacyLocation.matched && legacyLocation.destination) {
@@ -24,7 +29,6 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
       301,
     );
   }
-
   // "-cicek-ID" hem eski konum hem kategori biçiminde kullanılmış. Gerçek bir
   // konum hedefi bulunamadığında yalnız mevcut kategori envanterinde birebir
   // karşılığı varsa kategoriye yönlendir.
@@ -41,7 +45,6 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
       );
     }
   }
-
   // EK (kurtarma): Konum eşleşti ama whitelist'te yayınlanmış hedef yok.
   // Doğal 404'e düşmek yerine güvenli konum hedefine 301 (il sayfası ya da
   // /urunler). Backend il/ilçe sayfalarını yayınlayıp whitelist genişleyince
@@ -52,14 +55,12 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
       301,
     );
   }
-
   // EK (kurtarma): "{il}-cicek-{ilce}-{id}" ortada-cicek formatı. Ana resolver
   // soneki sonda aradığı için bunu kaçırır; burada güvenli konuma çözülür.
   const midCicek = resolveMidCicek(req.nextUrl.pathname);
   if (midCicek) {
     return NextResponse.redirect(new URL(midCicek, req.nextUrl.origin), 301);
   }
-
   // Konum kalıbına girmeyen eski "/kategori-slug-123" adreslerini korur.
   // GUARD: hedef kategori gerçekten yoksa var olmayan kategoriye 301 verilmez
   // (301→404 zinciri engellenir); güvenli hedefe (/urunler) düşülür.
@@ -72,7 +73,6 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
       );
     }
   }
-
   const res = NextResponse.next();
   const isPreview = req.nextUrl.pathname === "/onizleme";
   if (!SITE_INDEXABLE || isPreview) {
@@ -84,7 +84,6 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
   }
   return res;
 }
-
 export const config = {
   matcher: [
     "/onizleme",
