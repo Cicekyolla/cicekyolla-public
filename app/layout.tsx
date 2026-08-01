@@ -11,6 +11,7 @@ import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartVi
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
 import { EcommercePaymentInfoTracker } from "@/components/analytics/EcommercePaymentInfoTracker";
 import { BreadcrumbSchemaTracker } from "@/components/analytics/BreadcrumbSchemaTracker";
+import { CategoryImageEnhancer } from "@/components/CategoryImageEnhancer";
 import { CartProvider } from "@/lib/cart";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
@@ -136,6 +137,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <MemberNewsletterBand />
         <Footer categories={footerOrUndef} brand={footerBrand} />
         <WhatsAppButton />
+        <CategoryImageEnhancer />
       </body>
     </html>
   );
