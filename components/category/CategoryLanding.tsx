@@ -89,7 +89,22 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // İç-linkleme (Related): canlı ağaçtan; yetersizse catalog.
   const liveItems = tree ? mapTreeToItems(tree) : [];
   const pool = liveItems; // TEK KAYNAK: yalnız canlı ağaç; hardcoded/fallback YOK
-  const related = pool.filter((c) => c.href !== path).slice(0, 8);
+  let related = pool.filter((c) => c.href !== path).slice(0, 8);
+
+  // Kategori resim yükseltme: her kategori backend resmi yoksa → kendi ürün resmini al
+  if (tree && related.length > 0) {
+    const enriched = await Promise.all(
+      related.map(async (cat) => {
+        if (cat.image) return cat; // backend resmi varsa koru
+        const catId = findCategoryIdBySlug(tree, cat.href.replace(/^\/kategori\//, ""));
+        if (!catId) return cat; // slug çözülemezse koru
+        const prod = await fetchProducts({ category_id: catId, page_size: 1 });
+        const firstProduct = prod?.[0];
+        return firstProduct?.cover_image_url ? { ...cat, image: firstProduct.cover_image_url } : cat;
+      })
+    );
+    related = enriched;
+  }
 
   // Breadcrumb: parent-child ağaçtan türetilir; yoksa 2 seviyeli fallback.
   const trail = tree ? getBreadcrumbTrailFromTree(tree, slug) : [];
