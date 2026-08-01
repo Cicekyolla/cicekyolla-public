@@ -99,7 +99,10 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
         const isPlaceholder = cat.image?.startsWith("data:image/svg+xml");
         if (cat.image && !isPlaceholder) return cat;
         const catId = findCategoryIdBySlug(tree, cat.href.replace(/^\/kategori\//, ""));
-        if (!catId) return { ...cat, image: "" };
+        if (!catId) {
+          const slug = cat.href.replace(/^\/kategori\//, "").replace(/\/$/, "");
+          return { ...cat, image: `/api/category-image/${slug}` };
+        }
         try {
           const prod = await fetchProducts({ category_id: catId, page_size: 1 });
           const firstProduct = prod?.[0];
