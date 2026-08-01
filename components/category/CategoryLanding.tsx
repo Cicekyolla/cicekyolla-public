@@ -90,7 +90,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // İç-linkleme (Related): canlı ağaçtan; yetersizse catalog.
   const liveItems = tree ? mapTreeToItems(tree) : [];
   const pool = liveItems; // TEK KAYNAK: yalnız canlı ağaç; hardcoded/fallback YOK
-  let related = pool.filter((c) => c.href !== path).slice(0, 8);
+  let related = pool.filter((c) => c.href !== path && c.href !== "/kategori/kurumsal-hizmetler").slice(0, 8);
 
   // Kategori resim yükseltme: her kategori backend resmi yoksa → kendi ürün resmini al
   if (tree && related.length > 0) {
