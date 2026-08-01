@@ -156,13 +156,20 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
       const childCategoryId = findCategoryIdBySlug(tree, item.id);
       if (!childCategoryId) return { ...item, image: "" };
 
-      const candidates = await fetchProducts({
-        category_id: childCategoryId,
-        page_size: 1,
-        sort: "created_at_desc",
-      });
-      const image = candidates.find((product) => product.cover_image_url)?.cover_image_url;
-      return { ...item, image: image ?? "" };
+      try {
+        const candidates = await fetchProducts({
+          category_id: childCategoryId,
+          page_size: 1,
+          sort: "created_at_desc",
+        });
+        const productImage = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+        if (productImage) return { ...item, image: productImage };
+      } catch {
+        // API fail
+      }
+      // Fallback: /api/category-image/ route'u kategoriden ürün resmini çekecek
+      const slug = item.href.replace(/^\/kategori\//, "").replace(/\/$/, "");
+      return { ...item, image: `/api/category-image/${slug}` };
     })
   );
 
