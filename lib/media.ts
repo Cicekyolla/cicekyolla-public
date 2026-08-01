@@ -15,6 +15,20 @@
 // Harici URL'ler (unsplash vb.) ve göreli yollar (/uploads, /r2) AYNEN korunur.
 // ---------------------------------------------------------------------------
 
+/** Vercel cutover sonrası artık sunulmayan eski Plesk ürün medya yolunu tanır. */
+export function isLegacyPleskMedia(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url, "https://www.cicekyolla.com.tr");
+    return (
+      (parsed.hostname === "cicekyolla.com.tr" || parsed.hostname === "www.cicekyolla.com.tr") &&
+      parsed.pathname.startsWith("/storage/products/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** r2.dev mutlak URL'ini same-origin `/r2/<key>` yoluna çevirir; diğer her şeyi olduğu gibi bırakır. */
 export function mediaUrl(url: string | null | undefined): string {
   if (!url) return "";

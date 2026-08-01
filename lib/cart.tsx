@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { PendingDelivery } from "@/lib/pendingDelivery";
+import { pushEcommerceEvent } from "@/lib/analytics";
 
 export type CartItem = {
   key: string;
@@ -65,11 +66,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
     subtotalMinor: items.reduce((sum, item) => sum + item.unitPriceMinor * item.quantity, 0),
     addItem(item, quantity = 1) {
+      const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+
+      pushEcommerceEvent("add_to_cart", {
+        currency: "TRY",
+        value: (item.unitPriceMinor * safeQuantity) / 100,
+        items: [
+          {
+            item_id: item.productSlug || String(item.productId),
+            item_name: item.name,
+            item_brand: "ÇiçekYolla",
+            item_variant: item.variantTitle || undefined,
+            price: item.unitPriceMinor / 100,
+            quantity: safeQuantity,
+          },
+        ],
+      });
+
       const key = itemKey(item);
       setItems((current) => {
         const found = current.find((entry) => entry.key === key);
-        if (found) return current.map((entry) => entry.key === key ? { ...entry, quantity: entry.quantity + quantity } : entry);
-        return [...current, { ...item, key, quantity }];
+        if (found) return current.map((entry) => entry.key === key ? { ...entry, quantity: entry.quantity + safeQuantity } : entry);
+        return [...current, { ...item, key, quantity: safeQuantity }];
       });
     },
     setQuantity(key, quantity) {

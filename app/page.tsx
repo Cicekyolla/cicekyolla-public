@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
-import { mapTreeToItems } from "@/lib/catalog";
+import { findCategoryIdBySlug, mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
 import { HomeHero } from "../components/home/HomeHero";
 import HeroDeliveryBar from "../components/home/HeroDeliveryBar";
@@ -24,11 +24,12 @@ import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { HomepageRenderer } from "../components/home/HomepageRenderer";
-import { buildShowcaseFills } from "@/lib/homepageShowcase";
+import { buildShowcaseFills, getShowcaseSlots } from "@/lib/homepageShowcase";
 import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
+import { isLegacyPleskMedia } from "@/lib/media";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -60,11 +61,20 @@ export const metadata: Metadata = {
     title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
     description:
       "Premium aranjmanlar, zarif paketleme, aynı gün teslimat. Her duygu bir çiçekle anlam kazanır.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ÇiçekYolla — Premium Çiçekçi",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
     description: "Premium aranjmanlar, zarif paketleme, aynı gün teslimat.",
+    images: ["/twitter-image"],
   },
   robots: indexRobots(),
 };
@@ -78,10 +88,14 @@ function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: "Çiçekyolla",
+     foundingDate: "1986",
+      slogan: "1986'dan beri, her çiçekte bir usta dokunuşu.",
+      knowsAbout: ["Çiçek tasarımı", "Özel tasarım buket ve aranjman", "Saksı bitkileri toptan ve perakende", "Canlı ve yapay çiçek dekorasyonu", "Peyzaj tasarım ve bakım", "Düğün, davet ve kurumsal organizasyon çiçekçiliği", "Online çiçek gönderimi"],
+      areaServed: [{ "@type": "City", name: "İstanbul" }, { "@type": "Country", name: "Türkiye" }],
       url: SITE_URL,
       logo: logoUrl,
       description:
-        "Premium çiçek ve hediye markası. Aynı gün teslimat seçenekleri.",
+        "Çiçekyolla, 1986 yılında kurulan, çiçekçilik sektöründe kırk yıla yaklaşan tecrübeye sahip köklü bir markadır. Özel tasarım buket ve aranjmanlar, saksı bitkileri, düğün ve kurumsal organizasyon çiçekçiliği ile peyzaj tasarımı sunar. İstanbul'da aynı gün, Türkiye genelinde güvenli kargo ile teslimat.",
       contactPoint: {
         "@type": "ContactPoint",
         telephone: "+90-507-441-3474",
@@ -124,7 +138,21 @@ export default async function HomePage() {
   const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
   // Rail: Hero'dan bağımsız SATIŞ-ODAKLI slider (root+child+grandchild, ≤50).
-  const collections = buildCollectionSlider(tree, 50);
+  const collectionItems = buildCollectionSlider(tree, 50);
+  // Kategori kayıtlarında Vercel cutover öncesinden kalan Plesk görseli varsa,
+  // aynı kategorideki ilk aktif ve görselli ürünün gerçek CDN/R2 kapağını otomatik
+  // kullan. Hardcoded eşleme yoktur; kategori adı/sırası/linki aynen korunur.
+  // fetchProducts ISR cache kullanır; ürün bulunamazsa premium placeholder kalır.
+  const collections = await Promise.all(
+    collectionItems.map(async (item) => {
+      if (item.image && !isLegacyPleskMedia(item.image)) return item;
+      const categoryId = findCategoryIdBySlug(tree ?? [], item.id);
+      if (!categoryId) return { ...item, image: "" };
+      const candidates = await fetchProducts({ category_id: categoryId, page_size: 1 });
+      const image = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+      return { ...item, image: image ?? "" };
+    })
+  );
   const imagedCollections = liveItems.filter((c) => c.image); // Featured/Occasion görsel ister
 
   // Çok Satan rail'i: canlı katalogdan (admin Ürün Merkezi > Çok Satan toggle'ı).
@@ -189,12 +217,20 @@ export default async function HomePage() {
   const cmsLogoUrl = typeof heroSection?.config?.logo_url === "string" ? (heroSection.config.logo_url as string) : null;
   const schemaLogoUrl = cmsLogoUrl ?? `${SITE_URL}/brand/cicekyolla-brand.svg`;
 
-  // V65: yayındaki BOŞ product_showcase vitrinleri için canlı katalog dolguları.
-  // Boş vitrin yoksa hiç istek atılmaz; API hatasında dolgu boş kalır → vitrin gizli.
-  const needsShowcaseFills = publishedHomepage?.sections.some(
+  // V65: her product_showcase başlık/CTA/tema slotunu alır. Yalnız boş vitrin
+  // varsa canlı katalog dolgusu için ürün istekleri atılır; tamamı manuelse
+  // salt slot metadata'sı kullanılır ve ürün/sıra Admin DTO'sundan aynen kalır.
+  const hasShowcases = publishedHomepage?.sections.some(
+    (s) => s.enabled && s.type === "product_showcase"
+  ) ?? false;
+  const needsShowcaseProducts = publishedHomepage?.sections.some(
     (s) => s.enabled && s.type === "product_showcase" && (!s.products || s.products.length === 0)
   ) ?? false;
-  const showcaseFills = needsShowcaseFills ? await buildShowcaseFills(tree) : [];
+  const showcaseFills = needsShowcaseProducts
+    ? await buildShowcaseFills(tree)
+    : hasShowcases
+      ? getShowcaseSlots()
+      : [];
 
   if (publishedHomepage && publishedHomepage.sections.length > 0) {
     // Google yorumları + Instagram, kullanıcı kararına göre ana akışın sonunda

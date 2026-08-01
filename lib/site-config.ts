@@ -14,8 +14,11 @@ function normalizeSiteUrl(value: string | undefined): string {
 }
 
 export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+
+// Domain cutover onayı: yalnız gerçek Vercel production + kesin kanonik domain
+// birlikteyse indeksleme açılır. Preview/branch/local ortamları noindex kalır.
 export const SITE_INDEXABLE =
-  process.env.SITE_INDEXABLE === "true" &&
+  process.env.VERCEL_ENV === "production" &&
   process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") === PRODUCTION_SITE_URL;
 
 export function absoluteUrl(path = "/"): string {

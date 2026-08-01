@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
+import { isLegacyPleskMedia } from "@/lib/media";
 
 export function FloatingCategoryRail({
   items,
@@ -43,6 +44,10 @@ export function FloatingCategoryRail({
   };
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
   const cats = items ?? [];
+  // Eski Plesk döneminden kalan veya geçici olarak erişilemeyen kategori görselleri
+  // kırık <img>/alt metni göstermesin. Yalnız hatalı kart premium placeholder'a
+  // düşer; geçerli görseller, kategori sırası, linkler ve canlı veri aynen korunur.
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start", containScroll: "trimSnaps" });
   const router = useRouter();
   const [canPrev, setCanPrev] = useState(false);
@@ -112,6 +117,10 @@ export function FloatingCategoryRail({
             <div className="flex gap-4 sm:gap-5 lg:gap-6">
             {cats.map((cat) => {
               const badge = categoryBadges[cat.id];
+              const showImage =
+                Boolean(cat.image) &&
+                !isLegacyPleskMedia(cat.image) &&
+                !failedImages.has(cat.id);
               return (
                 <Link
                   key={cat.id}
@@ -132,12 +141,20 @@ export function FloatingCategoryRail({
                       boxShadow: "0 8px 28px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.12)",
                     }}
                   >
-                    {cat.image ? (
+                    {showImage ? (
                       <img
                         src={cat.image}
                         alt={cat.name}
                         className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
                         draggable={false}
+                        onError={() => {
+                          setFailedImages((current) => {
+                            if (current.has(cat.id)) return current;
+                            const next = new Set(current);
+                            next.add(cat.id);
+                            return next;
+                          });
+                        }}
                       />
                     ) : (
                       <span

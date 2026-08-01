@@ -13,6 +13,7 @@ import { FilterBar } from "@/components/category/FilterBar";
 import { CategoryProductGrid } from "@/components/category/CategoryProductGrid";
 import { CargoCategoryExperience } from "@/components/category/CargoCategoryExperience";
 import { absoluteUrl } from "@/lib/site-config";
+import { isLegacyPleskMedia } from "@/lib/media";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -140,9 +141,31 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
     `${rootSlug} ${slug}`,
   );
   const contextTag = { label: page.h1, isOccasion };
-  const subItems = currentNode?.children
+  const baseSubItems = currentNode?.children
     ? mapTreeToItems(currentNode.children as Parameters<typeof mapTreeToItems>[0]).slice(0, 50)
     : [];
+
+  // Ana sayfadaki çalışan kuralla AYNI: kategori görseli yoksa veya eski Plesk
+  // kaynağıysa, alt kategorinin ilk aktif ve görselli ürün kapağını kullan.
+  // İsim, sıra, slug, link ve kategori ilişkileri değişmez; veri yazılmaz.
+  const subItems = await Promise.all(
+    baseSubItems.map(async (item) => {
+      if (item.image && !isLegacyPleskMedia(item.image)) return item;
+      if (!tree) return { ...item, image: "" };
+
+      const childCategoryId = findCategoryIdBySlug(tree, item.id);
+      if (!childCategoryId) return { ...item, image: "" };
+
+      const candidates = await fetchProducts({
+        category_id: childCategoryId,
+        page_size: 1,
+        sort: "created_at_desc",
+      });
+      const image = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+      return { ...item, image: image ?? "" };
+    })
+  );
+
   const productPage = categoryId
     ? await fetchProductsPaged({
         category_id: categoryId, page_size: 50, page: pageNum, sort,

@@ -349,6 +349,7 @@ export interface PublicProductListParams {
   q?: string; // metin arama (backend /api/products?q= destekler)
   product_type?: string; // flower|plant|wreath|artificial|gift|service
   same_day_available?: boolean;
+  delivery_scope?: "istanbul" | "turkiye" | "regional";
   sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
 }
 
@@ -375,6 +376,7 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.q && params.q.trim()) q.set("q", params.q.trim());
   if (params.product_type) q.set("product_type", params.product_type);
   if (params.same_day_available) q.set("same_day_available", "true");
+  if (params.delivery_scope) q.set("delivery_scope", params.delivery_scope);
   if (params.sort) q.set("sort", params.sort);
   const url = `${API_ORIGIN}/api/products?${q.toString()}`;
   const attempts = [

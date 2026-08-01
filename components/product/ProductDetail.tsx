@@ -428,7 +428,7 @@ export function ProductDetail({
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer"
               aria-label="WhatsApp ile Sipariş"
               className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-[#25D366] text-white text-[14px] font-bold transition-all hover:brightness-105 hover:scale-[1.01]"
             >
@@ -566,7 +566,7 @@ export function ProductDetail({
         <a
           href={`https://wa.me/${WHATSAPP}?text=${waText}`}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="nofollow noopener noreferrer"
           aria-label="WhatsApp ile Sipariş"
           className="grid place-items-center w-12 h-12 rounded-xl bg-[#25D366] text-white shrink-0"
         >

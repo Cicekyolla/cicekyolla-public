@@ -1,18 +1,53 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer, type FooterBrand } from "@/components/Footer";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
+import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
+import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
+import { EcommercePaymentInfoTracker } from "@/components/analytics/EcommercePaymentInfoTracker";
+import { BreadcrumbSchemaTracker } from "@/components/analytics/BreadcrumbSchemaTracker";
 import { CartProvider } from "@/lib/cart";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
 
+const GTM_ID = "GTM-54FJNMT2";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  applicationName: "ÇiçekYolla",
+  title: {
+    default: "ÇiçekYolla | Online Çiçek Siparişi",
+    template: "%s | ÇiçekYolla",
+  },
+  description:
+    "1986'dan beri premium çiçek tasarımları. İstanbul'da aynı gün teslimat, Türkiye genelinde 1–3 iş günü kargo.",
+  authors: [{ name: "ÇiçekYolla", url: SITE_URL }],
+  creator: "ÇiçekYolla",
+  publisher: "ÇiçekYolla",
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    siteName: "ÇiçekYolla",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ÇiçekYolla — Premium Çiçekçi",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/twitter-image"],
+  },
   robots: indexRobots(),
 };
 
@@ -68,8 +103,33 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       "--header-text-color": headerColors.text,
       "--promo-bar-color": headerColors.promoBar,
     } as React.CSSProperties : undefined}>
+      <head>
+        <Script id="google-tag-manager" strategy="beforeInteractive">
+          {`
+            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+            })(window,document,'script','dataLayer','${GTM_ID}');
+          `}
+        </Script>
+      </head>
       <body>
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+            title="Google Tag Manager"
+          />
+        </noscript>
+        <EcommerceViewItemTracker />
+        <BreadcrumbSchemaTracker />
         <CartProvider>
+          <EcommerceCartViewTracker />
+          <EcommerceCheckoutTracker />
+          <EcommercePaymentInfoTracker />
           <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
           {children}
         </CartProvider>

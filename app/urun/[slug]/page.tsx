@@ -128,6 +128,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: absoluteUrl(`/urun/${params.slug}`),
       type: "website",
     },
+    twitter: {
+      card: "summary_large_image",
+      title: seo?.og_title || title,
+      description: seo?.og_description || description,
+      images: ogImage ? [ogImage] : [absoluteUrl("/twitter-image")],
+    },
   };
 }
 
@@ -328,7 +334,7 @@ export default async function ProductPage({ params }: PageProps) {
             <a
               href="https://wa.me/905074413474?text=Merhaba%2C%20%C3%BCr%C3%BCn%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer"
               aria-label="WhatsApp'tan ürün hakkında soru sor"
               className="mt-7 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#0D9488] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(16,185,129,0.24)] transition hover:-translate-y-0.5"
             >
