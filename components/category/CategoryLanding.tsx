@@ -96,12 +96,19 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   if (tree && related.length > 0) {
     const enriched = await Promise.all(
       related.map(async (cat) => {
-        if (cat.image) return cat; // backend resmi varsa koru
+        const isPlaceholder = cat.image?.startsWith("data:image/svg+xml");
+        if (cat.image && !isPlaceholder) return cat;
         const catId = findCategoryIdBySlug(tree, cat.href.replace(/^\/kategori\//, ""));
-        if (!catId) return cat; // slug çözülemezse koru
-        const prod = await fetchProducts({ category_id: catId, page_size: 1 });
-        const firstProduct = prod?.[0];
-        return firstProduct?.cover_image_url ? { ...cat, image: firstProduct.cover_image_url } : cat;
+        if (!catId) return { ...cat, image: "" };
+        try {
+          const prod = await fetchProducts({ category_id: catId, page_size: 1 });
+          const firstProduct = prod?.[0];
+          if (firstProduct?.cover_image_url) return { ...cat, image: firstProduct.cover_image_url };
+        } catch {
+          // API fail
+        }
+        const slug = cat.href.replace(/^\/kategori\//, "").replace(/\/$/, "");
+        return { ...cat, image: `/api/category-image/${slug}` };
       })
     );
     related = enriched;
