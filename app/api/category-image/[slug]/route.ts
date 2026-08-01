@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
-import { findCategoryIdBySlug } from "@/lib/catalog";
+import { findCategoryIdBySlug, findCategoryNodeBySlug } from "@/lib/catalog";
+import { isLegacyPleskMedia } from "@/lib/media";
 
 const CACHE_CONTROL = "public, s-maxage=1800, stale-while-revalidate=86400";
 
@@ -23,6 +24,13 @@ function placeholderSvg(label: string): string {
     </svg>`;
 }
 
+function redirectToImage(image: string, request: NextRequest): NextResponse {
+  const target = new URL(image, request.nextUrl.origin);
+  const response = NextResponse.redirect(target, 307);
+  response.headers.set("Cache-Control", CACHE_CONTROL);
+  return response;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
@@ -31,8 +39,24 @@ export async function GET(
 
   try {
     const tree = await getCategoryTree();
-    const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
+    const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
 
+    // 1) Admin/Category Center görseli her zaman önceliklidir.
+    if (node) {
+      const raw = node as { banner_image?: unknown; icon?: unknown; image?: unknown };
+      const categoryImage =
+        (typeof raw.banner_image === "string" && raw.banner_image) ||
+        (typeof raw.icon === "string" && raw.icon) ||
+        (typeof raw.image === "string" && raw.image) ||
+        "";
+
+      if (categoryImage && !isLegacyPleskMedia(categoryImage)) {
+        return redirectToImage(categoryImage, request);
+      }
+    }
+
+    // 2) Kategori görseli yoksa en yeni aktif ve görselli ürünü kullan.
+    const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
     if (categoryId) {
       const products = await fetchProducts({
         category_id: categoryId,
@@ -43,15 +67,10 @@ export async function GET(
         (product) => product.status === "active" && Boolean(product.cover_image_url)
       )?.cover_image_url;
 
-      if (image) {
-        const target = new URL(image, request.nextUrl.origin);
-        const response = NextResponse.redirect(target, 307);
-        response.headers.set("Cache-Control", CACHE_CONTROL);
-        return response;
-      }
+      if (image) return redirectToImage(image, request);
     }
   } catch {
-    // Görsel servisi veya katalog geçici olarak erişilemezse kırık resim yerine placeholder döner.
+    // Katalog geçici olarak erişilemezse kırık resim yerine placeholder döner.
   }
 
   return new NextResponse(placeholderSvg(slug), {
