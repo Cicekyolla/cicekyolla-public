@@ -10,6 +10,7 @@ import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewIt
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
 import { EcommercePaymentInfoTracker } from "@/components/analytics/EcommercePaymentInfoTracker";
+import { BreadcrumbSchemaTracker } from "@/components/analytics/BreadcrumbSchemaTracker";
 import { CartProvider } from "@/lib/cart";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
@@ -124,6 +125,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           />
         </noscript>
         <EcommerceViewItemTracker />
+        <BreadcrumbSchemaTracker />
         <CartProvider>
           <EcommerceCartViewTracker />
           <EcommerceCheckoutTracker />
