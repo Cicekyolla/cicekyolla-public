@@ -150,7 +150,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // İsim, sıra, slug, link ve kategori ilişkileri değişmez; veri yazılmaz.
   const subItems = await Promise.all(
     baseSubItems.map(async (item) => {
-      if (item.image && !isLegacyPleskMedia(item.image)) return item;
+      const isPlaceholder = item.image?.startsWith("data:image/svg+xml");
+      if (item.image && !isPlaceholder && !isLegacyPleskMedia(item.image)) return item;
       if (!tree) return { ...item, image: "" };
 
       const childCategoryId = findCategoryIdBySlug(tree, item.id);
