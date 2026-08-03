@@ -14,7 +14,7 @@
 // ADDITIVE: mevcut davranışı bozmaz; tüm yeni alanlar opsiyonel, graceful fallback.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveProductImage, isStudioImage, type ImageSourceLike } from "@/lib/productImage";
 import { mediaDerivatives } from "@/lib/media";
 import { blurhashToDataURL } from "@/lib/blurhash";
@@ -102,6 +102,15 @@ export function ProductImage({
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [lqip, setLqip] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // Hydration yarışı: görsel, React onLoad dinleyicisi bağlanmadan önce
+  // yüklenmişse (SSR + eager/önbellek) load olayı kaçar ve blur takılı kalır.
+  // Mount sonrası complete kontrolü bu durumu yakalar.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth > 0) setLoaded(true);
+  }, [resolved]);
 
   useEffect(() => {
     if (!hash) { setLqip(null); return; }
@@ -136,6 +145,7 @@ export function ProductImage({
       {webpType && webpSrcSet ? <source type={webpType} srcSet={webpSrcSet} sizes={sizes} /> : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={imgRef}
         src={resolved!}
         alt={alt}
         draggable={false}
