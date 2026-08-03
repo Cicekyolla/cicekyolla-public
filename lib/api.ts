@@ -431,3 +431,71 @@ export function toCardProduct(p: PublicProductListItem): CardProduct {
     blurhash: p.cover_blurhash ?? null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// LOKASYON SEO LANDING (ADDITIVE — Faz 1). Admin/DB tek kaynak:
+// mahalleler + Coverage Engine ürünleri /api/public/delivery/zones/... uçlarından
+// okunur (auth yok). Hata/erisim yoksa null döner; sayfa mevcut fallback ile
+// render olmaya devam eder (canlı davranış bozulmaz).
+// ---------------------------------------------------------------------------
+export interface LocationNeighborhood { name: string; slug: string }
+export interface DistrictNeighborhoods {
+  city: { name: string; slug: string };
+  district: { name: string; slug: string };
+  neighborhoods: LocationNeighborhood[];
+}
+
+export async function fetchDistrictNeighborhoods(
+  citySlug: string,
+  districtSlug: string
+): Promise<DistrictNeighborhoods | null> {
+  const url = `${API_ORIGIN}/api/public/delivery/zones/${encodeURIComponent(citySlug)}/${encodeURIComponent(districtSlug)}/neighborhoods`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: DistrictNeighborhoods };
+    if (!json?.data || !Array.isArray(json.data.neighborhoods)) return null;
+    return json.data;
+  } catch {
+    return null;
+  }
+}
+
+export interface LocationProductsPage {
+  items: PublicProductListItem[];
+  pagination: { page: number; page_size: number; total: number; total_pages: number };
+  meta: { source: string; coverage_products: number };
+}
+export interface LocationProductsQuery {
+  neighborhood?: string;
+  page?: number;
+  page_size?: number;
+  is_bestseller?: boolean;
+  is_new?: boolean;
+  is_featured?: boolean;
+}
+
+export async function fetchLocationProducts(
+  citySlug: string,
+  districtSlug: string,
+  query: LocationProductsQuery = {}
+): Promise<LocationProductsPage | null> {
+  const p = new URLSearchParams();
+  if (query.neighborhood) p.set("neighborhood", query.neighborhood);
+  if (query.page) p.set("page", String(query.page));
+  if (query.page_size) p.set("page_size", String(query.page_size));
+  if (query.is_bestseller) p.set("is_bestseller", "true");
+  if (query.is_new) p.set("is_new", "true");
+  if (query.is_featured) p.set("is_featured", "true");
+  const qs = p.toString();
+  const url = `${API_ORIGIN}/api/public/delivery/zones/${encodeURIComponent(citySlug)}/${encodeURIComponent(districtSlug)}/products${qs ? `?${qs}` : ""}`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 120 } });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: LocationProductsPage };
+    if (!json?.data || !Array.isArray(json.data.items)) return null;
+    return json.data;
+  } catch {
+    return null;
+  }
+}
