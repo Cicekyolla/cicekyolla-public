@@ -52,6 +52,11 @@ function sanitizeProductHtml(html: string): string {
   // Olay işleyicileri + sunuma karışan attribute'lar (tipografiyi biz veriyoruz)
   s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
   s = s.replace(/\s(style|class|id|dir|tabindex|role|data-[\w-]+|width|height|align|face|color)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // Düz metin Tailwind/CSS sınıfları (ChatGPT kopyala-yapıştır)
+  s = s.replace(/\*\]\:[a-z-\[\]\(\),.\d]+/gi, "");
+  s = s.replace(/\b[A-Z]\w+_[a-z]+\w+\b\s*/g, "");
+  s = s.replace(/scroll-(?:mb|mt|pt|pb)-\[[^\]]+\]/gi, "");
+  s = s.replace(/calc\s*\([^)]+\)/gi, "");
   // Sahte başlıkları (uzun metin veya blok içeren) düz bloğa indir — gerçek kısa başlıkları KORUR.
   // Callback ile başlık-başına işlenir; başlıklar arasına taşmaz.
   s = s.replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (full, _lvl, inner) => {
