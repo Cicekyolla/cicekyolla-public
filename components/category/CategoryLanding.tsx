@@ -270,7 +270,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
             <p className="mt-4 text-[15px] lg:text-[17px] leading-[1.7] text-white/58 max-w-[760px]">
               {page.meta_description && page.meta_description.trim()
                 ? page.meta_description
-                : `${page.h1} kategorisinde özenle seçilmiş, taze ve premium çiçek & bitki seçenekleri; özel günlerden kurumsal hediyelere her anı değerli kılar. Aynı gün teslimat imkânıyla.`}
+                : `${trail[trail.length - 1]?.name || page.h1?.trim() || "Bu koleksiyonda"} kategorisinde özenle seçilmiş, taze ve premium çiçek & bitki seçenekleri; özel günlerden kurumsal hediyelere her anı değerli kılar. Aynı gün teslimat imkânıyla.`}
             </p>
 
           </div>
