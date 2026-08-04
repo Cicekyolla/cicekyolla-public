@@ -221,17 +221,20 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
 
-  // Link enjeksiyonu hazırlığı
+  // Link enjeksiyonu hazırlığı (static kategoriler + dinamik coğrafi sayfalar)
   let injectedIntroHtml = page.intro_html;
   if (page.intro_html) {
     try {
       const linkData = await getLinkData();
-      injectedIntroHtml = injectLinksIntoHtml(
-        page.intro_html,
-        linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
-        page.url_path
-      );
-    } catch {
+      if (linkData.length > 0) {
+        injectedIntroHtml = injectLinksIntoHtml(
+          page.intro_html,
+          linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
+          page.url_path
+        );
+      }
+    } catch (err) {
+      console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);
       // Hata durumunda orijinal HTML kullan
     }
   }
