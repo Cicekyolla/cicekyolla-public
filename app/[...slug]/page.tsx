@@ -222,12 +222,18 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   const place = neighborhood || districtName || cityName;
 
   // Link enjeksiyonu hazırlığı (static kategoriler + dinamik coğrafi sayfalar)
+  // CHECK: mahalle sayfasında content nerede — intro_html mi, body_blocks mı?
+  const contentSource = page.intro_html ? 'intro_html' : (page.body_blocks && page.body_blocks.length > 0 ? 'body_blocks' : 'empty');
+  console.log(`[DeliveryLanding] page.url_path=${page.url_path}, contentSource=${contentSource}, intro_html.length=${page.intro_html?.length || 0}, body_blocks.count=${page.body_blocks?.length || 0}`);
+
   let injectedIntroHtml = page.intro_html;
   const hasIntro = !!page.intro_html && page.intro_html.length > 0;
-  console.log(`[DeliveryLanding] page.url_path=${page.url_path}, intro_html.length=${page.intro_html?.length || 0}, hasContent=${hasIntro}`);
   if (hasIntro) {
     const sampleText = page.intro_html.substring(0, 150).replace(/\n/g, ' ');
     console.log(`[DeliveryLanding] intro_html sample: "${sampleText}..."`);
+  } else if (page.body_blocks && page.body_blocks.length > 0) {
+    const bodyText = page.body_blocks.map(b => b.text).join(' ').substring(0, 150);
+    console.log(`[DeliveryLanding] body_blocks sample (${page.body_blocks.length} blocks): "${bodyText}..."`);
   }
 
   if (page.intro_html) {
