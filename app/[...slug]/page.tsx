@@ -223,19 +223,27 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
   // Link enjeksiyonu hazırlığı (static kategoriler + dinamik coğrafi sayfalar)
   let injectedIntroHtml = page.intro_html;
+  const hasIntro = !!page.intro_html && page.intro_html.length > 0;
+  console.log(`[DeliveryLanding] page.url_path=${page.url_path}, intro_html.length=${page.intro_html?.length || 0}, hasContent=${hasIntro}`);
+  if (hasIntro) {
+    const sampleText = page.intro_html.substring(0, 150).replace(/\n/g, ' ');
+    console.log(`[DeliveryLanding] intro_html sample: "${sampleText}..."`);
+  }
+
   if (page.intro_html) {
     try {
       const linkData = await getLinkData();
-      console.log(`[DeliveryLanding] page=${page.url_path} linkData.length=${linkData.length}`);
+      console.log(`[DeliveryLanding] linkData.length=${linkData.length}`);
       if (linkData.length > 0) {
         const linkCountBefore = (page.intro_html.match(/<a\s/g) || []).length;
+        console.log(`[DeliveryLanding] Before injection: linkCount=${linkCountBefore}, htmlLength=${page.intro_html.length}`);
         injectedIntroHtml = injectLinksIntoHtml(
           page.intro_html,
           linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
           page.url_path
         );
         const linkCountAfter = (injectedIntroHtml.match(/<a\s/g) || []).length;
-        console.log(`[DeliveryLanding] injection: before=${linkCountBefore} after=${linkCountAfter} added=${linkCountAfter - linkCountBefore}`);
+        console.log(`[DeliveryLanding] After injection: linkCount=${linkCountAfter}, added=${linkCountAfter - linkCountBefore}, htmlLength=${injectedIntroHtml.length}`);
       }
     } catch (err) {
       console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);
