@@ -28,6 +28,7 @@ export const SITEMAP_TYPES = [
   "products",
   "occasions",
   "locations",
+  "neighborhoods",
   "blog",
   "images",
 ] as const;
@@ -65,6 +66,22 @@ export async function getIndexableInventory(): Promise<SeoInventoryItem[]> {
   );
 }
 
+// ADDITIVE: neighborhoods.xml — SADECE İstanbul mahalleleri, ayrı filtre.
+// Envanteri bypass eder; doğrudan index_state='index' + page_type='neighborhood'
+// + İstanbul URL'leri çeker. 974 İstanbul mahallesi beklenir (db doğrulaması).
+export async function getIndexableNeighborhoods(): Promise<SeoInventoryItem[]> {
+  if (!SITE_INDEXABLE) return [];
+  const inventory = await fetchSeoInventory();
+  return inventory.filter(
+    (item) =>
+      item.index_state === "index" &&
+      item.page_type === "neighborhood" &&
+      item.url_path.startsWith("/istanbul/") &&
+      !item.url_path.includes("?") &&
+      !item.url_path.includes("#"),
+  );
+}
+
 function matchesType(item: SeoInventoryItem, type: SitemapType): boolean {
   switch (type) {
     case "pages":
@@ -76,7 +93,9 @@ function matchesType(item: SeoInventoryItem, type: SitemapType): boolean {
     case "occasions":
       return item.page_type === "special_day";
     case "locations":
-      return ["city", "district", "neighborhood"].includes(item.page_type);
+      return ["city", "district"].includes(item.page_type);
+    case "neighborhoods":
+      return item.page_type === "neighborhood";
     case "blog":
       return item.url_path === "/blog" || item.url_path.startsWith("/blog/");
     case "images":
@@ -132,6 +151,12 @@ async function blogNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
   return nodes;
 }
 
+// ADDITIVE: neighborhoods.xml — İstanbul mahalleleri (getIndexableNeighborhoods).
+async function neighborhoodNodes(): Promise<string[]> {
+  const neighborhoods = await getIndexableNeighborhoods();
+  return neighborhoods.map(urlNode);
+}
+
 async function imageNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
   const productItems = inventory.filter(
     (item) => item.page_type === "product" && item.url_path.startsWith("/urun/"),
@@ -181,9 +206,11 @@ export async function renderSitemap(type: SitemapType): Promise<string> {
       ? await imageNodes(inventory)
       : type === "pages"
         ? pageNodes(inventory)
-        : type === "blog"
-          ? await blogNodes(inventory)
-          : inventory.filter((item) => matchesType(item, type)).map(urlNode);
+        : type === "neighborhoods"
+          ? await neighborhoodNodes()
+          : type === "blog"
+            ? await blogNodes(inventory)
+            : inventory.filter((item) => matchesType(item, type)).map(urlNode);
   const imageNamespace =
     type === "images" ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : "";
   return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imageNamespace}>${nodes.join("")}</urlset>`;
