@@ -75,13 +75,21 @@ export function injectLinksIntoHtml(
 }
 
 function buildTurkishWordRegex(word: string): RegExp {
-  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Tüm regex özel karakterlerini escape et (/ dahil)
+  const escaped = word.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
+
   // Türkçe word boundary: boşluk/nokta/virgül/tire/parantez/başında/sonunda
-  // Case-insensitive match
-  return new RegExp(
-    `(^|[\\s\\.,!?;:\\(\\)\\-−"\\'"])(${escaped})(?=[\\s\\.,!?;:\\(\\)\\-−"\\'"]|$)`,
-    'gui'
-  );
+  // Köşeli parantez içinde: literal karakterler (parantez escape çıkırıldı)
+  const boundary = '[\\s.,;:!?()\\-−"\']';
+  const pattern = `(^|${boundary})(${escaped})(?=${boundary}|$)`;
+
+  try {
+    return new RegExp(pattern, 'gui');
+  } catch (err) {
+    console.error(`[buildTurkishWordRegex] Invalid pattern for word="${word}" pattern="${pattern}":`, err);
+    // Fallback: kelimeyi literal match et (word boundary yok)
+    return new RegExp(`\\b${escaped}\\b`, 'gui');
+  }
 }
 
 function escapeHtml(text: string): string {
