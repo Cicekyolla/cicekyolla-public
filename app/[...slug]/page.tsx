@@ -226,12 +226,16 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   if (page.intro_html) {
     try {
       const linkData = await getLinkData();
+      console.log(`[DeliveryLanding] page=${page.url_path} linkData.length=${linkData.length}`);
       if (linkData.length > 0) {
+        const linkCountBefore = (page.intro_html.match(/<a\s/g) || []).length;
         injectedIntroHtml = injectLinksIntoHtml(
           page.intro_html,
           linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
           page.url_path
         );
+        const linkCountAfter = (injectedIntroHtml.match(/<a\s/g) || []).length;
+        console.log(`[DeliveryLanding] injection: before=${linkCountBefore} after=${linkCountAfter} added=${linkCountAfter - linkCountBefore}`);
       }
     } catch (err) {
       console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);

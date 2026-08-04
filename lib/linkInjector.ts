@@ -18,7 +18,10 @@ export function injectLinksIntoHtml(
   currentPageUrl: string,
   maxLinks: number = 8
 ): string {
-  if (!html || words.length === 0) return html;
+  if (!html || words.length === 0) {
+    console.log(`[injectLinksIntoHtml] Skipped: html=${!!html} words=${words.length}`);
+    return html;
+  }
 
   const $ = cheerio.load(html);
   const linked = new Set<string>();
@@ -67,6 +70,7 @@ export function injectLinksIntoHtml(
       }
     });
 
+  console.log(`[injectLinksIntoHtml] Completed: linkCount=${linkCount} linkedWords=${linked.size}`);
   return $.html();
 }
 
