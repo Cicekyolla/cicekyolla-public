@@ -12,8 +12,10 @@ export interface LinkWord {
 
 export async function getLinkData(): Promise<LinkWord[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cicekyolla.com';
-    const response = await fetch(`${apiUrl}/api/public/link-dictionary`, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://cicekyolla-api.onrender.com';
+    const url = `${apiUrl}/api/public/link-dictionary`;
+    console.log('[linkData] Fetching from:', url);
+    const response = await fetch(url, {
       next: { revalidate: 600 },  // 10 min ISR
     });
 
@@ -24,13 +26,14 @@ export async function getLinkData(): Promise<LinkWord[]> {
 
     const data = await response.json();
     const words: LinkWord[] = data.words || [];
+    console.log('[linkData] Loaded', words.length, 'words');
 
     // Uzun adlar ilk (word boundary matching için)
     words.sort((a, b) => b.text.length - a.text.length);
 
     return words;
   } catch (err) {
-    console.error('[linkData]', err instanceof Error ? err.message : err);
+    console.error('[linkData] Fetch failed:', err instanceof Error ? err.message : err);
     return [];
   }
 }
