@@ -235,25 +235,45 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     console.log(`[DeliveryLanding] body_blocks sample (${page.body_blocks.length} blocks): "${bodyText}..."`);
   }
 
-  if (page.intro_html) {
-    try {
-      const linkData = await getLinkData();
-      console.log(`[DeliveryLanding] linkData.length=${linkData.length}`);
-      if (linkData.length > 0) {
+  // Enjeksiyon: intro_html varsa intro'ya, yoksa body_blocks'a
+  let injectedBodyBlocks: typeof page.body_blocks | null = null;
+
+  try {
+    const linkData = await getLinkData();
+    console.log(`[DeliveryLanding] linkData.length=${linkData.length}`);
+
+    if (linkData.length > 0) {
+      if (page.intro_html) {
+        // Enjeksiyon: intro_html
         const linkCountBefore = (page.intro_html.match(/<a\s/g) || []).length;
-        console.log(`[DeliveryLanding] Before injection: linkCount=${linkCountBefore}, htmlLength=${page.intro_html.length}`);
+        console.log(`[DeliveryLanding] Before injection (intro): linkCount=${linkCountBefore}, htmlLength=${page.intro_html.length}`);
         injectedIntroHtml = injectLinksIntoHtml(
           page.intro_html,
           linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
           page.url_path
         );
         const linkCountAfter = (injectedIntroHtml.match(/<a\s/g) || []).length;
-        console.log(`[DeliveryLanding] After injection: linkCount=${linkCountAfter}, added=${linkCountAfter - linkCountBefore}, htmlLength=${injectedIntroHtml.length}`);
+        console.log(`[DeliveryLanding] After injection (intro): linkCount=${linkCountAfter}, added=${linkCountAfter - linkCountBefore}, htmlLength=${injectedIntroHtml.length}`);
+      } else if (page.body_blocks && page.body_blocks.length > 0) {
+        // Enjeksiyon: body_blocks (intro boşsa)
+        console.log(`[DeliveryLanding] Injecting into body_blocks (${page.body_blocks.length} blocks)`);
+        injectedBodyBlocks = page.body_blocks
+          .filter((block) => block.text && block.text.length > 0)
+          .map((block) => ({
+            ...block,
+            text: injectLinksIntoHtml(
+              block.text || '',
+              linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
+              page.url_path
+            ),
+          }));
+        const totalLinks = injectedBodyBlocks.reduce((sum, b) => sum + ((b.text || '').match(/<a\s/g) || []).length, 0);
+        console.log(`[DeliveryLanding] After injection (body_blocks): totalLinks=${totalLinks}`);
       }
-    } catch (err) {
-      console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);
-      // Hata durumunda orijinal HTML kullan
     }
+  } catch (err) {
+    console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);
+    // Hata durumunda orijinal HTML/blocks kullan
   }
   // Bağlayıcı iş kuralı: yalnız İstanbul aynı gün; diğer tüm il/ilçe/mahalleler kargo.
   const cargoMode = parts[0] !== "istanbul";
@@ -336,6 +356,8 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     ) : products.length ? <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">{products.map((p) => <Link key={p.id} href={`/urun/${p.slug}`} className="group overflow-hidden rounded-[18px] bg-white"><div className="aspect-square overflow-hidden rounded-[18px] bg-[#f7f5fa]">{p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="grid h-full place-items-center text-[#8b5cf6]">ÇiçekYolla</div>}</div><div className="pt-5"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">{cargoMode ? "Türkiye Geneli Kargo" : "Premium Aranjman"}</p><h3 className="mt-3 text-lg font-semibold text-[#171020]">{p.name}</h3><p className="mt-3 text-xl font-bold">₺{p.price.toLocaleString("tr-TR")}</p></div></Link>)}</div> : <div className="mt-10 rounded-[24px] border border-[#ede9fe] bg-white p-8"><p className="text-[#746c80]">{cargoMode ? "Şu anda Türkiye geneli kargoya açık ürün bulunmuyor." : "Bu bölgeye gönderilebilen güncel ürünler çiçek koleksiyonunda listeleniyor."}</p><Link href={cargoMode ? "/kategori/turkiye-geneli-kargo" : "/kategori/cicekler"} className="mt-5 inline-flex rounded-full bg-[#8b5cf6] px-6 py-3 font-bold text-white">{cargoMode ? "Tüm Kargolu Ürünleri Gör" : "Çiçekleri İncele"}</Link></div>}</section>
 
     {injectedIntroHtml ? <section className="bg-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px] prose prose-sm max-w-none text-[#4b5563]"><div className="space-y-6 text-lg leading-8" dangerouslySetInnerHTML={{ __html: injectedIntroHtml }} /></div></section> : null}
+
+    {injectedBodyBlocks && injectedBodyBlocks.length > 0 ? <section className="bg-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px] prose prose-sm max-w-none text-[#4b5563]"><div className="space-y-6 text-lg leading-8">{injectedBodyBlocks.map((block, i) => block.type === 'paragraph' ? <p key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} /> : block.type === 'heading' ? <h2 key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} /> : <p key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} />)}</div></div></section> : null}
 
     {page.faq && page.faq.length > 0 ? <section className="bg-gradient-to-b from-[#f7f5fc] to-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-14 text-center"><h2 className="font-serif text-5xl font-semibold text-[#140b20]">Sıkça Sorulan Sorular</h2><p className="mt-4 text-lg text-[#667085]">{place} bölgesinde çiçek gönderimiyle ilgili merak edilen konular</p></div><div className="grid gap-6 md:grid-cols-2">{page.faq.map((item, i) => item.q && item.a ? <div key={i} className="rounded-[20px] border border-[#ebe7f2] bg-white p-8 shadow-sm"><h3 className="font-semibold text-[#140b20]">{item.q}</h3><p className="mt-4 text-[#667085]">{item.a}</p></div> : null)}</div></div></section> : null}
 
