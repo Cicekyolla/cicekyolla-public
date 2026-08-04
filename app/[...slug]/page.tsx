@@ -227,8 +227,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   console.log(`[DeliveryLanding] page.url_path=${page.url_path}, contentSource=${contentSource}, intro_html.length=${page.intro_html?.length || 0}, body_blocks.count=${page.body_blocks?.length || 0}`);
 
   let injectedIntroHtml = page.intro_html;
-  const hasIntro = !!page.intro_html && page.intro_html.length > 0;
-  if (hasIntro) {
+  if (page.intro_html && page.intro_html.length > 0) {
     const sampleText = page.intro_html.substring(0, 150).replace(/\n/g, ' ');
     console.log(`[DeliveryLanding] intro_html sample: "${sampleText}..."`);
   } else if (page.body_blocks && page.body_blocks.length > 0) {
