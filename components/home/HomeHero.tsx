@@ -14,13 +14,48 @@
  * Token: var(--font-display)=Fraunces (globals.css). Yeni token/mock/placeholder YOK.
  */
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Clock3, Package, Headset, Gem } from "lucide-react";
 
-export function HomeHero() {
+type HeroConfig = {
+  headline?: string;
+  subtitle?: string;
+  badge?: string;
+  media?: {
+    desktop?: string;
+    tablet?: string;
+    mobile?: string;
+    alt?: string;
+    focal_point?: { x: number; y: number };
+  };
+  cta1?: { label?: string; href?: string };
+  cta2?: { label?: string; href?: string };
+};
+
+const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92";
+
+export function HomeHero({ config = {} }: { config?: HeroConfig }) {
   const heroRef = useRef<HTMLDivElement>(null);
+  const [mediaFailed, setMediaFailed] = useState(false);
+  const hasCustomHeadline = Boolean(config.headline?.trim());
+  const headline = config.headline?.trim() || "Her Duygu\nBir Çiçekle\nAnlam Kazanır";
+  const subtitle = config.subtitle?.trim() || "Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat.";
+  const badge = config.badge?.trim() || "Aynı Gün Teslimat Aktif";
+  const cta1 = {
+    label: config.cta1?.label?.trim() || "Koleksiyonu Keşfet",
+    href: config.cta1?.href?.trim() || "/kategori/buketler",
+  };
+  const cta2 = {
+    label: config.cta2?.label?.trim() || "WhatsApp Sipariş",
+    href: config.cta2?.href?.trim() || "https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum",
+  };
+  const desktopImage = config.media?.desktop?.trim() || DEFAULT_HERO_IMAGE;
+  const tabletImage = config.media?.tablet?.trim();
+  const mobileImage = config.media?.mobile?.trim();
+  const focal = config.media?.focal_point;
+  const objectPosition = focal ? `${focal.x * 100}% ${focal.y * 100}%` : "center";
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -37,15 +72,41 @@ export function HomeHero() {
     >
       {/* Parallax image — clipped inside its own container */}
       <motion.div style={{ y: heroImgY }} className="absolute inset-0 overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92"
-          alt="Cinematic luxury flowers"
-          className="w-full h-full object-cover"
-          style={{
-            transform: "scale(1.12)",
-            animation: "kenburns 18s ease-in-out infinite alternate",
-          }}
-        />
+        {mediaFailed ? (
+          <img
+            src={DEFAULT_HERO_IMAGE}
+            alt="ÇiçekYolla premium çiçek koleksiyonu"
+            width={2800}
+            height={1800}
+            loading="eager"
+            fetchPriority="high"
+            className="w-full h-full object-cover"
+            style={{
+              transform: "scale(1.12)",
+              animation: "kenburns 18s ease-in-out infinite alternate",
+            }}
+          />
+        ) : (
+          <picture className="block w-full h-full">
+            {mobileImage ? <source media="(max-width: 639px)" srcSet={mobileImage} /> : null}
+            {tabletImage ? <source media="(max-width: 1023px)" srcSet={tabletImage} /> : null}
+            <img
+              src={desktopImage}
+              alt={config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu"}
+              width={2800}
+              height={1800}
+              loading="eager"
+              fetchPriority="high"
+              onError={() => setMediaFailed(true)}
+              className="w-full h-full object-cover"
+              style={{
+                objectPosition,
+                transform: "scale(1.12)",
+                animation: "kenburns 18s ease-in-out infinite alternate",
+              }}
+            />
+          </picture>
+        )}
         <style>{`
           @keyframes kenburns {
             from { transform: scale(1.14) translate(-0.8%, 0.6%); }
@@ -107,7 +168,7 @@ export function HomeHero() {
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
               </span>
               <span className="text-white/80 text-[11px] tracking-[0.18em] uppercase font-medium">
-                Aynı Gün Teslimat Aktif
+                {badge}
               </span>
             </motion.div>
 
@@ -123,22 +184,19 @@ export function HomeHero() {
               }}
               className="text-[3.8rem] sm:text-[5rem] lg:text-[6.5rem] font-semibold text-white mb-7"
             >
-              Her Duygu
-              <br />
-              <em
-                className="not-italic"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #C084FC 0%, #E9D5FF 50%, #C084FC 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                Bir Çiçekle
-              </em>
-              <br />
-              Anlam Kazanır
+              {hasCustomHeadline ? <span className="whitespace-pre-line">{headline}</span> : <>
+                Her Duygu<br />
+                <em
+                  className="not-italic"
+                  style={{
+                    background: "linear-gradient(135deg, #C084FC 0%, #E9D5FF 50%, #C084FC 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >Bir Çiçekle</em><br />
+                Anlam Kazanır
+              </>}
             </motion.h1>
 
             <motion.p
@@ -147,8 +205,7 @@ export function HomeHero() {
               transition={{ delay: 0.55, duration: 0.7 }}
               className="text-white/60 text-lg leading-relaxed mb-10 max-w-[460px]"
             >
-              Özenle seçilmiş premium
-              aranjmanlar, zarif paketleme, aynı gün teslimat.
+              {subtitle}
             </motion.p>
 
             <motion.div
@@ -157,7 +214,7 @@ export function HomeHero() {
               transition={{ delay: 0.7, duration: 0.6 }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <Link href="/kategori/buketler" className="inline-block">
+              <Link href={cta1.href} className="inline-block">
                 <motion.span
                   whileHover={{ scale: 1.04, y: -3 }}
                   whileTap={{ scale: 0.97 }}
@@ -169,13 +226,13 @@ export function HomeHero() {
                       "0 12px 40px rgba(139,92,246,0.55), 0 0 0 1px rgba(255,255,255,0.08)",
                   }}
                 >
-                  Koleksiyonu Keşfet
+                  {cta1.label}
                   <ArrowRight className="w-4 h-4" />
                 </motion.span>
               </Link>
               <motion.a
                 whileHover={{ scale: 1.03 }}
-                href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
+                href={cta2.href}
                 className="flex items-center justify-center gap-3 px-9 py-4 rounded-full text-white/90 text-sm font-semibold transition-colors"
                 style={{
                   background: "rgba(255,255,255,0.07)",
@@ -184,7 +241,7 @@ export function HomeHero() {
                 }}
               >
                 <MessageCircle className="w-4 h-4" />
-                WhatsApp Sipariş
+                {cta2.label}
               </motion.a>
             </motion.div>
 
