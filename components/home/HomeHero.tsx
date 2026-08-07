@@ -18,6 +18,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Clock3, Package, Headset, Gem } from "lucide-react";
+import { mediaUrl } from "@/lib/media";
 
 type HeroConfig = {
   headline?: string;
@@ -52,9 +53,9 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
     label: config.cta2?.label?.trim() || "WhatsApp Sipariş",
     href: config.cta2?.href?.trim() || "https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum",
   };
-  const desktopImage = config.media?.desktop?.trim() || DEFAULT_HERO_IMAGE;
-  const tabletImage = config.media?.tablet?.trim();
-  const mobileImage = config.media?.mobile?.trim();
+  const desktopImage = mediaUrl(config.media?.desktop?.trim()) || DEFAULT_HERO_IMAGE;
+  const tabletImage = mediaUrl(config.media?.tablet?.trim());
+  const mobileImage = mediaUrl(config.media?.mobile?.trim());
   const bannerHref = config.media?.href?.trim();
   const hasCmsMedia = Boolean(config.media?.desktop?.trim() || tabletImage || mobileImage);
   const focal = config.media?.focal_point;
