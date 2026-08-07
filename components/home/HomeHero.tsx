@@ -106,7 +106,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               }}
             />
           </picture>
-        )
+        )}
         <style>{`
           @keyframes kenburns {
             from { transform: scale(1.14) translate(-0.8%, 0.6%); }
