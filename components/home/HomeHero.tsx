@@ -14,7 +14,7 @@
  * Token: var(--font-display)=Fraunces (globals.css). Yeni token/mock/placeholder YOK.
  */
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Clock3, Package, Headset, Gem } from "lucide-react";
@@ -38,6 +38,7 @@ const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1490750967868-88df
 
 export function HomeHero({ config = {} }: { config?: HeroConfig }) {
   const heroRef = useRef<HTMLDivElement>(null);
+  const [mediaFailed, setMediaFailed] = useState(false);
   const hasCustomHeadline = Boolean(config.headline?.trim());
   const headline = config.headline?.trim() || "Her Duygu\nBir Çiçekle\nAnlam Kazanır";
   const subtitle = config.subtitle?.trim() || "Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat.";
@@ -71,20 +72,41 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
     >
       {/* Parallax image — clipped inside its own container */}
       <motion.div style={{ y: heroImgY }} className="absolute inset-0 overflow-hidden">
-        <picture>
-          {mobileImage ? <source media="(max-width: 639px)" srcSet={mobileImage} /> : null}
-          {tabletImage ? <source media="(max-width: 1023px)" srcSet={tabletImage} /> : null}
+        {mediaFailed ? (
           <img
-            src={desktopImage}
-            alt={config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu"}
+            src={DEFAULT_HERO_IMAGE}
+            alt="ÇiçekYolla premium çiçek koleksiyonu"
+            width={2800}
+            height={1800}
+            loading="eager"
+            fetchPriority="high"
             className="w-full h-full object-cover"
             style={{
-              objectPosition,
               transform: "scale(1.12)",
               animation: "kenburns 18s ease-in-out infinite alternate",
             }}
           />
-        </picture>
+        ) : (
+          <picture className="block w-full h-full">
+            {mobileImage ? <source media="(max-width: 639px)" srcSet={mobileImage} /> : null}
+            {tabletImage ? <source media="(max-width: 1023px)" srcSet={tabletImage} /> : null}
+            <img
+              src={desktopImage}
+              alt={config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu"}
+              width={2800}
+              height={1800}
+              loading="eager"
+              fetchPriority="high"
+              onError={() => setMediaFailed(true)}
+              className="w-full h-full object-cover"
+              style={{
+                objectPosition,
+                transform: "scale(1.12)",
+                animation: "kenburns 18s ease-in-out infinite alternate",
+              }}
+            />
+          </picture>
+        )
         <style>{`
           @keyframes kenburns {
             from { transform: scale(1.14) translate(-0.8%, 0.6%); }
