@@ -157,7 +157,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
           H1 yukarı çekildi, slider→Hero geçişi kompakt. Hero yüksekliği (82svh) + mor zemin korunur. */}
       <motion.div
         style={{ y: heroTextY, opacity: heroOpacity, minHeight: "82svh" }}
-        className="relative z-10 flex items-start pt-3 lg:pt-4 pb-16"
+        className="relative z-10 flex items-start pt-3 lg:pt-4 pb-10 sm:pb-16"
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14 w-full">
           <div className="max-w-[660px]">
@@ -166,7 +166,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="inline-flex items-center gap-2.5 mb-6"
+              className="inline-flex items-center gap-2.5 mb-4 sm:mb-6"
               style={{
                 background: "rgba(255,255,255,0.06)",
                 backdropFilter: "blur(20px)",
@@ -191,10 +191,9 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
               style={{
                 fontFamily: "var(--font-display)",
-                lineHeight: 1.0,
                 letterSpacing: "-0.02em",
               }}
-              className="text-[3.8rem] sm:text-[5rem] lg:text-[6.5rem] font-semibold text-white mb-7"
+              className="text-[3.1rem] sm:text-[5rem] lg:text-[6.5rem] leading-[0.96] sm:leading-none font-semibold text-white mb-5 sm:mb-7"
             >
               {hasCustomHeadline ? <span className="whitespace-pre-line">{headline}</span> : <>
                 Her Duygu<br />
@@ -215,7 +214,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.55, duration: 0.7 }}
-              className="text-white/60 text-lg leading-relaxed mb-10 max-w-[460px]"
+              className="text-white/60 text-base sm:text-lg leading-[1.6] sm:leading-relaxed mb-7 sm:mb-10 max-w-[460px]"
             >
               {subtitle}
             </motion.p>
@@ -224,7 +223,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7, duration: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4"
             >
               <Link href={cta1.href} className="inline-block">
                 <motion.span
@@ -263,7 +262,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9, duration: 0.6 }}
-              className="mt-10 flex flex-wrap gap-2.5"
+              className="mt-7 sm:mt-10 flex flex-wrap gap-2.5"
             >
               {([
                 { Icon: Clock3, label: "Bugün hazırlanır" },
