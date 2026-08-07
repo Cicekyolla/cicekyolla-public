@@ -10,8 +10,9 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
+import { resolveManagedRedirect } from "@/lib/managed-redirects";
 const categorySlugs = new Set(legacyCategorySlugs);
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
 const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
     return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);
@@ -73,6 +74,18 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
       );
     }
   }
+  // EK (YÖNETİLEN YÖNLENDİRME): AI Merkezi'nde onaylanmış 301'ler.
+  // EN SONDA bakılır — yukarıdaki hiçbir kural tutmadıysa. Mevcut kurallar
+  // her zaman önceliklidir ve davranışları değişmemiştir.
+  // API erişilemezse/yavaşsa null döner ve istek bugünkü gibi devam eder.
+  const managed = await resolveManagedRedirect(req.nextUrl.pathname);
+  if (managed) {
+    return NextResponse.redirect(
+      new URL(managed.to, req.nextUrl.origin),
+      managed.code,
+    );
+  }
+
   const res = NextResponse.next();
   const isPreview = req.nextUrl.pathname === "/onizleme";
   if (!SITE_INDEXABLE || isPreview) {
