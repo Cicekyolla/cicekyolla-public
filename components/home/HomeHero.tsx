@@ -28,6 +28,7 @@ type HeroConfig = {
     tablet?: string;
     mobile?: string;
     alt?: string;
+    href?: string;
     focal_point?: { x: number; y: number };
   };
   cta1?: { label?: string; href?: string };
@@ -54,8 +55,32 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
   const desktopImage = config.media?.desktop?.trim() || DEFAULT_HERO_IMAGE;
   const tabletImage = config.media?.tablet?.trim();
   const mobileImage = config.media?.mobile?.trim();
+  const bannerHref = config.media?.href?.trim();
+  const hasCmsMedia = Boolean(config.media?.desktop?.trim() || tabletImage || mobileImage);
   const focal = config.media?.focal_point;
   const objectPosition = focal ? `${focal.x * 100}% ${focal.y * 100}%` : "center";
+  const heroAlt = config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu";
+  const heroPicture = (
+    <picture className="block w-full h-full">
+      {mobileImage ? <source media="(max-width: 639px)" srcSet={mobileImage} /> : null}
+      {tabletImage ? <source media="(max-width: 1023px)" srcSet={tabletImage} /> : null}
+      <img
+        src={desktopImage}
+        alt={heroAlt}
+        width={2800}
+        height={1800}
+        loading="eager"
+        fetchPriority="high"
+        onError={() => setMediaFailed(true)}
+        className="w-full h-full object-cover"
+        style={{
+          objectPosition,
+          transform: "scale(1.12)",
+          animation: "kenburns 18s ease-in-out infinite alternate",
+        }}
+      />
+    </picture>
+  );
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -86,26 +111,12 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               animation: "kenburns 18s ease-in-out infinite alternate",
             }}
           />
+        ) : bannerHref && hasCmsMedia ? (
+          <Link href={bannerHref} aria-label={heroAlt} className="block w-full h-full">
+            {heroPicture}
+          </Link>
         ) : (
-          <picture className="block w-full h-full">
-            {mobileImage ? <source media="(max-width: 639px)" srcSet={mobileImage} /> : null}
-            {tabletImage ? <source media="(max-width: 1023px)" srcSet={tabletImage} /> : null}
-            <img
-              src={desktopImage}
-              alt={config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu"}
-              width={2800}
-              height={1800}
-              loading="eager"
-              fetchPriority="high"
-              onError={() => setMediaFailed(true)}
-              className="w-full h-full object-cover"
-              style={{
-                objectPosition,
-                transform: "scale(1.12)",
-                animation: "kenburns 18s ease-in-out infinite alternate",
-              }}
-            />
-          </picture>
+          heroPicture
         )}
         <style>{`
           @keyframes kenburns {
