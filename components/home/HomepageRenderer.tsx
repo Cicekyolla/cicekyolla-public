@@ -48,7 +48,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "collection_rail":
       return <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0"><FloatingCategoryRail items={ctx.collections} /></section>;
     case "hero_delivery_bar":   return <HeroDeliveryBar />;
-    case "hero":               return <HomeHero />;
+    case "hero":               return <HomeHero config={s.config} />;
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
     case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} config={s.config} />;
