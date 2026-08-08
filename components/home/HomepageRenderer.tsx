@@ -30,6 +30,7 @@ import { Newsletter } from "./Newsletter";
 import { ProductShowcase } from "./ProductShowcase";
 import { EditorsPicks } from "./EditorsPicks";
 import { WorkshopToday } from "./WorkshopToday";
+import type { WorkshopSlot } from "./WorkshopToday";
 import { MoodPicker } from "./MoodPicker";
 import type { ShowcaseFill } from "@/lib/homepageShowcase";
 
@@ -41,6 +42,49 @@ export interface RenderCtx {
   /** V65: product_showcase bölümlerinin sıralı tema ailesi ve boş vitrin dolguları.
       DTO'da ürün VARSA DTO kazanır — admin üstünlüğü korunur. */
   showcaseFills?: ShowcaseFill[];
+}
+
+/**
+ * "Atölyeden Bugün" bölümünü en fazla 3 slota indirger:
+ *   1) Admin'de seçilen ÜRÜNLER — kapak görseli, adı, fiyatı; /urun/{slug}'a gider.
+ *   2) Kalan slotlar config.cards editöryel BANNER kartlarıyla dolar.
+ * Eksik kalan slotları bileşenin kendi statik varsayılanı tamamlar, yani
+ * dönen dizi 3'ten kısa olabilir — bu kasıtlıdır.
+ */
+function buildWorkshopSlots(s: HpSection): WorkshopSlot[] {
+  const slots: WorkshopSlot[] = [];
+
+  for (const p of s.products ?? []) {
+    if (slots.length >= 3) break;
+    if (!p.cover_image_url) continue; // görselsiz ürün slotu bozar → statik karta bırak
+    const minor = p.sale_price_minor ?? p.price_minor;
+    slots.push({
+      title: p.name,
+      tag: p.is_new ? "Yeni" : "Bugün atölyeden",
+      text: `₺${Math.round(Number(minor) / 100)}`,
+      image: p.cover_image_url,
+      href: `/urun/${p.slug}`,
+    });
+  }
+
+  const raw = (s.config as { cards?: unknown })?.cards;
+  const cards = Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
+  for (const c of cards) {
+    if (slots.length >= 3) break;
+    if (c?.enabled === false) continue;
+    const image = typeof c?.image === "string" ? c.image : "";
+    const name = typeof c?.name === "string" ? c.name : "";
+    if (!image || !name) continue; // eksik kart sessizce atlanır, slot statiğe düşer
+    slots.push({
+      title: name,
+      tag: typeof c?.eyebrow === "string" ? c.eyebrow : undefined,
+      text: typeof c?.description === "string" ? c.description : undefined,
+      image,
+      href: typeof c?.href === "string" ? c.href : undefined,
+    });
+  }
+
+  return slots;
 }
 
 function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
@@ -58,6 +102,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
     case "best_sellers":        return <ProductShowcase title={s.title?.trim() && s.title.trim() !== "Çok Satanlar" ? s.title : "En Çok Tercih Edilenler"} subtitle={s.subtitle ?? "Müşterilerimizin favori çiçekleri."} products={s.products} />;
     case "editors_picks":       return <EditorsPicks title={s.title} subtitle={s.subtitle} config={s.config} />;
+    case "workshop_today":      return <WorkshopToday title={s.title} subtitle={s.subtitle} slots={buildWorkshopSlots(s)} />;
     case "brand_story":         return <BrandStory />;
     case "testimonials":        return <Testimonials />;
     case "instagram_gallery":   return <InstagramGallery config={s.config} />;
@@ -164,6 +209,11 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
   // V65 premium bölüm çapaları: Atölyeden Bugün hero'nun hemen ardından,
   // Duyguna Göre Seç occasion_shopping'in (yoksa best_sellers'ın) ardından.
   const hasHeroSection = enabledSections.some((s) => s.type === "hero");
+  // "Atölyeden Bugün" CMS bölümü olarak eklendiyse hero'ya çapalı statik kopya
+  // ÇİZİLMEZ — aksi halde sayfada iki kez görünürdü (collection_rail/editors_picks
+  // ile aynı duplicate koruması). Bölüm yoksa veya kampanya penceresi kapandıysa
+  // (starts_at/ends_at) DTO'dan düşer ve statik hâli otomatik geri gelir.
+  const hasWorkshopToday = enabledSections.some((s) => s.type === "workshop_today");
   const moodAnchor = enabledSections.some((s) => s.type === "occasion_shopping")
     ? "occasion_shopping"
     : enabledSections.some((s) => s.type === "best_sellers")
@@ -196,14 +246,14 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
       {enabledSections.map((s) => (
         <Fragment key={s.id}>
           {renderSection(s, ctx, fillAssign.get(s.id))}
-          {s.type === "hero" ? <WorkshopToday /> : null}
+          {!hasWorkshopToday && s.type === "hero" ? <WorkshopToday /> : null}
           {moodAnchor && s.type === moodAnchor ? <MoodPicker /> : null}
           {!hasUrgencyStrip && s.type === "featured_collections" ? <UrgencyStrip /> : null}
           {!hasEditorsPicks && s.type === editorFallbackAnchor ? <EditorsPicks config={{}} /> : null}
           {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
         </Fragment>
       ))}
-      {!hasHeroSection ? <WorkshopToday /> : null}
+      {!hasWorkshopToday && !hasHeroSection ? <WorkshopToday /> : null}
       {moodAnchor === null ? <MoodPicker /> : null}
       {!hasEditorsPicks && editorFallbackAnchor === null ? <EditorsPicks config={{}} /> : null}
       {!hasFeatureSplit && fallbackAnchor === null ? <FeatureSplit /> : null}

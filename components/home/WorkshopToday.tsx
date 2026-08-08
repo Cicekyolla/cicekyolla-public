@@ -7,8 +7,24 @@
  * ALINMADI. Metinler kullanıcı onaylı final metinlerdir — değiştirme.
  */
 
+import Link from "next/link";
 import { motion } from "motion/react";
 import { Sparkles, Gift, Flower2, Clock3, Package, Headset, Gem } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+/**
+ * CMS'ten (Homepage CMS → "Atölyeden Bugün") gelen tek slot. Slot ya seçilen
+ * bir ÜRÜNÜ ya da editöryel bir BANNER kartını temsil eder; ikisi de aynı
+ * görsel kalıba oturur, bu yüzden tek tip yeterlidir.
+ */
+export interface WorkshopSlot {
+  title: string;
+  tag?: string;
+  text?: string;
+  image: string;
+  href?: string;
+  Icon?: LucideIcon;
+}
 
 const CARDS = [
   {
@@ -34,7 +50,21 @@ const CARDS = [
   },
 ] as const;
 
-export function WorkshopToday() {
+export function WorkshopToday({
+  title,
+  subtitle,
+  slots,
+}: {
+  title?: string | null;
+  subtitle?: string | null;
+  slots?: WorkshopSlot[];
+} = {}) {
+  // Grid 3 slota sabittir (md:grid-cols-3). CMS'ten gelen kartlar sırayla
+  // yerleşir, kalan slotlar bugünkü statik kartlarla dolar → slot hiçbir
+  // kombinasyonda boş kalmaz ve tasarım bozulmaz. CMS hiç yoksa (yayın yok,
+  // API hatası, bölüm silinmiş) sonuç bugünkü ekranın birebir aynısıdır.
+  const cards: WorkshopSlot[] = [0, 1, 2].map((i) => slots?.[i] ?? CARDS[i]);
+
   return (
     <section aria-label="Atölyeden Bugün" className="relative bg-[#0A0118] overflow-hidden">
       {/* Soft lila ışık — hero ailesiyle aynı token rengi, abartısız */}
@@ -61,22 +91,24 @@ export function WorkshopToday() {
             className="text-white text-3xl lg:text-[2.6rem] font-semibold mb-3"
             style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
           >
-            Atölyeden Bugün
+            {title?.trim() || "Atölyeden Bugün"}
           </h2>
           <p className="text-white/55 text-base lg:text-lg max-w-[520px]">
-            Ustalarımızın bugün özenle hazırladığı taze ve premium seçkiler.
+            {subtitle?.trim() || "Ustalarımızın bugün özenle hazırladığı taze ve premium seçkiler."}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-          {CARDS.map((card, idx) => (
+          {cards.map((card, idx) => {
+            const Icon = card.Icon ?? Sparkles;
+            const article = (
             <motion.article
-              key={card.title}
+              key={`${idx}-${card.title}`}
               initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.12, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden rounded-[24px]"
+              className="overflow-hidden rounded-[24px] h-full"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 backdropFilter: "blur(24px) saturate(160%)",
@@ -96,26 +128,40 @@ export function WorkshopToday() {
                   className="absolute inset-0"
                   style={{ background: "linear-gradient(to top, rgba(10,1,24,0.55) 0%, transparent 45%)", pointerEvents: "none" }}
                 />
-                <span
-                  className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold tracking-wider text-white"
-                  style={{
-                    background: "rgba(139,92,246,0.80)",
-                    backdropFilter: "blur(12px)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                  }}
-                >
-                  <card.Icon className="w-3 h-3" aria-hidden="true" />
-                  {card.tag}
-                </span>
+                {card.tag ? (
+                  <span
+                    className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold tracking-wider text-white"
+                    style={{
+                      background: "rgba(139,92,246,0.80)",
+                      backdropFilter: "blur(12px)",
+                      border: "1px solid rgba(255,255,255,0.18)",
+                    }}
+                  >
+                    <Icon className="w-3 h-3" aria-hidden="true" />
+                    {card.tag}
+                  </span>
+                ) : null}
               </div>
               <div className="p-5 lg:p-6">
                 <h3 className="text-white text-lg font-semibold mb-1.5" style={{ fontFamily: "var(--font-display)" }}>
                   {card.title}
                 </h3>
-                <p className="text-white/55 text-sm leading-relaxed">{card.text}</p>
+                {card.text ? (
+                  <p className="text-white/55 text-sm leading-relaxed">{card.text}</p>
+                ) : null}
               </div>
             </motion.article>
-          ))}
+            );
+            // href yalnız CMS kartlarında dolu olur. Statik varsayılanlarda href
+            // yoktur → bugünkü DOM birebir korunur (article doğrudan grid child).
+            return card.href ? (
+              <Link key={`${idx}-${card.title}`} href={card.href} className="block h-full">
+                {article}
+              </Link>
+            ) : (
+              article
+            );
+          })}
         </div>
 
         {/* Trust şerit (V65) — kartların altında ince, cam efektli güven satırı */}
