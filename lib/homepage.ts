@@ -12,7 +12,8 @@ export type HpSectionType =
   | 'featured_collections' | 'urgency_strip' | 'feature_split' | 'same_day_delivery'
   | 'occasion_shopping' | 'best_sellers' | 'editors_picks' | 'brand_story'
   | 'testimonials' | 'instagram_gallery' | 'corporate_references'
-  | 'district_delivery' | 'whatsapp_cta' | 'newsletter' | 'product_showcase';
+  | 'district_delivery' | 'whatsapp_cta' | 'newsletter' | 'product_showcase'
+  | 'workshop_today';
 
 export interface HpProduct {
   id: number; name: string; slug: string; price_minor: number;
