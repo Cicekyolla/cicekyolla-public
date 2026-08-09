@@ -89,7 +89,7 @@ function corporateReferenceImage(reference: CorporateReference): string {
 export function CorporateReferences({ clients }: { clients?: CorporateClients }) {
   if (!clients?.enabled) return null;
 
-  const corporateWhatsApp = `https://wa.me/905074413474?text=${encodeURIComponent(
+  const corporateWhatsApp = `https://wa.me/905458813450?text=${encodeURIComponent(
     "Merhaba, kurumsal çiçek ve dekorasyon çözümleri için teklif almak istiyorum.",
   )}`;
 

@@ -68,7 +68,7 @@ export function ProductTrustPanel() {
       </details>
 
       <a
-        href="https://wa.me/905074413474?text=Merhaba%2C%20%C3%B6deme%20ve%20sipari%C5%9F%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
+        href="https://wa.me/905458813450?text=Merhaba%2C%20%C3%B6deme%20ve%20sipari%C5%9F%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-between border-t border-[#E4DCEB] bg-white/45 px-7 py-4 text-[12.5px] font-semibold text-[#5C3A73] transition hover:bg-white/70 hover:text-[#7C3AED]"

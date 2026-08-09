@@ -69,7 +69,7 @@ const DEFAULT_CARDS: FeaturedCollectionCard[] = [
 const DEFAULT_PERSONALIZED: FeaturedCollectionCard = {
   id: "personalized",
   name: "Kişiye Özel Tasarım",
-  href: "https://wa.me/905074413474?text=Merhaba%2C%20ki%C5%9Fiye%20%C3%B6zel%20bir%20tasar%C4%B1m%20haz%C4%B1rlatmak%20istiyorum",
+  href: "https://wa.me/905458813450?text=Merhaba%2C%20ki%C5%9Fiye%20%C3%B6zel%20bir%20tasar%C4%B1m%20haz%C4%B1rlatmak%20istiyorum",
   image: "/featured-collections/personalized-terrarium-lifestyle.webp",
   eyebrow: "Sadece Size Özel",
   description: "Hayalinizdeki hikâyeyi, size özel hazırlanan yaşayan bir tasarıma dönüştürelim.",

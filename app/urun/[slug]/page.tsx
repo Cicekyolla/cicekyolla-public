@@ -332,7 +332,7 @@ export default async function ProductPage({ params }: PageProps) {
               Bu ürün ve teslimat süreciyle ilgili en çok sorulan soruları derledik. Başka bir sorunuz varsa bize ulaşabilirsiniz.
             </p>
             <a
-              href="https://wa.me/905074413474?text=Merhaba%2C%20%C3%BCr%C3%BCn%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
+              href="https://wa.me/905458813450?text=Merhaba%2C%20%C3%BCr%C3%BCn%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
               target="_blank"
               rel="nofollow noopener noreferrer"
               aria-label="WhatsApp'tan ürün hakkında soru sor"

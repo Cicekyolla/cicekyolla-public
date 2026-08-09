@@ -51,7 +51,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
   };
   const cta2 = {
     label: config.cta2?.label?.trim() || "WhatsApp Sipariş",
-    href: config.cta2?.href?.trim() || "https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum",
+    href: config.cta2?.href?.trim() || "https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum",
   };
   const desktopImage = mediaUrl(config.media?.desktop?.trim()) || DEFAULT_HERO_IMAGE;
   const tabletImage = mediaUrl(config.media?.tablet?.trim());

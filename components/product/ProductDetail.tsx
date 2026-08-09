@@ -26,7 +26,7 @@ import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 
-const WHATSAPP = "905074413474";
+const WHATSAPP = "905458813450";
 
 const TYPE_LABEL: Record<string, string> = {
   flower: "Çiçek", plant: "Bitki", wreath: "Çelenk", artificial: "Yapay", gift: "Hediye", service: "Hizmet",

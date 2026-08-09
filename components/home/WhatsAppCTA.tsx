@@ -79,7 +79,7 @@ export function WhatsAppCTA() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <motion.a
-                href="https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
+                href="https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
                 target="_blank"
                 rel="nofollow noopener noreferrer"
                 whileHover={{ scale: 1.05, y: -3 }}
