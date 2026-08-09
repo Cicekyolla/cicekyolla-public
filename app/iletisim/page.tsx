@@ -5,7 +5,7 @@ import { fetchSeoPage } from "@/lib/api";
 export const metadata: Metadata = { title:"İletişim — ÇiçekYolla", description:"ÇiçekYolla iletişim kanalları, çalışma saatleri ve mesaj formu." };
 
 const FALLBACK = [
-  { kind:"whatsapp", label:"WhatsApp", value:"0507 441 34 74", note:"Sipariş ve destek için" },
+  { kind:"whatsapp", label:"WhatsApp", value:"0545 881 34 50", note:"Sipariş ve destek için" },
   { kind:"phone", label:"Telefon", value:"0507 441 34 74", note:"Her gün 08:00–22:00" },
   { kind:"email", label:"E-posta", value:"info@cicekyolla.com.tr", note:"24 saat içinde yanıt" },
   { kind:"address", label:"Adres", value:"İstanbul, Türkiye", note:"ÇiçekYolla" },

@@ -34,7 +34,7 @@ export default function OrderTrackingPage() {
           <div className="mt-8 rounded-[22px] bg-[#f7f5fc] p-6">
             <p className="font-bold text-[#111827]">Sipariş numaranızı bilmiyor musunuz?</p>
             <p className="mt-2 text-sm leading-6 text-[#667085]">WhatsApp üzerinden bize ulaşın, telefon numaranızla siparişinizi birlikte bulalım.</p>
-            <Link href="https://wa.me/905074413474" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-[#7c3aed]">WhatsApp Destek <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="https://wa.me/905458813450" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-[#7c3aed]">WhatsApp Destek <ArrowRight className="h-4 w-4" /></Link>
           </div>
         </section>
       </div>

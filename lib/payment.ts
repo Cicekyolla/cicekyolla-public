@@ -10,7 +10,7 @@ export interface BankAccountPublic {
   note: string | null;
 }
 
-export const SUPPORT_WHATSAPP = "https://wa.me/905074413474";
+export const SUPPORT_WHATSAPP = "https://wa.me/905458813450";
 
 export async function fetchBankAccounts(): Promise<BankAccountPublic[]> {
   try {

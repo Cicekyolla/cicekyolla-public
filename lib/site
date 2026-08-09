@@ -1,13 +1,19 @@
 /**
- * Merkezi site sabitleri — tek gerçek kaynak (single source of truth).
- * WhatsApp numarası/mesajı burada; tüm bileşenler bunu kullanır.
- * Numara değişince SADECE bu dosya düzenlenir (scalable / DRY).
+ * Merkezi site sabitleri.
+ *
+ * ⚠️ DİKKAT — BU DOSYA ŞU AN KULLANILMIYOR. Dosya adının uzantısı yok
+ * ("lib/site", "lib/site.ts" değil), bu yüzden `@/lib/site` importu ÇÖZÜLMEZ.
+ * Aşağıdaki sabitleri hiçbir bileşen import etmiyor; her bileşen numarayı
+ * kendi içinde literal olarak tutuyor. Yani "single source of truth" iddiası
+ * bugün geçerli DEĞİL. Numara değişikliğinde bu dosyayı düzeltmek YETMEZ.
+ * (Dosya, ileride .ts'e taşınıp tek kaynak yapılabilsin diye güncel tutuluyor.)
  *
  * Not: WhatsApp linki uluslararası format ister (baştaki 0 atılır, 90 eklenir, boşluk/tire olmaz).
- * 0507 441 34 74  →  905074413474
+ * RESMİ WHATSAPP: 0545 881 34 50  →  905458813450
+ * (Arama/tel: numarası AYRIDIR: 0507 441 34 74 — WhatsApp için kullanılmaz.)
  */
 
-export const WHATSAPP_NUMBER = "905074413474";
+export const WHATSAPP_NUMBER = "905458813450";
 
 export const WHATSAPP_DEFAULT_MESSAGE = "Merhaba, sipariş vermek istiyorum";
 

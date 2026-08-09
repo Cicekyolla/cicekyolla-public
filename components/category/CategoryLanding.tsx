@@ -22,14 +22,14 @@ import { isLegacyPleskMedia } from "@/lib/media";
  *
  * İç-linkleme (SEO Internal Linking) YALNIZCA backend'in Category Center'dan ürettiği SEO içeriğinden
  * gelir (intro_html / body_blocks içindeki anchor linkler). Hardcoded kategori listesi YOK, seed YOK,
- * ağaç çoğaltılmaz — Category Center tek gerçek kaynaktır. WhatsApp: sabit doğru link (905074413474).
+ * ağaç çoğaltılmaz — Category Center tek gerçek kaynaktır. WhatsApp: sabit doğru link (905458813450).
  *
  * JSON-LD: backend schema_jsonld + FAQPage route'ta basılır → burada TEKRAR ÜRETİLMEZ.
  *          Yalnızca additive BreadcrumbList JSON-LD eklenir (mevcut schema ile çakışmaz).
  */
 
 const WHATSAPP_URL =
-  "https://wa.me/905074413474?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum";
+  "https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum";
 
 /** body_blocks → premium tipografi (route'daki renderBlock ile aynı mantık, stilli). */
 function renderBlock(block: BodyBlock, i: number) {

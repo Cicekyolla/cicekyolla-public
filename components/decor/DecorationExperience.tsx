@@ -38,7 +38,7 @@ export function DecorationExperience({ blocks = [] }: { blocks?: BodyBlock[] }) 
   const filters = ["Tümü", ...Array.from(new Set(projects.map((p) => p.kind)))];
   const visible = useMemo(() => filter === "Tümü" ? projects : projects.filter((p) => p.kind === filter), [filter, projects]);
   const hero = String(settings?.note || "/decor/artificial-decoration-hero.webp");
-  const whatsapp = `https://wa.me/905074413474?text=${encodeURIComponent("Merhaba, yapay çiçek ve mekan dekorasyonu için ücretsiz keşif ve teklif almak istiyorum.")}`;
+  const whatsapp = `https://wa.me/905458813450?text=${encodeURIComponent("Merhaba, yapay çiçek ve mekan dekorasyonu için ücretsiz keşif ve teklif almak istiyorum.")}`;
 
   return <main className="bg-[#fcfbfd] text-[#160b25]">
     <section className="relative min-h-[720px] overflow-hidden bg-[#0b0315] text-white">
