@@ -66,9 +66,27 @@ export async function getIndexableInventory(): Promise<SeoInventoryItem[]> {
   );
 }
 
-// ADDITIVE: neighborhoods.xml — SADECE İstanbul mahalleleri, ayrı filtre.
+// ---------------------------------------------------------------------------
+// ACİL ŞALTER — sitemap'te il kısıtı.
+// BOŞ dizi = kısıt YOK; kural yürürlükte: "panelde yayınlandıysa sitemap'te".
+// Envanter ucu (/api/public/seo/inventory) zaten YALNIZ status='published'
+// kayıtları döndürür, bu yüzden ayrıca yayın kontrolü gerekmez.
+// Bir sorun çıkarsa buraya il slug'ı yazmak yeterli (ör. ["istanbul"]) —
+// GERİ ALMA TEK SATIR, başka hiçbir yere dokunmadan eski davranışa dönülür.
+// ---------------------------------------------------------------------------
+export const SITEMAP_PROVINCE_LOCK: string[] = [];
+
+function passesProvinceLock(urlPath: string): boolean {
+  if (SITEMAP_PROVINCE_LOCK.length === 0) return true;
+  // Derinlik koşulu, kilidin eski startsWith("/istanbul/") davranışıyla
+  // birebir aynı kalması için korunur: il-altı en az bir segment şart.
+  const seg = urlPath.split("/"); // ["", il, ...]
+  return seg.length > 2 && SITEMAP_PROVINCE_LOCK.includes(seg[1]);
+}
+
+// ADDITIVE: neighborhoods.xml — panelde yayınlanmış mahalleler (il ayrımı YOK).
 // Envanteri bypass eder; doğrudan index_state='index' + page_type='neighborhood'
-// + İstanbul URL'leri çeker. 974 İstanbul mahallesi beklenir (db doğrulaması).
+// çeker. Yayın anında index_state'i admin publish() yazar (seoApi.ts).
 export async function getIndexableNeighborhoods(): Promise<SeoInventoryItem[]> {
   if (!SITE_INDEXABLE) return [];
   const inventory = await fetchSeoInventory();
@@ -76,7 +94,7 @@ export async function getIndexableNeighborhoods(): Promise<SeoInventoryItem[]> {
     (item) =>
       item.index_state === "index" &&
       item.page_type === "neighborhood" &&
-      item.url_path.startsWith("/istanbul/") &&
+      passesProvinceLock(item.url_path) &&
       !item.url_path.includes("?") &&
       !item.url_path.includes("#"),
   );
