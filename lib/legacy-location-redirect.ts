@@ -1,5 +1,6 @@
 import locationMap from "@/lib/legacy-location-map.json";
 import publicLocationTargets from "@/lib/legacy-location-public-targets.json";
+import publicNeighborhoodTargets from "@/lib/legacy-neighborhood-targets.json";
 
 const SUFFIXES = [
   "cicek-gonderme",
@@ -21,6 +22,8 @@ const PAIR_ALIASES: Record<string, string> = {
 
 const cities = new Set(Object.keys(locationMap));
 const publicTargets = new Set(publicLocationTargets);
+/** Yayındaki mahalle yolları: "/istanbul/kadikoy/moda-mah" (1.012 adet). */
+const neighborhoodTargets = new Set<string>(publicNeighborhoodTargets);
 const cityDistrictTargets = new Map<string, string>();
 const districtTargets = new Map<string, string[]>();
 
@@ -108,6 +111,64 @@ export function resolveLegacyLocation(pathname: string): LegacyLocationResult {
         normalizedBase: base,
         suffix,
       };
+    }
+  }
+
+  // ── ESKİ SİTE MAHALLE URL'LERİ ────────────────────────────────────────────
+  // Eski site 73.277 mahalle adresi üretiyordu:
+  //   /{il}-{ilce}-{mahalle}-mahallesi-cicekci
+  // Yukarıdaki il-ilçe döngüsü "moda-mahallesi" artığını çözemediği için hepsi
+  // en sonda İL sayfasına düşüyordu (/istanbul, /ankara …): 73 bin URL 4 sayfaya
+  // akıyordu ve Google bunu soft 404 olarak okuyordu.
+  //
+  // Artık en uzun il-ilçe öneki bulunur, kalan kısım mahalle olarak çözülür:
+  //   mahalle yayındaysa  -> /{il}/{ilce}/{mahalle}-mah   (990 URL)
+  //   yayında değilse     -> /{il}/{ilce}                 (72.287 URL)
+  // İkisi de gerçek, yayında ve indekslenmiş hedeflerdir.
+  // Eski slug'lar üç biçimde gelir; hepsi aynı kurala indirgenir:
+  //   ...-mahallesi                         -> /{il}/{ilce}/{ad}-mah
+  //   ...-mahallesi-(filanca-koyu)          -> parantez atılır
+  //   ...-koyu                              -> /{il}/{ilce}/{ad}-koyu
+  const neighborhoodMatch = base
+    .replace(/\(.*?\)/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    // Kısaltmalar da yakalanır: "yenimah." (tiresiz, noktalı), "akca-mh."
+    // Tire opsiyonel; ilçe eşleşmesi bu daldan ÖNCE denendiği için
+    // "/istanbul-cekmekoy-cicekci" gibi adresler buraya hiç düşmez.
+    .match(/^(.*?)-?(mahallesi|mahalle|mah|mh|koyu|koy)\.?$/);
+  if (neighborhoodMatch) {
+    const withoutSuffix = neighborhoodMatch[1];
+    // Kaynak "köy" ise hedef slug'ı da "-koyu" ile aranır (yeni sitede
+    // /bilecik/bozuyuk/akcapinar-koyu gibi kayıtlar var).
+    const targetSuffixes =
+      neighborhoodMatch[2] === "koyu" || neighborhoodMatch[2] === "koy"
+        ? ["koyu", "mah"]
+        : ["mah", "koyu"];
+    const segments = withoutSuffix.split("-");
+    // En UZUN il-ilçe öneki önce denenir: "afyonkarahisar-emirdag" gibi çok
+    // parçalı adlar, kısa öneklerle yanlış eşleşmesin.
+    for (let index = segments.length - 1; index >= 2; index -= 1) {
+      for (let split = 1; split < index; split += 1) {
+        const rawCity = segments.slice(0, split).join("-");
+        const city = CITY_ALIASES[rawCity] ?? rawCity;
+        const district = segments.slice(split, index).join("-");
+        const districtTarget = cityDistrictTargets.get(`${city}-${district}`);
+        if (!districtTarget) continue;
+
+        const neighborhood = segments.slice(index).join("-");
+        const yayindaki = targetSuffixes
+          .map((ek) => `${districtTarget}/${neighborhood}-${ek}`)
+          .find((yol) => neighborhoodTargets.has(yol));
+        return {
+          matched: true,
+          // Mahalle yayındaysa oraya, değilse İLÇE sayfasına. İl sayfasına
+          // düşmek artık yok — 73 bin URL'in 4 il sayfasına akması bitti.
+          destination: yayindaki ?? districtTarget,
+          normalizedBase: base,
+          suffix,
+        };
+      }
     }
   }
 
