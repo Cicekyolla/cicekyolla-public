@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "seo:refresh-targets": "node scripts/refresh-legacy-targets.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
