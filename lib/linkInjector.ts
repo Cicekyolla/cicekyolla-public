@@ -68,7 +68,13 @@ export function injectLinksIntoHtml(
         const url = escapeAttr(word.url);
         const escapedWord = escapeHtml(word.text);
         const token = `\u0000${anchors.length}\u0000`;
-        anchors.push(`<a href="${url}">${escapedWord}</a>`);
+        // GÖRÜNÜRLÜK: Tailwind preflight `a { color: inherit }` uyguluyor ve
+        // kapsayıcıdaki `prose` sınıfları ÖLÜ (@tailwindcss/typography kurulu
+        // değil). Sınıfsız anchor gövde metninden ayırt edilemiyordu: Google
+        // linki görüyor ama kullanıcı göremiyordu. Marka tokenı ile renklendirilir
+        // (--primary = #8B5CF6); hardcode hex KULLANILMAZ. Alt çizgi bilinçli
+        // olarak yok — kurumsal görünüm tercihi.
+        anchors.push(`<a class="text-primary" href="${url}">${escapedWord}</a>`);
 
         // DÜZELTME (Kural 1): gerçekten YALNIZ ilk eşleşme değiştirilir.
         // Öncesinde String.replace /g bayraklı regex ile TÜM eşleşmeleri
