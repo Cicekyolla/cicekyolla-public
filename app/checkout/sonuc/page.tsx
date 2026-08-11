@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Check, X, Loader2, MessageCircle } from "lucide-react";
 import { paytrStatus, SUPPORT_WHATSAPP } from "@/lib/payment";
+import { trackPaidPurchase } from "@/lib/purchaseAnalytics";
 
 /* /checkout/sonuc — PayTR kart ödemesi dönüş sayfası.
    Ödeme onaylanınca (webhook) sipariş numarası GÖSTERİLİR; kural: no ödemeden sonra.
@@ -26,7 +27,12 @@ function Sonuc() {
       try {
         const s = await paytrStatus(oid);
         if (!alive) return;
-        if (s.paid && s.order_number) { setOrderNumber(s.order_number); setState("paid"); return; }
+        if (s.paid && s.order_number) {
+          trackPaidPurchase(s);
+          setOrderNumber(s.order_number);
+          setState("paid");
+          return;
+        }
       } catch { /* ağ hatası → tekrar dene */ }
       tries += 1;
       // Webhook birkaç saniye gecikebilir → ~40 sn poll, sonra fail göster.
