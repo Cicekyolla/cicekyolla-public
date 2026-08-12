@@ -1066,7 +1066,7 @@ function StepOdeme(p: {
       <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
         {p.paymentMethod === "card"
-          ? "Ödemeye geçtiğinizde güvenli PayTR ekranına yönlendirilirsiniz."
+          ? "Ödemeye geçtiğinizde güvenli PayTR ödeme formu bu sayfada açılır."
           : "Sipariş numaranız havale açıklamasına yazılmak üzere size verilecektir."}
       </p>
     </Card>
