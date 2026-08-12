@@ -10,6 +10,22 @@ export interface BankAccountPublic {
   note: string | null;
 }
 
+export interface PaidOrderItem {
+  product_id: number | string | null;
+  product_name: string;
+  unit_price_minor: number;
+  quantity: number;
+}
+
+export interface PaytrStatus {
+  paid: boolean;
+  status: string;
+  order_number: string | null;
+  total_amount_minor?: number;
+  currency?: string;
+  items?: PaidOrderItem[];
+}
+
 export const SUPPORT_WHATSAPP = "https://wa.me/905458813450";
 
 export async function fetchBankAccounts(): Promise<BankAccountPublic[]> {
@@ -38,7 +54,7 @@ export async function initPaytr(body: unknown): Promise<{ merchant_oid: string; 
   return (await r.json()).data;
 }
 
-export async function paytrStatus(oid: string): Promise<{ paid: boolean; status: string; order_number: string | null }> {
+export async function paytrStatus(oid: string): Promise<PaytrStatus> {
   const r = await fetch(`/api/payment/paytr-status/${encodeURIComponent(oid)}`, { cache: "no-store" });
   if (!r.ok) throw new Error(String(r.status));
   return (await r.json()).data;
