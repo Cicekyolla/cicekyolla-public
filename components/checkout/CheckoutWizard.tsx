@@ -81,25 +81,6 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
   const [stepIdx, setStepIdx] = useState(2);
   const [done, setDone] = useState<{ order_number: string } | null>(null);
-  // PayTR ödeme formu adresi. Doluysa sihirbaz yerine güvenli ödeme iframe'i
-  // gösterilir (tam sayfa yönlendirme YAPILMAZ — bkz. aşağıdaki not).
-  const [paytrUrl, setPaytrUrl] = useState<string | null>(null);
-
-  // PayTR iframeResizer — dokümanın önerdiği yükseklik ayarlayıcı. Yalnız ödeme
-  // formu açıldığında yüklenir; yüklenemezse iframe minHeight ile çalışmaya
-  // devam eder (ödeme bu yüzden engellenmez).
-  useEffect(() => {
-    if (!paytrUrl) return;
-    const script = document.createElement("script");
-    script.src = "https://www.paytr.com/js/iframeResizer.min.js";
-    script.async = true;
-    script.onload = () => {
-      const resize = (window as unknown as { iFrameResize?: (opts: unknown, target: string) => void }).iFrameResize;
-      try { resize?.({}, "#paytriframe"); } catch { /* yükseklik ayarı şart değil */ }
-    };
-    document.body.appendChild(script);
-    return () => { script.remove(); };
-  }, [paytrUrl]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
@@ -332,15 +313,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
         onComplete?.();
       } else {
-        // Kart: PayTR ödeme formu IFRAME içinde açılır. Ödeme TAMAMLANMADAN
-        // sepet/taslak TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
-        //
-        // ⚠️ TAM SAYFA YÖNLENDİRME YAPILMAZ (window.location.href). PayTR iFrame
-        // API dokümanı formu iframe içinde ister; üst pencere doğrudan o adrese
-        // götürülünce PayTR ödeme ekranını göstermeyip paytr.com'a atıyordu —
-        // canlıda 11 Ağu 2026'da ölçüldü, kart ödemesi hiç açılmıyordu.
+        // Kart: PayTR güvenli sayfasına yönlendir. Ödeme TAMAMLANMADAN sepet/taslak
+        // TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
         const r = await initPaytr(orderBody);
-        setPaytrUrl(r.iframe_url);
+        window.location.href = r.iframe_url;
         return;
       }
     } catch (failure) {
@@ -352,30 +328,6 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       setLoading(false);
     }
   };
-
-  // PayTR güvenli ödeme formu. Doküman gereği iframe; yüksekliği PayTR'ın
-  // iframeResizer betiği ayarlar, yüklenemezse minHeight devreye girer.
-  if (paytrUrl) {
-    return (
-      <div className="max-w-3xl mx-auto py-8">
-        <h1 className="text-xl font-bold text-[#111827] text-center" style={{ fontFamily: "var(--font-display)" }}>
-          Güvenli Ödeme
-        </h1>
-        <p className="text-[13px] text-[#6B7280] text-center mt-1.5">
-          Kart bilgileriniz doğrudan PayTR&apos;a iletilir; ÇiçekYolla sunucularında saklanmaz.
-        </p>
-        <div className="mt-6 rounded-2xl border border-[#EDE9FE] bg-white overflow-hidden">
-          <iframe
-            id="paytriframe"
-            src={paytrUrl}
-            title="PayTR güvenli ödeme formu"
-            scrolling="no"
-            style={{ width: "100%", minHeight: 700, border: 0, display: "block" }}
-          />
-        </div>
-      </div>
-    );
-  }
 
   if (done) {
     return (
@@ -1066,7 +1018,7 @@ function StepOdeme(p: {
       <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
         {p.paymentMethod === "card"
-          ? "Ödemeye geçtiğinizde güvenli PayTR ödeme formu bu sayfada açılır."
+          ? "Ödemeye geçtiğinizde güvenli PayTR ekranına yönlendirilirsiniz."
           : "Sipariş numaranız havale açıklamasına yazılmak üzere size verilecektir."}
       </p>
     </Card>
