@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { fetchProductBySlug, fetchProducts, type PublicProductListItem, type CategoryNode } from "@/lib/api";
@@ -5,6 +6,32 @@ import { getCategoryTree } from "@/lib/categories";
 import CheckoutFlow from "@/components/checkout/CheckoutFlow";
 
 export const dynamic = "force-dynamic";
+
+// SEO: /hizli-siparis?product=<slug> her ürün için ayrı bir URL üretiyor (132 adet)
+// ama sayfa bir CHECKOUT adımı — arama sonucunda görünmesi gereken içerik değil ve
+// kök layout başlığını miras aldığı için hepsi aynı başlıkla indexleniyordu.
+// Çözüm: noindex + follow. Canonical BİLEREK verilmiyor — noindex ile canonical
+// çelişkili sinyaldir ve noindex hedef ürün sayfasına taşınabilir. follow açık
+// kalıyor ki bu sayfadaki /urun/<slug> linki taranmaya devam etsin.
+// robots burada doğrudan yazılıyor; site-config'teki indexRobots() noindex
+// durumunda nofollow da uyguluyor, bu sayfa için istenen davranış o değil.
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ product?: string }>;
+}): Promise<Metadata> {
+  const robots = { index: false, follow: true } as const;
+  const slug = (await searchParams).product;
+  const detail = slug ? await fetchProductBySlug(slug) : null;
+  const name = detail?.product?.name;
+  return {
+    title: name ? `${name} — Hızlı Sipariş | ÇiçekYolla` : "Hızlı Sipariş | ÇiçekYolla",
+    description: name
+      ? `${name} için hızlı sipariş adımı. Teslimat bilgilerini girin, siparişinizi dakikalar içinde tamamlayın.`
+      : "Hızlı sipariş adımı. Teslimat bilgilerini girin, siparişinizi dakikalar içinde tamamlayın.",
+    robots,
+  };
+}
 
 // "Hediye ve Tamamlayıcı Ürünler" düğümü + TÜM alt kategorilerinin ID'lerini toplar.
 const GIFT_ROOT_SLUG = "hediye-ve-tamamlayici-urunler";
