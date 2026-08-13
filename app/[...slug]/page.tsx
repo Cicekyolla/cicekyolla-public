@@ -115,7 +115,15 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
     url_path: path,
     page_type: "delivery_info",
     lang: "tr",
-    index_state: "index",
+    // SEO: bu üretici DOĞRULAMA YAPMAZ — deliveryParts() yalnız parts[0]'ın 4 sabit
+    // ilden biri olmasına bakar, ilçe/mahalle adını hiç kontrol etmez. Yani
+    // /istanbul/<uydurma>/<uydurma> gibi SONSUZ bir URL uzayının tamamı 200 dönüyordu.
+    // noindex, o uzayın indexlenmesini durdurur. Gerçek yayınlanmış sayfalar
+    // etkilenmez: resolvePage() önce fetchSeoPage()'i dener, buraya yalnız admin'de
+    // karşılığı OLMAYAN yollar düşer. Dinamik üretici (admin Delivery Motor'dan
+    // çözülen syntheticDynamicDeliveryPage) BİLEREK "index" kalıyor — orada il/ilçe
+    // varlığı zones verisiyle doğrulanıyor.
+    index_state: "noindex",
     canonical_url: path,
     // SEO: "çiçekçi" + "çiçek siparişi" arama kalıpları — il/ilçe/mahalle aynı mantık.
     title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi | ÇiçekYolla`,
