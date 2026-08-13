@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
 
 /**
  * /hizli-siparis — ARTIK AYRI BİR MÜŞTERİ YOLU DEĞİLDİR.
@@ -12,10 +13,23 @@ import { redirect } from "next/navigation";
  * huninin doğru başlangıcına — ürün sayfasına — yönlendirilir; teslimat seçimi
  * orada yapılır. Ürün bilinmiyorsa ana sayfaya düşer.
  *
- * Geçici (307) yönlendirme: karar geri alınabilir kalsın ve arama motorları
- * kalıcı bir sinyal almasın. Sayfa zaten noindex idi, SEO etkisi yok.
+ * KALICI (308) yönlendirme: tek huni kalıcı bir karardır, arama motorlarına da
+ * öyle bildirilir. 308, 307'den farklı olarak indeks sinyalini hedef URL'e
+ * (/urun/[slug]) taşır; ~132 eski /hizli-siparis URL'i kaynakta asılı kalmaz.
+ * DİKKAT: 308 tarayıcıda agresif önbelleklenir — karar geri alınırsa eski
+ * ziyaretçilerde yönlendirme bir süre daha sürebilir.
+ *
+ * robots noindex BİLEREK KORUNDU: redirect gövdesiz döner ve normalde
+ * indekslenecek içerik yoktur, ancak sayfa daha önce açıkça `noindex, follow`
+ * ile yayınlanmıştı. Yönlendirmenin herhangi bir nedenle uygulanmadığı durumda
+ * (bot davranışı, ara katman, önbellek) bu 132 URL'in indekse geri sızmaması
+ * için işaret yerinde bırakıldı. follow açık: hedef ürün sayfası taranabilsin.
  */
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 export default async function HizliSiparisRedirect({
   searchParams,
@@ -23,5 +37,5 @@ export default async function HizliSiparisRedirect({
   searchParams: Promise<{ product?: string }>;
 }) {
   const slug = (await searchParams).product;
-  redirect(slug ? `/urun/${encodeURIComponent(slug)}` : "/");
+  permanentRedirect(slug ? `/urun/${encodeURIComponent(slug)}` : "/");
 }
