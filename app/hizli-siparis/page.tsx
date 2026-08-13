@@ -25,7 +25,10 @@ export async function generateMetadata({
   const detail = slug ? await fetchProductBySlug(slug) : null;
   const name = detail?.product?.name;
   return {
-    title: name ? `${name} — Hızlı Sipariş | ÇiçekYolla` : "Hızlı Sipariş | ÇiçekYolla",
+    // "| ÇiçekYolla" EKLENMEZ — kök layout'ta title.template = "%s | ÇiçekYolla"
+    // zaten uyguluyor. Buraya da yazılırsa başlık iki kez son ekleniyordu
+    // ("… | ÇiçekYolla | ÇiçekYolla"), canlıda görüldü.
+    title: name ? `${name} — Hızlı Sipariş` : "Hızlı Sipariş",
     description: name
       ? `${name} için hızlı sipariş adımı. Teslimat bilgilerini girin, siparişinizi dakikalar içinde tamamlayın.`
       : "Hızlı sipariş adımı. Teslimat bilgilerini girin, siparişinizi dakikalar içinde tamamlayın.",
