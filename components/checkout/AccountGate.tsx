@@ -14,6 +14,7 @@ import { motion } from "motion/react";
 import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil, LogIn, UserPlus } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { CheckoutProgress } from "./CheckoutProgress";
 
 const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
 
@@ -33,36 +34,6 @@ const TRUST = [
   { icon: Sparkles, label: "Profesyonel Floristler" },
   { icon: Users, label: "Binlerce Mutlu Müşteri" },
 ];
-
-const STEPS = ["Teslimat", "Hesap", "Alıcı", "Kart Mesajı", "Onay"];
-
-function ProgressBar({ active }: { active: number }) {
-  return (
-    <div className="flex items-center w-full max-w-2xl mx-auto mb-10">
-      {STEPS.map((s, i) => {
-        const done = i < active;
-        const cur = i === active;
-        return (
-          <div key={s} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1.5">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-all ${
-                  done ? "bg-[#7C3AED] text-white" : cur ? "bg-[#7C3AED] text-white ring-4 ring-[#EDE9FE]" : "bg-[#F1F0F5] text-[#9CA3AF]"
-                }`}
-              >
-                {done ? "✓" : i + 1}
-              </div>
-              <span className={`text-[10.5px] font-semibold whitespace-nowrap ${cur ? "text-[#7C3AED]" : done ? "text-[#6B7280]" : "text-[#C4B5FD]"}`}>{s}</span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <div className={`h-[2px] flex-1 mx-1.5 mb-5 rounded-full ${i < active ? "bg-[#7C3AED]" : "bg-[#F1F0F5]"}`} />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 type Props = {
   productName: string;
@@ -91,7 +62,11 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
 
   const dateStr = formatDate(pd?.date);
   const typeStr = pd?.mode === "cargo" ? "Ücretsiz Kargo" : pd?.mode === "sameday" ? "Aynı Gün Teslimat" : null;
-  const loginReturnPath = returnPath ?? `/hizli-siparis?product=${encodeURIComponent(productSlug)}`;
+  // TEK HUNİ: giriş sonrası dönüş her zaman checkout'un kendisidir.
+  // Eski fallback /hizli-siparis'e dönüyordu; o route artık ürün sayfasına
+  // yönlendiriyor ve müşteri giriş yaptıktan sonra sepetini kaybediyormuş gibi
+  // hissedecekti. productSlug prop'u özet kartındaki "Düzenle" için duruyor.
+  const loginReturnPath = returnPath ?? "/checkout";
 
   const Summary = (
     <motion.aside
@@ -157,7 +132,11 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
         </p>
       </div>
 
-      <ProgressBar active={1} />
+      {/* Tek anlatı — kendi 5 adımlı çubuğu kaldırıldı (Teslimat'ı 1. sıraya koyuyor,
+          Wizard ise 2. sıraya koyuyordu). Hesap seçimi "Bilgiler" fazının girişidir. */}
+      <div className="mb-10">
+        <CheckoutProgress current={2} />
+      </div>
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
         {/* Sol/İçerik — mobilde özetten SONRA */}

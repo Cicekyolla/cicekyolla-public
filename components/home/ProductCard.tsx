@@ -11,7 +11,6 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
-import { useCart } from "@/lib/cart";
 
 export type Product = {
   id: number;
@@ -88,7 +87,6 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 };
 
 export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean }) {
-  const { addItem } = useCart();
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [hoverImage, setHoverImage] = useState<string | null>(null);
@@ -207,11 +205,14 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="absolute bottom-0 left-0 right-0 p-4"
           >
+            {/* TEK KAPI: liste kartından sepete YAZILMAZ. Çiçek siparişi "nereye + ne zaman"
+                olmadan anlamsızdır; teslimatsız sepet satırı checkout'ta çıkmaz sokak üretiyordu.
+                Kart zaten /urun/[slug]'a Link — buton tıklaması doğal olarak oraya götürür.
+                Görsel V85 ile birebir aynı kalır (aynı gradient/gölge/radius). */}
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: null, variantTitle: null, unitPriceMinor: Math.round(product.price * 100), image: product.image });
-              }}
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
               className={`w-full py-3 text-white text-sm font-semibold tracking-wide ${polish ? "rounded-full" : "rounded-xl"}`}
               style={
                 polish
