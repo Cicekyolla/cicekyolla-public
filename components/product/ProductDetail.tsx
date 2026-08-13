@@ -11,7 +11,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, Minus, Plus, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 import galleryMapJson from "@/lib/gallery-map.json";
 
@@ -23,7 +24,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
-import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { savePendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 
 const WHATSAPP = "905458813450";
@@ -153,7 +154,10 @@ export function ProductDetail({
   }));
   const gallery: PublicProductImage[] = [...sortedImages, ...lifestyleExtras];
   const [active, setActive] = useState(0);
+  const router = useRouter();
   const { addItem } = useCart();
+  // Adet — tek CTA sepete ürünü bu adetle yazar (funnel: ürün + variant + quantity + teslimat).
+  const [quantity, setQuantity] = useState(1);
   const [wish, setWish] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
@@ -355,7 +359,9 @@ export function ProductDetail({
             </section>
           )}
 
-          {/* Teslimat planlayıcı — adres + 30 gün takvim + banda endeksli slot (Delivery Engine V2) */}
+          {/* Teslimat planlayıcı — adres + 30 gün takvim + banda endeksli slot (Delivery Engine V2).
+              id: mobil CTA kilitliyken buraya kaydırmak için çapa. */}
+          <div id="cy-teslimat-planlayici" className="scroll-mt-24" />
           <DeliveryPlanner
             product={{
               id: product.id,
@@ -365,6 +371,13 @@ export function ProductDetail({
               categoryId: data.categories?.find((c) => c.is_primary)?.category_id ?? data.categories?.[0]?.category_id ?? null,
             }}
             onSelect={(sel) => {
+              // Adres/tarih değişince planlayıcı null gönderir: eski seçim GEÇERSİZDİR.
+              // Aksi halde CTA açık kalıp siparişi eski adres/saatle gönderiyordu.
+              if (!sel) {
+                clearPendingDelivery();
+                setDeliverySelection(null);
+                return;
+              }
               const selectedDelivery: PendingDelivery = {
                 productSlug: product.slug,
                 productName: product.name,
@@ -412,23 +425,51 @@ export function ProductDetail({
             </div>
           )}
 
-          {/* CTA — ana buton CICEKYOLLA mor; WhatsApp yeşil; favori */}
+          {/* Adet — sepet sayfasındaki kontrolle aynı dil (rounded-full, lilac kenar) */}
+          <div className="mt-6">
+            <div className="text-[12px] font-bold text-[#9CA3AF] tracking-wider mb-3">ADET</div>
+            <div className="inline-flex items-center rounded-full border border-[#EDE9FE] bg-white text-[#111827]">
+              <button
+                type="button"
+                aria-label="Adet azalt"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                disabled={quantity <= 1}
+                className="grid h-12 w-14 place-items-center text-[#6B7280] disabled:text-[#D1D5DB] disabled:cursor-not-allowed"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="min-w-10 text-center text-[15px] font-bold">{quantity}</span>
+              <button
+                type="button"
+                aria-label="Adet arttır"
+                onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                className="grid h-12 w-14 place-items-center text-[#6B7280]"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* CTA — TEK buton (Sipariş Ver); WhatsApp yeşil; favori */}
           <div className="mt-7 flex gap-3">
+            {/* TEK KAPI · TEK HUNİ — ürün sayfasında TEK satın alma CTA'sı.
+                Doğrulanmış ürün + variantId + quantity + deliverySelection ile mevcut sepete
+                yazar, ardından tek CheckoutFlow devam eder (Sepet → Hesap → Bilgiler → Ödeme).
+                İkinci bir müşteri yolu (hızlı sipariş) YOKTUR.
+                Navigasyon router.push ile: window.location.href sepet yazımını yarışa sokup
+                localStorage effect'i çalışmadan sayfayı değiştiriyordu (ürün kaybı riski). */}
             <button
               type="button"
               disabled={!deliverySelection}
-              onClick={() => deliverySelection && addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "", delivery: deliverySelection })}
-              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl border text-[15px] font-bold transition-all ${deliverySelection ? "border-[#7C3AED] bg-white text-[#7C3AED] hover:bg-[#F5F3FF]" : "cursor-not-allowed border-[#E5E7EB] bg-[#F9FAFB] text-[#9CA3AF]"}`}
+              onClick={() => {
+                if (!deliverySelection) return;
+                addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "", delivery: deliverySelection }, quantity);
+                router.push("/sepet");
+              }}
+              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-[15px] font-bold transition-all ${deliverySelection ? "text-white hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]" : "cursor-not-allowed bg-[#DDD6FE] text-white"}`}
+              style={deliverySelection ? { background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" } : undefined}
             >
-              <ShoppingBag className="w-5 h-5" /> Sepete Ekle
-            </button>
-            <button
-              type="button"
-              disabled={!deliverySelection}
-              onClick={() => { if (deliverySelection) window.location.href = `/hizli-siparis?product=${encodeURIComponent(product.slug)}`; }}
-              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-[15px] font-bold transition-all ${deliverySelection ? "bg-[#7C3AED] text-white hover:bg-[#6D28D9] hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]" : "cursor-not-allowed bg-[#DDD6FE] text-white"}`}
-            >
-              <ShoppingBag className="w-5 h-5" /> Hemen Sipariş Ver
+              <ShoppingBag className="w-5 h-5" /> Sipariş Ver
             </button>
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
@@ -447,7 +488,7 @@ export function ProductDetail({
               <Heart className={`w-5 h-5 ${wish ? "fill-[#E11D48]" : ""}`} />
             </button>
           </div>
-          {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">Sepete eklemek veya siparişe geçmek için önce teslimat adresi, tarihi ve uygun saat aralığını seçin.</p>}
+          {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">Önce teslimatı planlayalım — bu çiçeğin nereye ve ne zaman ulaşacağını birlikte belirleyelim.</p>}
 
           {/* Güven ikonları — gerçek özellikler (sahte yorum/yıldız/satış YOK) */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
@@ -562,12 +603,23 @@ export function ProductDetail({
           <div className="text-[11px] text-[#9CA3AF] leading-none">Fiyat</div>
           <div className="text-[18px] font-bold text-[#111827] leading-tight">{formatMinorTRY(shown)}</div>
         </div>
-        <Link
-          href={`/hizli-siparis?product=${encodeURIComponent(product.slug)}`}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#7C3AED] text-white text-[14px] font-bold shadow-[0_6px_18px_rgba(124,58,237,0.3)]"
+        {/* Mobil karşılığı — MASAÜSTÜYLE AYNI aksiyon ve aynı teslimat kilidi.
+            İkinci bir müşteri yolu değildir; kilitliyken planlayıcıya kaydırır. */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!deliverySelection) {
+              document.getElementById("cy-teslimat-planlayici")?.scrollIntoView({ behavior: "smooth", block: "center" });
+              return;
+            }
+            addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "", delivery: deliverySelection }, quantity);
+            router.push("/sepet");
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white text-[14px] font-bold transition-all ${deliverySelection ? "shadow-[0_6px_18px_rgba(124,58,237,0.3)]" : "bg-[#DDD6FE]"}`}
+          style={deliverySelection ? { background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" } : undefined}
         >
-          <ShoppingBag className="w-[18px] h-[18px]" /> Sipariş Ver
-        </Link>
+          <ShoppingBag className="w-[18px] h-[18px]" /> {deliverySelection ? "Sipariş Ver" : "Teslimatı Planla"}
+        </button>
         <a
           href={`https://wa.me/${WHATSAPP}?text=${waText}`}
           target="_blank"

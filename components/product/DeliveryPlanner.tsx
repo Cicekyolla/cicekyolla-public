@@ -59,7 +59,8 @@ export interface SelectedDelivery {
 
 interface Props {
   product: { id: number; product_type: string; same_day_available: boolean; delivery_scope: string; categoryId?: number | null };
-  onSelect?: (sel: SelectedDelivery) => void;
+  /** Seçim tamamlandığında dolu, adres/tarih değişip seçim GEÇERSİZLEŞTİĞİNDE null gönderilir. */
+  onSelect?: (sel: SelectedDelivery | null) => void;
 }
 
 // --- Tarih yardımcıları -----------------------------------------------------
@@ -214,6 +215,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   useEffect(() => {
     if (address) check(address, dayOffset);
   }, [address, dayOffset, check]);
+
+  // ADRES/TARİH DEĞİŞTİ → ÖNCEKİ SEÇİM GEÇERSİZ.
+  // check() slot'u içeride sıfırlıyordu ama yukarıya haber vermiyordu; CTA açık kalıp
+  // sipariş ESKİ adres/saatle gidebiliyordu. onSelect ref üzerinden çağrılır: inline
+  // arrow prop her render kimlik değiştirdiği için dependency'e konulamaz (sonsuz döngü).
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => { onSelectRef.current = onSelect; });
+  const invalidateArmed = useRef(false);
+  useEffect(() => {
+    if (!invalidateArmed.current) { invalidateArmed.current = true; return; } // ilk mount tetiklemez
+    onSelectRef.current?.(null);
+  }, [address, dayOffset]);
 
   // Bugün + aynı gün uygun iken kesme saatine kalan süre (ms). Sadece bugün anlamlı.
   const cutoffStr = result?.same_day?.cutoff_time ?? null;

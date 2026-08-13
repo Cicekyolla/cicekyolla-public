@@ -1,14 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Gift, Minus, Plus, ShoppingBag, Tag, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Minus, Plus, ShoppingBag, Tag, Truck, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { useState } from "react";
-
-const checkoutSteps = ["Sepet", "Ek Ürünler", "Alıcı", "Teslimat", "Onay"];
 
 function money(minor: number) {
   return `₺${(minor / 100).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
+}
+
+/** Sepet satırında teslimatı okunur göster: "15 Ağustos Cuma · 12:00–15:00".
+ *  Teslimat sepet satırının bir alanıdır; müşteri sepette ne zaman ulaşacağını görmeli. */
+function deliveryLine(d?: { date?: string; slotLabel?: string; mode?: "sameday" | "cargo" }): string | null {
+  if (!d?.date) return null;
+  const parsed = new Date(`${d.date}T00:00:00`);
+  const day = Number.isNaN(parsed.getTime())
+    ? d.date
+    : parsed.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
+  if (d.mode === "cargo") return `${day} · Kargo`;
+  return d.slotLabel ? `${day} · ${d.slotLabel}` : day;
 }
 
 export default function CartPage() {
@@ -19,6 +30,9 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState(false);
   const [discountMinor, setDiscountMinor] = useState(0);
   const totalMinor = Math.max(0, subtotalMinor - discountMinor);
+  // Tek huni: her satırın teslimatı olmalı. Eski (teslimatsız) satırlar checkout kapısını
+  // geçemediği için CTA burada kilitlenir; müşteri duvara çarpmak yerine yönlendirilir.
+  const allHaveDelivery = items.length > 0 && items.every((item) => Boolean(item.delivery?.date && item.delivery?.address));
 
   async function applyCoupon() {
     const code = couponCode.trim();
@@ -59,22 +73,16 @@ export default function CartPage() {
 
   return (
     <main className="bg-[#fbfafc] text-[#111827]">
+      {/* TEK ANLATI: eski 5 adımlı çubuk ("Sepet · Ek Ürünler · Alıcı · Teslimat · Onay")
+          teslimatı 4. sıraya koyuyordu — oysa teslimat ürün sayfasında seçiliyor.
+          Artık paylaşılan CheckoutProgress: Teslimat → Bilgiler → Ödeme → Tamamlandı. */}
       <section className="border-b border-[#eee9f6] bg-white px-6 py-8 lg:px-14">
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between gap-3 overflow-x-auto">
-          {checkoutSteps.map((step, index) => (
-            <div key={step} className="flex min-w-[120px] flex-1 items-center gap-3">
-              <div className="flex flex-col items-center gap-2">
-                <span className={`grid h-11 w-11 place-items-center rounded-full text-sm font-bold ${index === 0 ? "bg-[#8b5cf6] text-white shadow-[0_12px_30px_rgba(139,92,246,.32)]" : "bg-[#f1f2f5] text-[#9aa1ad]"}`}>{index + 1}</span>
-                <span className={`text-xs font-semibold ${index === 0 ? "text-[#8b5cf6]" : "text-[#9aa1ad]"}`}>{step}</span>
-              </div>
-              {index < checkoutSteps.length - 1 ? <span className="h-px flex-1 bg-[#e5e7eb]" /> : null}
-            </div>
-          ))}
+        <div className="mx-auto max-w-[1100px]">
+          <CheckoutProgress current={1} />
         </div>
       </section>
       <section className="px-6 py-14 lg:px-14 lg:py-20">
         <div className="mx-auto max-w-[1320px]">
-          <p className="text-xs font-bold uppercase tracking-[.32em] text-[#8b5cf6]">Adım 1 / 5</p>
           <h1 className="mt-5 font-serif text-5xl font-semibold text-[#111827] md:text-6xl">Sepetim <span className="font-sans text-2xl text-[#a1a7b3]">({items.reduce((sum, item) => sum + item.quantity, 0)} ürün)</span></h1>
           {items.length === 0 ? (
             <div className="mt-12 rounded-[28px] border border-[#ede9fe] bg-white p-12 text-center shadow-[0_24px_70px_rgba(45,22,72,.07)]">
@@ -94,7 +102,28 @@ export default function CartPage() {
                       </div>
                       <div className="flex flex-1 flex-col justify-between gap-6">
                         <div className="flex items-start justify-between gap-4">
-                          <div><h2 className="text-xl font-bold">{item.name}</h2>{item.variantTitle ? <p className="mt-1 text-sm text-[#8b94a6]">{item.variantTitle}</p> : null}</div>
+                          <div>
+                            <h2 className="text-xl font-bold">{item.name}</h2>
+                            {item.variantTitle ? <p className="mt-1 text-sm text-[#8b94a6]">{item.variantTitle}</p> : null}
+                            {/* Teslimat satırın parçası — ÇiçekSepeti'nde de sepette görünür. */}
+                            {deliveryLine(item.delivery) ? (
+                              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#F5F3FF] px-3 py-1 text-[12px] font-semibold text-[#6D28D9]">
+                                <Truck className="h-3.5 w-3.5" /> {deliveryLine(item.delivery)}
+                              </p>
+                            ) : (
+                              /* ESKİ SEPET SATIRI: bu değişiklikten önce liste kartından teslimatsız
+                                 eklenmiş ürünler müşterinin localStorage'ında duruyor olabilir.
+                                 Checkout kapısı bunları reddediyor ve müşteri /sepet ↔ /checkout
+                                 arasında sıkışıyordu. Huniyi kırmamak için satırın kendisi
+                                 teslimat seçimine götürür. */
+                              <Link
+                                href={`/urun/${item.productSlug}`}
+                                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-3 py-1 text-[12px] font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]"
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5" /> Teslimat seçilmedi — seçmek için dokunun
+                              </Link>
+                            )}
+                          </div>
                           <button type="button" aria-label="Ürünü kaldır" onClick={() => removeItem(item.key)} className="rounded-full p-2 text-[#c4cad4] transition hover:bg-[#f7f5fc] hover:text-[#8b5cf6]"><X className="h-5 w-5" /></button>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-5">
@@ -119,7 +148,16 @@ export default function CartPage() {
                   <div className="mt-8 space-y-4 text-lg"><div className="flex justify-between"><span className="text-[#6f7482]">Ara Toplam</span><strong>{money(subtotalMinor)}</strong></div>{discountMinor > 0 ? <div className="flex justify-between text-[#047857]"><span>İndirim</span><strong>-{money(discountMinor)}</strong></div> : null}<div className="flex justify-between"><span className="text-[#6f7482]">Kargo</span><strong className="text-[#059669]">Ücretsiz</strong></div></div>
                   <div className="my-8 h-px bg-[#ede9fe]" />
                   <div className="flex items-end justify-between"><span className="text-xl font-bold">Toplam</span><strong className="font-serif text-5xl font-semibold">{money(totalMinor)}</strong></div>
-                  <Link href="/checkout" className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</Link>
+                  {/* Teslimatsız satır varsa checkout kapısı zaten reddeder; müşteriyi
+                      duvara göndermek yerine burada durdurup ne yapacağını söylüyoruz. */}
+                  {allHaveDelivery ? (
+                    <Link href="/checkout" className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</Link>
+                  ) : (
+                    <div className="mt-9">
+                      <div className="flex cursor-not-allowed items-center justify-center gap-3 rounded-full bg-[#DDD6FE] px-8 py-5 text-lg font-bold text-white"><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</div>
+                      <p className="mt-3 text-center text-sm font-semibold text-[#B91C1C]">Devam etmek için teslimatı seçilmemiş ürünlerin teslimatını tamamlayın.</p>
+                    </div>
+                  )}
                   <p className="mt-5 text-center text-sm text-[#8b94a6]">Teslimat bilgileri doğrulanarak sipariş kaydı oluşturulur.</p>
                 </div>
               </aside>

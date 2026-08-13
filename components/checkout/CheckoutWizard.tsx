@@ -26,6 +26,7 @@ import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
+import { CheckoutProgress } from "./CheckoutProgress";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
@@ -332,6 +333,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   if (done) {
     return (
       <div className="max-w-md mx-auto text-center py-16">
+        {/* Anlatı burada kapanır: 4/4 Tamamlandı */}
+        <div className="mb-10">
+          <CheckoutProgress current={4} />
+        </div>
         <div className="w-16 h-16 rounded-full bg-[#F0FDF4] flex items-center justify-center mx-auto mb-5">
           <Check className="w-8 h-8 text-[#22C55E]" />
         </div>
@@ -375,7 +380,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
   return (
     <div>
-      <StepProgress steps={steps} activeIdx={stepIdx} />
+      {/* Tek anlatı. İçerideki adım makinesi (steps/stepIdx) DEĞİŞMEDİ — yalnız
+          müşteriye gösterilen faz haritası ortak bileşene devredildi. */}
+      <CheckoutProgress current={stepKey === "odeme" ? 3 : 2} />
 
       <div className="grid lg:grid-cols-[1fr_370px] gap-6 lg:gap-8 items-start mt-8">
         <div className="order-1 min-h-[320px]">
@@ -452,29 +459,6 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           />
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ---------------------------- Progress ----------------------------------- */
-function StepProgress({ steps, activeIdx }: { steps: { key: string; label: string }[]; activeIdx: number }) {
-  return (
-    <div className="flex items-center w-full max-w-3xl mx-auto overflow-x-auto">
-      {steps.map((s, i) => {
-        const doneStep = i < activeIdx;
-        const cur = i === activeIdx;
-        return (
-          <div key={s.key} className="flex items-center flex-1 last:flex-none min-w-[52px]">
-            <div className="flex flex-col items-center gap-1.5">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-all ${doneStep ? "bg-[#7C3AED] text-white" : cur ? "bg-[#7C3AED] text-white ring-4 ring-[#EDE9FE]" : "bg-[#F1F0F5] text-[#9CA3AF]"}`}>
-                {doneStep ? "✓" : i + 1}
-              </div>
-              <span className={`text-[9.5px] font-semibold whitespace-nowrap ${cur ? "text-[#7C3AED]" : doneStep ? "text-[#6B7280]" : "text-[#C4B5FD]"}`}>{s.label}</span>
-            </div>
-            {i < steps.length - 1 && <div className={`h-[2px] flex-1 mx-1 mb-5 rounded-full ${i < activeIdx ? "bg-[#7C3AED]" : "bg-[#F1F0F5]"}`} />}
-          </div>
-        );
-      })}
     </div>
   );
 }
