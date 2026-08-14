@@ -89,7 +89,20 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export type SubscribeResult =
   | { ok: true }
-  | { ok: false; reason: "unsupported" | "denied" | "no_key" | "failed" };
+  | {
+      ok: false;
+      /* Hangi adımda kırıldığı ayrı ayrı raporlanır; hepsi tek bir "failed"
+         altında gizlenmez. Böylece kullanıcıya doğru mesaj, operatöre doğru
+         teşhis verilir. */
+      reason:
+        | "unsupported"
+        | "denied"
+        | "no_key"
+        | "sw_failed"
+        | "subscribe_failed"
+        | "save_failed";
+      detail?: string;
+    };
 
 /**
  * GERÇEK abonelik akışı:
@@ -100,25 +113,47 @@ export async function subscribeToPush(vapidPublicKey: string | null): Promise<Su
   if (!pushSupported()) return { ok: false, reason: "unsupported" };
   if (!vapidPublicKey) return { ok: false, reason: "no_key" };
 
+  const permission = await Notification.requestPermission().catch(
+    () => "denied" as NotificationPermission
+  );
+  if (permission !== "granted") return { ok: false, reason: "denied" };
+
+  /* 1) Service worker kaydı.
+     En sık kırılma nedeni: /sw.js isteğinin YÖNLENDİRİLMESİ (apex → www, ya da
+     Vercel deployment protection). Tarayıcı, yönlendirilen bir SW script'ini
+     reddeder. Gerçek istisna konsola yazılır ki teşhis tahmine kalmasın. */
+  let reg: ServiceWorkerRegistration;
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return { ok: false, reason: "denied" };
-
-    const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
     await navigator.serviceWorker.ready;
+  } catch (err) {
+    console.warn("[push] service worker kaydı başarısız:", err);
+    return { ok: false, reason: "sw_failed", detail: String((err as Error)?.message ?? err) };
+  }
 
-    // Zaten abone ise onu kullan (duplicate abonelik oluşturmayız).
-    let sub = await reg.pushManager.getSubscription();
+  /* 2) Abonelik. Zaten abone ise onu kullan (duplicate oluşturmayız). */
+  let sub: PushSubscription | null;
+  try {
+    sub = await reg.pushManager.getSubscription();
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       });
     }
+  } catch (err) {
+    console.warn("[push] pushManager.subscribe başarısız:", err);
+    return { ok: false, reason: "subscribe_failed", detail: String((err as Error)?.message ?? err) };
+  }
 
-    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return { ok: false, reason: "failed" };
+  const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    console.warn("[push] abonelik nesnesi eksik alan içeriyor");
+    return { ok: false, reason: "subscribe_failed", detail: "eksik abonelik alanları" };
+  }
 
+  /* 3) Backend kaydı. */
+  try {
     const res = await fetch("/api/consent/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -127,11 +162,16 @@ export async function subscribeToPush(vapidPublicKey: string | null): Promise<Su
         keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
       }),
     });
-    if (!res.ok) return { ok: false, reason: "failed" };
-    return { ok: true };
-  } catch {
-    return { ok: false, reason: "failed" };
+    if (!res.ok) {
+      console.warn("[push] backend kaydı başarısız, HTTP", res.status);
+      return { ok: false, reason: "save_failed", detail: `HTTP ${res.status}` };
+    }
+  } catch (err) {
+    console.warn("[push] backend kaydı başarısız:", err);
+    return { ok: false, reason: "save_failed", detail: String((err as Error)?.message ?? err) };
   }
+
+  return { ok: true };
 }
 
 /* ────────────────────── Hoş geldin kuponu ────────────────────── */
@@ -180,7 +220,14 @@ export async function registerMember(input: {
     });
     if (res.ok) return { ok: true };
     const json = (await res.json().catch(() => null)) as { message?: string; error?: string } | null;
-    return { ok: false, message: json?.message ?? "Kayıt tamamlanamadı. Lütfen tekrar deneyin." };
+    /* API hata metnini "error" alanında gönderiyor (ör. 409 → "Bu e-posta veya
+       telefon zaten kayıtlı."). Önce message, sonra error okunur; ikisi de yoksa
+       genel metne düşülür. Eskiden yalnız message aranıyordu ve gerçek sebep
+       kullanıcıdan gizleniyordu. */
+    return {
+      ok: false,
+      message: json?.message ?? json?.error ?? "Kayıt tamamlanamadı. Lütfen tekrar deneyin.",
+    };
   } catch {
     return { ok: false, message: "Kayıt tamamlanamadı. Lütfen tekrar deneyin." };
   }

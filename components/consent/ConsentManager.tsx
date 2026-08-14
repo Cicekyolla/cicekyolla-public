@@ -636,11 +636,16 @@ function NotificationConsent({ enabled, cfg }: { enabled: boolean; cfg: ConsentC
       close("declined");
       return;
     }
-    setErr(
-      r.reason === "unsupported"
-        ? "Tarayıcınız bildirimi desteklemiyor."
-        : "Şu anda kaydedilemedi. Lütfen daha sonra tekrar deneyin."
-    );
+    /* Her kırılma noktası için ayrı, dürüst mesaj — hepsi tek genel metne
+       gizlenmez. Teknik ayrıntı konsola yazılır (lib/consent.ts). */
+    const msg: Record<string, string> = {
+      unsupported: "Tarayıcınız bildirimi desteklemiyor.",
+      no_key: "Bildirim servisi şu anda yapılandırılmamış.",
+      sw_failed: "Bildirim servisi başlatılamadı. Lütfen sayfayı yenileyip tekrar deneyin.",
+      subscribe_failed: "Bildirim aboneliği oluşturulamadı. Lütfen daha sonra tekrar deneyin.",
+      save_failed: "Aboneliğiniz kaydedilemedi. Lütfen daha sonra tekrar deneyin.",
+    };
+    setErr(msg[r.reason] ?? "Şu anda kaydedilemedi. Lütfen daha sonra tekrar deneyin.");
   }
 
   return (
