@@ -57,3 +57,48 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
   markSent(transactionId);
   return true;
 }
+
+/**
+ * Havale/EFT ile OLUŞTURULMUŞ sipariş için purchase.
+ * ---------------------------------------------------------------------------
+ * Kart akışı ödeme onayını PayTR webhook'undan bekler ve trackPaidPurchase ile
+ * gönderir. Havalede ise böyle bir onay anı YOKTUR: para sonradan, elle gelir.
+ * Bu yüzden event "para tahsil edildi" değil, "başarılı havale siparişi
+ * oluşturuldu" anlamındadır — backend gerçek order_number döndürdükten sonra.
+ *
+ * Aynı altyapı: aynı `purchase` event adı, aynı pushEcommerceEvent, aynı
+ * mükerrer koruması (memory Set + localStorage). Yeni analytics mimarisi yok.
+ */
+export function trackHavaleOrderPurchase(order: {
+  order_number: string;
+  total_amount_minor: number;
+  items: Array<{ product_id?: number | null; product_name: string; unit_price_minor: number; quantity: number }>;
+}): boolean {
+  if (!order.order_number) return false;
+  if (typeof order.total_amount_minor !== "number" || !Number.isFinite(order.total_amount_minor)) return false;
+  if (!Array.isArray(order.items) || order.items.length === 0) return false;
+
+  const transactionId = order.order_number;
+  if (wasSent(transactionId)) return false;
+
+  const items = order.items.map((item) => {
+    const itemId = validItemId(item.product_id);
+    return {
+      ...(itemId ? { item_id: itemId } : {}),
+      item_name: item.product_name,
+      price: item.unit_price_minor / 100,
+      quantity: item.quantity,
+    };
+  });
+
+  pushEcommerceEvent("purchase", {
+    transaction_id: transactionId,
+    value: order.total_amount_minor / 100,
+    currency: "TRY",
+    payment_type: "havale",
+    items,
+  });
+
+  markSent(transactionId);
+  return true;
+}

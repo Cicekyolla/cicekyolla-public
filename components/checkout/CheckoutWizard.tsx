@@ -27,6 +27,7 @@ import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
+import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
@@ -319,6 +320,15 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       if (paymentMethod === "havale") {
         // Havale: sipariş 'ödeme bekliyor' oluşur; dönen numara = havale referansı.
         const r = await createHavaleOrder(orderBody);
+        // GA4 purchase — YALNIZ backend gerçek order_number döndürdükten sonra.
+        // Hata olsaydı createHavaleOrder throw ederdi ve buraya hiç gelinmezdi.
+        // Tutar backend'in yetkili toplamı (kupon/fiyat sunucuda yeniden hesaplanır).
+        // Mükerrer koruması purchaseAnalytics içinde (memory + localStorage).
+        trackHavaleOrderPurchase({
+          order_number: r.order_number,
+          total_amount_minor: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total,
+          items,
+        });
         setDone({ order_number: r.order_number });
         clearPendingDelivery();
         try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
