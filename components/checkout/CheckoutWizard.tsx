@@ -515,6 +515,17 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
             recipientName={recipientName} occasion={occasion} cardMessage={cardMessage} senderName={senderName}
             visibility={visibility} surprise={surprise}
             onEditDelivery={editingDelivery ? undefined : () => setEditingDelivery(true)}
+            onEditStep={(key) => {
+              // Checkout'tan ÇIKMADAN ilgili adıma atla. Adım makinesi değişmedi;
+              // yalnız stepIdx taşınır, tüm doldurulmuş state yerinde kalır.
+              const idx = steps.findIndex((s) => s.key === key);
+              if (idx < 0) return;
+              setEditingDelivery(false);
+              setDraftDelivery(null);
+              setError(null);
+              setStepIdx(Math.max(2, idx));
+              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           />
         </div>
       </div>
@@ -1168,6 +1179,8 @@ function LivingReceipt(p: {
   recipientName: string; occasion: string | null; cardMessage: string; senderName: string;
   visibility: "show" | "anonymous" | "hidden"; surprise: boolean;
   onEditDelivery?: () => void;
+  /** Fişteki bilgi grubundan ilgili adıma atla (checkout'tan çıkmadan). */
+  onEditStep?: (key: "alici" | "kart" | "gonderen" | "ekurun") => void;
 }) {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? "İsimsiz gönderim" : "Tamamen gizli gönderim";
@@ -1194,7 +1207,7 @@ function LivingReceipt(p: {
       </div>
 
       {selected.length > 0 && (
-        <ReceiptGroup label="Ek Ürünler">
+        <ReceiptGroup label="Ek Ürünler" onEdit={p.onEditStep ? () => p.onEditStep?.("ekurun") : undefined}>
           {selected.map((a) => (
             <div key={a.id} className="flex items-center justify-between">
               <span className="text-[12.5px] text-[#4B5563] flex items-center gap-1.5 min-w-0"><Gift className="w-3 h-3 text-[#A78BDA] shrink-0" /><span className="truncate">{a.name} ×{p.addonQty[a.id]}</span></span>
@@ -1204,7 +1217,7 @@ function LivingReceipt(p: {
         </ReceiptGroup>
       )}
 
-      <ReceiptGroup label="Teslimat">
+      <ReceiptGroup label="Teslimat" onEdit={p.onEditDelivery}>
         {p.placeName && <RLine icon={MapPin} value={p.placeName} />}
         {p.regionLabel.trim() && <RLine icon={MapPin} value={p.regionLabel} />}
         {p.dateStr && <RLine icon={Calendar} value={p.dateStr} />}
@@ -1213,15 +1226,15 @@ function LivingReceipt(p: {
       </ReceiptGroup>
 
       {(p.recipientName || p.occasion) && (
-        <ReceiptGroup label="Alıcı">
+        <ReceiptGroup label="Alıcı" onEdit={p.onEditStep ? () => p.onEditStep?.("alici") : undefined}>
           {p.recipientName && <RLine icon={User} value={p.recipientName} />}
           {occasionLabel(p.occasion) && <RLine icon={Heart} value={occasionLabel(p.occasion)!} />}
         </ReceiptGroup>
       )}
 
-      {p.cardMessage && <ReceiptGroup label="Kart Mesajı"><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
+      {p.cardMessage && <ReceiptGroup label="Kart Mesajı" onEdit={p.onEditStep ? () => p.onEditStep?.("kart") : undefined}><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
       {(senderLine || p.surprise) && (
-        <ReceiptGroup label="Gönderen">
+        <ReceiptGroup label="Gönderen" onEdit={p.onEditStep ? () => p.onEditStep?.("gonderen") : undefined}>
           {senderLine && <RLine icon={User} value={senderLine} />}
           {p.surprise && <RLine icon={Gift} value="🎁 Sürpriz sipariş" />}
         </ReceiptGroup>
@@ -1247,12 +1260,21 @@ function LivingReceipt(p: {
     </aside>
   );
 }
-function ReceiptGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function ReceiptGroup({ label, children, onEdit }: { label: string; children: React.ReactNode; onEdit?: () => void }) {
   const arr = Array.isArray(children) ? children : [children];
   if (!arr.some(Boolean)) return null;
   return (
     <div className="mt-4 pt-4 border-t border-[#F4F3F7]">
-      <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold mb-2">{label}</p>
+      {/* Her bilgi grubunun KENDİ "Düzenle"si — müşteri checkout'tan çıkmadan
+          ilgili adıma gider. Tek bir üst "Düzenle" yalnız teslimatı açıyordu. */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold">{label}</p>
+        {onEdit && (
+          <button type="button" onClick={onEdit} className="flex items-center gap-1 text-[11px] font-semibold text-[#7C3AED] hover:underline">
+            <Pencil className="w-2.5 h-2.5" /> Düzenle
+          </button>
+        )}
+      </div>
       <div className="space-y-1.5">{children}</div>
     </div>
   );
