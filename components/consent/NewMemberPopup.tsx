@@ -34,38 +34,18 @@ import {
   onOverlayFree,
   isMarketingBlockedPath,
 } from "./ConsentManager";
+import {
+  fetchConsentConfig,
+  registerMember,
+  fetchWelcomeCoupon,
+  formatMinor,
+  type ConsentConfig,
+  type WelcomeCoupon,
+} from "@/lib/consent";
 
-/* ── Kampanya içeriği — ADMIN'E BAĞLANACAK TEK CONFIG NOKTASI ──
-   İleride bu obje API'den beslenecek; alanları buradan dağıtma. ── */
-const CAMPAIGN = {
-  /* Operatör anahtarı. Tek başına AÇMAK YETMEZ — altta gerçek adapter şart. */
-  active: false,
-  title: "İlk çiçeğiniz\nbiraz daha özel olsun.",
-  subtitle: "ÇiçekYolla'ya katılın, ilk siparişinize özel hoş geldin ayrıcalığınızı alın.",
-  advantageLabel: "Hoş Geldin Ayrıcalığı",
-  advantageAmount: "150 TL",
-  minCartNote: "500 TL ve üzeri siparişlerde",
-  ctaText: "Ayrıcalığımı Al",
-  requireCode: false,
-  code: null as string | null,
-  /* Tetikleme zamanlaması */
-  delayMs: 30000,
-  scrollRatio: 0.4,
-};
-
-/**
- * Gerçek üyelik/kupon kaydı buraya bağlanacak.
- * null olduğu sürece form gönderilemez ve başarı ekranı AÇILMAZ —
- * sahte kupon veya sahte başarı mesajı üretilmez.
- */
-const submitMembership: ((email: string) => Promise<void>) | null = null;
-
-/**
- * GÜVENLİK KAPISI — kampanya yalnızca hem operatör açtıysa HEM DE gerçek bir
- * kayıt adapter'ı varsa çalışır. `active: true` yapılsa bile adapter yoksa popup
- * hiç açılmaz; dolayısıyla sahte başarı ekranına geçmek mümkün değildir.
- */
-const CAMPAIGN_READY: boolean = CAMPAIGN.active && submitMembership !== null;
+/* İçerik + kampanya ADMIN'den gelir (GET /api/consent/config).
+   İndirim tutarı ve minimum sepet Kupon Merkezi'ndeki gerçek kupondan okunur;
+   bu dosyada ikinci bir indirim değeri TUTULMAZ. */
 
 /* ── localStorage helpers ── */
 const KEY = "cy_member";
@@ -109,17 +89,36 @@ export function NewMemberPopup() {
   const [visible, setVisible] = useState(false);
   const [phase, setPhase] = useState<"entry" | "success">("entry");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const triggered = useRef(false);
   const [imgError, setImgError] = useState(false);
+  const [cfg, setCfg] = useState<ConsentConfig["welcome"] | null>(null);
+  const [coupon, setCoupon] = useState<WelcomeCoupon | null>(null);
+
+  /* Admin içeriği + GERÇEK kampanya durumu. active=false ise popup hiç açılmaz. */
+  useEffect(() => {
+    let alive = true;
+    fetchConsentConfig().then((c) => {
+      if (alive) setCfg(c?.welcome ?? null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const getPathname = () => window.location.pathname;
   const isProductPage = () => getPathname().startsWith("/urun/");
   const isBlocked = isMarketingBlockedPath;
 
   useEffect(() => {
-    if (!CAMPAIGN_READY) return;
+    /* Kampanya gerçekten aktif değilse (kupon yok/pasif/süresi dolmuş) popup açılmaz. */
+    const c = cfg;
+    if (!c?.active) return;
+    /* Kapanış içinde daraltma kaybolmasın diye ilkel değerler burada sabitlenir. */
+    const scrollRatio = c.scroll_ratio;
+    const delayMs = c.delay_ms;
     if (hasJoined() || hasDismissed()) return;
 
     let armed = false;
@@ -148,10 +147,10 @@ export function NewMemberPopup() {
     function onScroll() {
       if (armed) return;
       const scrollPct = window.scrollY / (document.body.scrollHeight - window.innerHeight);
-      if (scrollPct >= CAMPAIGN.scrollRatio) arm();
+      if (scrollPct >= scrollRatio) arm();
     }
 
-    const timer = setTimeout(arm, CAMPAIGN.delayMs);
+    const timer = setTimeout(arm, delayMs);
     window.addEventListener("scroll", onScroll, { passive: true });
     const unsub = onOverlayFree(tryShow);
 
@@ -161,7 +160,7 @@ export function NewMemberPopup() {
       window.removeEventListener("scroll", onScroll);
       unsub();
     };
-  }, []);
+  }, [cfg]);
 
   function dismiss() {
     setDismissed();
@@ -169,30 +168,42 @@ export function NewMemberPopup() {
     scheduleOverlayRelease("member");
   }
 
+  /**
+   * GERÇEK zincir: mevcut üyelik akışı (/api/auth/register) → oturum çerezi →
+   * Kupon Merkezi'ndeki gerçek hoş geldin kuponunun KODU.
+   * Kayıt başarısız olursa başarı ekranına GEÇİLMEZ; kupon uydurulmaz.
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
       setError("Geçerli bir e-posta adresi girin.");
       return;
     }
+    if (password.trim().length < 6) {
+      setError("Şifre en az 6 karakter olmalı.");
+      return;
+    }
     setError("");
+    setLoading(true);
 
-    /* Backend yok → sahte başarı ÜRETİLMEZ. */
-    if (!submitMembership) {
-      setError("Kayıt şu anda alınamıyor. Lütfen daha sonra tekrar deneyin.");
+    const reg = await registerMember({ email: email.trim(), password });
+    if (!reg.ok) {
+      setLoading(false);
+      setError(reg.message);
       return;
     }
 
-    setLoading(true);
-    try {
-      await submitMembership(email);
-      setJoined();
-      setPhase("success");
-    } catch {
-      setError("Kayıt şu anda alınamıyor. Lütfen daha sonra tekrar deneyin.");
-    } finally {
-      setLoading(false);
+    /* Üye artık gerçekten kayıtlı ve oturumu açık. Kuponu backend belirler. */
+    const c = await fetchWelcomeCoupon();
+    setLoading(false);
+    if (!c.available || !c.code) {
+      /* Üyelik oldu ama kampanya uygun değil → YALAN "kazandınız" gösterme. */
+      setError("Üyeliğiniz oluşturuldu, ancak hoş geldin avantajı şu anda uygulanamıyor.");
+      return;
     }
+    setCoupon(c);
+    setJoined();
+    setPhase("success");
   }
 
   function handleContinue() {
@@ -206,7 +217,7 @@ export function NewMemberPopup() {
 
   return (
     <AnimatePresence onExitComplete={() => releaseOverlay("member")}>
-      {visible && (
+      {visible && cfg && (
         /* Backdrop */
         <motion.div
           key="member-popup"
@@ -262,7 +273,7 @@ export function NewMemberPopup() {
                 {!imgError && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="https://images.unsplash.com/photo-1753189198695-9cfa2b47e76b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=90&w=900"
+                    src={cfg.image_url ?? "https://images.unsplash.com/photo-1753189198695-9cfa2b47e76b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=90&w=900"}
                     alt="Premium çiçek aranjmanı"
                     className="absolute inset-0 w-full h-full object-cover"
                     style={{
@@ -323,13 +334,13 @@ export function NewMemberPopup() {
                         letterSpacing: "-0.02em",
                       }}
                     >
-                      {CAMPAIGN.advantageAmount}
+                      {formatMinor(cfg.amount_minor)}
                     </span>
                     <span
                       className="text-white/45 font-semibold uppercase tracking-[0.2em]"
                       style={{ fontSize: "9px" }}
                     >
-                      {CAMPAIGN.advantageLabel}
+                      Hoş Geldin Ayrıcalığı
                     </span>
                   </div>
                 </div>
@@ -366,18 +377,20 @@ export function NewMemberPopup() {
                           whiteSpace: "pre-line",
                         }}
                       >
-                        {CAMPAIGN.title}
+                        {cfg.title}
                       </h2>
 
                       {/* Subtitle */}
                       <p className="text-white/42 text-sm leading-relaxed mb-6 max-w-[340px]">
-                        {CAMPAIGN.subtitle}
+                        {cfg.description}
                       </p>
 
                       {/* Min cart note */}
                       <p className="text-white/25 text-xs mb-6 flex items-center gap-1.5">
                         <span style={{ color: "#A78BFA", fontSize: "8px" }}>◇</span>
-                        {CAMPAIGN.minCartNote}
+                        {cfg.min_cart_total_minor
+                          ? `${formatMinor(cfg.min_cart_total_minor)} ve üzeri siparişlerde`
+                          : "İlk siparişinize özel"}
                       </p>
 
                       {/* Form */}
@@ -411,6 +424,27 @@ export function NewMemberPopup() {
                               (e.target as HTMLElement).style.background = "rgba(255,255,255,0.06)";
                             }}
                           />
+                        </div>
+
+                        <div className="mb-3">
+                          <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              setError("");
+                            }}
+                            placeholder="Şifre belirleyin (en az 6 karakter)"
+                            className="w-full text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
+                            style={{
+                              background: "rgba(255,255,255,0.06)",
+                              border: error
+                                ? "1.5px solid rgba(239,68,68,0.5)"
+                                : "1.5px solid rgba(196,181,253,0.14)",
+                              borderRadius: "14px",
+                              padding: "13px 16px",
+                            }}
+                          />
                           {error && (
                             <p className="mt-1.5 text-xs" style={{ color: "#F87171" }}>
                               {error}
@@ -437,7 +471,7 @@ export function NewMemberPopup() {
                             </svg>
                           ) : (
                             <>
-                              {CAMPAIGN.ctaText}
+                              {cfg.cta_text}
                               <ArrowRight className="w-4 h-4" />
                             </>
                           )}
@@ -506,24 +540,29 @@ export function NewMemberPopup() {
                       </h2>
 
                       <p className="text-white/42 text-sm leading-relaxed mb-6">
-                        {CAMPAIGN.advantageAmount} hoş geldin ayrıcalığınız hesabınıza tanımlandı.
-                        {CAMPAIGN.minCartNote && ` ${CAMPAIGN.minCartNote} geçerlidir.`}
+                        {formatMinor(coupon?.amount_minor ?? cfg.amount_minor)} hoş geldin ayrıcalığınız
+                        üyeliğinize tanımlandı.
+                        {coupon?.min_cart_total_minor
+                          ? ` ${formatMinor(coupon.min_cart_total_minor)} ve üzeri siparişlerde geçerlidir.`
+                          : ""}
+                        {coupon?.first_order_only ? " Yalnızca ilk siparişinizde kullanılabilir." : ""}
                       </p>
 
-                      {/* Kampanya kodu — yalnız backend istiyorsa */}
-                      {CAMPAIGN.requireCode && CAMPAIGN.code && (
+                      {/* GERÇEK kupon kodu — Kupon Merkezi'ndeki kampanyadan gelir.
+                          Kod yoksa bu blok hiç çizilmez (uydurma kod gösterilmez). */}
+                      {coupon?.code && (
                         <div
                           className="flex items-center justify-between px-4 py-3 rounded-[12px] mb-6"
                           style={{ background: "rgba(139,92,246,0.12)", border: "1.5px dashed rgba(196,181,253,0.3)" }}
                         >
                           <span className="text-xs text-white/50 font-semibold uppercase tracking-wider">
-                            Kampanya Kodu
+                            Kupon Kodu
                           </span>
                           <span
                             className="text-white font-bold tracking-widest"
                             style={{ fontFamily: "var(--font-display)", fontSize: "15px", letterSpacing: "0.12em" }}
                           >
-                            {CAMPAIGN.code}
+                            {coupon.code}
                           </span>
                         </div>
                       )}
