@@ -27,10 +27,14 @@ type Props = {
   returnPath?: string;
   delivery?: PendingDelivery;
   onComplete?: () => void;
+  /** Teslimat checkout içinde düzenlenince sepete geri yazar (tek kaynak sepettir). */
+  onDeliveryChange?: (delivery: PendingDelivery) => void;
 };
 
-export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete }: Props) {
+export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete, onDeliveryChange }: Props) {
   const [phase, setPhase] = useState<"gate" | "form">("gate");
+  // Hesap adımındaki "Düzenle" ile gelindiyse sihirbaz teslimat panelini açık başlatır.
+  const [openDeliveryEditor, setOpenDeliveryEditor] = useState(false);
 
   if (phase === "gate") {
     return (
@@ -44,10 +48,11 @@ export default function CheckoutFlow({ productName, productId, variantId, priceM
         returnPath={returnPath}
         delivery={delivery}
         onContinue={() => setPhase("form")}
+        onEditDelivery={() => { setOpenDeliveryEditor(true); setPhase("form"); }}
       />
     );
   }
 
   // Premium sipariş hazırlama deneyimi (Alıcı → Kart → Gönderen → Özet).
-  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} />;
+  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} onDeliveryChange={onDeliveryChange} initialEditDelivery={openDeliveryEditor} />;
 }

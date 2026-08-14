@@ -18,7 +18,7 @@ function deliveryFingerprint(delivery?: PendingDelivery) {
 }
 
 export default function CartCheckoutPage() {
-  const { items, hydrated, subtotalMinor, clearCart } = useCart();
+  const { items, hydrated, subtotalMinor, clearCart, updateAllDelivery } = useCart();
   const first = items[0];
   const firstDelivery = first?.delivery;
   const fingerprint = deliveryFingerprint(firstDelivery);
@@ -83,5 +83,5 @@ export default function CartCheckoutPage() {
   // Tüm alanlar view'dan okunur: sepet temizlendikten sonra da başarı ekranının
   // ihtiyaç duyduğu ana ürün verisi (ad, görsel, fiyat, adet) elde kalır.
   const v = view;
-  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} /></div></main>;
+  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} /></div></main>;
 }

@@ -21,7 +21,8 @@ import {
   Sparkles, Star, RefreshCw, TicketPercent, CreditCard, Landmark, MessageCircle,
 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
-import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { readPendingDelivery, clearPendingDelivery, savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/DeliveryPlanner";
 import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
@@ -64,9 +65,13 @@ function mapToSlot(start?: string, label?: string): string {
   return SLOTS[0];
 }
 
-type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; quantity?: number; initialAddonQty?: Record<number, number>; delivery?: PendingDelivery; onComplete?: () => void };
+type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; quantity?: number; initialAddonQty?: Record<number, number>; delivery?: PendingDelivery; onComplete?: () => void;
+  /** Teslimat checkout içinde düzenlenince sepete geri yazar (tek kaynak sepettir). */
+  onDeliveryChange?: (delivery: PendingDelivery) => void;
+  /** Hesap adımındaki "Düzenle" ile gelindiyse panel açık başlar. */
+  initialEditDelivery?: boolean };
 
-export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete }: Props) {
+export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false }: Props) {
   const steps = useMemo(() => {
     const base = [
       { key: "urun", label: "Ürün" },
@@ -85,6 +90,11 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
+  // TESLİMAT DÜZENLEME — checkout'tan ÇIKMADAN. Panel açıkken sihirbaz mount kalır,
+  // bu yüzden alıcı/kart mesajı/gönderen/fatura gibi doldurulmuş alanlar korunur.
+  const [editingDelivery, setEditingDelivery] = useState(initialEditDelivery);
+  // Panelde seçilen YENİ teslimat. null = adres/tarih değişti, geçerli seçim yok.
+  const [draftDelivery, setDraftDelivery] = useState<PendingDelivery | null>(null);
   // Ödeme yöntemi (Kart = PayTR iframe · Havale = IBAN, "ödeme bekliyor").
   const [paymentMethod, setPaymentMethod] = useState<"card" | "havale">(CARD_ENABLED ? "card" : "havale");
   const [bankAccounts, setBankAccounts] = useState<BankAccountPublic[]>([]);
@@ -386,6 +396,51 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
       <div className="grid lg:grid-cols-[1fr_370px] gap-6 lg:gap-8 items-start mt-8">
         <div className="order-1 min-h-[320px]">
+          {editingDelivery ? (
+            <StepTeslimatDuzenle
+              current={pd}
+              productId={productId}
+              draft={draftDelivery}
+              onPlannerSelect={(sel) => {
+                // null → adres/tarih değişti: ESKİ SLOT GEÇERSİZ, kaydetme kilitli.
+                if (!sel) { setDraftDelivery(null); return; }
+                setDraftDelivery({
+                  productSlug, productName,
+                  categoryId: pd?.categoryId ?? null,
+                  date: sel.date,
+                  mode: sel.mode,
+                  slotId: sel.slot?.id ?? null,
+                  slotLabel: sel.slot?.label,
+                  slotStart: sel.slot?.start_time,
+                  slotEnd: sel.slot?.end_time,
+                  slotFeeMinor: sel.slot?.extra_fee_minor ?? null,
+                  address: sel.address.formattedAddress,
+                  placeName: sel.address.placeName ?? null,
+                  neighborhood: sel.address.mahalle ?? null,
+                  district: sel.address.ilce ?? undefined,
+                  city: sel.address.il ?? undefined,
+                  placeId: sel.address.placeId ?? null,
+                  lat: sel.address.lat ?? null,
+                  lng: sel.address.lng ?? null,
+                  band: sel.band ?? null,
+                  occasion: pd?.occasion,
+                });
+              }}
+              onCancel={() => { setDraftDelivery(null); setEditingDelivery(false); }}
+              onSave={() => {
+                if (!draftDelivery) return;
+                setPd(draftDelivery);                 // sipariş gövdesi bunu kullanır
+                // Açık adres (cadde/bina/daire) YALNIZ konum gerçekten değiştiyse tazelenir.
+                // Sadece saat/tarih değiştirildiğinde müşterinin yazdığı tarif korunur.
+                const konumDegisti = (draftDelivery.placeId ?? draftDelivery.address) !== (pd?.placeId ?? pd?.address);
+                if (konumDegisti) setAddress(draftDelivery.address ?? "");
+                savePendingDelivery(draftDelivery);   // köprü tazelenir
+                onDeliveryChange?.(draftDelivery);    // SEPET tek kaynak olarak güncellenir
+                setDraftDelivery(null);
+                setEditingDelivery(false);
+              }}
+            />
+          ) : (
           <AnimatePresence mode="wait">
             <motion.div key={stepKey} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
               {stepKey === "alici" && (
@@ -422,10 +477,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
               )}
             </motion.div>
           </AnimatePresence>
+          )}
 
           {error && <div className="mt-5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] text-[13px] font-medium px-4 py-3">{error}</div>}
 
-          <div className="flex items-center gap-3 mt-7">
+          {/* Teslimat düzenlenirken adım navigasyonu gizlenir; panelin kendi
+              Kaydet / Vazgeç düğmeleri var. Sihirbaz mount kalır. */}
+          <div className={`items-center gap-3 mt-7 ${editingDelivery ? "hidden" : "flex"}`}>
             {stepIdx > 2 && (
               <button onClick={() => go(-1)} className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] text-[#4B5563] font-semibold px-5 py-3.5 hover:bg-[#FAFAFB] transition-colors">
                 <ArrowLeft className="w-4 h-4" /> Geri
@@ -456,6 +514,18 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
             placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
             recipientName={recipientName} occasion={occasion} cardMessage={cardMessage} senderName={senderName}
             visibility={visibility} surprise={surprise}
+            onEditDelivery={editingDelivery ? undefined : () => setEditingDelivery(true)}
+            onEditStep={(key) => {
+              // Checkout'tan ÇIKMADAN ilgili adıma atla. Adım makinesi değişmedi;
+              // yalnız stepIdx taşınır, tüm doldurulmuş state yerinde kalır.
+              const idx = steps.findIndex((s) => s.key === key);
+              if (idx < 0) return;
+              setEditingDelivery(false);
+              setDraftDelivery(null);
+              setError(null);
+              setStepIdx(Math.max(2, idx));
+              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           />
         </div>
       </div>
@@ -475,6 +545,74 @@ function Card({ title, subtitle, children }: { title: string; subtitle?: string;
 }
 const inputCls = "w-full px-4 py-3.5 rounded-2xl border border-[#E9E7F0] bg-[#FCFCFD] text-[15px] text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#C4B5FD] focus:bg-white focus:ring-4 focus:ring-[#F5F3FF] transition-all";
 const labelCls = "block text-[12px] font-semibold text-[#6B7280] mb-1.5";
+
+/* ------------------- Teslimat Düzenle (checkout içi) --------------------- */
+// Mevcut DeliveryPlanner + delivery-check altyapısını AYNEN kullanır; yeni
+// teslimat sistemi/haritası/API'si yoktur. Checkout'tan çıkılmaz, sihirbaz
+// mount kalır, doldurulmuş diğer alanlar korunur.
+function StepTeslimatDuzenle(p: {
+  current: PendingDelivery | null;
+  productId: number | null;
+  draft: PendingDelivery | null;
+  onPlannerSelect: (sel: SelectedDelivery | null) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const line = (d: PendingDelivery | null) => {
+    if (!d) return null;
+    const yer = [d.placeName, d.neighborhood, d.district, d.city].filter(Boolean).join(", ");
+    const gun = fmtDate(d.date);
+    const saat = d.mode === "cargo" ? "Kargo" : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
+    return [yer, gun, saat].filter(Boolean).join(" · ");
+  };
+  return (
+    <div>
+      <Card title="Teslimatı düzenleyin" subtitle="Ürün ve girdiğiniz diğer bilgiler korunur; yalnız teslimat değişir.">
+        {/* Mevcut seçim */}
+        <div className="rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-4">
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B5CF6]">Şu anki teslimat</div>
+          <p className="mt-1.5 text-[13.5px] text-[#374151] leading-relaxed">{line(p.current) ?? "Henüz teslimat seçilmedi."}</p>
+        </div>
+
+        {/* Yeni seçim — mevcut planlayıcı */}
+        {p.productId != null ? (
+          <div className="mt-4">
+            <DeliveryPlanner
+              product={{ id: p.productId, categoryId: p.current?.categoryId ?? null }}
+              onSelect={p.onPlannerSelect}
+            />
+          </div>
+        ) : (
+          <p className="mt-4 text-[13px] text-[#B91C1C] font-semibold">Ürün bilgisi okunamadı; teslimat burada düzenlenemiyor.</p>
+        )}
+
+        {/* Yeni seçim özeti — yalnız geçerli seçim varken */}
+        {p.draft && (
+          <div className="mt-4 rounded-2xl border border-[#A7F3D0] bg-[#F0FDF4] p-4">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#059669]">Yeni teslimat</div>
+            <p className="mt-1.5 text-[13.5px] text-[#065F46] font-semibold leading-relaxed">{line(p.draft)}</p>
+          </div>
+        )}
+      </Card>
+
+      <div className="flex items-center gap-3">
+        <button onClick={p.onCancel} className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] text-[#4B5563] font-semibold px-5 py-3.5 hover:bg-[#FAFAFB] transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Vazgeç
+        </button>
+        <button
+          onClick={p.onSave}
+          disabled={!p.draft}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-2xl text-white text-[15px] font-bold py-4 transition-all ${p.draft ? "bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.99] shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)]" : "bg-[#C4B5FD] cursor-not-allowed"}`}
+        >
+          <Check className="w-4 h-4" /> Teslimatı Güncelle
+        </button>
+      </div>
+      {!p.draft && (
+        <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">Kaydetmek için yeni adresi ve uygun teslimat zamanını seçin.</p>
+      )}
+    </div>
+  );
+}
 
 /* ---------------------------- Adım: Alıcı ------------------------------- */
 function StepAlici(p: {
@@ -1040,6 +1178,9 @@ function LivingReceipt(p: {
   regionLabel: string; placeName: string | null; dateStr: string | null; slotStr: string | null; typeStr: string | null;
   recipientName: string; occasion: string | null; cardMessage: string; senderName: string;
   visibility: "show" | "anonymous" | "hidden"; surprise: boolean;
+  onEditDelivery?: () => void;
+  /** Fişteki bilgi grubundan ilgili adıma atla (checkout'tan çıkmadan). */
+  onEditStep?: (key: "alici" | "kart" | "gonderen" | "ekurun") => void;
 }) {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? "İsimsiz gönderim" : "Tamamen gizli gönderim";
@@ -1047,8 +1188,10 @@ function LivingReceipt(p: {
     <aside className="lg:sticky lg:top-6 rounded-[22px] border border-[#F1F0F5] bg-white p-5 shadow-[0_10px_40px_-18px_rgba(124,58,237,0.28)]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[11px] tracking-[0.18em] text-[#8B5CF6] uppercase font-bold">Sipariş Fişi</h3>
-        {p.productSlug && (
-          <Link href={`/urun/${p.productSlug}`} className="flex items-center gap-1 text-[12px] font-semibold text-[#7C3AED] hover:underline"><Pencil className="w-3 h-3" /> Düzenle</Link>
+        {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini yerinde açar.
+            Önce /urun/[slug]'a Link'ti ve müşteri tüm yolculuğu baştan yapıyordu. */}
+        {p.onEditDelivery && (
+          <button type="button" onClick={p.onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-[#7C3AED] hover:underline"><Pencil className="w-3 h-3" /> Düzenle</button>
         )}
       </div>
 
@@ -1064,7 +1207,7 @@ function LivingReceipt(p: {
       </div>
 
       {selected.length > 0 && (
-        <ReceiptGroup label="Ek Ürünler">
+        <ReceiptGroup label="Ek Ürünler" onEdit={p.onEditStep ? () => p.onEditStep?.("ekurun") : undefined}>
           {selected.map((a) => (
             <div key={a.id} className="flex items-center justify-between">
               <span className="text-[12.5px] text-[#4B5563] flex items-center gap-1.5 min-w-0"><Gift className="w-3 h-3 text-[#A78BDA] shrink-0" /><span className="truncate">{a.name} ×{p.addonQty[a.id]}</span></span>
@@ -1074,7 +1217,7 @@ function LivingReceipt(p: {
         </ReceiptGroup>
       )}
 
-      <ReceiptGroup label="Teslimat">
+      <ReceiptGroup label="Teslimat" onEdit={p.onEditDelivery}>
         {p.placeName && <RLine icon={MapPin} value={p.placeName} />}
         {p.regionLabel.trim() && <RLine icon={MapPin} value={p.regionLabel} />}
         {p.dateStr && <RLine icon={Calendar} value={p.dateStr} />}
@@ -1083,15 +1226,15 @@ function LivingReceipt(p: {
       </ReceiptGroup>
 
       {(p.recipientName || p.occasion) && (
-        <ReceiptGroup label="Alıcı">
+        <ReceiptGroup label="Alıcı" onEdit={p.onEditStep ? () => p.onEditStep?.("alici") : undefined}>
           {p.recipientName && <RLine icon={User} value={p.recipientName} />}
           {occasionLabel(p.occasion) && <RLine icon={Heart} value={occasionLabel(p.occasion)!} />}
         </ReceiptGroup>
       )}
 
-      {p.cardMessage && <ReceiptGroup label="Kart Mesajı"><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
+      {p.cardMessage && <ReceiptGroup label="Kart Mesajı" onEdit={p.onEditStep ? () => p.onEditStep?.("kart") : undefined}><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
       {(senderLine || p.surprise) && (
-        <ReceiptGroup label="Gönderen">
+        <ReceiptGroup label="Gönderen" onEdit={p.onEditStep ? () => p.onEditStep?.("gonderen") : undefined}>
           {senderLine && <RLine icon={User} value={senderLine} />}
           {p.surprise && <RLine icon={Gift} value="🎁 Sürpriz sipariş" />}
         </ReceiptGroup>
@@ -1117,12 +1260,21 @@ function LivingReceipt(p: {
     </aside>
   );
 }
-function ReceiptGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function ReceiptGroup({ label, children, onEdit }: { label: string; children: React.ReactNode; onEdit?: () => void }) {
   const arr = Array.isArray(children) ? children : [children];
   if (!arr.some(Boolean)) return null;
   return (
     <div className="mt-4 pt-4 border-t border-[#F4F3F7]">
-      <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold mb-2">{label}</p>
+      {/* Her bilgi grubunun KENDİ "Düzenle"si — müşteri checkout'tan çıkmadan
+          ilgili adıma gider. Tek bir üst "Düzenle" yalnız teslimatı açıyordu. */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold">{label}</p>
+        {onEdit && (
+          <button type="button" onClick={onEdit} className="flex items-center gap-1 text-[11px] font-semibold text-[#7C3AED] hover:underline">
+            <Pencil className="w-2.5 h-2.5" /> Düzenle
+          </button>
+        )}
+      </div>
       <div className="space-y-1.5">{children}</div>
     </div>
   );

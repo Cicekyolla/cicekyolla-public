@@ -26,6 +26,11 @@ type CartContextValue = {
   setQuantity: (key: string, quantity: number) => void;
   removeItem: (key: string) => void;
   clearCart: () => void;
+  /** Checkout içinde teslimat düzenlenince TÜM satırlara yazar. Sepet teslimatın
+   *  tek kaynağıdır; checkout ayrı bir kopya tutmaz. Satır anahtarı teslimatı
+   *  içerdiği için yeniden hesaplanır, aksi halde aynı ürün+teslimat tekrar
+   *  eklendiğinde mükerrer satır oluşurdu. */
+  updateAllDelivery: (delivery: PendingDelivery) => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -100,6 +105,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     },
     clearCart() {
       setItems([]);
+    },
+    updateAllDelivery(delivery) {
+      setItems((current) =>
+        current.map((entry) => {
+          const next = { ...entry, delivery };
+          return { ...next, key: itemKey(next) };
+        })
+      );
     },
   }), [hydrated, items]);
 
