@@ -75,33 +75,34 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="lg:sticky lg:top-6 rounded-[22px] border border-[#F1F0F5] bg-white p-5 shadow-[0_10px_40px_-18px_rgba(124,58,237,0.28)]"
+      // V85 — checkout'taki ürün hafızası paneliyle AYNI koyu aile, böylece
+      // hesap adımı kompozisyonun doğal devamı olur. Auth mantığı DEĞİŞMEDİ.
+      className="lg:sticky lg:top-6 overflow-hidden rounded-[22px] p-5 shadow-[0_28px_70px_-34px_rgba(76,29,149,0.85)]"
+      style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 55%, #110328 100%)" }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[11px] tracking-[0.18em] text-[#8B5CF6] uppercase font-bold">Sipariş Özeti</h3>
+        <h3 className="text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>✦ Siparişiniz</h3>
         {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini açar. Önce
             /urun/[slug]'a Link'ti ve müşteri siparişe baştan başlıyordu. */}
         {onEditDelivery && (
-          <button type="button" onClick={onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-[#7C3AED] hover:underline">
+          <button type="button" onClick={onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-white/70 hover:text-white transition-colors">
             <Pencil className="w-3 h-3" /> Düzenle
           </button>
         )}
       </div>
 
-      <div className="flex gap-3.5">
-        <div className="relative w-[84px] h-[104px] rounded-[14px] overflow-hidden ring-1 ring-[#F1F0F5] shrink-0 bg-white">
-          <ProductImage src={coverUrl ?? undefined} alt={productName} padding="0px" protect={false} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[14px] font-semibold text-[#1F2937] leading-snug line-clamp-2">{productName}</p>
-          <p className="text-[13px] text-[#6B7280] mt-1">Adet: {quantity}</p>
-          <p className="text-[16px] font-bold text-[#111827] mt-1.5">{money(priceMinor * quantity)}</p>
-        </div>
+      <div className="relative w-full overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
+        <ProductImage src={coverUrl ?? undefined} alt={productName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" />
+      </div>
+      <p className="mt-3.5 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "19px", letterSpacing: "-0.01em" }}>{productName}</p>
+      <div className="mt-1 flex items-baseline gap-2">
+        {quantity > 1 && <span className="text-white/40 text-[12px]">×{quantity}</span>}
+        <span className="text-white/70 text-[13.5px] font-medium">{money(priceMinor * quantity)}</span>
       </div>
 
       {(pd?.address || pd?.placeName || dateStr || pd?.slotLabel || typeStr) && (
-        <div className="mt-4 pt-4 border-t border-[#F4F3F7] space-y-2.5">
-          <p className="text-[10.5px] tracking-[0.16em] text-[#8B5CF6] uppercase font-bold">Teslimat Bilgileri</p>
+        <div className="mt-4 pt-4 space-y-2.5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
+          <p className="text-[10px] tracking-[0.14em] uppercase font-bold" style={{ color: "#C4B5FD" }}>Teslimat Bilgileri</p>
           {pd?.placeName && <Row icon={MapPin} label="Seçilen Yer" value={pd.placeName} />}
           {(pd?.address || pd?.neighborhood) && (
             <Row
@@ -116,9 +117,9 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
         </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-[#F4F3F7] flex items-center justify-between">
-        <span className="text-[13px] font-semibold text-[#6B7280]">Toplam</span>
-        <span className="text-[19px] font-bold text-[#111827]">{money(totalMinor ?? priceMinor * quantity)}</span>
+      <div className="mt-4 pt-4 flex items-baseline justify-between" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
+        <span className="text-[12px] text-white/40">Toplam</span>
+        <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(totalMinor ?? priceMinor * quantity)}</span>
       </div>
     </motion.aside>
   );
@@ -194,13 +195,13 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
   );
 }
 
-function Row({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+function Row({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2.5">
-      <Icon className="w-4 h-4 text-[#8B5CF6] mt-0.5 shrink-0" />
+      <Icon className="w-3.5 h-3.5 mt-[3px] shrink-0" style={{ color: "#8B5CF6" }} />
       <div className="min-w-0">
-        <p className="text-[11px] text-[#9CA3AF] font-medium uppercase tracking-wide">{label}</p>
-        <p className="text-[13px] text-[#374151] font-medium leading-snug">{value}</p>
+        <p className="text-[10px] text-white/35 font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-[12.5px] text-white/75 font-medium leading-snug break-words">{value}</p>
       </div>
     </div>
   );
