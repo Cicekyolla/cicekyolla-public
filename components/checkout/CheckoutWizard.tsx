@@ -347,12 +347,27 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         <div className="mb-10">
           <CheckoutProgress current={4} />
         </div>
-        <div className="w-16 h-16 rounded-full bg-[#F0FDF4] flex items-center justify-center mx-auto mb-5">
-          <Check className="w-8 h-8 text-[#22C55E]" />
+        {/* V85 başarı — koyu editorial hero, ürün fotoğrafı tekrar güçlü.
+            Konfeti/animasyon yok; sakin premium dil. Sipariş numarası davranışı
+            DEĞİŞMEDİ, yalnız sunumu. */}
+        <div
+          className="overflow-hidden rounded-[22px] p-7 shadow-[0_28px_70px_-34px_rgba(76,29,149,0.85)]"
+          style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 60%, #120328 100%)" }}
+        >
+          <div className="relative mx-auto w-[132px] overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
+            <ProductImage src={coverUrl ?? undefined} alt={productName} padding="8px" protect={false} sizes="132px" />
+          </div>
+          <p className="mt-5 text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>✦ Tamamlandı</p>
+          <h1 className="mt-2 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>
+            Siparişiniz artık bizim ellerimizde.
+          </h1>
+          <p className="mt-2 text-white/45 text-[13.5px] leading-relaxed">{productName}</p>
+
+          <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
+            <p className="text-white/40 text-[12px]">Sipariş numaranız</p>
+            <p className="mt-1 text-white font-semibold tracking-wide" style={{ fontFamily: "var(--font-display)", fontSize: "24px" }}>{done.order_number}</p>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Siparişiniz alındı!</h1>
-        <p className="text-[#6B7280] mt-2">Sipariş numaranız</p>
-        <p className="text-[22px] font-bold text-[#7C3AED] mt-1 tracking-wide">{done.order_number}</p>
 
         {/* Havale ödemesi: numara referans; ödeme onaylanınca hazırlanır */}
         <div className="mt-6 text-left rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-5">
@@ -390,12 +405,53 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
   return (
     <div>
+      {/* MOBİL ürün hafızası (V85): ürün ekranı boğmadan sürekli görünür kalır.
+          Masaüstünde koyu sol panel bu görevi üstlenir. */}
+      <div
+        className="lg:hidden sticky top-0 z-30 -mx-5 mb-5 flex items-center gap-3 px-5 py-3"
+        style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(139,92,246,0.10)" }}
+      >
+        <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-[#EDE9FE]">
+          <ProductImage src={coverUrl ?? undefined} alt={productName} padding="2px" protect={false} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold text-[#111827] truncate">{productName}</p>
+          {qty > 1 && <p className="text-[10px]" style={{ color: "#8B5CF6" }}>×{qty}</p>}
+        </div>
+        <span className="shrink-0 font-semibold text-[#111827]" style={{ fontFamily: "var(--font-display)", fontSize: "17px" }}>{money(total)}</span>
+      </div>
+
       {/* Tek anlatı. İçerideki adım makinesi (steps/stepIdx) DEĞİŞMEDİ — yalnız
           müşteriye gösterilen faz haritası ortak bileşene devredildi. */}
       <CheckoutProgress current={stepKey === "odeme" ? 3 : 2} />
 
-      <div className="grid lg:grid-cols-[1fr_370px] gap-6 lg:gap-8 items-start mt-8">
-        <div className="order-1 min-h-[320px]">
+      {/* V85 kompozisyon: SOL ürün görsel hafızası · SAĞ o anki tek görev.
+          Yalnız yerleşim/sıra değişti; adım mantığı ve state aynı. */}
+      <div className="grid lg:grid-cols-[360px_1fr] gap-6 lg:gap-8 items-start mt-8">
+        <div className="order-2 lg:order-1">
+          <LivingReceipt
+            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug}
+            addons={addons} addonQty={addonQty} coupon={coupon}
+            regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
+            placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
+            recipientName={recipientName} occasion={occasion} cardMessage={cardMessage} senderName={senderName}
+            visibility={visibility} surprise={surprise}
+            onEditDelivery={editingDelivery ? undefined : () => setEditingDelivery(true)}
+            onEditStep={(key) => {
+              // Checkout'tan ÇIKMADAN ilgili adıma atla. Adım makinesi değişmedi;
+              // yalnız stepIdx taşınır, tüm doldurulmuş state yerinde kalır.
+              const idx = steps.findIndex((s) => s.key === key);
+              if (idx < 0) return;
+              setEditingDelivery(false);
+              setDraftDelivery(null);
+              setError(null);
+              setStepIdx(Math.max(2, idx));
+              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        </div>
+
+        <div className="order-1 lg:order-2 min-h-[320px]">
           {editingDelivery ? (
             <StepTeslimatDuzenle
               current={pd}
@@ -506,28 +562,6 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           </div>
         </div>
 
-        <div className="order-2">
-          <LivingReceipt
-            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug}
-            addons={addons} addonQty={addonQty} coupon={coupon}
-            regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
-            placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
-            recipientName={recipientName} occasion={occasion} cardMessage={cardMessage} senderName={senderName}
-            visibility={visibility} surprise={surprise}
-            onEditDelivery={editingDelivery ? undefined : () => setEditingDelivery(true)}
-            onEditStep={(key) => {
-              // Checkout'tan ÇIKMADAN ilgili adıma atla. Adım makinesi değişmedi;
-              // yalnız stepIdx taşınır, tüm doldurulmuş state yerinde kalır.
-              const idx = steps.findIndex((s) => s.key === key);
-              if (idx < 0) return;
-              setEditingDelivery(false);
-              setDraftDelivery(null);
-              setError(null);
-              setStepIdx(Math.max(2, idx));
-              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-          />
-        </div>
       </div>
     </div>
   );
@@ -1185,26 +1219,35 @@ function LivingReceipt(p: {
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? "İsimsiz gönderim" : "Tamamen gizli gönderim";
   return (
-    <aside className="lg:sticky lg:top-6 rounded-[22px] border border-[#F1F0F5] bg-white p-5 shadow-[0_10px_40px_-18px_rgba(124,58,237,0.28)]">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[11px] tracking-[0.18em] text-[#8B5CF6] uppercase font-bold">Sipariş Fişi</h3>
-        {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini yerinde açar.
-            Önce /urun/[slug]'a Link'ti ve müşteri tüm yolculuğu baştan yapıyordu. */}
-        {p.onEditDelivery && (
-          <button type="button" onClick={p.onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-[#7C3AED] hover:underline"><Pencil className="w-3 h-3" /> Düzenle</button>
-        )}
+    // V85 PREMIUM — koyu ürün paneli. Fotoğraf beyaz stüdyo çerçevesinde kalır:
+    // katalog görsellerimiz beyaz zeminli kesme, V85'in object-cover full-bleed'i
+    // bunlari kotu kirpar ve paneli agartir. V85'in kendi kurali da urunun gercek
+    // renklerini korumayi ve wallpaper'a donusmemeyi soyluyor.
+    <aside
+      className="lg:sticky lg:top-6 overflow-hidden rounded-[22px] shadow-[0_28px_70px_-34px_rgba(76,29,149,0.85)]"
+      style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 55%, #110328 100%)" }}
+    >
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>✦ Siparişiniz</h3>
+          {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini yerinde açar. */}
+          {p.onEditDelivery && (
+            <button type="button" onClick={p.onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-white/70 hover:text-white transition-colors"><Pencil className="w-3 h-3" /> Düzenle</button>
+          )}
+        </div>
+
+        {/* Ürün — yolculuğun görsel çapası */}
+        <div className="relative w-full overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
+          <ProductImage src={p.coverUrl ?? undefined} alt={p.productName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" />
+        </div>
+        <p className="mt-3.5 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "19px", letterSpacing: "-0.01em" }}>{p.productName}</p>
+        <div className="mt-1 flex items-baseline gap-2">
+          {p.productQty > 1 && <span className="text-white/40 text-[12px]">×{p.productQty}</span>}
+          <span className="text-white/70 text-[13.5px] font-medium">{money(p.productPrice * p.productQty)}</span>
+        </div>
       </div>
 
-      <div className="flex gap-3.5">
-        <div className="relative w-[80px] h-[100px] rounded-[14px] overflow-hidden ring-1 ring-[#F1F0F5] shrink-0 bg-white">
-          <ProductImage src={p.coverUrl ?? undefined} alt={p.productName} padding="0px" protect={false} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-semibold text-[#1F2937] leading-snug line-clamp-2">{p.productName}</p>
-          <p className="text-[12.5px] text-[#6B7280] mt-1">Adet: {p.productQty}</p>
-          <p className="text-[15px] font-bold text-[#111827] mt-1">{money(p.productPrice * p.productQty)}</p>
-        </div>
-      </div>
+      <div className="px-5 pb-5">
 
       {selected.length > 0 && (
         <ReceiptGroup label="Ek Ürünler" onEdit={p.onEditStep ? () => p.onEditStep?.("ekurun") : undefined}>
@@ -1240,22 +1283,33 @@ function LivingReceipt(p: {
         </ReceiptGroup>
       )}
 
-      <div className="mt-4 pt-4 border-t border-[#F4F3F7] space-y-1.5">
-        {p.coupon && p.coupon.discount_minor > 0 && (
-          <>
-            <div className="flex items-center justify-between text-[12px] text-[#6B7280]">
-              <span>Ara Toplam</span><span>{money(p.subtotal)}</span>
-            </div>
-            <div className="flex items-center justify-between text-[12px] font-semibold text-[#15803D]">
-              <span className="flex items-center gap-1"><TicketPercent className="w-3 h-3" />{p.coupon.code}</span>
-              <span>−{money(p.coupon.discount_minor)}</span>
-            </div>
-          </>
-        )}
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] font-semibold text-[#6B7280]">Toplam</span>
-          <span className="text-[19px] font-bold text-[#111827]">{money(p.total)}</span>
+        <div className="mt-4 pt-4 space-y-1.5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
+          {p.coupon && p.coupon.discount_minor > 0 && (
+            <>
+              <div className="flex items-center justify-between text-[12px] text-white/40">
+                <span>Ara Toplam</span><span>{money(p.subtotal)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[12px] font-semibold text-[#86EFAC]">
+                <span className="flex items-center gap-1"><TicketPercent className="w-3 h-3" />{p.coupon.code}</span>
+                <span>−{money(p.coupon.discount_minor)}</span>
+              </div>
+            </>
+          )}
+          <div className="flex items-baseline justify-between">
+            <span className="text-[12px] text-white/40">Toplam</span>
+            <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(p.total)}</span>
+          </div>
         </div>
+      </div>
+
+      {/* Güven şeridi — V85; bağırmayan, kısa ve gerçek */}
+      <div className="flex items-center gap-5 px-5 py-4" style={{ borderTop: "1px solid rgba(196,181,253,0.08)" }}>
+        {[{ icon: Truck, text: "Aynı Gün" }, { icon: ShieldCheck, text: "SSL Güvenli" }].map(({ icon: Icon, text }) => (
+          <div key={text} className="flex items-center gap-1.5">
+            <Icon className="w-3 h-3 shrink-0" style={{ color: "#8B5CF6" }} />
+            <span className="text-white/30 text-[10.5px]">{text}</span>
+          </div>
+        ))}
       </div>
     </aside>
   );
@@ -1264,13 +1318,13 @@ function ReceiptGroup({ label, children, onEdit }: { label: string; children: Re
   const arr = Array.isArray(children) ? children : [children];
   if (!arr.some(Boolean)) return null;
   return (
-    <div className="mt-4 pt-4 border-t border-[#F4F3F7]">
+    <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
       {/* Her bilgi grubunun KENDİ "Düzenle"si — müşteri checkout'tan çıkmadan
           ilgili adıma gider. Tek bir üst "Düzenle" yalnız teslimatı açıyordu. */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold">{label}</p>
+        <p className="text-[10px] tracking-[0.14em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{label}</p>
         {onEdit && (
-          <button type="button" onClick={onEdit} className="flex items-center gap-1 text-[11px] font-semibold text-[#7C3AED] hover:underline">
+          <button type="button" onClick={onEdit} className="flex items-center gap-1 text-[11px] font-semibold text-white/55 hover:text-white transition-colors">
             <Pencil className="w-2.5 h-2.5" /> Düzenle
           </button>
         )}
@@ -1279,11 +1333,11 @@ function ReceiptGroup({ label, children, onEdit }: { label: string; children: Re
     </div>
   );
 }
-function RLine({ icon: Icon, value }: { icon: React.ComponentType<{ className?: string }>; value: string }) {
+function RLine({ icon: Icon, value }: { icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; value: string }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="w-3.5 h-3.5 text-[#A78BDA] mt-0.5 shrink-0" />
-      <p className="text-[12.5px] text-[#4B5563] leading-snug break-words">{value}</p>
+      <Icon className="w-3 h-3 mt-[3px] shrink-0" style={{ color: "#8B5CF6" }} />
+      <span className="text-[12.5px] text-white/75 leading-snug break-words">{value}</span>
     </div>
   );
 }

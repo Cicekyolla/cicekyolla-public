@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, Minus, Plus, ShoppingBag, Tag, Truck, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Minus, Plus, ShieldCheck, ShoppingBag, Tag, Truck, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
+import { ProductImage } from "@/components/product/ProductImage";
 import { useState } from "react";
 
 function money(minor: number) {
@@ -97,8 +98,10 @@ export default function CartPage() {
                 {items.map((item) => (
                   <article key={item.key} className="rounded-[28px] border border-[#ede9fe] bg-white p-8 shadow-[0_24px_70px_rgba(45,22,72,.07)]">
                     <div className="flex gap-6">
-                      <div className="h-36 w-36 flex-shrink-0 overflow-hidden rounded-[20px] bg-[#f3edf7]">
-                        {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-contain" /> : null}
+                      {/* V85: ürün fotoğrafı güçlü ve gerçek renkleriyle. Merkezi
+                          ProductImage (blurhash + türevler) — checkout ile aynı dil. */}
+                      <div className="relative h-40 w-40 flex-shrink-0 overflow-hidden rounded-[20px] bg-white ring-1 ring-[#EDE9FE]">
+                        <ProductImage src={item.image || undefined} alt={item.name} padding="8px" protect={false} sizes="160px" />
                       </div>
                       <div className="flex flex-1 flex-col justify-between gap-6">
                         <div className="flex items-start justify-between gap-4">
@@ -140,25 +143,58 @@ export default function CartPage() {
                 ))}
                 <Link href="/" className="inline-flex items-center gap-2 font-medium text-[#8b5cf6]"><ArrowLeft className="h-4 w-4" /> Alışverişe Devam Et</Link>
               </div>
-              <aside className="overflow-hidden rounded-[28px] border border-[#ede9fe] bg-white shadow-[0_24px_70px_rgba(45,22,72,.07)]">
-                <div className="border-b border-[#ede9fe] p-8"><h2 className="font-serif text-3xl font-semibold">Sipariş Özeti</h2></div>
-                <div className="p-8">
-                  <p className="text-xs font-bold uppercase tracking-[.32em] text-[#8b5cf6]">İndirim Kodu</p>
-                  <div className="mt-5 flex gap-3"><label className="flex min-w-0 flex-1 items-center gap-3 rounded-full border border-[#e5dbfb] px-5 text-[#8b94a6]"><Tag className="h-5 w-5" /><input aria-label="İndirim kodu" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyCoupon(); }} placeholder="Kodu girin" className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" /></label><button type="button" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()} className="rounded-full bg-[#f1ebff] px-7 font-bold text-[#8b5cf6] disabled:cursor-not-allowed disabled:opacity-50">{couponLoading ? "Kontrol ediliyor…" : "Uygula"}</button></div>{couponMessage ? <p className={`mt-3 text-sm font-semibold ${couponError ? "text-[#b91c1c]" : "text-[#047857]"}`}>{couponMessage}</p> : null}
-                  <div className="mt-8 space-y-4 text-lg"><div className="flex justify-between"><span className="text-[#6f7482]">Ara Toplam</span><strong>{money(subtotalMinor)}</strong></div>{discountMinor > 0 ? <div className="flex justify-between text-[#047857]"><span>İndirim</span><strong>-{money(discountMinor)}</strong></div> : null}<div className="flex justify-between"><span className="text-[#6f7482]">Kargo</span><strong className="text-[#059669]">Ücretsiz</strong></div></div>
-                  <div className="my-8 h-px bg-[#ede9fe]" />
-                  <div className="flex items-end justify-between"><span className="text-xl font-bold">Toplam</span><strong className="font-serif text-5xl font-semibold">{money(totalMinor)}</strong></div>
+              {/* V85 koyu premium panel — checkout'taki ürün hafızası paneliyle
+                  AYNI aile, böylece sepet→checkout geçişi tek deneyim gibi okunur.
+                  Kupon/toplam/CTA mantığı DEĞİŞMEDİ, yalnız sunum. */}
+              <aside
+                className="lg:sticky lg:top-6 overflow-hidden rounded-[28px] shadow-[0_28px_70px_-34px_rgba(76,29,149,0.85)]"
+                style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 55%, #110328 100%)" }}
+              >
+                <div className="p-8 pb-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.32em]" style={{ color: "#C4B5FD" }}>✦ Sipariş Özeti</p>
+                </div>
+                <div className="px-8 pb-8">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "#C4B5FD" }}>İndirim Kodu</p>
+                  <div className="mt-3 flex gap-2.5">
+                    <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full px-4 text-white/45" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(196,181,253,0.16)" }}>
+                      <Tag className="h-4 w-4" />
+                      <input aria-label="İndirim kodu" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyCoupon(); }} placeholder="Kodu girin" className="h-12 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
+                    </label>
+                    <button type="button" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()} className="rounded-full px-6 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" }}>{couponLoading ? "Kontrol ediliyor…" : "Uygula"}</button>
+                  </div>
+                  {couponMessage ? <p className={`mt-3 text-[13px] font-semibold ${couponError ? "text-[#FCA5A5]" : "text-[#86EFAC]"}`}>{couponMessage}</p> : null}
+
+                  <div className="mt-7 space-y-3 text-[14px]">
+                    <div className="flex justify-between"><span className="text-white/45">Ara Toplam</span><span className="font-semibold text-white/85">{money(subtotalMinor)}</span></div>
+                    {discountMinor > 0 ? <div className="flex justify-between text-[#86EFAC]"><span>İndirim</span><span className="font-semibold">-{money(discountMinor)}</span></div> : null}
+                    <div className="flex justify-between"><span className="text-white/45">Kargo</span><span className="font-semibold text-[#86EFAC]">Ücretsiz</span></div>
+                  </div>
+                  <div className="my-6 h-px" style={{ background: "rgba(196,181,253,0.13)" }} />
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[13px] text-white/45">Toplam</span>
+                    <span className="font-semibold text-white" style={{ fontFamily: "var(--font-display)", fontSize: "34px", letterSpacing: "-0.02em" }}>{money(totalMinor)}</span>
+                  </div>
                   {/* Teslimatsız satır varsa checkout kapısı zaten reddeder; müşteriyi
                       duvara göndermek yerine burada durdurup ne yapacağını söylüyoruz. */}
                   {allHaveDelivery ? (
-                    <Link href="/checkout" className="mt-9 flex items-center justify-center gap-3 rounded-full bg-[#8b5cf6] px-8 py-5 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]"><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</Link>
+                    <Link href="/checkout" className="mt-8 flex items-center justify-center gap-3 rounded-full px-8 py-5 text-[17px] font-bold text-white transition hover:brightness-110" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)", boxShadow: "0 18px 45px rgba(139,92,246,.35)" }}><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</Link>
                   ) : (
-                    <div className="mt-9">
-                      <div className="flex cursor-not-allowed items-center justify-center gap-3 rounded-full bg-[#DDD6FE] px-8 py-5 text-lg font-bold text-white"><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</div>
-                      <p className="mt-3 text-center text-sm font-semibold text-[#B91C1C]">Devam etmek için teslimatı seçilmemiş ürünlerin teslimatını tamamlayın.</p>
+                    <div className="mt-8">
+                      <div className="flex cursor-not-allowed items-center justify-center gap-3 rounded-full px-8 py-5 text-[17px] font-bold text-white/45" style={{ background: "rgba(255,255,255,0.08)" }}><ShoppingBag className="h-5 w-5" /> Siparişi Tamamla</div>
+                      <p className="mt-3 text-center text-[13px] font-semibold text-[#FCA5A5]">Devam etmek için teslimatı seçilmemiş ürünlerin teslimatını tamamlayın.</p>
                     </div>
                   )}
-                  <p className="mt-5 text-center text-sm text-[#8b94a6]">Teslimat bilgileri doğrulanarak sipariş kaydı oluşturulur.</p>
+                  <p className="mt-5 text-center text-[12.5px] text-white/35">Teslimat bilgileri doğrulanarak sipariş kaydı oluşturulur.</p>
+
+                  {/* Güven şeridi — checkout paneliyle aynı */}
+                  <div className="mt-6 flex items-center justify-center gap-5 pt-5" style={{ borderTop: "1px solid rgba(196,181,253,0.08)" }}>
+                    {[{ icon: Truck, text: "Aynı Gün" }, { icon: ShieldCheck, text: "SSL Güvenli" }].map(({ icon: Icon, text }) => (
+                      <div key={text} className="flex items-center gap-1.5">
+                        <Icon className="h-3 w-3 shrink-0" style={{ color: "#8B5CF6" }} />
+                        <span className="text-[10.5px] text-white/30">{text}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </aside>
             </div>
