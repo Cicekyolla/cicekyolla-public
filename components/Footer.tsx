@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
 import { BrandWordmark } from "./BrandWordmark";
+import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -202,6 +203,18 @@ export function Footer({
                 {item.label}
               </Link>
             ))}
+            {/* Çerez tercihlerini sonradan değiştirme girişi — Gizlilik Ayarları
+                panelini açar. Panel hazır değilse çerez politikasına düşer. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (canOpenCookiePreferences()) openCookiePreferences();
+                else window.location.href = "/kvkk";
+              }}
+              className="text-xs text-[#4B5563] hover:text-[#9CA3AF] transition-colors"
+            >
+              Çerez Tercihleri
+            </button>
           </div>
         </div>
       </div>

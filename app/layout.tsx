@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { Footer, type FooterBrand } from "@/components/Footer";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { ConsentManager } from "@/components/consent/ConsentManager";
+import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
@@ -105,6 +107,42 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       "--promo-bar-color": headerColors.promoBar,
     } as React.CSSProperties : undefined}>
       <head>
+        {/*
+          Google Consent Mode v2 — GTM'DEN ÖNCE çalışmak ZORUNDA.
+          Ziyaretçinin kaydı yoksa privacy-safe: analytics + reklam sinyalleri "denied".
+          Kaydı varsa (cy_cookie_prefs) default doğrudan o tercihle kurulur, böylece
+          refresh sonrası da aynı consent durumu oluşur.
+          Kullanıcı seçim yaptığında ConsentManager 'consent update' gönderir.
+          GTM container (GTM-54FJNMT2) ve mevcut dataLayer event'leri DEĞİŞMEDİ.
+        */}
+        <Script id="consent-mode-default" strategy="beforeInteractive">
+          {`
+            (function(){
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){ window.dataLayer.push(arguments); }
+              window.gtag = window.gtag || gtag;
+              var a = "denied", m = "denied";
+              try {
+                var raw = window.localStorage.getItem("cy_cookie_prefs");
+                if (raw) {
+                  var p = JSON.parse(raw);
+                  a = (p && p.analytics === true) ? "granted" : "denied";
+                  m = (p && p.marketing === true) ? "granted" : "denied";
+                }
+              } catch (e) {}
+              gtag("consent", "default", {
+                ad_storage: m,
+                ad_user_data: m,
+                ad_personalization: m,
+                personalization_storage: m,
+                analytics_storage: a,
+                functionality_storage: "granted",
+                security_storage: "granted",
+                wait_for_update: 500
+              });
+            })();
+          `}
+        </Script>
         <Script id="google-tag-manager" strategy="beforeInteractive">
           {`
             (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -137,6 +175,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <MemberNewsletterBand />
         <Footer categories={footerOrUndef} brand={footerBrand} />
         <WhatsAppButton />
+        <ConsentManager />
+        <NewMemberPopup />
         <CategoryImageEnhancer />
       </body>
     </html>
