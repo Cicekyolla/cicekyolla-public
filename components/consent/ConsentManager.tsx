@@ -24,23 +24,16 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Check } from "lucide-react";
+import {
+  fetchConsentConfig,
+  subscribeToPush,
+  pushPermission,
+  type ConsentConfig,
+} from "@/lib/consent";
 
-/* ── "Haberdar Ol" — ADMIN'E BAĞLANACAK TEK CONFIG NOKTASI ── */
-const NOTIFICATION = {
-  /* Operatör anahtarı. Tek başına AÇMAK YETMEZ — altta gerçek adapter şart. */
-  enabled: false,
-  timingMs: 13500, // çerez kararından sonra bekleme
-};
-
-/**
- * Gerçek abonelik/marketing kaydı buraya bağlanacak.
- * null olduğu sürece popup HİÇ AÇILMAZ ve hiçbir şey kaydedilmez —
- * sahte abonelik üretilemez.
- */
-const subscribeToUpdates: ((source: string) => Promise<void>) | null = null;
-
-/** Backend adapter'ı olmadan bu deneyim etkinleştirilemez. */
-const NOTIFICATION_READY: boolean = NOTIFICATION.enabled && subscribeToUpdates !== null;
+/* İçerik ve açık/kapalı artık ADMIN'den gelir (GET /api/consent/config).
+   Push için gerçek VAPID anahtarı da oradan iner; anahtar yoksa API zaten
+   push.active=false döndürür → çalışmayan CTA müşteriye gösterilmez. */
 
 /* ── Pazarlama popup'larının ASLA gösterilmeyeceği kritik yollar ──
    Çerez katmanı yasal/consent olduğu için bu listeden etkilenmez; her yolda çıkar.
@@ -375,7 +368,22 @@ function PreferencesPanel({
 /* ══════════════════════════════════════
    COOKIE CONSENT
 ══════════════════════════════════════ */
-function CookieConsent({ onResolved }: { onResolved: () => void }) {
+function CookieConsent({
+  onResolved,
+  cfg,
+}: {
+  onResolved: () => void;
+  /* Config henüz inmediyse V100 varsayılanlarıyla çalışır — yasal katman beklemez. */
+  cfg: ConsentConfig["cookie"] | null;
+}) {
+  const T = {
+    title: cfg?.title ?? "Deneyiminizi size özel hale getirelim.",
+    description:
+      cfg?.description ??
+      "ÇiçekYolla deneyimini geliştirmek, tercihlerinizi hatırlamak ve size daha uygun içerikler sunmak için çerezlerden yararlanıyoruz.",
+    accept: cfg?.accept_text ?? "Tümünü Kabul Et",
+    manage: cfg?.manage_text ?? "Tercihleri Yönet",
+  };
   const [visible, setVisible] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
 
@@ -456,11 +464,10 @@ function CookieConsent({ onResolved }: { onResolved: () => void }) {
                     className="text-white font-semibold text-sm leading-snug mb-1"
                     style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.008em" }}
                   >
-                    Deneyiminizi size özel hale getirelim.
+                    {T.title}
                   </p>
                   <p className="text-white/40 text-xs leading-relaxed max-w-[600px]">
-                    ÇiçekYolla deneyimini geliştirmek, tercihlerinizi hatırlamak ve size daha uygun
-                    içerikler sunmak için çerezlerden yararlanıyoruz.{" "}
+                    {T.description}{" "}
                     <a
                       href="/kvkk"
                       className="underline underline-offset-2 hover:text-white/70 transition-colors"
@@ -480,7 +487,7 @@ function CookieConsent({ onResolved }: { onResolved: () => void }) {
                       color: "rgba(255,255,255,0.6)",
                     }}
                   >
-                    Tercihleri Yönet
+                    {T.manage}
                   </button>
                   <button
                     onClick={acceptAll}
@@ -490,7 +497,7 @@ function CookieConsent({ onResolved }: { onResolved: () => void }) {
                       boxShadow: "0 4px 16px rgba(139,92,246,0.45)",
                     }}
                   >
-                    Tümünü Kabul Et
+                    {T.accept}
                   </button>
                 </div>
               </div>
@@ -518,9 +525,7 @@ function CookieConsent({ onResolved }: { onResolved: () => void }) {
                   className="text-white font-semibold text-[17px] leading-snug mb-2"
                   style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
                 >
-                  Deneyiminizi size özel
-                  <br />
-                  hale getirelim.
+                  {T.title}
                 </p>
                 <p className="text-white/40 text-xs leading-relaxed mb-5">
                   Tercihlerinizi hatırlamak ve size uygun içerikler sunmak için çerezlerden
@@ -539,7 +544,7 @@ function CookieConsent({ onResolved }: { onResolved: () => void }) {
                       color: "rgba(255,255,255,0.6)",
                     }}
                   >
-                    Tercihleri Yönet
+                    {T.manage}
                   </button>
                   <button
                     onClick={acceptAll}
@@ -566,13 +571,18 @@ function CookieConsent({ onResolved }: { onResolved: () => void }) {
    Cookie kararı verildikten 13.5s sonra;
    cookie ile ASLA aynı anda gösterilmez.
 ══════════════════════════════════════ */
-function NotificationConsent({ enabled }: { enabled: boolean }) {
+function NotificationConsent({ enabled, cfg }: { enabled: boolean; cfg: ConsentConfig["push"] }) {
   const [visible, setVisible] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
     if (safeGet("cy_notif")) return;
+    /* Tarayıcı izni zaten verilmiş veya KALICI REDDEDİLMİŞSE bir daha sorma. */
+    const perm = pushPermission();
+    if (perm === "unsupported" || perm === "denied" || perm === "granted") return;
 
     let shown = false;
     let armed = false;
@@ -589,7 +599,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
     const t = setTimeout(() => {
       armed = true;
       show();
-    }, NOTIFICATION.timingMs);
+    }, cfg.delay_ms);
     const unsub = onOverlayFree(show);
     return () => {
       clearTimeout(t);
@@ -607,15 +617,30 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
     close("declined");
   }
 
-  /** Gerçek abonelik ucu olmadan HİÇBİR ŞEY kaydedilmez, başarı gösterilmez. */
+  /**
+   * GERÇEK Web Push aboneliği: tarayıcı izni → PushSubscription → backend kaydı.
+   * Sahte toast/başarı yok; başarısızsa dürüst sebep gösterilir.
+   */
   async function subscribe() {
-    if (!subscribeToUpdates) return;
-    try {
-      await subscribeToUpdates("notification-popup");
+    if (busy) return;
+    setBusy(true);
+    setErr(null);
+    const r = await subscribeToPush(cfg.vapid_public_key);
+    setBusy(false);
+    if (r.ok) {
       close("accepted");
-    } catch {
-      /* Başarısızsa popup açık kalır — sahte başarı yok. */
+      return;
     }
+    if (r.reason === "denied") {
+      /* Kullanıcı tarayıcı izninde reddetti → tekrar rahatsız etme. */
+      close("declined");
+      return;
+    }
+    setErr(
+      r.reason === "unsupported"
+        ? "Tarayıcınız bildirimi desteklemiyor."
+        : "Şu anda kaydedilemedi. Lütfen daha sonra tekrar deneyin."
+    );
   }
 
   return (
@@ -647,7 +672,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                   {!imgError && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src="https://images.unsplash.com/photo-1782038522642-0d2dbeae5476?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=88&w=640"
+                      src={cfg.image_url ?? "https://images.unsplash.com/photo-1782038522642-0d2dbeae5476?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=88&w=640"}
                       alt="Çiçek koleksiyonu"
                       className="w-full h-full object-cover"
                       style={{
@@ -702,18 +727,22 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                       fontSize: "16px",
                       lineHeight: 1.2,
                       letterSpacing: "-0.01em",
+                      whiteSpace: "pre-line",
                     }}
                   >
-                    En güzel anları
-                    <br />
-                    kaçırmayın.
+                    {cfg.title}
                   </h4>
                   <p className="text-white/38 text-xs leading-relaxed mb-4">
-                    Yeni koleksiyonları, özel gün seçkilerini ve size özel fırsatları ilk siz keşfedin.{" "}
+                    {cfg.description}{" "}
                     <a href="/kvkk" className="underline underline-offset-2 hover:text-white/60 transition-colors">
                       Aydınlatma Metni
                     </a>
                   </p>
+                  {err && (
+                    <p className="text-xs mb-3" style={{ color: "#F87171" }}>
+                      {err}
+                    </p>
+                  )}
                   <div className="flex gap-2.5">
                     <button
                       onClick={dismiss}
@@ -724,7 +753,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                         color: "rgba(255,255,255,0.5)",
                       }}
                     >
-                      Şimdi Değil
+                      {cfg.dismiss_text}
                     </button>
                     <button
                       onClick={subscribe}
@@ -735,7 +764,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                       }}
                     >
                       <Check className="w-3 h-3" />
-                      Haberdar Ol
+                      {busy ? "Kaydediliyor…" : cfg.cta_text}
                     </button>
                   </div>
                 </div>
@@ -771,7 +800,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                 {!imgError && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="https://images.unsplash.com/photo-1782038522642-0d2dbeae5476?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=88&w=640"
+                    src={cfg.image_url ?? "https://images.unsplash.com/photo-1782038522642-0d2dbeae5476?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=88&w=640"}
                     alt="Çiçek koleksiyonu"
                     className="w-full h-full object-cover"
                     style={{
@@ -825,12 +854,13 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                     fontSize: "19px",
                     lineHeight: 1.15,
                     letterSpacing: "-0.01em",
+                    whiteSpace: "pre-line",
                   }}
                 >
-                  En güzel anları kaçırmayın.
+                  {cfg.title}
                 </h4>
                 <p className="text-white/38 text-xs leading-relaxed mb-5">
-                  Yeni koleksiyonları, özel gün seçkilerini ve size özel fırsatları ilk siz keşfedin.{" "}
+                  {cfg.description}{" "}
                   <a href="/kvkk" className="underline underline-offset-2 hover:text-white/60 transition-colors">
                     Aydınlatma Metni
                   </a>
@@ -845,7 +875,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                       color: "rgba(255,255,255,0.55)",
                     }}
                   >
-                    Şimdi Değil
+                    {cfg.dismiss_text}
                   </button>
                   <button
                     onClick={subscribe}
@@ -856,7 +886,7 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
                     }}
                   >
                     <Check className="w-4 h-4" />
-                    Haberdar Ol
+                    {busy ? "Kaydediliyor…" : cfg.cta_text}
                   </button>
                 </div>
               </div>
@@ -874,6 +904,19 @@ function NotificationConsent({ enabled }: { enabled: boolean }) {
 ══════════════════════════════════════ */
 export function ConsentManager() {
   const [cookieResolved, setCookieResolved] = useState(false);
+  const [cfg, setCfg] = useState<ConsentConfig | null>(null);
+
+  /* Admin içerikleri + gerçek kampanya/VAPID durumu. Hata olursa null kalır ve
+     çerez katmanı V100 varsayılanlarıyla çalışmaya devam eder. */
+  useEffect(() => {
+    let alive = true;
+    fetchConsentConfig().then((c) => {
+      if (alive) setCfg(c);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   /* SSR/CSR hydration uyuşmazlığını önlemek için localStorage okuması
      ilk render'dan sonra yapılır (V100 Vite SPA'da bu sorun yoktu). */
@@ -884,8 +927,13 @@ export function ConsentManager() {
 
   return (
     <>
-      <CookieConsent onResolved={() => setCookieResolved(true)} />
-      {NOTIFICATION_READY && <NotificationConsent enabled={cookieResolved} />}
+      {/* Çerez katmanı yasal — admin kapatmadıkça her zaman çalışır. */}
+      {(cfg?.cookie.active ?? true) && (
+        <CookieConsent cfg={cfg?.cookie ?? null} onResolved={() => setCookieResolved(true)} />
+      )}
+      {/* Haberdar Ol: yalnız admin açtıysa VE gerçek VAPID anahtarı varsa
+          (API push.active'i buna göre döndürür) — çalışmayan CTA gösterilmez. */}
+      {cfg?.push.active && <NotificationConsent enabled={cookieResolved} cfg={cfg.push} />}
     </>
   );
 }
