@@ -58,7 +58,12 @@ export interface SelectedDelivery {
 }
 
 interface Props {
-  product: { id: number; product_type: string; same_day_available: boolean; delivery_scope: string; categoryId?: number | null };
+  /** id ZORUNLU (delivery-check bunu okur ve modeli DB'den çözer).
+   *  product_type yalnız fallback; same_day_available / delivery_scope bu bileşende
+   *  KULLANILMIYOR. Checkout'tan yeniden kullanılabilsin diye opsiyonel yapıldı —
+   *  sepette bu alanlar yok, yalnız productId ve (teslimat içinde) categoryId var.
+   *  Davranış değişmedi. */
+  product: { id: number; product_type?: string; same_day_available?: boolean; delivery_scope?: string; categoryId?: number | null };
   /** Seçim tamamlandığında dolu, adres/tarih değişip seçim GEÇERSİZLEŞTİĞİNDE null gönderilir. */
   onSelect?: (sel: SelectedDelivery | null) => void;
 }
@@ -162,7 +167,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         const VALID_TYPES = ["flower", "plant", "wreath", "artificial", "gift", "service"];
         const city = addr.il && addr.il.trim() ? addr.il.trim() : undefined;
         const district = addr.ilce && addr.ilce.trim() ? addr.ilce.trim() : undefined;
-        const productType = VALID_TYPES.includes(product.product_type) ? product.product_type : undefined;
+        const productType = VALID_TYPES.includes(product.product_type ?? "") ? product.product_type : undefined;
         // KRİTİK: pg BIGINT id'yi STRING döndürebilir -> Number()'a zorla (z.number() aksi halde 422).
         const pid = Number(product.id);
         const selectedDate = isoOf(offset);

@@ -45,9 +45,11 @@ type Props = {
   returnPath?: string;
   delivery?: PendingDelivery;
   onContinue: () => void;
+  /** Teslimatı checkout içinde düzenle (ürün sayfasına GİTMEZ). */
+  onEditDelivery?: () => void;
 };
 
-export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, delivery, onContinue }: Props) {
+export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, delivery, onContinue, onEditDelivery }: Props) {
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
   const [member, setMember] = useState<{ name: string; email: string } | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);
@@ -77,9 +79,13 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[11px] tracking-[0.18em] text-[#8B5CF6] uppercase font-bold">Sipariş Özeti</h3>
-        <Link href={`/urun/${productSlug}`} className="flex items-center gap-1 text-[12px] font-semibold text-[#7C3AED] hover:underline">
-          <Pencil className="w-3 h-3" /> Düzenle
-        </Link>
+        {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini açar. Önce
+            /urun/[slug]'a Link'ti ve müşteri siparişe baştan başlıyordu. */}
+        {onEditDelivery && (
+          <button type="button" onClick={onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-[#7C3AED] hover:underline">
+            <Pencil className="w-3 h-3" /> Düzenle
+          </button>
+        )}
       </div>
 
       <div className="flex gap-3.5">
