@@ -60,9 +60,9 @@ export const metadata: Metadata = {
     locale: "tr_TR",
     url: "/",
     siteName: "Çiçekyolla",
-    title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
+    title: "Çiçek Yolla - Online Çiçek Siparişi - Çiçek Gönder - Çiçekçi",
     description:
-      "Premium aranjmanlar, zarif paketleme, aynı gün teslimat. Her duygu bir çiçekle anlam kazanır.",
+      "Online çiçek siparişi verin, sevdiklerinize güvenle çiçek gönderin. Özel günlere uygun çiçekleri ÇiçekYolla ile kolayca sipariş edin.",
     images: [
       {
         url: "/opengraph-image",
@@ -74,8 +74,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat",
-    description: "Premium aranjmanlar, zarif paketleme, aynı gün teslimat.",
+    title: "Çiçek Yolla - Online Çiçek Siparişi - Çiçek Gönder - Çiçekçi",
+    description: "Online çiçek siparişi verin, sevdiklerinize güvenle çiçek gönderin.",
     images: ["/twitter-image"],
   },
   robots: indexRobots(),
