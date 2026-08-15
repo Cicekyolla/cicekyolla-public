@@ -170,13 +170,13 @@ export function Header({ menu, nav, search, brand }: {
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
           background: scrolled
-            ? "rgba(15, 10, 31, 0.96)"
-            : "linear-gradient(180deg, #0f0a1f 0%, #0f0a1f 100%)",
+            ? "rgba(255, 255, 255, 0.94)"
+            : "linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 100%)",
           backdropFilter: scrolled ? "blur(20px) saturate(160%)" : "none",
-          borderBottom: "1px solid rgba(192,132,252,0.16)",
+          borderBottom: "1px solid rgba(17,24,39,0.07)",
           boxShadow: scrolled
-            ? "0 1px 0 rgba(192,132,252,0.12), 0 14px 40px rgba(7,0,17,0.28)"
-            : "0 1px 0 rgba(192,132,252,0.10)",
+            ? "0 1px 0 rgba(139,92,246,0.10), 0 14px 40px rgba(76,29,149,0.08)"
+            : "0 1px 0 rgba(139,92,246,0.06)",
         }}
       >
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
@@ -185,10 +185,10 @@ export function Header({ menu, nav, search, brand }: {
             {/* ── Logo — hero tipografisiyle aynı keskin vektör marka sistemi ── */}
             <Link
               href="/"
-              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-white/[0.04]"
+              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-[#F5F3FF]"
               aria-label="ÇiçekYolla ana sayfa"
             >
-              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} inverse />
+              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} />
             </Link>
 
             {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
@@ -205,8 +205,8 @@ export function Header({ menu, nav, search, brand }: {
                     href={menuData[key].href ?? "/kategori/turkiye-geneli-kargo"}
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
-                        ? "text-[#E9D5FF] bg-white/[0.10]"
-                        : "text-[#E5E7EB] hover:text-[#E9D5FF] hover:bg-white/[0.07]"
+                        ? "text-[#8B5CF6] bg-[#F5F3FF]"
+                        : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
                     style={{
                       padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
@@ -221,8 +221,8 @@ export function Header({ menu, nav, search, brand }: {
                   <button
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
-                        ? "text-[#E9D5FF] bg-white/[0.10]"
-                        : "text-[#E5E7EB] hover:text-[#E9D5FF] hover:bg-white/[0.07]"
+                        ? "text-[#8B5CF6] bg-[#F5F3FF]"
+                        : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
                     style={{
                       padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
@@ -242,7 +242,7 @@ export function Header({ menu, nav, search, brand }: {
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="w-11 h-11 flex items-center justify-center rounded-full text-[#D1D5DB] hover:text-[#E9D5FF] hover:bg-white/[0.08] transition-all"
+                className="w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
               >
                 {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
               </button>
@@ -250,7 +250,7 @@ export function Header({ menu, nav, search, brand }: {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#D1D5DB] hover:text-[#E9D5FF] hover:bg-white/[0.08] transition-all">
+                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" d="M4 7h16M4 12h10M4 17h16" />
                     </svg>

@@ -275,7 +275,7 @@ export default async function HomePage() {
           SPACING FIX: alt boşluk (pb) sıfırlandı → dark Hero slider'ın HEMEN altında başlar,
           aradaki beyaz gap kalkar, geçiş tek akış görünür. Üstte pt-5 (header'dan hafif nefes). */}
       <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
-        <FloatingCategoryRail items={collections} />
+        <FloatingCategoryRail items={collections} variant="light" allHref="/kategori/koleksiyonlar" />
       </section>
 
       <HeroDeliveryBar />
