@@ -30,7 +30,11 @@ export function BrandWordmark({
     : isCompact
       ? "mt-1 text-[8px]"
       : "mt-1.5 text-[8.5px] xl:text-[9px]";
-  const taglineColor = inverse ? "text-[#C084FC]" : "text-[#51247A]";
+  // Açık zeminde tagline logodan GÜÇLÜ olmamalı: yardımcı bir satırın ait olduğu
+  // markanın önüne geçmesi hiyerarşiyi bozuyordu (#51247A 11.15:1 > logo 9.25:1).
+  // #6D28D9 -> 7.10:1: logodan net zayıf, WCAG AA'nın (4.5) rahat üstünde ve
+  // marka moru olduğu için kimliği pekiştiriyor. inverse (footer) DEĞİŞMEDİ.
+  const taglineColor = inverse ? "text-[#C084FC]" : "text-[#6D28D9]";
 
   return (
     <div className="flex w-fit flex-col" aria-label={alt}>
