@@ -279,7 +279,13 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
         {/* ── Alt Kategori Slider (Çiçeksepeti deseni): mevcut kategorinin children'ı ── */}
         {subItems.length > 0 ? (
           <section aria-label="Alt kategoriler" className="max-w-[1440px] mx-auto pt-8 lg:pt-10">
-            <FloatingCategoryRail items={subItems} variant="light" label={`${page.h1} Kategorileri`} />
+            {/* h1 boşsa şablon "null Kategorileri" üretiyordu; kategori ağacı geçici
+                erişilemezse fallback devreye giremeyeceği için burada da korunuyor. */}
+            <FloatingCategoryRail
+              items={subItems}
+              variant="light"
+              label={page.h1?.trim() ? `${page.h1.trim()} Kategorileri` : "Alt Kategoriler"}
+            />
           </section>
         ) : null}
 
