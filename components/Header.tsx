@@ -206,7 +206,7 @@ export function Header({ menu, nav, search, brand }: {
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
                         ? "text-[#8B5CF6] bg-[#F5F3FF]"
-                        : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
+                        : "text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
                     style={{
                       padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
@@ -222,7 +222,7 @@ export function Header({ menu, nav, search, brand }: {
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
                         ? "text-[#8B5CF6] bg-[#F5F3FF]"
-                        : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
+                        : "text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
                     style={{
                       padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
@@ -268,7 +268,7 @@ export function Header({ menu, nav, search, brand }: {
                       <Link
                         href="/"
                         onClick={() => setMobileOpen(false)}
-                        className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
+                        className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
                       >
                         Ana Sayfa
                         <ArrowRight className="w-3.5 h-3.5 opacity-40" />
@@ -286,7 +286,7 @@ export function Header({ menu, nav, search, brand }: {
                               key={cat.href}
                               href={cat.href}
                               onClick={() => setMobileOpen(false)}
-                              className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
+                              className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
                             >
                               {cat.label}
                               <ArrowRight className="w-3.5 h-3.5 opacity-40" />
@@ -299,7 +299,7 @@ export function Header({ menu, nav, search, brand }: {
                               type="button"
                               aria-expanded={isOpen}
                               onClick={() => setMobileExpanded(isOpen ? null : cat.label)}
-                              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold uppercase tracking-wide transition-all ${isOpen ? "text-[#8B5CF6] bg-[#F5F3FF]" : "text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"}`}
+                              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold uppercase tracking-wide transition-all ${isOpen ? "text-[#8B5CF6] bg-[#F5F3FF]" : "text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"}`}
                             >
                               {cat.label}
                               <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? "rotate-180 text-[#8B5CF6]" : "opacity-50"}`} />
@@ -348,7 +348,7 @@ export function Header({ menu, nav, search, brand }: {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMobileOpen(false)}
-                          className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#374151] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
+                          className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
                         >
                           {item.label}
                           <ArrowRight className="w-3.5 h-3.5 opacity-40" />
