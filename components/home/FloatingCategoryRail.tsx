@@ -31,17 +31,20 @@ export function FloatingCategoryRail({
 }) {
   const light = variant === "light";
   const t = {
+    // Acik tema: temiz BEYAZ yuzey. Lila blok hissi veren zemin tonu kaldirildi;
+    // ayrim artik yalniz hairline border + cok hafif premium golge ile kuruluyor.
+    // Mor yalnizca vurgu (etiket, ok, hover) olarak kaliyor.
     container: light
-      ? "rgba(250,248,255,0.92)"
+      ? "#FFFFFF"
       : "rgba(6, 2, 18, 0.82)",
-    border: light ? "1px solid rgba(124,58,237,0.14)" : "1px solid rgba(255,255,255,0.13)",
+    border: light ? "1px solid rgba(17,24,39,0.06)" : "1px solid rgba(255,255,255,0.13)",
     shadow: light
-      ? "0 12px 40px rgba(124,58,237,0.08), 0 2px 8px rgba(0,0,0,0.04)"
+      ? "0 4px 16px rgba(17,24,39,0.04), 0 1px 3px rgba(17,24,39,0.03)"
       : ["0 40px 120px rgba(0,0,0,0.65)", "0 8px 32px rgba(0,0,0,0.4)", "0 1px 0 rgba(255,255,255,0.12) inset", "0 -1px 0 rgba(255,255,255,0.03) inset"].join(", "),
     labelText: light ? "text-[#7C3AED]" : "text-white/45",
     hintText: light ? "text-[#9CA3AF]" : "text-white/22",
     arrowBg: light ? "rgba(255,255,255,0.95)" : "rgba(20,10,40,0.85)",
-    arrowBorder: light ? "1px solid rgba(124,58,237,0.2)" : "1px solid rgba(255,255,255,0.18)",
+    arrowBorder: light ? "1px solid rgba(17,24,39,0.08)" : "1px solid rgba(255,255,255,0.18)",
     arrowText: light ? "text-[#7C3AED]" : "text-white/90 hover:text-white",
     nameText: light ? "text-[#374151] group-hover:text-[#7C3AED]" : "text-white/72 group-hover:text-white",
     countText: light ? "text-[#9CA3AF]" : "text-white/25",
@@ -49,9 +52,10 @@ export function FloatingCategoryRail({
       ? "text-[#6B7280] hover:text-[#7C3AED]"
       : "text-white/45 hover:text-white",
     // Daire görsellerin gölgesi: koyu zeminde derin siyah halo doğru görünür,
-    // beyaz zeminde kirli bir leke yapar → açık temada yumuşak mor-nötr ring.
+    // beyaz zeminde kirli bir leke yapar → açık temada notr, temiz beyaz yuzey
+    // hissi veren cok hafif ring (mor halo kaldirildi).
     circleShadow: light
-      ? "0 6px 18px rgba(76,29,149,0.10), 0 0 0 1.5px rgba(124,58,237,0.10)"
+      ? "0 4px 14px rgba(17,24,39,0.08), 0 0 0 1.5px rgba(17,24,39,0.05)"
       : "0 8px 28px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.12)",
   };
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.

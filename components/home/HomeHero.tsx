@@ -152,6 +152,19 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
           pointerEvents: "none",
         }}
       />
+      {/* Üst kenar yumuşatma — beyaz teslimat bandından koyu Hero'ya sert kesim
+          oluşmasın diye SADECE ilk ~72px'te beyazdan şeffafa geçen ince katman.
+          Hero görseli, metinleri, CTA'ları ve CMS yapısı DEĞİŞMEZ; bu yalnız
+          dekoratif bir örtü (pointerEvents: none, z-index yok → içerik üstte). */}
+      <div
+        aria-hidden
+        className="absolute top-0 left-0 right-0 h-[72px]"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0.12) 42%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
 
       {/* Hero content — akışta; OPTİK DENGE: üst padding minimuma indirildi (pt-3/4),
           H1 yukarı çekildi, slider→Hero geçişi kompakt. Hero yüksekliği (82svh) + mor zemin korunur. */}
