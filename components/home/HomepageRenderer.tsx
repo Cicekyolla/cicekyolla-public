@@ -90,7 +90,7 @@ function buildWorkshopSlots(s: HpSection): WorkshopSlot[] {
 function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
   switch (s.type) {
     case "collection_rail":
-      return <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0"><FloatingCategoryRail items={ctx.collections} /></section>;
+      return <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0"><FloatingCategoryRail items={ctx.collections} variant="light" allHref="/kategori/koleksiyonlar" /></section>;
     case "hero_delivery_bar":   return <HeroDeliveryBar />;
     case "hero":               return <HomeHero config={s.config} />;
     case "trust_bar":           return <TrustBar />;
@@ -240,7 +240,7 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
           CMS sürümünde kayıt yoksa kaybolmaz; kayıt varsa ikinci kez gösterilmez. */}
       {!hasCollectionRail ? (
         <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
-          <FloatingCategoryRail items={ctx.collections} />
+          <FloatingCategoryRail items={ctx.collections} variant="light" allHref="/kategori/koleksiyonlar" />
         </section>
       ) : null}
       {enabledSections.map((s) => (

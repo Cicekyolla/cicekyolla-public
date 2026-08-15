@@ -20,10 +20,14 @@ export function FloatingCategoryRail({
   items,
   variant = "dark",
   label = "Koleksiyonlar",
+  allHref,
 }: {
   items?: CategoryItem[];
   variant?: "dark" | "light";
   label?: string;
+  /** Verilirse etiket satirinin sagina "Tumunu Gor" baglantisi cikar; yoksa mevcut
+   *  "Kaydir" ipucu aynen kalir (kategori sayfalarindaki ray degismez). */
+  allHref?: string;
 }) {
   const light = variant === "light";
   const t = {
@@ -41,6 +45,14 @@ export function FloatingCategoryRail({
     arrowText: light ? "text-[#7C3AED]" : "text-white/90 hover:text-white",
     nameText: light ? "text-[#374151] group-hover:text-[#7C3AED]" : "text-white/72 group-hover:text-white",
     countText: light ? "text-[#9CA3AF]" : "text-white/25",
+    allText: light
+      ? "text-[#6B7280] hover:text-[#7C3AED]"
+      : "text-white/45 hover:text-white",
+    // Daire görsellerin gölgesi: koyu zeminde derin siyah halo doğru görünür,
+    // beyaz zeminde kirli bir leke yapar → açık temada yumuşak mor-nötr ring.
+    circleShadow: light
+      ? "0 6px 18px rgba(76,29,149,0.10), 0 0 0 1.5px rgba(124,58,237,0.10)"
+      : "0 8px 28px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.12)",
   };
   // TEK KAYNAK: yalnız canlı kategori ağacından gelen items; hardcoded/fallback YOK.
   const cats = items ?? [];
@@ -83,12 +95,24 @@ export function FloatingCategoryRail({
         <div className="flex items-center gap-2.5 mb-4">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C084FC] flex-shrink-0" />
           <span className={`${t.labelText} text-[10px] tracking-[0.3em] uppercase font-semibold`}>{label}</span>
-          <span className={`ml-auto flex items-center gap-1 ${t.hintText} text-[9px] tracking-wide`}>
-            Kaydır
-            <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
-              <path d="M1.5 5h7M5.5 1.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+          {allHref ? (
+            <Link
+              href={allHref}
+              className={`ml-auto flex items-center gap-1.5 ${t.allText} text-[11px] font-semibold tracking-wide transition-colors`}
+            >
+              Tümünü Gör
+              <svg className="w-3 h-3" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 5h7M5.5 1.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          ) : (
+            <span className={`ml-auto flex items-center gap-1 ${t.hintText} text-[9px] tracking-wide`}>
+              Kaydır
+              <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 5h7M5.5 1.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          )}
         </div>
 
         {/* Embla carousel + ileri/geri ok butonları (drag/scroll da çalışır) */}
@@ -138,7 +162,7 @@ export function FloatingCategoryRail({
                     style={{
                       aspectRatio: "1",
                       borderRadius: "50%",
-                      boxShadow: "0 8px 28px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.12)",
+                      boxShadow: t.circleShadow,
                     }}
                   >
                     {showImage ? (
