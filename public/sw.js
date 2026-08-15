@@ -26,11 +26,17 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "ÇiçekYolla";
   const options = {
     body: payload.body || "",
+    // icon  = sol üstteki küçük kare (marka logosu). Admin boş bırakırsa
+    //         /icon-192.png devreye girer.
     icon: payload.icon || "/icon-192.png",
     badge: "/icon-192.png",
     // Tıklama hedefi admin'de belirlenir; SW burada yalnız taşır.
     data: { url: payload.url || "/" },
   };
+
+  // image = bildirimin altındaki GENİŞ kampanya görseli. Ayrı bir alandır;
+  // yalnız admin doldurduysa eklenir, boşsa hiç gönderilmez.
+  if (payload.image) options.image = payload.image;
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
