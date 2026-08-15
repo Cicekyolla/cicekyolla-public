@@ -132,7 +132,7 @@ export default function HeroDeliveryBar() {
 
     let content;
     if (st.loading) {
-      content = <span className="text-white/70">Teslimat durumu yükleniyor…</span>;
+      content = <span className="text-[#6B7280]">Teslimat durumu yükleniyor…</span>;
     } else if (st.availableToday && st.cutoff) {
       const rem = cutoffRemainingMs(st.cutoff, nowTs);
       if (rem > 0) {
@@ -142,24 +142,24 @@ export default function HeroDeliveryBar() {
         const urgent = rem < 3_600_000;
         content = (
           <>
-            <span className="font-semibold">{ref.label}:</span>{" "}
-            <span className="text-white/85">Aynı gün için</span>{" "}
-            <span className={`tabular-nums font-bold tracking-tight ${urgent ? "text-[#FEE2E2]" : "text-white"}`}>{hh}:{mm}:{ss}</span>{" "}
-            <span className="text-white/70">kaldı · Son alım {st.cutoff}</span>
+            <span className="font-semibold text-[#7C3AED]">{ref.label}:</span>{" "}
+            <span className="text-[#4B5563]">Aynı gün için</span>{" "}
+            <span className={`tabular-nums font-bold tracking-tight mx-[3px] ${urgent ? "text-[#DC2626]" : "text-[#7C3AED]"}`}>{hh}:{mm}:{ss}</span>{" "}
+            <span className="text-[#6B7280]">kaldı · Son alım {st.cutoff}</span>
           </>
         );
       } else {
-        content = <span className="font-semibold">{ref.label}: Bugün kapandı</span>;
+        content = <span className="font-semibold text-[#7C3AED]">{ref.label}: Bugün kapandı</span>;
       }
     } else {
       content = (
         <>
-          <span className="font-semibold">{ref.label}:</span>{" "}
-          <span className="text-white/85">Bugün kapandı</span>
+          <span className="font-semibold text-[#7C3AED]">{ref.label}:</span>{" "}
+          <span className="text-[#4B5563]">Bugün kapandı</span>
           {st.next ? (
-            <span className="text-white/70"> — en erken {dayLabel(st.next.offset)} {st.next.label}</span>
+            <span className="text-[#6B7280]"> — en erken {dayLabel(st.next.offset)} {st.next.label}</span>
           ) : (
-            <span className="text-white/70"> — en erken teslimat için takvimi kullanın</span>
+            <span className="text-[#6B7280]"> — en erken teslimat için takvimi kullanın</span>
           )}
         </>
       );
@@ -167,7 +167,7 @@ export default function HeroDeliveryBar() {
 
     return (
       <div className="flex items-center gap-2 whitespace-normal md:whitespace-nowrap px-4 py-2 text-[12.5px] md:text-[13px] w-full md:w-auto">
-        <Icon className="w-4 h-4 shrink-0 text-white/90" />
+        <Icon className="w-4 h-4 shrink-0 text-[#7C3AED]" />
         <span className="leading-tight">{content}</span>
       </div>
     );
@@ -175,15 +175,19 @@ export default function HeroDeliveryBar() {
 
   return (
     <div
-      className="w-full text-white"
-      style={{ background: "linear-gradient(90deg, #5B21B6 0%, #7C3AED 45%, #6D28D9 100%)" }}
+      className="w-full text-[#374151]"
+      style={{
+        background: "#FFFFFF",
+        borderTop: "1px solid rgba(17,24,39,0.06)",
+        borderBottom: "1px solid rgba(17,24,39,0.06)",
+      }}
       aria-label="Aynı gün teslimat son alım durumu"
     >
-      <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row md:items-stretch divide-y md:divide-y-0 md:divide-x divide-white/15">
+      <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row md:items-stretch divide-y md:divide-y-0 md:divide-x divide-[rgba(17,24,39,0.07)]">
         {renderSide("anadolu")}
         {renderSide("avrupa")}
-        <div className="hidden lg:flex items-center gap-1.5 px-4 py-2 text-[12px] text-white/70 ml-auto">
-          <Clock className="w-3.5 h-3.5" /> Saatler bölgenize göre sipariş adımında güncellenir
+        <div className="hidden lg:flex items-center gap-1.5 px-4 py-2 text-[12px] text-[#6B7280] ml-auto">
+          <Clock className="w-3.5 h-3.5 text-[#7C3AED]" /> Saatler bölgenize göre sipariş adımında güncellenir
         </div>
       </div>
     </div>
