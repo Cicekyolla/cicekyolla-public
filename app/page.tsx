@@ -49,9 +49,11 @@ import { isLegacyPleskMedia } from "@/lib/media";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { absolute: "Çiçekyolla — Premium Çiçek & Aynı Gün Teslimat" },
+  // SEO kurtarma (15 Ağu 2026, operatör onaylı): eski güçlü dönemin Wayback-kanıtlı
+  // title'ı geri getirildi — "çiçek yolla" poz ~2 dönemi bu head ile kazanılmıştı.
+  title: { absolute: "Çiçek Yolla - Online Çiçek Siparişi - Çiçek Gönder - Çiçekçi" },
   description:
-    "Özenle seçilmiş premium aranjmanlar, zarif paketleme ve aynı gün teslimat seçenekleri.",
+    "Online çiçek siparişi verin, sevdiklerinize güvenle çiçek gönderin. Özel günlere uygun çiçekleri ÇiçekYolla ile kolayca sipariş edin.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
