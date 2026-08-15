@@ -23,13 +23,37 @@ function syntheticCategoryPage(path: string, node: Record<string, unknown>): Seo
     lang: "tr",
     index_state: node.is_indexable === false ? "noindex" : "index",
     canonical_url: str("canonical_url") || path,
-    title_tag: str("seo_title") || `${name} — Cicekyolla`,
+    // Marka EKLENMEZ: app/layout.tsx metadata şablonu zaten "%s | ÇiçekYolla"
+    // uyguluyor. Buraya marka yazmak "Güller — Cicekyolla | ÇiçekYolla" gibi
+    // çift markalı (ve diakritiksiz) başlık üretiyordu.
+    title_tag: str("seo_title") || name,
     meta_description: str("seo_description") || desc || `${name} koleksiyonu — aynı gün teslimat.`,
     h1: str("h1_title") || name,
     intro_html: desc ? `<p>${desc}</p>` : null,
     body_blocks: [],
     faq: Array.isArray(node.faq_json) ? (node.faq_json as SeoPublicPage["faq"]) : [],
     schema_jsonld: {},
+  };
+}
+
+// Admin'deki SEO kaydı yayında olduğu halde h1/title_tag/meta_description alanları
+// boş bırakılmış olabilir. O durumda sayfa boş <h1> ve boş <title> ile yayınlanıyor,
+// kategori rayının etiketi de "null Kategorileri" çıkıyordu. Boş alanları
+// syntheticCategoryPage'in ürettiği (canlı kategori ağacından gelen) değerlerle
+// tamamlar. DOLU gelen hiçbir alana dokunmaz → admin tek kaynak olmayı sürdürür.
+function withCategoryFallbacks(
+  seo: SeoPublicPage,
+  path: string,
+  node: Record<string, unknown>
+): SeoPublicPage {
+  const blank = (v: string | null | undefined): boolean => !v || v.trim() === "";
+  if (!blank(seo.h1) && !blank(seo.title_tag) && !blank(seo.meta_description)) return seo;
+  const derived = syntheticCategoryPage(path, node);
+  return {
+    ...seo,
+    h1: blank(seo.h1) ? derived.h1 : seo.h1,
+    title_tag: blank(seo.title_tag) ? derived.title_tag : seo.title_tag,
+    meta_description: blank(seo.meta_description) ? derived.meta_description : seo.meta_description,
   };
 }
 
@@ -200,9 +224,13 @@ function syntheticDynamicDeliveryPage(path: string, dyn: DynDelivery): SeoPublic
 async function resolvePage(path: string): Promise<SeoPublicPage | null> {
   if (path.startsWith("/kategori/")) {
     const [seo, tree] = await Promise.all([fetchSeoPage(path), getCategoryTree()]);
-    if (seo) return seo;
     const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
     const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
+    // SEO kaydı VAR ama h1/title_tag/meta_description alanları boş olabilir
+    // (canlıda tüm kategorilerde null'dı → boş <h1>, boş <title>, "null Kategorileri").
+    // Bu alanları canlı kategori ağacından türet; hardcoded veri YOK, admin tek
+    // kaynak kalır. Dolu gelen her alan AYNEN korunur.
+    if (seo) return node ? withCategoryFallbacks(seo, path, node as unknown as Record<string, unknown>) : seo;
     if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
     // Render/API kısa süreli erişilemezse geçerli kategori URL'lerini 404 olarak
     // önbelleğe alma. Ağaç geri geldiğinde admin verisi yeniden tek kaynak olur.
