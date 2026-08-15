@@ -132,7 +132,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(105deg, rgba(5,0,20,0.82) 0%, rgba(15,7,60,0.55) 45%, rgba(0,0,0,0.18) 100%)",
+            "linear-gradient(105deg, rgba(5,0,20,0.55) 0%, rgba(15,7,60,0.55) 45%, rgba(0,0,0,0.18) 100%)",
           pointerEvents: "none",
         }}
       />
@@ -149,19 +149,6 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
         style={{
           background:
             "radial-gradient(ellipse at 20% 50%, #8B5CF6 0%, transparent 60%)",
-          pointerEvents: "none",
-        }}
-      />
-      {/* Üst kenar yumuşatma — beyaz teslimat bandından koyu Hero'ya sert kesim
-          oluşmasın diye SADECE ilk ~72px'te beyazdan şeffafa geçen ince katman.
-          Hero görseli, metinleri, CTA'ları ve CMS yapısı DEĞİŞMEZ; bu yalnız
-          dekoratif bir örtü (pointerEvents: none, z-index yok → içerik üstte). */}
-      <div
-        aria-hidden
-        className="absolute top-0 left-0 right-0 h-[72px]"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0.12) 42%, transparent 100%)",
           pointerEvents: "none",
         }}
       />
