@@ -100,6 +100,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const navOrUndef = nav.length > 0 ? nav : undefined;
   const footerOrUndef = footerNav.length > 0 ? footerNav : undefined;
 
+  // Header BEYAZ, footer KOYU zeminde. Tek logo dosyası ikisine birden uyamıyor:
+  // beyaza uygun koyu logo footer'da kayboluyor (3.03:1), footer'a uygun açık logo
+  // header'da soluk kalıyor (2.34:1).
+  // Header  -> CMS'teki logo (operatör beyaz zemine göre koyu sürümü yükledi).
+  // Footer  -> logoUrl verilmez; BrandWordmark'ın MEVCUT yedeği olan repodaki açık
+  //            marka varlığı (/brand-logo) devreye girer → koyu zeminde 8.48:1.
+  // Diğer tüm alanlar (alt metin, tagline, iletişim) aynen korunur.
+  const footerBrandLight = footerBrand ? { ...footerBrand, logoUrl: undefined } : undefined;
+
   return (
     <html lang="tr" style={headerColors ? {
       "--header-bg-color": headerColors.bg,
@@ -173,7 +182,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </CartProvider>
         <MemberNewsletterBand />
-        <Footer categories={footerOrUndef} brand={footerBrand} />
+        <Footer categories={footerOrUndef} brand={footerBrandLight} />
         <WhatsAppButton />
         <ConsentManager />
         <NewMemberPopup />
