@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { PendingDelivery } from "@/lib/pendingDelivery";
 import { pushEcommerceEvent } from "@/lib/analytics";
+import { metaTrack } from "@/lib/metaPixel";
 
 export type CartItem = {
   key: string;
@@ -86,6 +87,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
             quantity: safeQuantity,
           },
         ],
+      });
+      /* Meta Pixel — gerçek products.id (slug DEĞİL), Catalog retailer_id ile aynı kimlik. */
+      metaTrack("AddToCart", {
+        content_ids: [String(item.productId)],
+        content_type: "product",
+        value: (item.unitPriceMinor * safeQuantity) / 100,
+        currency: "TRY",
+        num_items: safeQuantity,
       });
 
       const key = itemKey(item);

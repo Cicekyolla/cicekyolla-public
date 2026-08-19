@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { pushEcommerceEvent } from "@/lib/analytics";
+import { metaTrack } from "@/lib/metaPixel";
 import { useCart } from "@/lib/cart";
 
 export function EcommerceCheckoutTracker() {
@@ -29,6 +30,15 @@ export function EcommerceCheckoutTracker() {
         price: item.unitPriceMinor / 100,
         quantity: item.quantity,
       })),
+    });
+
+    /* Meta Pixel — gerçek products.id, ikinci kez tetiklenmez (aynı ref guard). */
+    metaTrack("InitiateCheckout", {
+      content_ids: items.map((item) => String(item.productId)),
+      content_type: "product",
+      value: subtotalMinor / 100,
+      currency: "TRY",
+      num_items: items.reduce((sum, item) => sum + item.quantity, 0),
     });
 
     trackedVisit.current = true;

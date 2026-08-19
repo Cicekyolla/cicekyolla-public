@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
+import { MetaViewContentTracker } from "@/components/analytics/MetaViewContentTracker";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductImage } from "@/components/product/ProductImage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
@@ -211,6 +212,7 @@ export default async function ProductPage({ params }: PageProps) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <MetaViewContentTracker productId={product.id} priceTRY={Number(price) / 100} />
       <ProductDetail data={data} sizeProducts={sizeProducts} />
       {(() => {
         const fn = (product as { florist_note?: string | null; florist_note_status?: string | null });
