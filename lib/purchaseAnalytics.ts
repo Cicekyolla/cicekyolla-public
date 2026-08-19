@@ -1,4 +1,5 @@
 import { pushEcommerceEvent } from "@/lib/analytics";
+import { metaTrack } from "@/lib/metaPixel";
 import type { PaytrStatus } from "@/lib/payment";
 
 const memorySent = new Set<string>();
@@ -53,6 +54,27 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
     currency: status.currency || "TRY",
     items,
   });
+
+  /* Meta Pixel Purchase — GERÇEK ödeme onayı (status.paid) sonrası, PayTR'da
+     olduğu gibi. eventID = order_number: backend CAPI'nin AYNI order_number'ı
+     event_id olarak gönderdiği Purchase ile Meta tarafında otomatik dedup
+     olur (bkz. metaCapiService.ts sendCapiPurchase). content_ids yalnız
+     gerçek products.id taşıyan kalemlerden — slug/isim asla kullanılmaz. */
+  const contentIds = status.items
+    .map((item) => validItemId(item.product_id))
+    .filter((id): id is string => Boolean(id));
+  if (contentIds.length > 0) {
+    metaTrack(
+      "Purchase",
+      {
+        content_ids: contentIds,
+        content_type: "product",
+        value: status.total_amount_minor / 100,
+        currency: "TRY",
+      },
+      transactionId,
+    );
+  }
 
   markSent(transactionId);
   return true;

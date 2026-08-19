@@ -30,6 +30,7 @@ import {
   pushPermission,
   type ConsentConfig,
 } from "@/lib/consent";
+import { loadMetaPixel } from "@/lib/metaPixel";
 
 /* İçerik ve açık/kapalı artık ADMIN'den gelir (GET /api/consent/config).
    Push için gerçek VAPID anahtarı da oradan iner; anahtar yoksa API zaten
@@ -127,6 +128,9 @@ function persist(prefs: CookiePrefs) {
   safeSet(COOKIE_KEY, prefs.analytics || prefs.marketing ? "accepted" : "declined");
   safeSet(PREFS_KEY, JSON.stringify({ ...prefs, ts: Date.now() }));
   applyConsent(prefs);
+  /* Meta Pixel — GTM/GA4'ten bağımsız, ayrı bir onay sinyali değil, doğrudan
+     yükleme kapısı: pazarlama onayı yoksa script hiç enjekte edilmez. */
+  if (prefs.marketing) loadMetaPixel();
 }
 
 /* ══════════════════════════════════════
@@ -928,6 +932,9 @@ export function ConsentManager() {
   useEffect(() => {
     const s = safeGet(COOKIE_KEY);
     if (s === "accepted" || s === "declined") setCookieResolved(true);
+    /* Dönen ziyaretçi: pazarlama onayı önceki oturumda zaten verilmişse
+       Pixel'i tekrar sormadan yükle. */
+    if (getCookiePrefs()?.marketing) loadMetaPixel();
   }, []);
 
   return (
