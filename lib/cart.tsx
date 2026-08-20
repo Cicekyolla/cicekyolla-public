@@ -79,7 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         value: (item.unitPriceMinor * safeQuantity) / 100,
         items: [
           {
-            item_id: item.productSlug || String(item.productId),
+            item_id: String(item.productId),
             item_name: item.name,
             item_brand: "ÇiçekYolla",
             item_variant: item.variantTitle || undefined,

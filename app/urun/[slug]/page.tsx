@@ -199,6 +199,7 @@ export default async function ProductPage({ params }: PageProps) {
     description: product.short_description || product.long_description || product.name,
     image: cover ? [cover] : undefined,
     sku: product.sku || undefined,
+    productID: String(product.id),
     ...(ratingCount > 0 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: ratingAvg.toFixed(1), reviewCount: ratingCount } } : {}),
     offers: {
       "@type": "Offer",
