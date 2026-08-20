@@ -35,7 +35,7 @@ export function EcommercePaymentInfoTracker() {
         value: subtotalMinor / 100,
         payment_type: "havale",
         items: items.map((item) => ({
-          item_id: item.productSlug || String(item.productId),
+          item_id: String(item.productId),
           item_name: item.name,
           item_brand: "ÇiçekYolla",
           item_variant: item.variantTitle || undefined,

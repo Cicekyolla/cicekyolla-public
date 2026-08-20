@@ -7,6 +7,8 @@ type ProductJsonLd = {
   "@type"?: string | string[];
   name?: string;
   sku?: string;
+  /** Gerçek products.id (Merchant offerId / Order item product_id ile aynı kimlik). */
+  productID?: string;
   brand?: string | { name?: string };
   offers?: {
     price?: string | number;
@@ -77,7 +79,7 @@ export function EcommerceViewItemTracker() {
           value: price,
           items: [
             {
-              item_id: product.sku || slug,
+              item_id: product.productID || slug,
               item_name: product.name,
               item_brand: brand,
               price,

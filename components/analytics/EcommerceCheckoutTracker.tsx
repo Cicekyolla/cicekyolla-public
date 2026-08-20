@@ -23,7 +23,7 @@ export function EcommerceCheckoutTracker() {
       currency: "TRY",
       value: subtotalMinor / 100,
       items: items.map((item) => ({
-        item_id: item.productSlug || String(item.productId),
+        item_id: String(item.productId),
         item_name: item.name,
         item_brand: "ÇiçekYolla",
         item_variant: item.variantTitle || undefined,
