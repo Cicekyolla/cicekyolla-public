@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { fetchSeoPage } from "@/lib/api";
 import { FaqExperience, type FaqItem } from "@/components/faq/FaqExperience";
 
-export const metadata:Metadata={title:"Sık Sorulan Sorular — ÇiçekYolla",description:"Sipariş, teslimat, ürün, ödeme ve kurumsal hizmetlerle ilgili sık sorulan sorular."};
+export const metadata:Metadata={title:"Sık Sorulan Sorular",description:"Sipariş, teslimat, ürün, ödeme ve kurumsal hizmetlerle ilgili sık sorulan sorular."};
 
 const FALLBACK:FaqItem[]=[
  {category:"Sipariş & Teslimat",question:"Aynı gün teslimat için son sipariş saati nedir?",answer:"Uygun son sipariş saati teslimat bölgesi ve güncel yoğunluğa göre sipariş adımında gösterilir."},

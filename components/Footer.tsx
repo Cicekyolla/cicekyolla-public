@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
 import { BrandWordmark } from "./BrandWordmark";
 import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
+import { yonelme } from "@/lib/turkish";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -151,7 +152,9 @@ export function Footer({
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                    {item.label}'e Çiçek
+                    {/* HATA 2 düzeltmesi: sabit "'e" yerine gerçek Türkçe yönelme
+                        eki (yonelme()) — "Beşiktaş'e" gibi hatalar önlenir. */}
+                    {yonelme(item.label)} Çiçek
                   </Link>
                 </li>
               ))}

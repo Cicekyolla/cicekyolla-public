@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { fetchSeoPage } from "@/lib/api";
 import { LegalExperience, type LegalBlock } from "@/components/legal/LegalExperience";
 
-export const metadata:Metadata={title:"Mesafeli Satış Sözleşmesi — ÇiçekYolla",description:"ÇiçekYolla mesafeli satış sözleşmesi ve tüketici bilgilendirmesi."};
+export const metadata:Metadata={title:"Mesafeli Satış Sözleşmesi",description:"ÇiçekYolla mesafeli satış sözleşmesi ve tüketici bilgilendirmesi."};
 
 const FALLBACK:LegalBlock[]=[
  {title:"Taraflar ve Satıcı Bilgileri",text:"Satıcı: Çiçek Yolla İnternet Hizmetleri Sanayi ve Ticaret Limited Şirketi\nAdres: Altayçeşme Mahallesi, Atatürk Caddesi No:37, Adalı Sokak A, Maltepe/İstanbul\nVergi Dairesi / No: Küçükyalı / 2531536370\nWeb: www.cicekyolla.com.tr\nE-posta: info@cicekyolla.com.tr\nTelefon: 0507 441 34 74\n\nAlıcı, sipariş sırasında bilgilerini giren gerçek veya tüzel kişidir."},

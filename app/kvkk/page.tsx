@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { fetchSeoPage } from "@/lib/api";
 import { LegalExperience, type LegalBlock } from "@/components/legal/LegalExperience";
 
-export const metadata:Metadata={title:"KVKK Aydınlatma Metni — ÇiçekYolla",description:"ÇiçekYolla kişisel verilerin korunması ve aydınlatma metni."};
+export const metadata:Metadata={title:"KVKK Aydınlatma Metni",description:"ÇiçekYolla kişisel verilerin korunması ve aydınlatma metni."};
 
 const FALLBACK:LegalBlock[]=[
  {title:"Veri Sorumlusunun Kimliği",text:"6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sorumlusu Çiçek Yolla İnternet Hizmetleri Sanayi ve Ticaret Limited Şirketi’dir.\n\nAdres: Altayçeşme Mahallesi, Atatürk Caddesi No:37, Adalı Sokak A, Maltepe/İstanbul\nVergi Dairesi / No: Küçükyalı / 2531536370\nWeb: www.cicekyolla.com.tr\nE-posta: info@cicekyolla.com.tr\nTelefon: 0507 441 34 74"},

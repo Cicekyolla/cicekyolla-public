@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { fetchSeoPage } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Hakkımızda — ÇiçekYolla",
+  title: "Hakkımızda",
   description: "1986'dan bu yana çiçekçilik sanatı, taze çiçekler ve özenli teslimatla sevdiklerinize mutluluk ulaştırıyoruz.",
 };
 

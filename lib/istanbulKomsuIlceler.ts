@@ -1,0 +1,48 @@
+// lib/istanbulKomsuIlceler.ts — ADDITIVE. İstanbul'un 39 ilçesi için basit,
+// statik coğrafi komşuluk haritası (HATA 3). Dinamik hesaplama YAPILMAZ —
+// görev talebi gereği sabit bir harita yeterlidir. Anahtar/değerler gerçek
+// SEO envanterindeki (fetchSeoInventory) ilçe slug'larıyla birebir eşleşir.
+//
+// Not: Adalar (ada ilçesi, kara sınırı yok) en yakın vapur/feribot bağlantılı
+// ilçelere bağlanır — gerçek coğrafi komşuluk değil, pratik yakınlık.
+export const KOMSU_ILCELER: Record<string, string[]> = {
+  adalar: ["kadikoy", "maltepe"],
+  arnavutkoy: ["basaksehir", "sultangazi", "eyupsultan", "catalca"],
+  atasehir: ["kadikoy", "umraniye", "maltepe"],
+  avcilar: ["kucukcekmece", "esenyurt", "buyukcekmece"],
+  bagcilar: ["bahcelievler", "gungoren", "esenler", "bayrampasa", "kucukcekmece"],
+  bahcelievler: ["bakirkoy", "bagcilar", "gungoren", "kucukcekmece"],
+  bakirkoy: ["zeytinburnu", "bahcelievler", "gungoren"],
+  basaksehir: ["kucukcekmece", "esenyurt", "arnavutkoy", "eyupsultan"],
+  bayrampasa: ["fatih", "zeytinburnu", "gungoren", "esenler", "gaziosmanpasa"],
+  besiktas: ["sisli", "sariyer", "beyoglu"],
+  beykoz: ["uskudar", "sile", "umraniye"],
+  beylikduzu: ["buyukcekmece", "esenyurt"],
+  beyoglu: ["sisli", "kagithane", "eyupsultan", "fatih"],
+  buyukcekmece: ["avcilar", "esenyurt", "beylikduzu", "catalca"],
+  catalca: ["buyukcekmece", "silivri", "arnavutkoy"],
+  cekmekoy: ["umraniye", "sancaktepe", "sultanbeyli", "sile"],
+  esenler: ["bagcilar", "gungoren", "bayrampasa", "gaziosmanpasa", "bahcelievler"],
+  esenyurt: ["avcilar", "kucukcekmece", "basaksehir", "buyukcekmece", "beylikduzu"],
+  eyupsultan: ["sariyer", "kagithane", "beyoglu", "gaziosmanpasa", "sultangazi", "basaksehir"],
+  fatih: ["beyoglu", "zeytinburnu", "bayrampasa"],
+  gaziosmanpasa: ["bayrampasa", "esenler", "eyupsultan", "sultangazi"],
+  gungoren: ["bakirkoy", "bahcelievler", "bagcilar", "bayrampasa", "esenler"],
+  kadikoy: ["uskudar", "atasehir", "maltepe"],
+  kagithane: ["sisli", "sariyer", "eyupsultan", "beyoglu"],
+  kartal: ["maltepe", "pendik", "sancaktepe"],
+  kucukcekmece: ["bahcelievler", "bagcilar", "basaksehir", "avcilar", "esenyurt"],
+  maltepe: ["kadikoy", "atasehir", "kartal"],
+  pendik: ["kartal", "tuzla", "sancaktepe"],
+  sancaktepe: ["umraniye", "sultanbeyli", "kartal", "pendik", "cekmekoy"],
+  sariyer: ["sisli", "besiktas", "eyupsultan", "kagithane"],
+  sile: ["beykoz", "cekmekoy"],
+  silivri: ["catalca"],
+  sisli: ["besiktas", "beyoglu", "kagithane", "sariyer"],
+  sultanbeyli: ["sancaktepe", "pendik"],
+  sultangazi: ["gaziosmanpasa", "eyupsultan", "arnavutkoy"],
+  tuzla: ["pendik"],
+  umraniye: ["uskudar", "atasehir", "cekmekoy", "sancaktepe", "beykoz"],
+  uskudar: ["kadikoy", "umraniye", "beykoz", "cekmekoy"],
+  zeytinburnu: ["fatih", "bakirkoy", "bayrampasa", "gungoren"],
+};

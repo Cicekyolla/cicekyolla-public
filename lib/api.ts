@@ -107,6 +107,48 @@ export interface SeoInventoryItem {
   title: string | null;
 }
 
+// ADDITIVE — lokasyon şablonu çapraz bağlantı bloğu (HATA 3): sabit 5 linkli
+// blok yerine, bir ilin GERÇEK ilçe envanterinden türetilen isim/slug listesi.
+// Yeni bir uç İCAT EDİLMEDİ — mevcut fetchSeoInventory()'nin filtrelenmiş hali.
+export interface CityDistrictSummary { slug: string; name: string }
+
+/** SEO envanterindeki başlık kalıplarından ("{Ad} Çiçek Gönder",
+ * "{Ad} Çiçekçi ve Çiçek Siparişi", "{Ad} Çiçekçi — {Ad} Çiçek Siparişi | ÇiçekYolla")
+ * gerçek (Türkçe karakterli) yer adını çıkarır. Slug'lar diyakritik taşımadığı
+ * için ad KESİNLİKLE başlıktan türetilmeli — slug'tan tahmin edilmez. */
+function placeNameFromTitle(title: string | null, fallbackSlug: string): string {
+  if (!title) return fallbackSlug;
+  const cleaned = title
+    .split(" | ")[0]
+    .split(" — ")[0]
+    .replace(/\s+Mahallesi\s+Çiçek\s+Gönder\s*$/i, "")
+    .replace(/\s+Çiçek\s+Gönder\s*$/i, "")
+    .replace(/\s+Çiçekçi\s+ve\s+Çiçek\s+Siparişi\s*$/i, "")
+    .replace(/\s+Çiçek\s+Siparişi\s*$/i, "")
+    .replace(/\s+Çiçekçi\s*$/i, "")
+    .trim();
+  return cleaned || fallbackSlug;
+}
+
+/** Bir ilin (citySlug) TÜM ilçelerini gerçek SEO envanterinden döner —
+ * hardcoded liste YOK, veri büyüdükçe/değiştikçe otomatik güncel kalır. */
+export async function fetchCityDistricts(citySlug: string): Promise<CityDistrictSummary[]> {
+  const inventory = await fetchSeoInventory();
+  const prefix = `/${citySlug}/`;
+  const seen = new Set<string>();
+  const out: CityDistrictSummary[] = [];
+  for (const item of inventory) {
+    if (item.page_type !== "district" || item.index_state !== "index") continue;
+    if (!item.url_path.startsWith(prefix)) continue;
+    const rest = item.url_path.slice(prefix.length);
+    if (rest.includes("/") || rest.length === 0) continue; // yalnız il/ilçe derinliği
+    if (seen.has(rest)) continue;
+    seen.add(rest);
+    out.push({ slug: rest, name: placeNameFromTitle(item.title, rest) });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+}
+
 export async function fetchSeoInventory(): Promise<SeoInventoryItem[]> {
   const url = `${API_ORIGIN}/api/public/seo/inventory`;
   try {

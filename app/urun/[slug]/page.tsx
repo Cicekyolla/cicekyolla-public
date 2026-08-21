@@ -109,9 +109,11 @@ function productFaqsFromDescription(productName: string, description?: string | 
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const data = await fetchProductBySlug(params.slug);
-  if (!data) return { title: "Ürün bulunamadı — Cicekyolla" };
+  if (!data) return { title: "Ürün bulunamadı" };
   const { product, seo } = data;
-  const title = seo?.meta_title || `${product.name} — Cicekyolla`;
+  // MARKA EKLENMEZ: app/layout.tsx metadata şablonu ("%s | ÇiçekYolla")
+  // zaten ekliyor — burada eklemek duplicate title'a yol açar.
+  const title = seo?.meta_title || product.name;
   const description =
     seo?.meta_description ||
     product.short_description ||

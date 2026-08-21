@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { fetchSeoPage } from "@/lib/api";
 import { CorporateExperience, type CorporateField, type CorporateService } from "@/components/corporate/CorporateExperience";
 
-export const metadata:Metadata={title:"Kurumsal Çözümler — ÇiçekYolla",description:"İşletmelere özel çiçek aboneliği, etkinlik, toplu hediye ve VIP kurumsal çözümler."};
+export const metadata:Metadata={title:"Kurumsal Çözümler",description:"İşletmelere özel çiçek aboneliği, etkinlik, toplu hediye ve VIP kurumsal çözümler."};
 const SERVICES:CorporateService[]=[
  {title:"Ofis Aboneliği",description:"Haftalık veya aylık düzenli çiçek teslimatı ile ofisinizi her zaman canlı tutun.",badge:"Popüler",features:["Haftalık / aylık periyot","Özel faturalama","Öncelikli teslimat","Kişisel hesap yöneticisi"],price:"Aylık özel teklif"},
  {title:"Etkinlik & Organizasyon",description:"Düğün, nişan, mezuniyet, konferans ve kurumsal etkinlikler için kapsamlı çiçek ve dekorasyon hizmeti.",badge:"Özel",features:["Kişiye özel dekorasyon","Masa aranjmanları","Sahne ve giriş dekoru","Kurulum ve söküm dahil"],price:"Proje bazlı"},
