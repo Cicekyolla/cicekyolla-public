@@ -5,7 +5,7 @@ import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { categories } from "@/app/api/site-map/data";
 
 export const metadata: Metadata = {
-  title: "Site Haritası | ÇiçekYolla",
+  title: "Site Haritası",
   description: "ÇiçekYolla'nın tüm çiçek koleksiyonları, özel günler, teslimat bölgeleri ve bilgi sayfaları. Aradığınız her şey tek bir haritada.",
   alternates: { canonical: "/site-haritasi" },
   robots: indexRobots(),

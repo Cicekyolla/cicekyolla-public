@@ -4,7 +4,7 @@ import { Clock3, MapPin, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { fetchSeoPage } from "@/lib/api";
 import { absoluteUrl } from "@/lib/site-config";
 
-export const metadata:Metadata={title:"Teslimat Bölgeleri — ÇiçekYolla",description:"ÇiçekYolla il, ilçe ve mahalle teslimat bölgeleri ile güncel teslimat süreleri."};
+export const metadata:Metadata={title:"Teslimat Bölgeleri",description:"ÇiçekYolla il, ilçe ve mahalle teslimat bölgeleri ile güncel teslimat süreleri."};
 export const revalidate=300;
 
 type Region={city:string;district:string;neighborhoods:string[];duration:string;cutoff:string;hot:boolean};

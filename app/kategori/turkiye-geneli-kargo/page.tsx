@@ -7,7 +7,7 @@ import { findCategoryIdBySlug } from "@/lib/catalog";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Türkiye Geneli Kargo — ÇiçekYolla",
+  title: "Türkiye Geneli Kargo",
   description: "Kargoya uygun saksı bitkileri, sukulentler, yapay çiçekler ve hediye kutuları.",
   alternates: { canonical: "/kategori/turkiye-geneli-kargo" },
 };

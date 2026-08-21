@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, PackageSearch, Phone, ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Sipariş Takibi — ÇiçekYolla",
+  title: "Sipariş Takibi",
   description: "ÇiçekYolla sipariş numaranız veya telefon numaranız ile siparişinizin durumunu güvenle takip edin.",
   robots: { index: false, follow: false },
 };

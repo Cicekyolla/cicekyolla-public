@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test:unit": "node --test lib/*.test.ts",
     "seo:refresh-targets": "node scripts/refresh-legacy-targets.mjs"
   },
   "dependencies": {

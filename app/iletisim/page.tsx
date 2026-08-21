@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Clock3, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
 import { fetchSeoPage } from "@/lib/api";
 
-export const metadata: Metadata = { title:"İletişim — ÇiçekYolla", description:"ÇiçekYolla iletişim kanalları, çalışma saatleri ve mesaj formu." };
+export const metadata: Metadata = { title:"İletişim", description:"ÇiçekYolla iletişim kanalları, çalışma saatleri ve mesaj formu." };
 
 const FALLBACK = [
   { kind:"whatsapp", label:"WhatsApp", value:"0545 881 34 50", note:"Sipariş ve destek için" },

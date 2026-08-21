@@ -68,8 +68,13 @@ export function NeighborhoodCards({
               className="group flex items-center justify-between gap-3 rounded-[20px] border border-[#ece7f4] bg-white px-5 py-5 shadow-[0_12px_34px_rgba(45,22,72,.04)] transition-all hover:border-[#c4b5fd] hover:shadow-[0_16px_40px_rgba(139,92,246,.12)]"
             >
               <span className="min-w-0">
+                {/* HATA 1 düzeltmesi: bağlantı metnine anahtar kelime eklendi
+                    ("{Mahalle} Çiçekçi" — önceki halinde tüm anchor text
+                    "{Mahalle} Aynı gün teslimat" idi, arama motoru için
+                    alakasız/zayıf anahtar kelimeydi). "Aynı gün teslimat"
+                    bilgisi SİLİNMEDİ, ayrı küçük etiket olarak altta kalır. */}
                 <span className="block truncate text-base font-semibold text-[#1f2937] group-hover:text-[#6d28d9]">
-                  {displayName(n.name)}
+                  {displayName(n.name)} Çiçekçi
                 </span>
                 <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-[#9b94a8]">
                   <Truck className="h-3.5 w-3.5 text-[#8b5cf6]" /> Aynı gün teslimat

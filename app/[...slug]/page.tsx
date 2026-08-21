@@ -3,9 +3,12 @@ import { unstable_noStore as noStore } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, toCardProduct, type BodyBlock, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, toCardProduct, type BodyBlock, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
+import { CrossLinkBlock } from "@/components/location/CrossLinkBlock";
 import { LocationProducts } from "@/components/location/LocationProducts";
+import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
+import { yonelme } from "@/lib/turkish";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
@@ -150,7 +153,9 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
     index_state: "noindex",
     canonical_url: path,
     // SEO: "çiçekçi" + "çiçek siparişi" arama kalıpları — il/ilçe/mahalle aynı mantık.
-    title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi | ÇiçekYolla`,
+    // MARKA EKLENMEZ: app/layout.tsx metadata şablonu zaten "%s | ÇiçekYolla"
+    // uyguluyor (bkz. syntheticCategoryPage yorum satırı, aynı kök neden).
+    title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi`,
     meta_description: locationSeoDescription(parts, cityName, districtName, neighborhood),
     h1: `${titlePlace} Çiçekçi — Çiçek Siparişi`,
     intro_html: `<p>${district?.description || `${place} için özenle hazırlanan taze çiçekler ve premium aranjmanlar.`}</p>`,
@@ -211,7 +216,8 @@ function syntheticDynamicDeliveryPage(path: string, dyn: DynDelivery): SeoPublic
     index_state: "index",
     canonical_url: path,
     // SEO: "çiçekçi" + "çiçek siparişi" arama kalıpları — il/ilçe/mahalle aynı mantık.
-    title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi | ÇiçekYolla`,
+    // MARKA EKLENMEZ (bkz. syntheticDeliveryPage yorumu — aynı kök neden).
+    title_tag: `${titlePlace} Çiçekçi — ${titlePlace} Çiçek Siparişi`,
     meta_description: locationSeoDescription(dyn.parts, dyn.cityName, dyn.districtName, neighborhood),
     h1: `${titlePlace} Çiçekçi — Çiçek Siparişi`,
     intro_html: `<p>${place} için özenle hazırlanan taze çiçekler ve premium aranjmanlar.</p>`,
@@ -322,21 +328,45 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   // Coverage ürünleri + gerçek mahalleler paralel çekilir; API erişilemezse
   // mevcut canlı davranış (aşağıdaki fetchProducts fallback'i) aynen sürer.
   const isDistrictScope = !cargoMode && parts.length >= 2;
+  // HATA 4: ilçe sayfasında gösterilen ürün sayısı 12 → 30 (rakip 27 ürün
+  // gösteriyordu). "Daha Fazla Göster" istemci mekanizması değişmedi.
+  const LOCATION_PAGE_SIZE = 30;
   let locationData: LocationProductsPage | null = null;
   let dbHood: DistrictNeighborhoods | null = null;
   let effectiveNeighborhood: string | undefined = parts[2];
   if (isDistrictScope) {
     [locationData, dbHood] = await Promise.all([
-      fetchLocationProducts(parts[0], parts[1], { neighborhood: parts[2], page_size: 12 }),
+      fetchLocationProducts(parts[0], parts[1], { neighborhood: parts[2], page_size: LOCATION_PAGE_SIZE }),
       fetchDistrictNeighborhoods(parts[0], parts[1]),
     ]);
     // Mahalle slug'ı DB ile eşleşmezse ilçe kapsamına düş (miras — sayfa boş kalmaz).
     if (!locationData && parts[2]) {
-      locationData = await fetchLocationProducts(parts[0], parts[1], { page_size: 12 });
+      locationData = await fetchLocationProducts(parts[0], parts[1], { page_size: LOCATION_PAGE_SIZE });
       effectiveNeighborhood = undefined;
     }
   }
   const useLocationGrid = locationData != null && locationData.items.length > 0;
+
+  // ── ADDITIVE (HATA 3): sayfa bağlamına göre GERÇEK çapraz bağlantı verisi.
+  // Sabit 5 linkli blok yerine — il sayfasında o ilin tüm ilçeleri (gerçek
+  // envanterden), ilçe sayfasında İstanbul'da coğrafi komşu ilçeler
+  // (KOMSU_ILCELER) veya diğer illerde aynı ildeki birkaç gerçek ilçe.
+  // Not: cargoMode/isDistrictScope yalnız "aynı gün mü kargo mu" iş kuralına
+  // bakar — çapraz bağlantı görünürlüğü bundan bağımsız, TÜM iller (İstanbul
+  // dahil/hariç) için parts.length'e göre çalışmalı.
+  let cityDistricts: CityDistrictSummary[] | null = null;
+  let relatedDistricts: CityDistrictSummary[] = [];
+  if (parts.length === 1) {
+    cityDistricts = await fetchCityDistricts(parts[0]);
+  } else if (parts.length === 2) {
+    const allCityDistricts = await fetchCityDistricts(parts[0]);
+    if (parts[0] === "istanbul") {
+      const neighborSlugs = new Set(KOMSU_ILCELER[parts[1]] ?? []);
+      relatedDistricts = allCityDistricts.filter((d) => neighborSlugs.has(d.slug));
+    } else {
+      relatedDistricts = allCityDistricts.filter((d) => d.slug !== parts[1]).slice(0, 6);
+    }
+  }
 
   const productItems = useLocationGrid
     ? []
@@ -377,6 +407,32 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
       />
     ) : neighborhoods.length > 0 ? <section className="border-y border-[#eee9f6] bg-[#f7f5fc] px-6 py-16 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-10 flex items-center gap-4"><span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#8b5cf6]"><MapPin className="h-5 w-5" /></span><p className="text-xs font-bold uppercase tracking-[.32em] text-[#8b5cf6]">Teslimat yapılan mahalleler</p></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{neighborhoods.map((item) => <Link key={item} href={`/${parts[0]}/${parts[1]}/${slugifyTR(item)}-mah`} className="flex items-center gap-4 rounded-[20px] border border-[#ece7f4] bg-white px-5 py-5 text-lg font-medium text-[#1f2937] shadow-[0_12px_34px_rgba(45,22,72,.04)]"><span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full bg-[#f5f0ff]"><Check className="h-4 w-4 text-[#8b5cf6]" /></span>{item}</Link>)}</div></div></section> : null}
 
+    {/* HATA 3: gerçek çapraz bağlantı bloğu — il sayfasında tüm ilçeler,
+        ilçe sayfasında komşu ilçeler + il hub linki. Mahalle sayfasında
+        NeighborhoodCards zaten kardeş mahalleler + ilçeye dönüşü veriyor;
+        burada yalnız il hub linki eklenir (aşağıda). */}
+    {cityDistricts && cityDistricts.length > 0 ? (
+      <CrossLinkBlock variant="city" citySlug={parts[0]} cityName={cityName} districts={cityDistricts} />
+    ) : null}
+    {parts.length === 2 && relatedDistricts.length > 0 ? (
+      <CrossLinkBlock
+        variant="district"
+        citySlug={parts[0]}
+        cityName={cityName}
+        districtSlug={parts[1]}
+        related={relatedDistricts}
+      />
+    ) : null}
+    {parts.length === 3 ? (
+      <section className="bg-white px-6 py-8 lg:px-14">
+        <div className="mx-auto max-w-[1320px]">
+          <Link href={`/${parts[0]}`} className="inline-flex items-center gap-2 text-sm font-bold text-[#6d28d9] hover:underline">
+            <MapPin className="h-4 w-4" /> Tüm {cityName} Çiçekçileri
+          </Link>
+        </div>
+      </section>
+    ) : null}
+
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
     <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{useLocationGrid && locationData ? (
@@ -397,7 +453,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
     {page.faq && page.faq.length > 0 ? <section className="bg-gradient-to-b from-[#f7f5fc] to-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-14 text-center"><h2 className="font-serif text-5xl font-semibold text-[#140b20]">Sıkça Sorulan Sorular</h2><p className="mt-4 text-lg text-[#667085]">{place} bölgesinde çiçek gönderimiyle ilgili merak edilen konular</p></div><div className="grid gap-6 md:grid-cols-2">{page.faq.map((item, i) => item.q && item.a ? <div key={i} className="rounded-[20px] border border-[#ebe7f2] bg-white p-8 shadow-sm"><h3 className="font-semibold text-[#140b20]">{item.q}</h3><p className="mt-4 text-[#667085]">{item.a}</p></div> : null)}</div></div></section> : null}
 
-    <section className="bg-gradient-to-r from-[#14051f] via-[#2e1065] to-[#6d28d9] px-6 py-20 text-white lg:px-14"><div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[1fr_1.15fr]"><div><p className="text-xs font-bold uppercase tracking-[.3em] text-[#c4b5fd]">{place}'e özel</p><h2 className="mt-6 font-serif text-5xl font-semibold leading-tight">{cargoMode ? <>Özenle Hazırlayalım,<br />Güvenle Ulaştıralım</> : <>Bugün Sipariş Ver,<br />Bugün Teslim Edelim</>}</h2><p className="mt-8 text-xl leading-9 text-[#ede9fe]">{cargoMode ? `${place} bölgesine gönderilecek siparişiniz özenle hazırlanır, korumalı şekilde paketlenir ve 1–3 iş günü içinde kargoyla teslim edilir.` : `${place} bölgesine çiçek göndermek hiç bu kadar kolay olmamıştı. ${cutoff}'a kadar verilen siparişler uygun teslimat akışında aynı gün planlanır.`}</p><div className="mt-10 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-white px-8 py-4 font-bold text-[#6d28d9]">Çiçekleri İncele</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-white/25 px-8 py-4 font-bold text-white"><MessageCircle className="h-5 w-5" /> WhatsApp ile Sipariş</Link></div></div><div className="border-l border-white/15 pl-0 text-lg leading-9 text-[#ede9fe] lg:pl-10"><p>{cityName} ve çevresine çiçek göndermek için güvenilir adresiniz ÇiçekYolla. Taptaze çiçeklerimiz, özenle hazırlanmış buketlerimiz ve profesyonel ekibimizle sevdiklerinize özel anlar yaratıyoruz.</p><p className="mt-7">Doğum günü, sevgililer günü, anneler günü veya herhangi bir özel gün için zarif seçeneklerimiz mevcut. WhatsApp üzerinden de destek sağlıyoruz.</p></div></div></section>
+    <section className="bg-gradient-to-r from-[#14051f] via-[#2e1065] to-[#6d28d9] px-6 py-20 text-white lg:px-14"><div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[1fr_1.15fr]"><div><p className="text-xs font-bold uppercase tracking-[.3em] text-[#c4b5fd]">{yonelme(place)} özel</p><h2 className="mt-6 font-serif text-5xl font-semibold leading-tight">{cargoMode ? <>Özenle Hazırlayalım,<br />Güvenle Ulaştıralım</> : <>Bugün Sipariş Ver,<br />Bugün Teslim Edelim</>}</h2><p className="mt-8 text-xl leading-9 text-[#ede9fe]">{cargoMode ? `${place} bölgesine gönderilecek siparişiniz özenle hazırlanır, korumalı şekilde paketlenir ve 1–3 iş günü içinde kargoyla teslim edilir.` : `${place} bölgesine çiçek göndermek hiç bu kadar kolay olmamıştı. ${cutoff}'a kadar verilen siparişler uygun teslimat akışında aynı gün planlanır.`}</p><div className="mt-10 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-white px-8 py-4 font-bold text-[#6d28d9]">Çiçekleri İncele</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-white/25 px-8 py-4 font-bold text-white"><MessageCircle className="h-5 w-5" /> WhatsApp ile Sipariş</Link></div></div><div className="border-l border-white/15 pl-0 text-lg leading-9 text-[#ede9fe] lg:pl-10"><p>{cityName} ve çevresine çiçek göndermek için güvenilir adresiniz ÇiçekYolla. Taptaze çiçeklerimiz, özenle hazırlanmış buketlerimiz ve profesyonel ekibimizle sevdiklerinize özel anlar yaratıyoruz.</p><p className="mt-7">Doğum günü, sevgililer günü, anneler günü veya herhangi bir özel gün için zarif seçeneklerimiz mevcut. WhatsApp üzerinden de destek sağlıyoruz.</p></div></div></section>
   </main>;
 }
 
@@ -455,7 +511,10 @@ async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<P
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
   return {
-    title: `${place} Çiçekçi — ${place} Çiçek Siparişi | ÇiçekYolla`,
+    // MARKA EKLENMEZ: app/layout.tsx metadata şablonu ("%s | ÇiçekYolla")
+    // burada da uygulanır — brand'i tekrar eklemek "... | ÇiçekYolla | ÇiçekYolla"
+    // duplicate title'ına yol açıyordu (kanıtlandı: canlı /istanbul/kadikoy).
+    title: `${place} Çiçekçi — ${place} Çiçek Siparişi`,
     description: locationSeoDescription(parts, cityName, districtName, neighborhood),
   };
 }
