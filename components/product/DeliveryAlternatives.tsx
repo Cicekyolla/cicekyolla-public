@@ -69,7 +69,7 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
           <p className="text-[12.5px] text-[#6B7280] mt-1 leading-relaxed">
             Ancak {toCity} kargoyla gönderebileceğimiz ürünlerimiz var. {descText}
           </p>
-          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#047857]">📦 1-5 iş günü teslimat</p>
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#047857]">📦 1-3 iş günü teslimat</p>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
         {ctaText}
         <ChevronRight className="w-4 h-4" />
       </Link>
-      <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">Yalnız Kargo Merkezi'nde kargoya onaylı ürünler · Türkiye geneli kargo · 1-5 iş günü</p>
+      <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">Yalnız Kargo Merkezi'nde kargoya onaylı ürünler · Türkiye geneli kargo · 1-3 iş günü</p>
     </div>
   );
 }

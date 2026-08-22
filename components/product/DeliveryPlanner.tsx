@@ -4,7 +4,7 @@
  * DeliveryPlanner — Premium teslimat planlayıcı (ürün detay).
  * ---------------------------------------------------------------------------
  * Akış: Adres seç (Google) -> /api/delivery-check (Delivery Engine V2) ->
- *   İstanbul aynı gün (Maltepe mesafe bandı + slot) | Kargo 1-5 iş günü | kapsam dışı.
+ *   İstanbul aynı gün (Maltepe mesafe bandı + slot) | Kargo 1-3 iş günü | kapsam dışı.
  * Karar backend'den (admin verisi); Google sadece konum. Sahte slot YOK.
  * Tasarım: mevcut mor/lilac premium dil (Tailwind v4), soft shadow, mikro animasyon.
  * Additive: sipariş/ödeme mantığına dokunmaz; seçilen slot yukarı taşınır (onSelect).
@@ -288,7 +288,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       setMode("sameday");
       onSelect?.(null);
     } else if (result.cargo?.available) {
-      // Tek seçenek kargo → karar kendiliğinden kesinleşir: slot YOK, 1-5 iş günü.
+      // Tek seçenek kargo → karar kendiliğinden kesinleşir: slot YOK, 1-3 iş günü.
       setMode("cargo");
       if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", address });
     } else {
@@ -457,13 +457,13 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                             : "border-[#EDE9FE] bg-white hover:border-[#C4B5FD] hover:shadow-[0_4px_16px_rgba(124,58,237,0.1)]"
                         }`}
                       >
-                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center">1-5<br />İŞ GÜNÜ</span>
+                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center">1-3<br />İŞ GÜNÜ</span>
                         {mode === "cargo" && <Check className="w-4 h-4 text-[#7C3AED] absolute bottom-2.5 right-2.5" />}
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center mb-2">
                           <Package className="w-[18px] h-[18px] text-white" />
                         </div>
                         <div className="text-[13.5px] font-bold text-[#111827]">{cargoFree ? "Ücretsiz Kargo" : "Kargo"}</div>
-                        <div className="text-[11.5px] text-[#6B7280] mt-0.5">Türkiye Geneli · {cargo?.est_text ?? "1-5 iş günü"}</div>
+                        <div className="text-[11.5px] text-[#6B7280] mt-0.5">Türkiye Geneli · {cargo?.est_text ?? "1-3 iş günü"}</div>
                       </button>
                     )}
                   </div>
@@ -540,12 +540,12 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                         </div>
                         <ul className="space-y-1.5 text-[12.5px] text-[#374151]">
                           <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#059669] shrink-0" /> Siparişiniz siparişe özel hazırlanır.</li>
-                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> Kargo ile {cargo!.est_text ?? "1-5 iş günü"} içinde teslim edilir · saat slotu yoktur.</li>
+                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> Kargo ile {cargo!.est_text ?? "1-3 iş günü"} içinde teslim edilir · saat slotu yoktur.</li>
                         </ul>
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">
                             <div className="text-[10.5px] text-[#9CA3AF] font-semibold">Tahmini teslimat</div>
-                            <div className="text-[13px] font-bold text-[#111827] mt-0.5">{cargo!.est_text ?? "1-5 iş günü"}</div>
+                            <div className="text-[13px] font-bold text-[#111827] mt-0.5">{cargo!.est_text ?? "1-3 iş günü"}</div>
                           </div>
                           <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">
                             <div className="text-[10.5px] text-[#9CA3AF] font-semibold">Kargo ücreti</div>

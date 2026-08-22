@@ -229,8 +229,8 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
   const dateStr = fmtDate(pd?.date);
   const slotStr = pd?.slotLabel ?? (pd?.slotStart ? mapToSlot(pd.slotStart) : null);
-  // Teslimat kararı PDP'den (pending.mode) taşınır; burada yeniden TAHMİN edilmez. Tek kargo dili: 1-5 iş günü.
-  const typeStr = pd?.mode === "cargo" ? "Türkiye Geneli Kargo · 1-5 iş günü" : pd?.mode === "sameday" ? "İstanbul Aynı Gün" : null;
+  // Teslimat kararı PDP'den (pending.mode) taşınır; burada yeniden TAHMİN edilmez. Tek kargo dili: 1-3 iş günü.
+  const typeStr = pd?.mode === "cargo" ? "Türkiye Geneli Kargo · 1-3 iş günü" : pd?.mode === "sameday" ? "İstanbul Aynı Gün" : null;
 
   const toggleNote = (id: string) => setNotes((n) => (n.includes(id) ? n.filter((x) => x !== id) : [...n, id]));
   const setAddon = (id: number, q: number) => setAddonQty((m) => ({ ...m, [id]: Math.max(0, q) }));
@@ -614,7 +614,7 @@ function StepTeslimatDuzenle(p: {
     if (!d) return null;
     const yer = [d.placeName, d.neighborhood, d.district, d.city].filter(Boolean).join(", ");
     const gun = fmtDate(d.date);
-    const saat = d.mode === "cargo" ? "Kargo · 1-5 iş günü" : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
+    const saat = d.mode === "cargo" ? "Kargo · 1-3 iş günü" : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
     return [yer, gun, saat].filter(Boolean).join(" · ");
   };
   return (
