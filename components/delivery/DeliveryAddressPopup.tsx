@@ -164,7 +164,7 @@ export function DeliveryAddressPopup() {
 
           <div className="mt-5">
             <label className="block text-[12.5px] font-bold tracking-wide text-[#4B5563] mb-2">Gönderim yeri ara</label>
-            <AddressAutocomplete placeholder="Mahalle, cadde, AVM, okul veya açık adres" onSelect={onSelect} />
+            <AddressAutocomplete placeholder="Mahalle, cadde, AVM, okul veya açık adres" onSelect={onSelect} hideSelected />
           </div>
 
           {/* Seçim sonrası: doğrulanmış il/ilçe + teslimat türü (gün/saat YOK) */}
@@ -199,7 +199,7 @@ export function DeliveryAddressPopup() {
                 onClick={() => close(false)}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-5 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.28)] hover:bg-[#6D28D9] transition-colors"
               >
-                <Package className="w-4 h-4" /> {cityName ? `${cityName}'a gönderilebilen ürünleri gör` : "Kargolu ürünleri gör"}
+                <Package className="w-4 h-4" /> {cityName ? `${cityName} için gönderilebilen ürünleri gör` : "Kargolu ürünleri gör"}
               </Link>
             )}
             <button

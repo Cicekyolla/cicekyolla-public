@@ -54,6 +54,8 @@ interface Props {
   className?: string;
   /** Ülke kısıtı (varsayılan Türkiye). */
   regionCodes?: string[];
+  /** Seçim sonrası dahili "Doğrulanan adres" kutusunu gizle (çağıran kendi özetini gösterir). */
+  hideSelected?: boolean;
 }
 
 // ----------------------------------------------------------------------------
@@ -207,6 +209,7 @@ export default function AddressAutocomplete({
   defaultValue = '',
   className,
   regionCodes = ['tr'],
+  hideSelected = false,
 }: Props) {
   const [query, setQuery] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -569,7 +572,7 @@ export default function AddressAutocomplete({
         <p style={{ marginTop: 12, color: '#C0392B', fontSize: 14 }}>{error}</p>
       )}
 
-      {selected && (
+      {selected && !hideSelected && (
         <div
           style={{
             marginTop: 16,
