@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
+import { readPendingDelivery, hasPendingAddress } from "@/lib/pendingDelivery";
 
 // --- Endpoint yanıt tipleri (backend sözleşmesi) ---------------------------
 interface Slot {
@@ -151,6 +152,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   const passedRef = useRef(false);
 
   const days = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ offset: i, ...labelOf(i) })), []);
+
+  // POPUP → PDP: ortak kayıtta doğrulanmış adres varsa (Teslimat Adresi popup'ı / önceki PDP)
+  // adres tekrar sorulmaz; aynı delivery-check motoru bu adresle çalışır. Slot/mode TAŞINMAZ
+  // (ürün bazlı karar her PDP'de yeniden hesaplanır — state sızması yok).
+  useEffect(() => {
+    const p = readPendingDelivery();
+    if (!hasPendingAddress(p) || !p.address) return;
+    setAddress({
+      formattedAddress: p.address, placeId: p.placeId ?? "", placeName: p.placeName ?? null,
+      lat: p.lat, lng: p.lng, il: p.city ?? null, ilce: p.district ?? null, mahalle: p.neighborhood ?? null,
+    });
+  }, []);
   const quickDays = days.slice(0, 3);
 
   const check = useCallback(
@@ -321,6 +334,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       <div className="mt-3">
         <AddressAutocomplete
           placeholder="Teslimat adresini yazın (mahalle / cadde / AVM)"
+          defaultValue={address?.formattedAddress ?? ""}
           onSelect={(r) => {
             // ADRES DEĞİŞTİ → eski teslimat seçimi (İstanbul slotu dahil) GEÇERSİZ:
             // pending temizlenir, CTA kilitlenir; karar yeni adresle yeniden hesaplanır.

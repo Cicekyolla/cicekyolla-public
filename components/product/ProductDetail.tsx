@@ -24,7 +24,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
-import { savePendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { savePendingDelivery, clearPendingSelection, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 
 const WHATSAPP = "905458813450";
@@ -374,7 +374,7 @@ export function ProductDetail({
               // Adres/tarih değişince planlayıcı null gönderir: eski seçim GEÇERSİZDİR.
               // Aksi halde CTA açık kalıp siparişi eski adres/saatle gönderiyordu.
               if (!sel) {
-                clearPendingDelivery();
+                clearPendingSelection(); // slot/mode/ürün düşer, doğrulanmış adres kalır (popup → PDP → PDP)
                 setDeliverySelection(null);
                 return;
               }

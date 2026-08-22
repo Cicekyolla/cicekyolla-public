@@ -227,6 +227,13 @@ export default function AddressAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  // Ortak adres state'inden (popup seçimi) sonradan gelen defaultValue input'a yansır.
+  // Yalnız boş→dolu / değer değişiminde; kullanıcı yazarken müdahale etmez (selected yokken ve query farklıysa).
+  useEffect(() => {
+    if (defaultValue && defaultValue !== query && !selected && suggestions.length === 0) setQuery(defaultValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
+
   // --- Init: Google Maps + kütüphaneleri yükle -----------------------------
   useEffect(() => {
     let cancelled = false;
