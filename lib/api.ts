@@ -55,6 +55,11 @@ export interface SeoPublicPage {
   body_blocks: BodyBlock[];
   faq: FaqItem[];
   schema_jsonld: Record<string, unknown>;
+  // ADDITIVE (Lokasyon SEO Merkezi): güncel içerik versiyonunun köken kaynağı.
+  // Operatör-onaylı içeriği (bkz. lib/managedSeoContent.ts) konum şablonunun
+  // önüne almak için kullanılır. Eski API alanı göndermezse undefined kalır
+  // ve davranış öncekiyle birebir aynıdır.
+  content_source?: string | null;
 }
 
 // Tek sayfa çeker. published değilse backend not_found döndürür → null.
