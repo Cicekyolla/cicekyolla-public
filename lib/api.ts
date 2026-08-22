@@ -408,6 +408,8 @@ export interface PublicProductListParams {
   delivery_scope?: "istanbul" | "turkiye" | "regional";
   /** TEK OTORİTE: teslimat profili (product_delivery_profiles). cargo_capable = cargo ∪ same_day_and_cargo. */
   delivery_model?: "same_day_courier" | "cargo" | "same_day_and_cargo" | "cargo_capable";
+  /** true → veri önbelleği atlanır (Kargo Merkezi kararı anında yansısın: kargo kategorisi / alternatif listesi). */
+  fresh?: boolean;
   sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
 }
 
@@ -438,10 +440,12 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.delivery_model) q.set("delivery_model", params.delivery_model);
   if (params.sort) q.set("sort", params.sort);
   const url = `${API_ORIGIN}/api/products?${q.toString()}`;
-  const attempts = [
-    { headers: apiHeaders(), next: { revalidate: 120 } },
-    { headers: apiHeaders(), cache: "no-store" as const },
-  ];
+  const attempts = params.fresh
+    ? [{ headers: apiHeaders(), cache: "no-store" as const }]
+    : [
+      { headers: apiHeaders(), next: { revalidate: 120 } },
+      { headers: apiHeaders(), cache: "no-store" as const },
+    ];
   for (const init of attempts) {
     try {
       const res = await fetch(url, init);

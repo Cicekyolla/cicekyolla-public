@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Truck, Sparkles, ChevronLeft, PackageCheck } from "lucide-react";
-import { fetchProducts, type PublicProductListItem } from "@/lib/api";
+import { fetchProducts, fetchProductsPaged, type PublicProductListItem } from "@/lib/api";
 import { ProductImage } from "@/components/product/ProductImage";
 
 /**
@@ -13,6 +13,9 @@ import { ProductImage } from "@/components/product/ProductImage";
  * (kategori boşsa tüm Türkiye-geneli kargo ürünlerine düşer). Sahte veri YOK;
  * tüm sonuçlar canlı katalogdan (fetchProducts). Mevcut mimari bozulmaz (additive).
  */
+
+// Admin Kargo Merkezi kararı ANINDA yansısın: sayfa dinamik, ürün sorguları önbelleksiz.
+export const dynamic = "force-dynamic";
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
 
@@ -42,12 +45,20 @@ export async function generateMetadata({ params }: { params: { city: string } })
   };
 }
 
-async function loadCargoProducts(catId: number, excludeId: number, limit: number): Promise<PublicProductListItem[]> {
+async function loadCargoProducts(catId: number, excludeId: number, limit: number): Promise<{ items: PublicProductListItem[]; total: number }> {
+  // Havuz = TÜM kargoya onaylı ürünler (sayfalı, üst sınır 1000) — Kargo Merkezi'nde
+  // sonradan açılan eski ürünler de aday olur (önceden yalnız en yeni 60 ürün alınıyordu).
+  const allCargo: PublicProductListItem[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const r = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page, sort: "created_at_desc", fresh: true });
+    allCargo.push(...r.items);
+    if (page >= (r.pagination?.total_pages ?? 1)) break;
+  }
   const calls: Promise<PublicProductListItem[]>[] = [
-    fetchProducts({ delivery_model: "cargo_capable", page_size: 60 }),
-    fetchProducts({ delivery_model: "cargo_capable", is_bestseller: true, page_size: 24 }),
+    Promise.resolve(allCargo),
+    fetchProducts({ delivery_model: "cargo_capable", is_bestseller: true, page_size: 24, fresh: true }),
   ];
-  if (catId) calls.unshift(fetchProducts({ delivery_model: "cargo_capable", category_id: catId, page_size: 24 }));
+  if (catId) calls.unshift(fetchProducts({ delivery_model: "cargo_capable", category_id: catId, page_size: 24, fresh: true }));
   const lists = await Promise.all(calls);
 
   const seen = new Set<number>();
@@ -62,7 +73,7 @@ async function loadCargoProducts(catId: number, excludeId: number, limit: number
     items.push(p);
   }
   items.sort((a, b) => (a.is_bestseller !== b.is_bestseller ? (a.is_bestseller ? -1 : 1) : 0));
-  return items.slice(0, limit);
+  return { items: items.slice(0, limit), total: items.length };
 }
 
 export default async function DeliveryCityPage({
@@ -78,7 +89,7 @@ export default async function DeliveryCityPage({
   const cfg = await loadConfig();
   const maxItems = cfg?.max_items && cfg.max_items > 0 ? cfg.max_items : 24;
   const pageTitle = cfg?.title?.trim() ? cfg.title.replace(/\{city\}/g, `${cityName}'a`) : `${cityName}'a Gönderilebilen Ürünler`;
-  const items = await loadCargoProducts(catId, excludeId, maxItems);
+  const { items, total } = await loadCargoProducts(catId, excludeId, maxItems);
 
   return (
     <main className="min-h-screen bg-white">
@@ -137,6 +148,14 @@ export default async function DeliveryCityPage({
                 </Link>
               );
             })}
+          </div>
+        )}
+        {total > items.length && (
+          <div className="mt-8 text-center">
+            <p className="text-[13px] text-[#6B7280]">Bu sayfada {items.length} öneri gösteriliyor (admin öneri ayarı). Kargoya onaylı toplam {total} ürün var.</p>
+            <Link href="/kategori/turkiye-geneli-kargo" className="mt-3 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[13px] font-bold hover:bg-[#6D28D9] transition-colors">
+              Tüm Kargolu Ürünleri Gör ({total}) <ChevronLeft className="w-3.5 h-3.5 rotate-180" />
+            </Link>
           </div>
         )}
       </div>
