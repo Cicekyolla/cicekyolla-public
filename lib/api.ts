@@ -342,6 +342,11 @@ export async function fetchProductBySlug(slug: string): Promise<PublicProductDet
       if (!res.ok) continue;
       const data = (await res.json()) as PublicProductDetail;
       if (!data?.product || data.product.status !== "active") return null;
+      // TEK FİYAT KURALI: müşteriye yalnız SATIN ALINABİLİR (status="active") varyantlar
+      // gösterilir — sipariş motoru (ordersRepository.create) da yalnız aktif varyantı
+      // fiyatlar. Taslak varyantlar (AI "Taslak Hazırla" ×1/1,25/1,5) PDP'ye sızmaz;
+      // aksi hâlde ₺1 placeholder varsayılan seçim oluyor ve checkout 409 alıyordu.
+      if (Array.isArray(data.variants)) data.variants = data.variants.filter((v) => v.status === "active");
       if (Array.isArray(data.images)) {
         data.images = data.images.map((im) => ({ ...im, url: mediaUrl(im.url), derivatives: mediaDerivatives(im.derivatives) }));
       }
