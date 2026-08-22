@@ -73,7 +73,7 @@ function setDismissed() {
    popup'ı da aynı listeyi kullanır). */
 
 /** Çerez kararı verildi mi? Verilmeden pazarlama popup'ı bindirilmez (sıralı gösterim). */
-function cookieDecided() {
+export function cookieDecided() {
   try {
     const v = localStorage.getItem("cy_cookie");
     return v === "accepted" || v === "declined";

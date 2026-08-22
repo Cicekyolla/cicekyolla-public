@@ -8,6 +8,7 @@ import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ConsentManager } from "@/components/consent/ConsentManager";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
+import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
 import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
@@ -186,6 +187,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <WhatsAppButton />
         <ConsentManager />
         <NewMemberPopup />
+        <DeliveryAddressPopup />
         <CategoryImageEnhancer />
       </body>
     </html>

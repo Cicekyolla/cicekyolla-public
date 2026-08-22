@@ -39,6 +39,9 @@ export interface PendingDelivery {
   cargoEstimate?: string | null;
   occasion?: string | null; // vesile (ileride CRM/AI/kampanya)
 
+  /** Teslimat Adresi popup'ı bu oturumda kapatıldı (aynı kayıt; ikinci storage YOK). */
+  popupDismissed?: boolean;
+
   ts?: number;
 }
 
@@ -66,6 +69,50 @@ export function readPendingDelivery(): PendingDelivery | null {
   } catch {
     return null;
   }
+}
+
+/** Adres alanları dolu ve koordinat geçerli mi? (popup/PDP ön-dolum için tek ölçüt) */
+export function hasPendingAddress(p: PendingDelivery | null | undefined): p is PendingDelivery & { lat: number; lng: number } {
+  return !!p && typeof p.lat === "number" && Number.isFinite(p.lat) && typeof p.lng === "number" && Number.isFinite(p.lng);
+}
+
+/** Popup'tan seçilen DOĞRULANMIŞ adresi ortak kayda yazar (yalnız adres; slot/mode/ürün YOK).
+ *  PDP/sepet/checkout aynı kaydı okur — ikinci adres state'i yoktur. */
+export function savePendingAddress(a: {
+  formattedAddress: string; placeId?: string | null; placeName?: string | null;
+  lat: number | null; lng: number | null; il?: string | null; ilce?: string | null; mahalle?: string | null;
+}): void {
+  const prev = readPendingDelivery();
+  savePendingDelivery({
+    occasion: prev?.occasion ?? null,
+    address: a.formattedAddress,
+    placeName: a.placeName ?? null,
+    neighborhood: a.mahalle ?? null,
+    district: a.ilce ?? undefined,
+    city: a.il ?? undefined,
+    placeId: a.placeId ?? null,
+    lat: a.lat ?? null,
+    lng: a.lng ?? null,
+  });
+}
+
+/** Teslimat SEÇİMİNİ (slot/mode/tarih/ürün) geçersiz kılar, ADRESİ korur.
+ *  Adres değişiminde eski slot/kargo state'i sızmasın; ama müşteri adresi yeniden yazmasın. */
+export function clearPendingSelection(): void {
+  const p = readPendingDelivery();
+  if (!p) return;
+  if (!hasPendingAddress(p)) { clearPendingDelivery(); return; }
+  savePendingDelivery({
+    occasion: p.occasion ?? null,
+    popupDismissed: p.popupDismissed,
+    address: p.address, placeName: p.placeName ?? null, neighborhood: p.neighborhood ?? null,
+    district: p.district, city: p.city, placeId: p.placeId ?? null, lat: p.lat, lng: p.lng,
+  });
+}
+
+export function markDeliveryPopupDismissed(): void {
+  const p = readPendingDelivery();
+  savePendingDelivery({ ...(p ?? {}), popupDismissed: true });
 }
 
 export function clearPendingDelivery(): void {

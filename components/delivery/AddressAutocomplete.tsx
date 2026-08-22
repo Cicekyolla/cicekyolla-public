@@ -54,6 +54,8 @@ interface Props {
   className?: string;
   /** Ülke kısıtı (varsayılan Türkiye). */
   regionCodes?: string[];
+  /** Seçim sonrası dahili "Doğrulanan adres" kutusunu gizle (çağıran kendi özetini gösterir). */
+  hideSelected?: boolean;
 }
 
 // ----------------------------------------------------------------------------
@@ -207,6 +209,7 @@ export default function AddressAutocomplete({
   defaultValue = '',
   className,
   regionCodes = ['tr'],
+  hideSelected = false,
 }: Props) {
   const [query, setQuery] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -226,6 +229,13 @@ export default function AddressAutocomplete({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Ortak adres state'inden (popup seçimi) sonradan gelen defaultValue input'a yansır.
+  // Yalnız boş→dolu / değer değişiminde; kullanıcı yazarken müdahale etmez (selected yokken ve query farklıysa).
+  useEffect(() => {
+    if (defaultValue && defaultValue !== query && !selected && suggestions.length === 0) setQuery(defaultValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
 
   // --- Init: Google Maps + kütüphaneleri yükle -----------------------------
   useEffect(() => {
@@ -562,7 +572,7 @@ export default function AddressAutocomplete({
         <p style={{ marginTop: 12, color: '#C0392B', fontSize: 14 }}>{error}</p>
       )}
 
-      {selected && (
+      {selected && !hideSelected && (
         <div
           style={{
             marginTop: 16,
