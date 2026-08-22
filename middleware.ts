@@ -12,6 +12,16 @@ import {
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveManagedRedirect } from "@/lib/managed-redirects";
 const categorySlugs = new Set(legacyCategorySlugs);
+/* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
+   statik listeden (/kategori/{eski-slug}) üretir. Kategori Merkezi'nden onaylı
+   bir URL değişikliği varsa o hedef artık yönetilen bir 301 KAYNAĞIDIR; burada
+   tek adımda nihai hedefe düzleştirilir (301→301 zinciri YOK, statik dosya
+   elle senkron GEREKMEZ). Yönetilen yönlendirme yoksa / API erişilemezse hedef
+   bugünkü haliyle döner — mevcut davranış birebir korunur. */
+async function flattenManagedTarget(target: string): Promise<string> {
+  const managed = await resolveManagedRedirect(target);
+  return managed?.to ?? target;
+}
 export async function middleware(req: NextRequest) {
 const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
@@ -41,7 +51,7 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
     const categorySlug = `${legacyLocation.normalizedBase}-cicek`;
     if (categorySlugs.has(categorySlug)) {
       return NextResponse.redirect(
-        new URL(`/kategori/${categorySlug}`, req.nextUrl.origin),
+        new URL(await flattenManagedTarget(`/kategori/${categorySlug}`), req.nextUrl.origin),
         301,
       );
     }
@@ -69,7 +79,7 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
     const legacyCategory = req.nextUrl.pathname.match(/^\/([a-z0-9-]+)-\d+\/?$/);
     if (legacyCategory) {
       return NextResponse.redirect(
-        new URL(guardedCategoryTarget(legacyCategory[1]), req.nextUrl.origin),
+        new URL(await flattenManagedTarget(guardedCategoryTarget(legacyCategory[1])), req.nextUrl.origin),
         301,
       );
     }
