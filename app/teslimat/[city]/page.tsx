@@ -14,6 +14,9 @@ import { ProductImage } from "@/components/product/ProductImage";
  * tüm sonuçlar canlı katalogdan (fetchProducts). Mevcut mimari bozulmaz (additive).
  */
 
+// Admin Kargo Merkezi kararı ANINDA yansısın: sayfa dinamik, ürün sorguları önbelleksiz.
+export const dynamic = "force-dynamic";
+
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
 
 interface RecConfig { title: string; max_items: number; is_active: boolean; }
@@ -47,15 +50,15 @@ async function loadCargoProducts(catId: number, excludeId: number, limit: number
   // sonradan açılan eski ürünler de aday olur (önceden yalnız en yeni 60 ürün alınıyordu).
   const allCargo: PublicProductListItem[] = [];
   for (let page = 1; page <= 10; page++) {
-    const r = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page, sort: "created_at_desc" });
+    const r = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page, sort: "created_at_desc", fresh: true });
     allCargo.push(...r.items);
     if (page >= (r.pagination?.total_pages ?? 1)) break;
   }
   const calls: Promise<PublicProductListItem[]>[] = [
     Promise.resolve(allCargo),
-    fetchProducts({ delivery_model: "cargo_capable", is_bestseller: true, page_size: 24 }),
+    fetchProducts({ delivery_model: "cargo_capable", is_bestseller: true, page_size: 24, fresh: true }),
   ];
-  if (catId) calls.unshift(fetchProducts({ delivery_model: "cargo_capable", category_id: catId, page_size: 24 }));
+  if (catId) calls.unshift(fetchProducts({ delivery_model: "cargo_capable", category_id: catId, page_size: 24, fresh: true }));
   const lists = await Promise.all(calls);
 
   const seen = new Set<number>();

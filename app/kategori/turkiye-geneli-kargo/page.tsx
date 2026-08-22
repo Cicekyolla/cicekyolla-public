@@ -8,7 +8,7 @@ import { findCategoryIdBySlug } from "@/lib/catalog";
 async function fetchCargoCapableProducts(): Promise<PublicProductListItem[]> {
   const out: PublicProductListItem[] = [];
   for (let page = 1; page <= 10; page++) {
-    const r = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page, sort: "created_at_desc" });
+    const r = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page, sort: "created_at_desc", fresh: true });
     out.push(...r.items);
     if (page >= (r.pagination?.total_pages ?? 1)) break;
   }
@@ -34,7 +34,7 @@ export default async function NationwideCargoPage() {
   ]);
   const categoryId = tree ? findCategoryIdBySlug(tree, "turkiye-geneli-kargo") : null;
   const categoryProducts = categoryId
-    ? await fetchProducts({ category_id: categoryId, delivery_model: "cargo_capable", page_size: 100, sort: "created_at_desc" })
+    ? await fetchProducts({ category_id: categoryId, delivery_model: "cargo_capable", page_size: 100, sort: "created_at_desc", fresh: true })
     : [];
   const unique = new Map<number, PublicProductListItem>();
   const cargoOk = (p: PublicProductListItem) => p.delivery_model_code === "cargo" || p.delivery_model_code === "same_day_and_cargo";
