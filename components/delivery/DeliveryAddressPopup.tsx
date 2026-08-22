@@ -141,7 +141,7 @@ export function DeliveryAddressPopup() {
         <Dialog.Overlay className="fixed inset-0 z-[90] bg-[#1A1226]/30 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
         <Dialog.Content
           aria-describedby="cy-addr-desc"
-          className="fixed z-[91] left-1/2 -translate-x-1/2 bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 w-full sm:w-[min(92vw,560px)] max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-t-[24px] sm:rounded-[24px] bg-white/95 backdrop-blur-md border border-[#EDE9FE] shadow-[0_24px_80px_rgba(26,18,38,0.16)] p-5 sm:p-8 outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+          className="fixed z-[91] left-1/2 -translate-x-1/2 bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 w-full sm:w-[min(92vw,560px)] min-h-[78dvh] sm:min-h-0 max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-t-[24px] sm:rounded-[24px] bg-white/95 backdrop-blur-md border border-[#EDE9FE] shadow-[0_24px_80px_rgba(26,18,38,0.16)] p-5 sm:p-8 outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
         >
           <Dialog.Close
             aria-label="Kapat"
