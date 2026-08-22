@@ -34,7 +34,7 @@ function titleCaseTr(slug: string): string {
 function tl(m: number | string): string {
   return `${Math.round(Number(m) / 100).toLocaleString("tr-TR")} ₺`;
 }
-const CARGO_ETA_TEXT = "1-5 iş günü"; // tek kargo dili (backend deliveryDecision.CARGO_ETA_TEXT ile aynı)
+const CARGO_ETA_TEXT = "1-3 iş günü"; // tek kargo dili (backend deliveryDecision.CARGO_ETA_TEXT ile aynı)
 
 export async function generateMetadata({ params }: { params: { city: string } }): Promise<Metadata> {
   const name = titleCaseTr(params.city);
@@ -45,7 +45,9 @@ export async function generateMetadata({ params }: { params: { city: string } })
   };
 }
 
-async function loadCargoProducts(catId: number, excludeId: number, limit: number): Promise<{ items: PublicProductListItem[]; total: number }> {
+const PAGE_SIZE = 50; // operatör kararı (22 Ağu): sayfa başına 50, sıralı sayfalama
+
+async function loadCargoProducts(catId: number, excludeId: number, page: number): Promise<{ items: PublicProductListItem[]; total: number; pages: number; page: number }> {
   // Havuz = TÜM kargoya onaylı ürünler (sayfalı, üst sınır 1000) — Kargo Merkezi'nde
   // sonradan açılan eski ürünler de aday olur (önceden yalnız en yeni 60 ürün alınıyordu).
   const allCargo: PublicProductListItem[] = [];
@@ -72,8 +74,11 @@ async function loadCargoProducts(catId: number, excludeId: number, limit: number
     seen.add(p.id);
     items.push(p);
   }
-  items.sort((a, b) => (a.is_bestseller !== b.is_bestseller ? (a.is_bestseller ? -1 : 1) : 0));
-  return { items: items.slice(0, limit), total: items.length };
+  // Sıra: aynı kategori (önce) → çok satan → ad (deterministik sayfalama)
+  items.sort((a, b) => (a.is_bestseller !== b.is_bestseller ? (a.is_bestseller ? -1 : 1) : a.name.localeCompare(b.name, "tr")));
+  const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const cur = Math.min(Math.max(1, page), pages);
+  return { items: items.slice((cur - 1) * PAGE_SIZE, cur * PAGE_SIZE), total: items.length, pages, page: cur };
 }
 
 export default async function DeliveryCityPage({
@@ -81,15 +86,16 @@ export default async function DeliveryCityPage({
   searchParams,
 }: {
   params: { city: string };
-  searchParams: { cat?: string; il?: string; from?: string };
+  searchParams: { cat?: string; il?: string; from?: string; sayfa?: string };
 }) {
   const cityName = searchParams.il?.trim() || titleCaseTr(params.city);
   const catId = Number(searchParams.cat || 0);
   const excludeId = Number(searchParams.from || 0);
   const cfg = await loadConfig();
-  const maxItems = cfg?.max_items && cfg.max_items > 0 ? cfg.max_items : 24;
+  const pageNo = Math.max(1, Number(searchParams.sayfa || 1) || 1);
   const pageTitle = cfg?.title?.trim() ? cfg.title.replace(/\{city\}/g, `${cityName}'a`) : `${cityName}'a Gönderilebilen Ürünler`;
-  const { items, total } = await loadCargoProducts(catId, excludeId, maxItems);
+  const { items, total, pages, page } = await loadCargoProducts(catId, excludeId, pageNo);
+  const pageHref = (n: number) => { const q = new URLSearchParams(); if (searchParams.from) q.set("from", searchParams.from); if (searchParams.cat) q.set("cat", searchParams.cat); if (searchParams.il) q.set("il", searchParams.il); if (n > 1) q.set("sayfa", String(n)); const qs = q.toString(); return `/teslimat/${params.city}${qs ? `?${qs}` : ""}`; };
 
   return (
     <main className="min-h-screen bg-white">
@@ -150,14 +156,19 @@ export default async function DeliveryCityPage({
             })}
           </div>
         )}
-        {total > items.length && (
-          <div className="mt-8 text-center">
-            <p className="text-[13px] text-[#6B7280]">Bu sayfada {items.length} öneri gösteriliyor (admin öneri ayarı). Kargoya onaylı toplam {total} ürün var.</p>
-            <Link href="/kategori/turkiye-geneli-kargo" className="mt-3 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[13px] font-bold hover:bg-[#6D28D9] transition-colors">
-              Tüm Kargolu Ürünleri Gör ({total}) <ChevronLeft className="w-3.5 h-3.5 rotate-180" />
-            </Link>
-          </div>
+        {pages > 1 && (
+          <nav aria-label="Sayfalama" className="mt-8 flex flex-wrap items-center justify-center gap-2">
+            {page > 1 && <Link href={pageHref(page - 1)} className="px-4 py-2 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#7C3AED]">‹ Önceki</Link>}
+            {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
+              <Link key={n} href={pageHref(n)} aria-current={n === page ? "page" : undefined}
+                className={`min-w-[40px] text-center px-3 py-2 rounded-xl text-[13px] font-bold ${n === page ? "bg-[#7C3AED] text-white" : "border border-[#E5E7EB] text-[#374151] hover:border-[#7C3AED]"}`}>
+                {n}
+              </Link>
+            ))}
+            {page < pages && <Link href={pageHref(page + 1)} className="px-4 py-2 rounded-xl border border-[#E5E7EB] text-[13px] font-semibold text-[#374151] hover:border-[#7C3AED]">Sonraki ›</Link>}
+          </nav>
         )}
+        <p className="mt-4 text-center text-[12.5px] text-[#6B7280]">Kargoya onaylı toplam {total} ürün · sayfa {page}/{pages}</p>
       </div>
     </main>
   );
