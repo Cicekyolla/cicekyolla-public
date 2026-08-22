@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Search, X, ArrowRight, ChevronDown, UserRound, PackageCheck } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
-import type { MegaGroup } from "@/lib/headerNav";
+import { balanceMegaColumns, type MegaGroup } from "@/lib/headerNav";
 import { BrandWordmark } from "./BrandWordmark";
 import { useCart } from "@/lib/cart";
 
@@ -54,7 +54,6 @@ export function Header({ menu, nav, search, brand }: {
   // hardcoded menü fallback (UI birebir aynı → görsel regresyon YOK).
   const menuData: Record<string, MegaGroup> = menu && Object.keys(menu).length > 0 ? menu : FALLBACK_MENU;
   const navItems: string[] = Object.keys(menuData);
-  const isCargoNav = (label: string) => label.toLocaleLowerCase("tr").includes("kargo");
 
   // Mobil menü kategori kısmı: canlı nav (fallback: menü anahtarları / hardcoded).
   const mobileCats: { label: string; href: string }[] =
@@ -115,6 +114,12 @@ export function Header({ menu, nav, search, brand }: {
       controller.abort();
     };
   }, [query, searchOpen]);
+
+  // Mega menü sütun dağılımı (sunum katmanı): aktif menü değişince yeniden hesaplanır.
+  const balancedColumns = useMemo(
+    () => (activeMenu && menuData[activeMenu] ? balanceMegaColumns(menuData[activeMenu].columns, 4) : []),
+    [activeMenu, menuData],
+  );
 
   const handleMouseEnter = (key: string) => {
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
@@ -180,7 +185,7 @@ export function Header({ menu, nav, search, brand }: {
         }}
       >
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
-          <div className="flex items-center justify-between h-[82px] lg:h-[92px] gap-4 lg:gap-6 xl:gap-8">
+          <div className="flex items-center justify-between h-[82px] lg:h-[92px] gap-4 lg:gap-5 xl:gap-7">
 
             {/* ── Logo — hero tipografisiyle aynı keskin vektör marka sistemi ── */}
             <Link
@@ -191,8 +196,17 @@ export function Header({ menu, nav, search, brand }: {
               <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} />
             </Link>
 
-            {/* ── Desktop mega nav (root kategoriler — canlı CategoryTree) ── */}
-            <nav className="hidden lg:flex items-center flex-1 justify-center" style={{ gap: "clamp(0px, 0.5vw, 4px)" }}>
+            {/* ── Desktop mega nav (curated kategoriler — canlı CategoryTree) ──
+                HOVER → mega menü açılır · CLICK → ana kategorinin gerçek canlı
+                sayfasına gider (önceden <button> idi: tıklama hiçbir şey yapmıyor,
+                SSR'da link bile yoktu). Klavye: focus açar, Escape kapatır.
+                Taşma emniyeti: 9 öğe için kontrollü spacing + gizli yatay kaydırma
+                (overlap yerine); mega panel header'a göre konumlandığı için etkilenmez. */}
+            <nav
+              aria-label="Ana kategoriler"
+              className="hidden lg:flex items-center flex-1 min-w-0"
+              style={{ gap: "clamp(0px, 0.35vw, 4px)", overflowX: "auto", scrollbarWidth: "none", justifyContent: "safe center" }}
+            >
               {navItems.map((key) => (
                 <div
                   key={key}
@@ -200,40 +214,28 @@ export function Header({ menu, nav, search, brand }: {
                   onMouseEnter={() => handleMouseEnter(key)}
                   onMouseLeave={handleMouseLeave}
                 >
-                  {isCargoNav(key) ? (
                   <Link
-                    href={menuData[key].href ?? "/kategori/turkiye-geneli-kargo"}
+                    href={menuData[key].href}
+                    aria-haspopup="true"
+                    aria-expanded={activeMenu === key}
+                    onFocus={() => handleMouseEnter(key)}
+                    onKeyDown={(e) => { if (e.key === "Escape") setActiveMenu(null); }}
+                    onClick={() => setActiveMenu(null)}
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
                         ? "text-[#8B5CF6] bg-[#F5F3FF]"
                         : "text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
                     }`}
                     style={{
-                      padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
-                      fontSize: "clamp(10px, 1vw, 11.5px)",
-                      letterSpacing: "clamp(0.02em, 0.04em, 0.05em)",
+                      display: "inline-block",
+                      padding: "clamp(5px, 0.6vw, 7px) clamp(4px, 0.55vw, 9px)",
+                      fontSize: "clamp(10px, 0.82vw, 11px)",
+                      letterSpacing: "0.025em",
                       textTransform: "uppercase",
                     }}
                   >
                     {key}
                   </Link>
-                  ) : (
-                  <button
-                    className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
-                      activeMenu === key
-                        ? "text-[#8B5CF6] bg-[#F5F3FF]"
-                        : "text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
-                    }`}
-                    style={{
-                      padding: "clamp(6px, 0.8vw, 8px) clamp(6px, 0.85vw, 12px)",
-                      fontSize: "clamp(10px, 1vw, 11.5px)",
-                      letterSpacing: "clamp(0.02em, 0.04em, 0.05em)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {key}
-                  </button>
-                  )}
                 </div>
               ))}
             </nav>
@@ -475,51 +477,65 @@ export function Header({ menu, nav, search, brand }: {
                 boxShadow: "0 24px 64px rgba(0,0,0,0.10), 0 4px 16px rgba(139,92,246,0.06)",
               }}
             >
-              <div className="max-w-[1440px] mx-auto px-8 xl:px-14 py-8 xl:py-10">
-                <div className="grid grid-cols-[1fr_220px] xl:grid-cols-[1fr_280px] gap-8 xl:gap-12">
-                  {/* Categories: child (başlık) + grandchild (alt linkler) — tam alt ağaç */}
-                  <div>
-                    <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-6">
-                      {activeMenu} Koleksiyonu
-                    </p>
+              <div className="max-w-[1440px] mx-auto px-8 xl:px-14 py-7 xl:py-9">
+                <div className="grid grid-cols-[1fr_200px] xl:grid-cols-[1fr_240px] gap-8 xl:gap-12">
+                  {/* SUNUM KATMANI: aileler (child) sırası korunarak 4 dengeli sütuna
+                      dağıtılır; uzun aile sütunu aşarsa devamı sonraki sütunda aynı
+                      başlıkla sürer. DB parent/child ilişkisi DEĞİŞMEZ. */}
+                  <div className="min-w-0">
+                    <div className="flex items-baseline justify-between gap-4 mb-5 pb-3 border-b border-black/[0.06]">
+                      <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold">
+                        {activeMenu}
+                      </p>
+                      <Link
+                        href={menuData[activeMenu].href}
+                        onClick={() => setActiveMenu(null)}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8B5CF6] uppercase tracking-widest hover:gap-2.5 transition-all whitespace-nowrap"
+                      >
+                        Tüm {activeMenu}'i Gör <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
                     <div
-                      className="grid grid-cols-2 xl:grid-cols-3 gap-x-10 gap-y-6"
-                      style={{ maxHeight: "min(62vh, 520px)", overflowY: "auto" }}
+                      className="grid grid-cols-3 xl:grid-cols-4 gap-x-8 xl:gap-x-10"
+                      style={{ maxHeight: "min(74vh, 680px)", overflowY: "auto", scrollbarWidth: "thin" }}
                     >
-                      {menuData[activeMenu].columns.map((col) => (
-                        <div key={col.href}>
-                          <Link
-                            href={col.href}
-                            onClick={() => setActiveMenu(null)}
-                            className="block text-sm font-semibold text-[#111827] hover:text-[#8B5CF6] transition-colors pb-1.5 border-b border-black/[0.06]"
-                          >
-                            {col.title}
-                          </Link>
-                          {col.links.length > 0 && (
-                            <ul className="mt-2 space-y-1.5">
-                              {col.links.map((l) => (
-                                <li key={l.href}>
-                                  <Link
-                                    href={l.href}
-                                    onClick={() => setActiveMenu(null)}
-                                    className="text-[13px] text-[#6B7280] hover:text-[#8B5CF6] transition-colors"
-                                  >
-                                    {l.name}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
+                      {balancedColumns.map((stack, si) => (
+                        <div key={si} className="min-w-0 space-y-5">
+                          {stack.map((col, ci) => (
+                            <div key={`${col.href}-${ci}`}>
+                              {col.continued ? (
+                                <p className="text-[11px] font-semibold text-[#9CA3AF] pb-1 tracking-wide">
+                                  {col.title} <span className="font-normal">· devamı</span>
+                                </p>
+                              ) : (
+                                <Link
+                                  href={col.href}
+                                  onClick={() => setActiveMenu(null)}
+                                  className="block text-[13.5px] font-semibold text-[#111827] hover:text-[#8B5CF6] transition-colors pb-1"
+                                >
+                                  {col.title}
+                                </Link>
+                              )}
+                              {col.links.length > 0 && (
+                                <ul className="mt-1 space-y-[3px]">
+                                  {col.links.map((l) => (
+                                    <li key={l.href}>
+                                      <Link
+                                        href={l.href}
+                                        onClick={() => setActiveMenu(null)}
+                                        className="block text-[13px] leading-[1.4] text-[#6B7280] hover:text-[#8B5CF6] transition-colors truncate"
+                                      >
+                                        {l.name}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
-                    <Link
-                      href={menuData[activeMenu].href}
-                      onClick={() => setActiveMenu(null)}
-                      className="inline-flex items-center gap-2 mt-6 text-xs font-bold text-[#8B5CF6] uppercase tracking-widest hover:gap-3 transition-all"
-                    >
-                      Tüm {activeMenu}'i Gör <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
                   </div>
 
                   {/* Featured card: banner_image varsa görsel, yoksa premium placeholder */}
