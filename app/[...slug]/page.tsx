@@ -352,13 +352,15 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   const productItems = useLocationGrid
     ? []
     : await fetchProducts({
+        // Şehir dışı vitrin: TEK yetki kaynağı Admin Kargo Merkezi (teslimat profili).
+        // Legacy delivery_scope kargo yetkisi VEREMEZ (önceden bu sayfa onu kullanıyordu).
         ...(cargoMode
-          ? { delivery_scope: "turkiye" as const }
+          ? { delivery_model: "cargo_capable" as const }
           : { product_type: "flower", same_day_available: true }),
         page_size: cargoMode ? 100 : 8,
       });
   const products = productItems
-    .filter((product) => !cargoMode || product.delivery_scope === "turkiye")
+    .filter((product) => !cargoMode || product.delivery_model_code === "cargo" || product.delivery_model_code === "same_day_and_cargo")
     .map(toCardProduct)
     .slice(0, cargoMode ? 100 : 4);
 
