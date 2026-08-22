@@ -227,7 +227,8 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
   const dateStr = fmtDate(pd?.date);
   const slotStr = pd?.slotLabel ?? (pd?.slotStart ? mapToSlot(pd.slotStart) : null);
-  const typeStr = pd?.mode === "cargo" ? "Ücretsiz Kargo" : pd?.mode === "sameday" ? "Aynı Gün Teslimat" : null;
+  // Teslimat kararı PDP'den (pending.mode) taşınır; burada yeniden TAHMİN edilmez. Tek kargo dili: 1-5 iş günü.
+  const typeStr = pd?.mode === "cargo" ? "Türkiye Geneli Kargo · 1-5 iş günü" : pd?.mode === "sameday" ? "İstanbul Aynı Gün" : null;
 
   const toggleNote = (id: string) => setNotes((n) => (n.includes(id) ? n.filter((x) => x !== id) : [...n, id]));
   const setAddon = (id: number, q: number) => setAddonQty((m) => ({ ...m, [id]: Math.max(0, q) }));
@@ -300,8 +301,11 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         recipient_name: recipientName, recipient_phone: recipientPhone || null,
         delivery_address: address || null, delivery_district: pd?.district || null,
         delivery_city: pd?.city || null,
-        delivery_date: pd?.date || null, delivery_time_slot: pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null),
-        delivery_slot_id: pd?.slotId ?? null,
+        // KARGO = kurye slotu KESİNLİKLE yok (backend de siler; burada hiç gönderilmez).
+        delivery_date: pd?.date || null,
+        delivery_time_slot: pd?.mode === "cargo" ? null : (pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null)),
+        delivery_slot_id: pd?.mode === "cargo" ? null : (pd?.slotId ?? null),
+        delivery_method: pd?.mode === "cargo" ? "cargo" : pd?.mode === "sameday" ? "courier" : null,
         card_message: composedCard, source: "web",
         occasion: occasion || null,
         sender_visibility: visibility,
@@ -344,7 +348,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       const reason = failure instanceof Error ? failure.message : "";
       setError(reason === "delivery slot is no longer available"
         ? "Seçtiğiniz saat aralığı artık dolu veya kapanmış. Lütfen ürün sayfasından yeni bir saat seçin."
-        : "Sipariş oluşturulamadı. Bilgileriniz korunuyor; lütfen tekrar deneyin.");
+        : reason === "product_not_deliverable_to_address"
+          ? "Bu ürün seçtiğiniz adrese gönderilemiyor (yalnız İstanbul içi aynı gün). Ürün sayfasından adrese uygun ürünleri görebilirsiniz."
+          : "Sipariş oluşturulamadı. Bilgileriniz korunuyor; lütfen tekrar deneyin.");
     } finally {
       setLoading(false);
     }
@@ -606,7 +612,7 @@ function StepTeslimatDuzenle(p: {
     if (!d) return null;
     const yer = [d.placeName, d.neighborhood, d.district, d.city].filter(Boolean).join(", ");
     const gun = fmtDate(d.date);
-    const saat = d.mode === "cargo" ? "Kargo" : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
+    const saat = d.mode === "cargo" ? "Kargo · 1-5 iş günü" : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
     return [yer, gun, saat].filter(Boolean).join(" · ");
   };
   return (

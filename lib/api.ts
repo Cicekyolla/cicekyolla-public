@@ -300,6 +300,8 @@ export interface PublicProductCore {
   price_minor: string | number; sale_price_minor: string | number | null; currency: string;
   stock_quantity: number; status: string; product_type: string;
   same_day_available: boolean; delivery_scope: string;
+  /** Teslimat profili kodu (backend delivery_model_code); profil yoksa null = kargoya KAPALI. */
+  delivery_model_code?: string | null;
   height_cm: number | null; width_cm: number | null;
   is_featured: boolean; is_bestseller: boolean; is_new: boolean;
 }
@@ -388,6 +390,8 @@ export interface PublicProductListItem {
   is_featured: boolean; is_bestseller: boolean; is_new: boolean;
   stock_quantity: number; cover_image_url: string | null; primary_category_id: number | null;
   same_day_available?: boolean; delivery_scope?: string;
+  /** Teslimat profili kodu (backend delivery_model_code); yok/null = kargoya KAPALI. */
+  delivery_model_code?: string | null;
   cover_blurhash?: string | null; cover_derivatives?: MediaDerivatives | null;
 }
 export interface PublicProductListParams {
@@ -397,6 +401,8 @@ export interface PublicProductListParams {
   product_type?: string; // flower|plant|wreath|artificial|gift|service
   same_day_available?: boolean;
   delivery_scope?: "istanbul" | "turkiye" | "regional";
+  /** TEK OTORİTE: teslimat profili (product_delivery_profiles). cargo_capable = cargo ∪ same_day_and_cargo. */
+  delivery_model?: "same_day_courier" | "cargo" | "same_day_and_cargo" | "cargo_capable";
   sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
 }
 
@@ -424,6 +430,7 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.product_type) q.set("product_type", params.product_type);
   if (params.same_day_available) q.set("same_day_available", "true");
   if (params.delivery_scope) q.set("delivery_scope", params.delivery_scope);
+  if (params.delivery_model) q.set("delivery_model", params.delivery_model);
   if (params.sort) q.set("sort", params.sort);
   const url = `${API_ORIGIN}/api/products?${q.toString()}`;
   const attempts = [

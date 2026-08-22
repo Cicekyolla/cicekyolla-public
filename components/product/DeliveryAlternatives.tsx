@@ -27,7 +27,10 @@ function slugifyTr(s: string): string {
 }
 
 export default function DeliveryAlternatives({ excludeId, city, district, categoryId }: Props) {
+  // Şehir adı doğrulanmış adresten (delivery-check yanıtı location.city). Yoksa genel ifade.
   const cityName = (city && city.trim()) || "Bu adrese";
+  const hasCity = cityName !== "Bu adrese";
+  const toCity = hasCity ? cityName + "'a" : "bu adrese";
 
   // Recommendation Engine config (admin-yönetimli). Gelmezse mevcut premium metne düşer.
   const [cfg, setCfg] = useState<{ description?: string; cta_text?: string; is_active?: boolean } | null>(null);
@@ -62,10 +65,11 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
           <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#6D28D9]">
             <MapPin className="w-3.5 h-3.5" /> Teslimat Adresiniz · {addrLine}
           </div>
-          <p className="text-[13.5px] font-bold text-[#111827] mt-1">Bu canlı çiçek ürünü bu adrese gönderilemiyor.</p>
+          <p className="text-[13.5px] font-bold text-[#111827] mt-1">Bu ürün {toCity} aynı gün gönderilemiyor.</p>
           <p className="text-[12.5px] text-[#6B7280] mt-1 leading-relaxed">
-            {descText}
+            Ancak {toCity} kargoyla gönderebileceğimiz ürünlerimiz var. {descText}
           </p>
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#047857]">📦 1-5 iş günü teslimat</p>
         </div>
       </div>
 
@@ -79,7 +83,7 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
         {ctaText}
         <ChevronRight className="w-4 h-4" />
       </Link>
-      <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">Türkiye geneli ücretsiz kargo ile gönderilebilen özel ürünler</p>
+      <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">Yalnız Kargo Merkezi'nde kargoya onaylı ürünler · Türkiye geneli kargo · 1-5 iş günü</p>
     </div>
   );
 }

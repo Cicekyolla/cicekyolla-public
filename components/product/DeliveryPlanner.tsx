@@ -283,9 +283,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   // Sonuç gelince varsayılan mod: aynı gün uygunsa 'sameday', değilse 'cargo'.
   useEffect(() => {
     if (!result) return;
-    if (result.same_day?.available && (result.same_day.slots?.length ?? 0) > 0) setMode("sameday");
-    else if (result.cargo?.available) setMode("cargo");
-  }, [result]);
+    if (result.same_day?.available && (result.same_day.slots?.length ?? 0) > 0) {
+      // Aynı gün: slot seçilene kadar seçim YOK (eski kargo/slot seçimi taşınmaz).
+      setMode("sameday");
+      onSelect?.(null);
+    } else if (result.cargo?.available) {
+      // Tek seçenek kargo → karar kendiliğinden kesinleşir: slot YOK, 1-5 iş günü.
+      setMode("cargo");
+      if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", address });
+    } else {
+      onSelect?.(null); // satılamaz (fail closed)
+    }
+  }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPickSlot = (s: Slot) => {
     setSlotId(s.id);
@@ -312,7 +321,12 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       <div className="mt-3">
         <AddressAutocomplete
           placeholder="Teslimat adresini yazın (mahalle / cadde / AVM)"
-          onSelect={(r) => { setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(0); }}
+          onSelect={(r) => {
+            // ADRES DEĞİŞTİ → eski teslimat seçimi (İstanbul slotu dahil) GEÇERSİZ:
+            // pending temizlenir, CTA kilitlenir; karar yeni adresle yeniden hesaplanır.
+            onSelect?.(null);
+            setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(0);
+          }}
         />
       </div>
 
@@ -415,7 +429,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                   <div className={`grid gap-2.5 ${showSameday && showCargo ? "sm:grid-cols-2" : "grid-cols-1"}`}>
                     {showSameday && (
                       <button
-                        onClick={() => setMode("sameday")}
+                        onClick={() => { setMode("sameday"); if (slotId == null) onSelect?.(null); }}
                         className={`relative text-left rounded-[20px] border p-3.5 min-h-[92px] transition-all ${
                           mode === "sameday"
                             ? "border-[#7C3AED] bg-[#F5F3FF] shadow-[0_6px_20px_rgba(124,58,237,0.18)]"
@@ -443,7 +457,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                             : "border-[#EDE9FE] bg-white hover:border-[#C4B5FD] hover:shadow-[0_4px_16px_rgba(124,58,237,0.1)]"
                         }`}
                       >
-                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center">YARIN<br />KARGODA</span>
+                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center">1-5<br />İŞ GÜNÜ</span>
                         {mode === "cargo" && <Check className="w-4 h-4 text-[#7C3AED] absolute bottom-2.5 right-2.5" />}
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center mb-2">
                           <Package className="w-[18px] h-[18px] text-white" />
@@ -526,7 +540,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                         </div>
                         <ul className="space-y-1.5 text-[12.5px] text-[#374151]">
                           <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#059669] shrink-0" /> Siparişiniz siparişe özel hazırlanır.</li>
-                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> Yarın kargoya teslim edilir.</li>
+                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> Kargo ile {cargo!.est_text ?? "1-5 iş günü"} içinde teslim edilir · saat slotu yoktur.</li>
                         </ul>
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">

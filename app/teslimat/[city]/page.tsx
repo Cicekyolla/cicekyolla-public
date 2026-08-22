@@ -7,16 +7,16 @@ import { ProductImage } from "@/components/product/ProductImage";
 /**
  * /teslimat/[city] — Cargo Engine koleksiyon sayfası (Conversion Recovery).
  * ---------------------------------------------------------------------------
- * Yalnızca KARGOYA UYGUN ürünler (plant | artificial | gift = same_day_and_cargo).
+ * Yalnızca KARGOYA UYGUN ürünler — TEK OTORİTE teslimat profili (cargo ∪ same_day_and_cargo).
+ * product_type/delivery_scope/kategori yetki VEREMEZ; Kargo Merkezi'nde onaylanmamış ürün buraya giremez.
  * Öncelik: aynı kategori (?cat) -> çok satan -> geniş katalog. ASLA boş kalmaz
  * (kategori boşsa tüm Türkiye-geneli kargo ürünlerine düşer). Sahte veri YOK;
  * tüm sonuçlar canlı katalogdan (fetchProducts). Mevcut mimari bozulmaz (additive).
  */
 
-const CARGO_TYPES_DEFAULT = ["plant", "artificial", "gift"];
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
 
-interface RecConfig { title: string; max_items: number; cargo_types: string[]; is_active: boolean; }
+interface RecConfig { title: string; max_items: number; is_active: boolean; }
 async function loadConfig(): Promise<RecConfig | null> {
   try {
     const r = await fetch(`${API_ORIGIN}/api/public/recommendation-config`, { next: { revalidate: 120 } });
@@ -31,7 +31,7 @@ function titleCaseTr(slug: string): string {
 function tl(m: number | string): string {
   return `${Math.round(Number(m) / 100).toLocaleString("tr-TR")} ₺`;
 }
-const TYPE_BADGE: Record<string, string> = { plant: "Türkiye Geneli", artificial: "Ücretsiz Kargo", gift: "1-3 İş Günü" };
+const CARGO_ETA_TEXT = "1-5 iş günü"; // tek kargo dili (backend deliveryDecision.CARGO_ETA_TEXT ile aynı)
 
 export async function generateMetadata({ params }: { params: { city: string } }): Promise<Metadata> {
   const name = titleCaseTr(params.city);
@@ -42,12 +42,12 @@ export async function generateMetadata({ params }: { params: { city: string } })
   };
 }
 
-async function loadCargoProducts(catId: number, excludeId: number, cargoTypes: string[], limit: number): Promise<PublicProductListItem[]> {
+async function loadCargoProducts(catId: number, excludeId: number, limit: number): Promise<PublicProductListItem[]> {
   const calls: Promise<PublicProductListItem[]>[] = [
-    fetchProducts({ page_size: 60 }),
-    fetchProducts({ is_bestseller: true, page_size: 24 }),
+    fetchProducts({ delivery_model: "cargo_capable", page_size: 60 }),
+    fetchProducts({ delivery_model: "cargo_capable", is_bestseller: true, page_size: 24 }),
   ];
-  if (catId) calls.unshift(fetchProducts({ category_id: catId, page_size: 24 }));
+  if (catId) calls.unshift(fetchProducts({ delivery_model: "cargo_capable", category_id: catId, page_size: 24 }));
   const lists = await Promise.all(calls);
 
   const seen = new Set<number>();
@@ -55,7 +55,8 @@ async function loadCargoProducts(catId: number, excludeId: number, cargoTypes: s
   for (const p of lists.flat()) {
     if (!p.cover_image_url) continue;
     if (excludeId && p.id === excludeId) continue;
-    if (!cargoTypes.includes(p.product_type)) continue;
+    // İkinci savunma: profil kodu kargo değilse (veya yoksa) asla listeleme.
+    if (p.delivery_model_code !== "cargo" && p.delivery_model_code !== "same_day_and_cargo") continue;
     if (seen.has(p.id)) continue;
     seen.add(p.id);
     items.push(p);
@@ -75,10 +76,9 @@ export default async function DeliveryCityPage({
   const catId = Number(searchParams.cat || 0);
   const excludeId = Number(searchParams.from || 0);
   const cfg = await loadConfig();
-  const cargoTypes = cfg?.cargo_types?.length ? cfg.cargo_types : CARGO_TYPES_DEFAULT;
   const maxItems = cfg?.max_items && cfg.max_items > 0 ? cfg.max_items : 24;
   const pageTitle = cfg?.title?.trim() ? cfg.title.replace(/\{city\}/g, `${cityName}'a`) : `${cityName}'a Gönderilebilen Ürünler`;
-  const items = await loadCargoProducts(catId, excludeId, cargoTypes, maxItems);
+  const items = await loadCargoProducts(catId, excludeId, maxItems);
 
   return (
     <main className="min-h-screen bg-white">
@@ -115,7 +115,7 @@ export default async function DeliveryCityPage({
             {items.map((p) => {
               const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
               const shown = hasSale ? p.sale_price_minor! : p.price_minor;
-              const badge = TYPE_BADGE[p.product_type] ?? "Türkiye Geneli";
+              const badge = `Kargo · ${CARGO_ETA_TEXT}`;
               return (
                 <Link key={p.id} href={`/urun/${p.slug}`} className="group">
                   <div className="relative w-full aspect-[4/5] rounded-[20px] overflow-hidden bg-white ring-1 ring-[#F1F0F5]">
