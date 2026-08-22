@@ -1,4 +1,5 @@
 import { isCategoryVisible, type CategoryNode } from "./api";
+import { mediaUrl } from "./media";
 import { HEADER_NAV_CONFIG, balanceMegaColumns, type HeaderNavItem, type MegaColumn } from "./megaMenuLayout";
 
 /* ============================================================================
@@ -63,7 +64,8 @@ export function buildHeaderMenu(
       href,
       columns: cols,
       categories: kids.map((c) => ({ name: c.name, href: `/kategori/${c.slug}` })),
-      featured: { title: item.label, href, image: typeof banner === "string" && banner ? banner : null },
+      // R2 URL'i TR'de bloklu → /r2/ proxy (ürün görselleriyle aynı yol).
+      featured: { title: item.label, href, image: typeof banner === "string" && banner ? mediaUrl(banner) : null },
     };
   }
   return { menu, missing };

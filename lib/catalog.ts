@@ -1,5 +1,5 @@
 import { isCategoryVisible } from "@/lib/api";
-import { isLegacyPleskMedia } from "@/lib/media";
+import { isLegacyPleskMedia, mediaUrl } from "@/lib/media";
 /**
  * CICEKYOLLA OS — CATALOG (tek kanonik frontend kaynağı)
  * ------------------------------------------------------------------
@@ -55,7 +55,8 @@ function normalizeCategoryImage(value: unknown): string {
   if (typeof value !== "string") return "";
   const image = value.trim();
   if (!image || isLegacyPleskMedia(image)) return "";
-  if (/^(https?:\/\/|data:image\/|blob:|\/)/i.test(image)) return image;
+  // R2 (pub-*.r2.dev) URL'leri TR'de bloklu → same-origin /r2/ proxy (ürünlerle aynı yol).
+  if (/^(https?:\/\/|data:image\/|blob:|\/)/i.test(image)) return mediaUrl(image);
   return `/${image.replace(/^\.\//, "").replace(/^\/+/, "")}`;
 }
 

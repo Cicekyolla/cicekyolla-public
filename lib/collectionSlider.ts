@@ -1,4 +1,5 @@
 import { isCategoryVisible, type CategoryNode } from "./api";
+import { mediaUrl } from "./media";
 import type { CategoryItem } from "./catalog";
 
 /* ============================================================================
@@ -26,9 +27,10 @@ const norm = (s: string) => s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim(
 
 const nodeImage = (n: CategoryNode): string => {
   const r = n as { banner_image?: unknown; icon?: unknown; image?: unknown };
-  return (typeof r.banner_image === "string" && r.banner_image) ||
+  // Kategori görselleri R2'de (r2.dev TR'de bloklu) → /r2/ proxy.
+  return mediaUrl((typeof r.banner_image === "string" && r.banner_image) ||
     (typeof r.icon === "string" && r.icon) ||
-    (typeof r.image === "string" && r.image) || "";
+    (typeof r.image === "string" && r.image) || "");
 };
 
 const toItem = (n: CategoryNode): CategoryItem => ({
