@@ -19,7 +19,7 @@ function deliveryLine(d?: { date?: string; slotLabel?: string; mode?: "sameday" 
   const day = Number.isNaN(parsed.getTime())
     ? d.date
     : parsed.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
-  if (d.mode === "cargo") return `${day} · Kargo`;
+  if (d.mode === "cargo") return `Türkiye Geneli Kargo · 1-5 iş günü`; // karar PDP'den; slot yok, tahmin yok
   return d.slotLabel ? `${day} · ${d.slotLabel}` : day;
 }
 
