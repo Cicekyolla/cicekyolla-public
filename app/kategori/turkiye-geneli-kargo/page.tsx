@@ -37,8 +37,10 @@ export default async function NationwideCargoPage() {
     ? await fetchProducts({ category_id: categoryId, delivery_model: "cargo_capable", page_size: 100, sort: "created_at_desc" })
     : [];
   const unique = new Map<number, PublicProductListItem>();
+  const cargoOk = (p: PublicProductListItem) => p.delivery_model_code === "cargo" || p.delivery_model_code === "same_day_and_cargo";
   [...categoryProducts, ...cargoCapable].forEach((product) => {
-    if (product.status === "active" && product.cover_image_url) unique.set(product.id, product);
+    // FAIL CLOSED (ikinci savunma): API filtresi uygulanmasa bile profil kodu kargo değilse listelenmez.
+    if (product.status === "active" && product.cover_image_url && cargoOk(product)) unique.set(product.id, product);
   });
   const selectedIds = (managed?.body_blocks ?? [])
     .filter((block) => block.type === "cargo-product" && block.enabled !== false && block.value !== "false")
