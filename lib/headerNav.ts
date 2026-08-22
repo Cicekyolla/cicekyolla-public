@@ -1,29 +1,17 @@
 import { isCategoryVisible, type CategoryNode } from "./api";
+import { HEADER_NAV_CONFIG, balanceMegaColumns, type HeaderNavItem, type MegaColumn } from "./megaMenuLayout";
 
 /* ============================================================================
    CICEKYOLLA — HEADER CURATION (Sales First)
    Header, ham DB root'larini degil, satis niyetini artiran CURATED bir seti gosterir.
-   Config yalniz "hangi kategori header'da + sira + etiket" belirler.
+   Config yalniz "hangi kategori header'da + sira + etiket" belirler (megaMenuLayout.ts).
    VERI (isim/cocuk/torun/link/gorsel) CANLI CategoryTree'den gelir -> tek kaynak.
    Bulunamayan oge atlanir ve `missing`'te raporlanir (uydurma YOK).
    ============================================================================ */
 
-export interface HeaderNavItem { match: string; label: string }
+export { HEADER_NAV_CONFIG, balanceMegaColumns };
+export type { HeaderNavItem, MegaColumn };
 
-export const HEADER_NAV_CONFIG: HeaderNavItem[] = [
-  { match: "Çiçekler", label: "Çiçekler" },
-  { match: "Gönderim Amacına Göre", label: "Gönderim Amacına Göre" },
-  { match: "Buketler", label: "Buketler" },
-  { match: "Güller", label: "Güller" },
-  { match: "Premium Çiçekler", label: "Premium Çiçekler" },
-  { match: "Doğum Günü", label: "Doğum Günü" },
-  { match: "Orkideler", label: "Orkideler" },
-  { match: "Saksı Bitkileri", label: "Saksı Bitkileri" },
-  { match: "Kampanyalar", label: "Kampanyalar" },
-  { match: "Koleksiyonlar", label: "Koleksiyonlar" },
-];
-
-export interface MegaColumn { title: string; href: string; links: { name: string; href: string }[] }
 export interface MegaGroup {
   href: string;
   featured: { title: string; href: string; image: string | null };
