@@ -28,10 +28,12 @@ import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
+import { formatMinorTRY } from "@/lib/api";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
-const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
+// Tek para formatı (PDP/sepet ile aynı): formatMinorTRY — kuruş gösterilmez (hesap değişmez, yalnız görüntü).
+const money = (m: number) => formatMinorTRY(m);
 // Kart (PayTR) yalnız açık anahtar varken gösterilir. PayTR production anahtarı
 // gelince public Vercel'de NEXT_PUBLIC_PAYTR_ENABLED=true → kart görünür. Şimdilik
 // (sandbox) kapalı → müşteriye yalnız Havale/EFT gösterilir.
