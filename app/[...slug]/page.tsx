@@ -9,6 +9,7 @@ import { CrossLinkBlock } from "@/components/location/CrossLinkBlock";
 import { LocationProducts } from "@/components/location/LocationProducts";
 import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
 import { yonelme } from "@/lib/turkish";
+import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
@@ -115,6 +116,7 @@ function locationLabel(page: SeoPublicPage, fallback: string): string {
     ?.replace(/\s+Mahallesi.*$/i, "")
     .replace(/\s+Çiçekçi.*$/i, "")
     .replace(/\s+Çiçek Siparişi.*$/i, "")
+    .replace(/\s+Çiçek Gönder.*$/i, "")
     .trim();
   return fromHeading || fallback;
 }
@@ -262,43 +264,24 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   const districtName = dyn?.districtName || district?.label || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
+  // Lokasyon SEO Merkezi: operatör-onaylı H1 varsa sabit şablonun önüne geçer
+  // (kapı mantığı lib/managedSeoContent.ts — onaysız sayfalarda null).
+  const adminH1 = managedH1(page);
 
-  // Link enjeksiyonu hazırlığı (static kategoriler + dinamik coğrafi sayfalar)
-  // CHECK: mahalle sayfasında content nerede — intro_html mi, body_blocks mı?
-  const contentSource = page.intro_html ? 'intro_html' : (page.body_blocks && page.body_blocks.length > 0 ? 'body_blocks' : 'empty');
-  console.log(`[DeliveryLanding] page.url_path=${page.url_path}, contentSource=${contentSource}, intro_html.length=${page.intro_html?.length || 0}, body_blocks.count=${page.body_blocks?.length || 0}`);
-
+  // Link enjeksiyonu: intro_html varsa intro'ya, yoksa body_blocks'a.
   let injectedIntroHtml = page.intro_html;
-  if (page.intro_html && page.intro_html.length > 0) {
-    const sampleText = page.intro_html.substring(0, 150).replace(/\n/g, ' ');
-    console.log(`[DeliveryLanding] intro_html sample: "${sampleText}..."`);
-  } else if (page.body_blocks && page.body_blocks.length > 0) {
-    const bodyText = page.body_blocks.map(b => b.text).join(' ').substring(0, 150);
-    console.log(`[DeliveryLanding] body_blocks sample (${page.body_blocks.length} blocks): "${bodyText}..."`);
-  }
-
-  // Enjeksiyon: intro_html varsa intro'ya, yoksa body_blocks'a
   let injectedBodyBlocks: typeof page.body_blocks | null = null;
 
   try {
     const linkData = await getLinkData();
-    console.log(`[DeliveryLanding] linkData.length=${linkData.length}`);
-
     if (linkData.length > 0) {
       if (page.intro_html) {
-        // Enjeksiyon: intro_html
-        const linkCountBefore = (page.intro_html.match(/<a\s/g) || []).length;
-        console.log(`[DeliveryLanding] Before injection (intro): linkCount=${linkCountBefore}, htmlLength=${page.intro_html.length}`);
         injectedIntroHtml = injectLinksIntoHtml(
           page.intro_html,
           linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
           page.url_path
         );
-        const linkCountAfter = (injectedIntroHtml.match(/<a\s/g) || []).length;
-        console.log(`[DeliveryLanding] After injection (intro): linkCount=${linkCountAfter}, added=${linkCountAfter - linkCountBefore}, htmlLength=${injectedIntroHtml.length}`);
       } else if (page.body_blocks && page.body_blocks.length > 0) {
-        // Enjeksiyon: body_blocks (intro boşsa)
-        console.log(`[DeliveryLanding] Injecting into body_blocks (${page.body_blocks.length} blocks)`);
         injectedBodyBlocks = page.body_blocks
           .filter((block) => block.text && block.text.length > 0)
           .map((block) => ({
@@ -309,8 +292,6 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
               page.url_path
             ),
           }));
-        const totalLinks = injectedBodyBlocks.reduce((sum, b) => sum + ((b.text || '').match(/<a\s/g) || []).length, 0);
-        console.log(`[DeliveryLanding] After injection (body_blocks): totalLinks=${totalLinks}`);
       }
     }
   } catch (err) {
@@ -385,7 +366,9 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     <section className="bg-white px-6 pb-16 pt-20 lg:px-14 lg:pb-24 lg:pt-28">
       <div className="mx-auto max-w-[1320px]">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode ? "1–3 iş günü kargo" : "Aynı gün hızlı teslimat"} — {place}</div>
-        <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{place} Çiçekçi<br /><span className="text-[#8b5cf6]">Çiçek Siparişi</span></h1>
+        {adminH1
+          ? <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{adminH1}</h1>
+          : <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{place} Çiçekçi<br /><span className="text-[#8b5cf6]">Çiçek Siparişi</span></h1>}
         <p className="mt-8 max-w-2xl text-xl leading-9 text-[#667085]">{seoDescription}</p>
         <div className="mt-12 grid max-w-3xl gap-5 md:grid-cols-2">
           <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Clock3 className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{deliveryTime}</div><div className="mt-1 text-sm text-[#9b94a8]">Ortalama teslimat süresi</div></div></div>
@@ -477,8 +460,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const page = await resolvePage(path);
   if (!page) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
   const locationMetadata = await getLocationMetadata(page, path);
-  const title = locationMetadata?.title || page.title_tag;
-  const description = locationMetadata?.description || page.meta_description;
+  // Lokasyon SEO Merkezi entegrasyonu: OPERATÖR-ONAYLI içerik (content_source
+  // kapısı, bkz. lib/managedSeoContent.ts) konum şablonunun ÖNÜNE geçer.
+  // Kaynak NULL/otomatik ise (bugün yayındaki tüm sayfalar) davranış birebir eski.
+  const title = managedTitle(page) || locationMetadata?.title || page.title_tag;
+  const description = managedDescription(page) || locationMetadata?.description || page.meta_description;
   // Category pages are served from /kategori/{slug}; stale catalog canonicals
   // may still point at retired /cicekler/* paths that now return 404.
   const canonicalPath = path.startsWith("/kategori/") ? path : (page.canonical_url || path);
