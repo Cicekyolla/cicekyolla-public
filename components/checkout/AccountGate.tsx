@@ -12,28 +12,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil, LogIn, UserPlus } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
 
-function formatDate(d?: string): string | null {
+function formatDate(d: string | undefined, intl: string): string | null {
   if (!d) return null;
   const dt = new Date(d + "T00:00:00");
   if (isNaN(dt.getTime())) return d;
-  return dt.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
+  return dt.toLocaleDateString(intl, { day: "numeric", month: "long", weekday: "long" });
 }
 
-const TRUST = [
-  { icon: ShieldCheck, label: "256 Bit Güvenli Alışveriş" },
-  { icon: Truck, label: "Aynı Gün Teslimat" },
-  { icon: Lock, label: "SSL Koruması" },
-  { icon: FileCheck, label: "KVKK Uyumlu" },
-  { icon: CreditCard, label: "Güvenli Sipariş" },
-  { icon: Sparkles, label: "Profesyonel Floristler" },
-  { icon: Users, label: "Binlerce Mutlu Müşteri" },
-];
+const TRUST_ICONS = [ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users] as const;
+const TRUST_KEYS = ["co.gate.secure256", "co.trust.sameDay", "co.gate.ssl", "co.gate.kvkk", "co.gate.secureOrder", "co.gate.florists", "co.gate.happy"] as const;
 
 type Props = {
   productName: string;
@@ -62,8 +56,10 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
       .finally(() => setAccountLoading(false));
   }, [delivery]);
 
-  const dateStr = formatDate(pd?.date);
-  const typeStr = pd?.mode === "cargo" ? "Ücretsiz Kargo" : pd?.mode === "sameday" ? "Aynı Gün Teslimat" : null;
+  const { t, intl } = useI18n();
+  const TRUST = TRUST_ICONS.map((icon, i) => ({ icon, label: t(TRUST_KEYS[i] as "co.gate.ssl") }));
+  const dateStr = formatDate(pd?.date, intl);
+  const typeStr = pd?.mode === "cargo" ? t("co.gate.freeCargo") : pd?.mode === "sameday" ? t("co.trust.sameDay") : null;
   // TEK HUNİ: giriş sonrası dönüş her zaman checkout'un kendisidir.
   // Eski fallback /hizli-siparis'e dönüyordu; o route artık ürün sayfasına
   // yönlendiriyor ve müşteri giriş yaptıktan sonra sepetini kaybediyormuş gibi
@@ -102,23 +98,23 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
 
       {(pd?.address || pd?.placeName || dateStr || pd?.slotLabel || typeStr) && (
         <div className="mt-4 pt-4 space-y-2.5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
-          <p className="text-[10px] tracking-[0.14em] uppercase font-bold" style={{ color: "#C4B5FD" }}>Teslimat Bilgileri</p>
-          {pd?.placeName && <Row icon={MapPin} label="Seçilen Yer" value={pd.placeName} />}
+          <p className="text-[10px] tracking-[0.14em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{t("co.gate.deliveryInfo")}</p>
+          {pd?.placeName && <Row icon={MapPin} label={t("co.gate.selectedPlace")} value={pd.placeName} />}
           {(pd?.address || pd?.neighborhood) && (
             <Row
               icon={MapPin}
-              label="Teslimat Adresi"
+              label={t("co.gate.deliveryAddress")}
               value={`${pd.neighborhood ? pd.neighborhood + ", " : ""}${pd.district ? pd.district : ""}${pd.city ? " / " + pd.city : ""}${pd.address ? " — " + pd.address : ""}`}
             />
           )}
-          {dateStr && <Row icon={Calendar} label="Teslimat Tarihi" value={dateStr} />}
-          {pd?.slotLabel && <Row icon={Clock} label="Saat" value={pd.slotLabel} />}
-          {typeStr && <Row icon={Package} label="Teslimat Tipi" value={typeStr} />}
+          {dateStr && <Row icon={Calendar} label={t("co.gate.deliveryDate")} value={dateStr} />}
+          {pd?.slotLabel && <Row icon={Clock} label={t("co.gate.time")} value={pd.slotLabel} />}
+          {typeStr && <Row icon={Package} label={t("co.gate.deliveryType")} value={typeStr} />}
         </div>
       )}
 
       <div className="mt-4 pt-4 flex items-baseline justify-between" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
-        <span className="text-[12px] text-white/40">Toplam</span>
+        <span className="text-[12px] text-white/40">{t("common.total")}</span>
         <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(totalMinor ?? priceMinor * quantity)}</span>
       </div>
     </motion.aside>
@@ -132,7 +128,7 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
           <span style={{ fontFamily: "var(--font-display)" }}>Çiçek Yolla</span> <span>❤️</span>
         </div>
         <h1 className="text-3xl lg:text-[34px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}>
-          Siparişinize Devam Edelim
+          {t("co.gate.title")}
         </h1>
         <p className="text-[15px] text-[#6B7280] mt-3 max-w-lg mx-auto leading-relaxed">
           Ürününüz hazır. Şimdi siparişinizi birkaç adımda güvenle tamamlayacağız.
@@ -155,18 +151,18 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="rounded-[22px] border border-[#EDE9FE] bg-gradient-to-b from-white to-[#FBFAFF] p-6 lg:p-8"
           >
-            {accountLoading ? <p className="text-[14px] text-[#6B7280]">Üyelik durumunuz kontrol ediliyor…</p> : member ? <>
-              <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>{member.name} olarak devam edin</h2>
-              <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">{member.email} hesabıyla verilen sipariş, müşteri panelinizde tarih, saat, durum ve puan hareketleriyle görünür.</p>
-              <button onClick={onContinue} className="group mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] py-4 text-[15px] font-bold text-white shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)] hover:bg-[#6D28D9]">Üye Olarak Devam Et <ArrowRight className="h-4 w-4" /></button>
+            {accountLoading ? <p className="text-[14px] text-[#6B7280]">{t("co.gate.checking")}</p> : member ? <>
+              <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>{t("co.gate.continueAs", { name: member.name })}</h2>
+              <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">{t("co.gate.memberDesc", { email: member.email })}</p>
+              <button onClick={onContinue} className="group mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] py-4 text-[15px] font-bold text-white shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)] hover:bg-[#6D28D9]">{t("co.gate.continueMember")} <ArrowRight className="h-4 w-4" /></button>
             </> : <>
-              <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Nasıl devam etmek istersiniz?</h2>
-              <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">Üye siparişleri müşteri panelinde görünür ve teslimattan sonra puan kazanır. Hesap oluşturmadan da devam edebilirsiniz.</p>
+              <h2 className="text-[20px] font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>{t("co.gate.question")}</h2>
+              <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">{t("co.gate.desc")}</p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <Link href={`/giris?next=${encodeURIComponent(loginReturnPath)}`} className="flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-4 py-4 text-[14px] font-bold text-white hover:bg-[#6D28D9]"><LogIn className="h-4 w-4" /> Giriş Yap</Link>
-                <Link href={`/giris?next=${encodeURIComponent(loginReturnPath)}#uye-ol`} className="flex items-center justify-center gap-2 rounded-2xl border border-[#C4B5FD] bg-white px-4 py-4 text-[14px] font-bold text-[#7C3AED] hover:bg-[#F5F3FF]"><UserPlus className="h-4 w-4" /> Üye Ol</Link>
+                <Link href={`/giris?next=${encodeURIComponent(loginReturnPath)}`} className="flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-4 py-4 text-[14px] font-bold text-white hover:bg-[#6D28D9]"><LogIn className="h-4 w-4" /> {t("co.gate.login")}</Link>
+                <Link href={`/giris?next=${encodeURIComponent(loginReturnPath)}#uye-ol`} className="flex items-center justify-center gap-2 rounded-2xl border border-[#C4B5FD] bg-white px-4 py-4 text-[14px] font-bold text-[#7C3AED] hover:bg-[#F5F3FF]"><UserPlus className="h-4 w-4" /> {t("co.gate.register")}</Link>
               </div>
-              <button onClick={onContinue} className="group mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white py-4 text-[14px] font-bold text-[#4B5563] hover:border-[#C4B5FD] hover:text-[#7C3AED]">Misafir Olarak Devam Et <ArrowRight className="h-4 w-4" /></button>
+              <button onClick={onContinue} className="group mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white py-4 text-[14px] font-bold text-[#4B5563] hover:border-[#C4B5FD] hover:text-[#7C3AED]">{t("co.gate.guest")} <ArrowRight className="h-4 w-4" /></button>
             </>}
           </motion.div>
 

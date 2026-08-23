@@ -22,6 +22,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useT } from '@/lib/i18n';
 
 // ----------------------------------------------------------------------------
 // Tipler
@@ -205,12 +206,14 @@ function buildResult(place: any): AddressResult {
 
 export default function AddressAutocomplete({
   onSelect,
-  placeholder = 'Mahalle, sokak, hastane, okul, AVM veya adres girin',
+  placeholder,
   defaultValue = '',
   className,
   regionCodes = ['tr'],
   hideSelected = false,
 }: Props) {
+  const t = useT();
+  const effectivePlaceholder = placeholder ?? t('addr.placeholder');
   const [query, setQuery] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -275,7 +278,7 @@ export default function AddressAutocomplete({
         // eslint-disable-next-line no-console
         console.error('[AddressAutocomplete] init hatası:', err);
         if (!cancelled) {
-          setError('Adres servisi şu anda kullanılamıyor. Lütfen adresi elle yazın.');
+          setError(t('addr.serviceDown'));
           setReady(false);
         }
       }
@@ -360,7 +363,7 @@ export default function AddressAutocomplete({
         console.error('[AddressAutocomplete] öneri hatası:', err);
         setSuggestions([]);
         setOpen(false);
-        setError('Adres önerileri şu anda alınamıyor. Adresi elle yazıp devam edebilirsiniz.');
+        setError(t('addr.suggestFail'));
       } finally {
         setLoading(false);
       }
@@ -423,12 +426,12 @@ export default function AddressAutocomplete({
           setSelected(result);
           onSelect?.(result);
         } else {
-          setError('Adres detayları alınamadı.');
+          setError(t('addr.detailFail'));
         }
       } catch (err: any) {
         // eslint-disable-next-line no-console
         console.error('[AddressAutocomplete] detay hatası:', err);
-        setError('Adres detayları alınamadı. Lütfen tekrar deneyin.');
+        setError(t('addr.detailFail'));
       } finally {
         setLoading(false);
       }
@@ -473,7 +476,7 @@ export default function AddressAutocomplete({
           value={query}
           onChange={(e) => onInputChange(e.target.value)}
           onFocus={() => suggestions.length > 0 && setOpen(true)}
-          placeholder={placeholder}
+          placeholder={effectivePlaceholder}
           autoComplete="off"
           spellCheck={false}
           style={{
@@ -487,7 +490,7 @@ export default function AddressAutocomplete({
         />
         {loading && (
           <span
-            aria-label="yükleniyor"
+            aria-label={t('addr.loading')}
             style={{
               width: 18,
               height: 18,
@@ -584,7 +587,7 @@ export default function AddressAutocomplete({
             color: '#1A1226',
           }}
         >
-          <strong style={{ color: '#7C3AED' }}>Doğrulanan adres</strong>
+          <strong style={{ color: '#7C3AED' }}>{t('addr.verified')}</strong>
           <p style={{ margin: '8px 0 0' }}>{selected.formattedAddress}</p>
           <p style={{ margin: '4px 0 0', color: '#8A7FA0', fontSize: 13 }}>
             {[selected.il, selected.ilce, selected.mahalle].filter(Boolean).join(' · ') || '—'}

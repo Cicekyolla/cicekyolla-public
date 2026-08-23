@@ -11,6 +11,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
+import { useT, Num } from "@/lib/i18n";
 
 export type Product = {
   id: number;
@@ -87,6 +88,7 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 };
 
 export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean }) {
+  const tr = useT();
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [hoverImage, setHoverImage] = useState<string | null>(null);
@@ -229,7 +231,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
                     }
               }
             >
-              Sepete Ekle
+              {tr("card.addToCart")}
             </button>
           </motion.div>
         </div>
@@ -262,15 +264,15 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
           {deliveryPromise ? (
             <div className={`mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-bold ${deliveryPromise === "today" ? "border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]" : "border-[#DDD6FE] bg-[#F5F3FF] text-[#6D28D9]"}`}>
               {deliveryPromise === "today" ? <Zap className="h-3 w-3" aria-hidden="true" /> : <Clock3 className="h-3 w-3" aria-hidden="true" />}
-              {deliveryPromise === "today" ? "Bugün Hızlı Teslimat" : "Yarın Teslimat"}
+              {deliveryPromise === "today" ? tr("card.fastToday") : tr("card.tomorrow")}
             </div>
           ) : null}
           <div className="mt-auto pt-3 flex items-baseline gap-2">
             <span style={{ fontFamily: "var(--font-display)", fontSize: "19px" }} className="font-semibold text-[#111827]">
-              ₺{product.price}
+              <Num>₺{product.price}</Num>
             </span>
             {product.originalPrice ? (
-              <span className="text-sm text-[#C4B5FD] line-through font-medium">₺{product.originalPrice}</span>
+              <Num className="text-sm text-[#C4B5FD] line-through font-medium">₺{product.originalPrice}</Num>
             ) : null}
           </div>
         </div>
