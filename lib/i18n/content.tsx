@@ -15,6 +15,7 @@ export interface CategoryContentTx { byId: Record<string, { name: string | null;
 const productCache = new Map<string, ProductContentTx | null>();
 const categoryCache = new Map<string, CategoryContentTx>();
 const EMPTY_CAT: CategoryContentTx = { byId: {}, bySlug: {} };
+const categoryInflight = new Map<string, Promise<CategoryContentTx>>();
 
 /** Ürün adı/açıklaması — yalnız onaylı çeviri; TR'de daima null. */
 export function useProductTranslation(slug: string | null | undefined): ProductContentTx | null {
@@ -42,9 +43,15 @@ export function useCategoryTranslations(): CategoryContentTx {
     if (!key) { setTx(EMPTY_CAT); return; }
     if (categoryCache.has(key)) { setTx(categoryCache.get(key)!); return; }
     let alive = true;
-    fetch(`/api/i18n/categories?locale=${locale}`, { cache: "force-cache" })
-      .then((r) => r.json()).then((j) => { const d = j?.data; const v: CategoryContentTx = d && d.bySlug ? d : EMPTY_CAT; categoryCache.set(key, v); if (alive) setTx(v); })
-      .catch(() => { if (alive) setTx(EMPTY_CAT); });
+    // Aynı anda mount olan header/footer/başlık tek istek paylaşır (in-flight tekilleştirme).
+    let p = categoryInflight.get(key);
+    if (!p) {
+      p = fetch(`/api/i18n/categories?locale=${locale}`, { cache: "force-cache" })
+        .then((r) => r.json()).then((j) => { const d = j?.data; const v: CategoryContentTx = d && d.bySlug ? d : EMPTY_CAT; categoryCache.set(key, v); return v; })
+        .catch(() => EMPTY_CAT).finally(() => categoryInflight.delete(key));
+      categoryInflight.set(key, p);
+    }
+    p.then((v) => { if (alive) setTx(v); });
     return () => { alive = false; };
   }, [key, locale]);
   return tx;
