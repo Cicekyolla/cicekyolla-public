@@ -102,7 +102,7 @@ export function LanguageSelector() {
       aria-label={t("lang.title")}
       dir="ltr"
       style={{ position: "fixed", top: pos.top, right: pos.right }}
-      className="z-[1000] w-[320px] rounded-[20px] border border-[#8B5CF6]/15 bg-white p-5 pt-6 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_8px_rgba(139,92,246,0.08)]"
+      className="z-[9999] w-[320px] rounded-[20px] border border-[#8B5CF6]/15 bg-white p-5 pt-6 shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_8px_rgba(139,92,246,0.08)]"
     >
       <h3 className="m-0 mb-1 text-[15px] font-bold text-[#1C0838]">{t("lang.title")}</h3>
       <p className="m-0 mb-4 text-[12px] leading-[1.5] text-[#6B7280]">{t("lang.subtitle")}</p>
