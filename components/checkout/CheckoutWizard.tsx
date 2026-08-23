@@ -23,11 +23,12 @@ import {
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, clearPendingDelivery, savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/DeliveryPlanner";
-import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
+import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
+import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { formatMinorTRY } from "@/lib/api";
 import { CheckoutProgress } from "./CheckoutProgress";
 
@@ -52,11 +53,11 @@ const isValidTRPhone = (v: string) => {
   if (d.length === 12) return d.startsWith("905");
   return false;
 };
-function fmtDate(d?: string): string | null {
+function fmtDate(d?: string, intl = "tr-TR"): string | null {
   if (!d) return null;
   const dt = new Date(d + "T00:00:00");
   if (isNaN(dt.getTime())) return d;
-  return dt.toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
+  return dt.toLocaleDateString(intl, { day: "numeric", month: "long", weekday: "long" });
 }
 function mapToSlot(start?: string, label?: string): string {
   if (label && SLOTS.includes(label)) return label;
@@ -75,18 +76,19 @@ type Props = { productName: string; productId: number | null; variantId?: number
   initialEditDelivery?: boolean };
 
 export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false }: Props) {
+  const { t, intl } = useI18n();
   const steps = useMemo(() => {
     const base = [
-      { key: "urun", label: "Ürün" },
-      { key: "teslimat", label: "Teslimat" },
-      { key: "alici", label: "Alıcı" },
-      { key: "kart", label: "Kart Mesajı" },
-      { key: "gonderen", label: "Gönderen" },
-      { key: "odeme", label: "Onay" },
+      { key: "urun", label: t("common.product") },
+      { key: "teslimat", label: t("co.steps.delivery") },
+      { key: "alici", label: t("co.recipient") },
+      { key: "kart", label: t("co.cardMessage") },
+      { key: "gonderen", label: t("co.sender") },
+      { key: "odeme", label: t("co.steps.confirm") },
     ];
-    if (addons.length > 0) base.splice(4, 0, { key: "ekurun", label: "Ek Ürünler" });
+    if (addons.length > 0) base.splice(4, 0, { key: "ekurun", label: t("co.addons") });
     return base;
-  }, [addons]);
+  }, [addons, t]);
 
   const [stepIdx, setStepIdx] = useState(2);
   const [done, setDone] = useState<{ order_number: string } | null>(null);
@@ -219,18 +221,18 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         setCouponMsg(null);
       } else {
         setCoupon(null);
-        setCouponMsg(d?.message ?? "Kupon uygulanamadı.");
+        setCouponMsg(d?.message ?? t("co.couponFail"));
       }
     } catch {
-      setCoupon(null); setCouponMsg("Kupon doğrulanamadı. Lütfen tekrar deneyin.");
+      setCoupon(null); setCouponMsg(t("co.couponErr"));
     } finally { setCouponBusy(false); }
   };
   const removeCoupon = () => { setCoupon(null); setCouponInput(""); setCouponMsg(null); };
 
-  const dateStr = fmtDate(pd?.date);
+  const dateStr = fmtDate(pd?.date, intl);
   const slotStr = pd?.slotLabel ?? (pd?.slotStart ? mapToSlot(pd.slotStart) : null);
   // Teslimat kararı PDP'den (pending.mode) taşınır; burada yeniden TAHMİN edilmez. Tek kargo dili: 1-3 iş günü.
-  const typeStr = pd?.mode === "cargo" ? "Türkiye Geneli Kargo · 1-3 iş günü" : pd?.mode === "sameday" ? "İstanbul Aynı Gün" : null;
+  const typeStr = pd?.mode === "cargo" ? t("co.deliveryCargoLine") : pd?.mode === "sameday" ? t("co.deliverySameDayLine") : null;
 
   const toggleNote = (id: string) => setNotes((n) => (n.includes(id) ? n.filter((x) => x !== id) : [...n, id]));
   const setAddon = (id: number, q: number) => setAddonQty((m) => ({ ...m, [id]: Math.max(0, q) }));
@@ -254,16 +256,16 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const submit = async () => {
     setError(null);
     if (!pd?.date || !address.trim() || (pd.mode === "sameday" && !pd.slotId && !pd.slotLabel && !pd.slotStart)) {
-      setError("Teslimat adresi, tarihi ve uygun saat aralığı olmadan sipariş oluşturulamaz."); return;
+      setError(t("co.err.noDelivery")); return;
     }
     if (!senderName.trim() || !recipientName.trim()) {
-      setError("Lütfen gönderen ve alıcı adını tamamlayın."); return;
+      setError(t("co.err.names")); return;
     }
     if (!isValidTRPhone(senderPhone)) {
-      setError("Lütfen geçerli bir telefon numarası girin (örn. 05xx xxx xx xx)."); return;
+      setError(t("co.err.phone")); return;
     }
     if (!isValidEmail(senderEmail)) {
-      setError("Lütfen geçerli bir e-posta adresi girin."); return;
+      setError(t("co.err.email")); return;
     }
     setLoading(true);
     try {
@@ -349,10 +351,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
     } catch (failure) {
       const reason = failure instanceof Error ? failure.message : "";
       setError(reason === "delivery slot is no longer available"
-        ? "Seçtiğiniz saat aralığı artık dolu veya kapanmış. Lütfen ürün sayfasından yeni bir saat seçin."
+        ? t("co.err.slotGone")
         : reason === "product_not_deliverable_to_address"
-          ? "Bu ürün seçtiğiniz adrese gönderilemiyor (yalnız İstanbul içi aynı gün). Ürün sayfasından adrese uygun ürünleri görebilirsiniz."
-          : "Sipariş oluşturulamadı. Bilgileriniz korunuyor; lütfen tekrar deneyin.");
+          ? t("co.err.notDeliverable")
+          : t("co.err.generic"));
     } finally {
       setLoading(false);
     }
@@ -375,27 +377,26 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           <div className="relative mx-auto w-[132px] overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
             <ProductImage src={coverUrl ?? undefined} alt={productName} padding="8px" protect={false} sizes="132px" />
           </div>
-          <p className="mt-5 text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>✦ Tamamlandı</p>
+          <p className="mt-5 text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{t("co.done")}</p>
           <h1 className="mt-2 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>
-            Siparişiniz artık bizim ellerimizde.
+            {t("co.doneTitle")}
           </h1>
           <p className="mt-2 text-white/45 text-[13.5px] leading-relaxed">{productName}</p>
 
           <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
-            <p className="text-white/40 text-[12px]">Sipariş numaranız</p>
-            <p className="mt-1 text-white font-semibold tracking-wide" style={{ fontFamily: "var(--font-display)", fontSize: "24px" }}>{done.order_number}</p>
+            <p className="text-white/40 text-[12px]">{t("co.orderNo")}</p>
+            <p className="mt-1 text-white font-semibold tracking-wide" style={{ fontFamily: "var(--font-display)", fontSize: "24px" }}><Num>{done.order_number}</Num></p>
           </div>
         </div>
 
         {/* Havale ödemesi: numara referans; ödeme onaylanınca hazırlanır */}
         <div className="mt-6 text-left rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-5">
-          <div className="text-[13px] font-bold text-[#6D28D9] mb-1">Havale / EFT ile ödeme</div>
+          <div className="text-[13px] font-bold text-[#6D28D9] mb-1">{t("co.bankTitle")}</div>
           <div className="text-[12.5px] text-[#6B7280] mb-3">
-            Aşağıdaki hesaba <b>{money(total)}</b> transfer edin. Açıklamaya sipariş numaranızı
-            (<b>{done.order_number}</b>) yazmayı unutmayın. Ödemeniz onaylanınca siparişiniz hazırlanır.
+            {t("co.bankInstrAmount", { amount: money(total), no: done.order_number })}
           </div>
           {bankAccounts.length === 0 ? (
-            <div className="text-[12px] text-[#9CA3AF]">Hesap bilgisi için bizimle iletişime geçin.</div>
+            <div className="text-[12px] text-[#9CA3AF]">{t("co.bankContact")}</div>
           ) : (
             <div className="space-y-2.5">
               {bankAccounts.map((b) => (
@@ -411,10 +412,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
           <Link href={`/siparis-takip?order=${encodeURIComponent(done.order_number)}`} className="rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
-            Siparişi Takip Et
+            {t("track.button")}
           </Link>
           <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-[#25D366] text-[#128C7E] font-bold px-7 py-3.5 hover:bg-[#F0FFF4] transition-colors">
-            <MessageCircle className="w-4 h-4" /> WhatsApp Destek
+            <MessageCircle className="w-4 h-4" /> {t("co.whatsappSupport")}
           </a>
         </div>
       </div>
@@ -573,8 +574,8 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.99] text-white text-[15px] font-bold py-4 transition-all shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)] disabled:opacity-70">
                 <ShieldCheck className="w-4 h-4" />
                 {loading
-                  ? (paymentMethod === "card" ? "Yönlendiriliyor…" : "Gönderiliyor…")
-                  : (paymentMethod === "card" ? "Güvenli Ödemeye Geç" : "Siparişi Tamamla")}
+                  ? (paymentMethod === "card" ? t("co.redirecting") : t("co.submitting"))
+                  : (paymentMethod === "card" ? t("co.goSecurePay") : t("co.completeOrder"))}
               </button>
             )}
           </div>
@@ -610,20 +611,21 @@ function StepTeslimatDuzenle(p: {
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const { t, intl } = useI18n();
   const line = (d: PendingDelivery | null) => {
     if (!d) return null;
     const yer = [d.placeName, d.neighborhood, d.district, d.city].filter(Boolean).join(", ");
-    const gun = fmtDate(d.date);
-    const saat = d.mode === "cargo" ? "Kargo · 1-3 iş günü" : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
+    const gun = fmtDate(d.date, intl);
+    const saat = d.mode === "cargo" ? t("co.cargoShort") : d.slotLabel ?? (d.slotStart ? mapToSlot(d.slotStart) : null);
     return [yer, gun, saat].filter(Boolean).join(" · ");
   };
   return (
     <div>
-      <Card title="Teslimatı düzenleyin" subtitle="Ürün ve girdiğiniz diğer bilgiler korunur; yalnız teslimat değişir.">
+      <Card title={t("co.editDelivery")} subtitle={t("co.editDeliveryDesc")}>
         {/* Mevcut seçim */}
         <div className="rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-4">
-          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B5CF6]">Şu anki teslimat</div>
-          <p className="mt-1.5 text-[13.5px] text-[#374151] leading-relaxed">{line(p.current) ?? "Henüz teslimat seçilmedi."}</p>
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B5CF6]">{t("co.currentDelivery")}</div>
+          <p className="mt-1.5 text-[13.5px] text-[#374151] leading-relaxed">{line(p.current) ?? t("co.noDeliveryYet")}</p>
         </div>
 
         {/* Yeni seçim — mevcut planlayıcı */}
@@ -635,7 +637,7 @@ function StepTeslimatDuzenle(p: {
             />
           </div>
         ) : (
-          <p className="mt-4 text-[13px] text-[#B91C1C] font-semibold">Ürün bilgisi okunamadı; teslimat burada düzenlenemiyor.</p>
+          <p className="mt-4 text-[13px] text-[#B91C1C] font-semibold">{t("co.productUnreadable")}</p>
         )}
 
         {/* Yeni seçim özeti — yalnız geçerli seçim varken */}
@@ -649,18 +651,18 @@ function StepTeslimatDuzenle(p: {
 
       <div className="flex items-center gap-3">
         <button onClick={p.onCancel} className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] text-[#4B5563] font-semibold px-5 py-3.5 hover:bg-[#FAFAFB] transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Vazgeç
+          <ArrowLeft className="w-4 h-4" /> {t("co.cancel")}
         </button>
         <button
           onClick={p.onSave}
           disabled={!p.draft}
           className={`flex-1 flex items-center justify-center gap-2 rounded-2xl text-white text-[15px] font-bold py-4 transition-all ${p.draft ? "bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.99] shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)]" : "bg-[#C4B5FD] cursor-not-allowed"}`}
         >
-          <Check className="w-4 h-4" /> Teslimatı Güncelle
+          <Check className="w-4 h-4" /> {t("co.updateDelivery")}
         </button>
       </div>
       {!p.draft && (
-        <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">Kaydetmek için yeni adresi ve uygun teslimat zamanını seçin.</p>
+        <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">{t("co.saveDeliveryHint")}</p>
       )}
     </div>
   );
@@ -676,51 +678,52 @@ function StepAlici(p: {
   address: string; setAddress: (v: string) => void;
   regionLabel: string;
 }) {
+  const { t } = useI18n();
   return (
     <div>
-      <Card title="Kime gönderiyoruz?" subtitle="Çiçeği teslim alacak kişi.">
+      <Card title={t("co.recipientTitle")} subtitle={t("co.recipientDesc")}>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div><label className={labelCls}>Alıcı Adı Soyadı *</label><input className={inputCls} value={p.recipientName} onChange={(e) => p.setRecipientName(e.target.value)} placeholder="Örn. Ayşe Yılmaz" /></div>
-          <div><label className={labelCls}>Alıcı Telefonu</label><input className={inputCls} value={p.recipientPhone} onChange={(e) => p.setRecipientPhone(e.target.value)} placeholder="+90 5xx xxx xx xx" /></div>
+          <div><label className={labelCls}>{t("co.recipientName")}</label><input className={inputCls} value={p.recipientName} onChange={(e) => p.setRecipientName(e.target.value)} placeholder={t("co.recipientNamePh")} /></div>
+          <div><label className={labelCls}>{t("co.recipientPhone")}</label><input className={inputCls} value={p.recipientPhone} onChange={(e) => p.setRecipientPhone(e.target.value)} placeholder="+90 5xx xxx xx xx" /></div>
         </div>
       </Card>
 
-      <Card title="Bu çiçek kimin için?" subtitle="Seçiminiz kart mesajı ve hediye önerilerini kişiselleştirir.">
+      <Card title={t("co.forWhom")} subtitle={t("co.forWhomDesc")}>
         <div className="flex flex-wrap gap-2.5">
           {OCCASIONS.map((o) => {
             const on = p.occasion === o.id;
             return (
               <button key={o.id} onClick={() => p.setOccasion(o.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[13.5px] font-semibold transition-all ${on ? "bg-[#7C3AED] text-white scale-[1.03] shadow-[0_8px_20px_-8px_rgba(124,58,237,0.7)]" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
-                <span>{o.emoji}</span> {o.label}
+                <span>{o.emoji}</span> {t(("occ." + o.id) as DictKey)}
               </button>
             );
           })}
         </div>
       </Card>
 
-      <Card title="Teslimat notu" subtitle="Kuryeye iletilmesini istediklerinizi seçin.">
+      <Card title={t("co.deliveryNoteTitle")} subtitle={t("co.courierNotes")}>
         <div className="flex flex-wrap gap-2.5">
           {DELIVERY_NOTES.map((d) => {
             const on = p.notes.includes(d.id);
             return (
               <button key={d.id} onClick={() => p.toggleNote(d.id)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-all border ${on ? "bg-[#F5F3FF] border-[#C4B5FD] text-[#6D28D9]" : "bg-white border-[#E9E7F0] text-[#6B7280] hover:border-[#DDD6FE]"}`}>
-                {on && <Check className="w-3.5 h-3.5" />} {d.label}
+                {on && <Check className="w-3.5 h-3.5" />} {t(("note." + d.id) as DictKey)}
               </button>
             );
           })}
         </div>
-        <textarea className={`${inputCls} mt-4 min-h-[76px] resize-y`} value={p.specialNote} onChange={(e) => p.setSpecialNote(e.target.value)} placeholder="Özel bir not eklemek isterseniz…" />
+        <textarea className={`${inputCls} mt-4 min-h-[76px] resize-y`} value={p.specialNote} onChange={(e) => p.setSpecialNote(e.target.value)} placeholder={t("co.notePh")} />
       </Card>
 
-      <Card title="Açık adres" subtitle="Mahalle, cadde, bina, kat, daire ve tarif — kurye kolayca bulsun.">
+      <Card title={t("co.openAddress")} subtitle={t("co.openAddressSub")}>
         {p.regionLabel.trim() && (
           <div className="inline-flex items-center gap-1.5 mb-3 px-3 py-1.5 rounded-full bg-[#F5F3FF] text-[#6D28D9] text-[12.5px] font-semibold">
             <MapPin className="w-3.5 h-3.5" /> {p.regionLabel}
           </div>
         )}
-        <textarea className={`${inputCls} min-h-[120px] resize-y`} value={p.address} onChange={(e) => p.setAddress(e.target.value)} placeholder="Örn. Bağdat Cad. No:12 D:4, kapı kodu 1234, 2. kat…" />
+        <textarea className={`${inputCls} min-h-[120px] resize-y`} value={p.address} onChange={(e) => p.setAddress(e.target.value)} placeholder={t("co.openAddressPh")} />
       </Card>
     </div>
   );
@@ -739,8 +742,10 @@ function lsWrite(key: string, arr: string[]) {
 }
 
 function StepKart(p: { occasion: string | null; recipientName: string; cardMessage: string; setCardMessage: (v: string) => void }) {
+  const { t } = useI18n();
   const [tone, setTone] = useState<Tone>("samimi");
-  const [lang, setLang] = useState<Lang>("tr");
+  const { locale: siteLocale } = useI18n();
+  const [lang, setLang] = useState<Lang>(siteLocale === "tr" ? "tr" : "en");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
@@ -789,21 +794,21 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
   useEffect(() => { setAiSuggestions([]); }, [tone, lang, p.occasion]);
 
   return (
-    <Card title="Kart mesajı" subtitle="Çiçekle birlikte gidecek not. Tonu seçin, önerilerden ilham alın ya da kendiniz yazın.">
+    <Card title={t("co.cardTitle")} subtitle={t("co.cardDesc")}>
       {/* Canlı önizleme */}
       <div className="rounded-[18px] p-5 mb-5 bg-gradient-to-br from-[#FBFAFF] to-[#F5F3FF] border border-[#EDE9FE]">
-        <p className="text-[10px] tracking-[0.16em] text-[#8B5CF6] uppercase font-bold mb-2">Önizleme</p>
+        <p className="text-[10px] tracking-[0.16em] text-[#8B5CF6] uppercase font-bold mb-2">{t("co.preview")}</p>
         <p className="text-[15px] text-[#3B3357] leading-relaxed italic min-h-[48px] whitespace-pre-wrap" style={{ fontFamily: "var(--font-display)" }}>
-          {p.cardMessage ? `“${p.cardMessage}”` : "Mesajınız burada canlı görünecek…"}
+          {p.cardMessage ? `“${p.cardMessage}”` : t("co.previewPh")}
         </p>
       </div>
 
       {/* Ton + Dil */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        {TONES.map((t) => (
-          <button key={t.id} onClick={() => setTone(t.id)}
-            className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tone === t.id ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
-            {t.label}
+        {TONES.map((tn) => (
+          <button key={tn.id} onClick={() => setTone(tn.id)}
+            className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tone === tn.id ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
+            {t(("tone." + tn.id) as DictKey)}
           </button>
         ))}
         <div className="ml-auto inline-flex rounded-full bg-[#F1F0F5] p-0.5">
@@ -826,12 +831,12 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
         ))}
         <button onClick={aiWrite} disabled={aiBusy}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#7C3AED] text-white text-[12.5px] font-bold hover:bg-[#6D28D9] transition-colors disabled:opacity-70">
-          {aiBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} {aiBusy ? "Yazıyor…" : "AI ile Yaz"}
+          {aiBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} {aiBusy ? t("co.typing") : t("co.aiWrite")}
         </button>
       </div>
 
       {/* Metin + araçlar */}
-      <textarea className={`${inputCls} min-h-[120px] resize-y`} value={p.cardMessage} onChange={(e) => p.setCardMessage(e.target.value)} maxLength={300} placeholder="Kendi mesajınızı yazın…" />
+      <textarea className={`${inputCls} min-h-[120px] resize-y`} value={p.cardMessage} onChange={(e) => p.setCardMessage(e.target.value)} maxLength={300} placeholder={t("co.writeOwn")} />
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-3">
           <button onClick={toggleFav} disabled={!p.cardMessage.trim()}
@@ -839,7 +844,7 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
             <Star className={`w-4 h-4 ${isFav ? "fill-[#7C3AED]" : ""}`} /> {isFav ? "Favorilerde" : "Favorilere ekle"}
           </button>
           {p.cardMessage && (
-            <button onClick={() => p.setCardMessage("")} className="text-[12.5px] font-medium text-[#9CA3AF] hover:text-[#6B7280]">Kartsız gönder</button>
+            <button onClick={() => p.setCardMessage("")} className="text-[12.5px] font-medium text-[#9CA3AF] hover:text-[#6B7280]">{t("co.noCard")}</button>
           )}
         </div>
         <span className="text-[12px] text-[#9CA3AF]">{p.cardMessage.length}/300</span>
@@ -862,7 +867,7 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
       {/* Son kullanılanlar */}
       {recent.length > 0 && (
         <div className="mt-4">
-          <p className="text-[10px] tracking-[0.14em] text-[#9CA3AF] uppercase font-bold mb-2">Son kullanılanlar</p>
+          <p className="text-[10px] tracking-[0.14em] text-[#9CA3AF] uppercase font-bold mb-2">{t("co.recent")}</p>
           <div className="flex flex-wrap gap-2">
             {recent.filter((r) => !favorites.includes(r)).slice(0, 5).map((m) => (
               <button key={m} onClick={() => choose(m)} className="px-3 py-1.5 rounded-lg bg-[#FAFAFB] text-[#6B7280] text-[12px] font-medium hover:bg-[#F1F0F5] transition-colors max-w-[240px]">
@@ -874,7 +879,7 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
       )}
 
       <p className="text-[11.5px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
-        <Sparkles className="w-3.5 h-3.5 text-[#C4B5FD]" /> “AI ile Yaz” alıcı, vesile ve seçtiğiniz tona göre size özel mesaj üretir.
+        <Sparkles className="w-3.5 h-3.5 text-[#C4B5FD]" /> {t("co.aiHint")}
       </p>
     </Card>
   );
@@ -886,21 +891,22 @@ function StepGonderen(p: {
   visibility: "show" | "anonymous" | "hidden"; setVisibility: (v: "show" | "anonymous" | "hidden") => void;
   surprise: boolean; setSurprise: (v: boolean) => void;
 }) {
+  const { t } = useI18n();
   // Hata yalnız alan ilk kez terk edilince (blur) gösterilir; düzeltilince anında kalkar.
   const [touched, setTouched] = useState<{ phone?: boolean; email?: boolean }>({});
   const phoneErr = touched.phone && !isValidTRPhone(p.phone);
   const emailErr = touched.email && !isValidEmail(p.email);
   const errInput = "w-full px-4 py-3.5 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] text-[15px] text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#F87171] focus:bg-white focus:ring-4 focus:ring-[#FEE2E2] transition-all";
   const opts: { id: "show" | "anonymous" | "hidden"; title: string; desc: string }[] = [
-    { id: "show", title: "Adımı Kartta Göster", desc: "Kart mesajının altında adınız görünür. Örn. “Sevgiler, " + (p.name.trim() || "Adem") + "”." },
-    { id: "anonymous", title: "İsimsiz Gönder", desc: "Kartta ve teslimatta gönderen adı görünmez." },
-    { id: "hidden", title: "Tamamen Gizli Gönderim", desc: "Adınız, telefon ve e-postanız alıcıyla asla paylaşılmaz." },
+    { id: "show", title: t("co.showName"), desc: t("co.showNameDesc") },
+    { id: "anonymous", title: t("co.sendAnon"), desc: t("co.sendAnonDesc") },
+    { id: "hidden", title: t("co.sendHidden"), desc: t("co.sendHiddenDesc") },
   ];
   return (
     <div>
-      <Card title="Gönderen bilgileri" subtitle="Sipariş onayı ve iletişim için gereklidir. Bu bilgiler alıcıyla paylaşılmaz.">
+      <Card title={t("co.senderTitle")} subtitle={t("co.senderDesc")}>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div><label className={labelCls}>Ad Soyad *</label><input className={inputCls} value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Adınız Soyadınız" /></div>
+          <div><label className={labelCls}>{t("co.fullName")}</label><input className={inputCls} value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder={t("co.fullNamePh")} /></div>
           <div>
             <label className={labelCls}>Telefon *</label>
             <input
@@ -911,7 +917,7 @@ function StepGonderen(p: {
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
               placeholder="05xx xxx xx xx"
             />
-            {phoneErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">Geçerli bir telefon numarası girin (05xx xxx xx xx).</p>}
+            {phoneErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">{t("co.phoneErr")}</p>}
           </div>
           <div className="sm:col-span-2">
             <label className={labelCls}>E-posta *</label>
@@ -923,15 +929,15 @@ function StepGonderen(p: {
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               placeholder="ornek@eposta.com"
             />
-            {emailErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">Geçerli bir e-posta adresi girin (sipariş onayı için gereklidir).</p>}
+            {emailErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">{t("co.emailErr")}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2 mt-5 text-[12.5px] text-[#6B7280]">
-          <ShieldCheck className="w-4 h-4 text-[#22C55E]" /> Telefon ve e-postanız hiçbir koşulda alıcıya gösterilmez (KVKK uyumlu).
+          <ShieldCheck className="w-4 h-4 text-[#22C55E]" /> {t("co.kvkkNote")}
         </div>
       </Card>
 
-      <Card title="Gönderen bilgileriniz alıcıyla paylaşılsın mı?" subtitle="Siparişinizi isimsiz veya tamamen gizli gönderebilirsiniz.">
+      <Card title={t("co.shareSender")} subtitle={t("co.shareSenderDesc")}>
         <div className="space-y-2.5">
           {opts.map((o) => {
             const on = p.visibility === o.id;
@@ -956,8 +962,8 @@ function StepGonderen(p: {
             <span className="w-5 h-5 rounded-full bg-white shadow" />
           </span>
           <span className="text-left">
-            <span className="block text-[14px] font-bold text-[#1F2937]">🎁 Sürpriz Olarak Gönder</span>
-            <span className="block text-[12.5px] text-[#6B7280] mt-0.5">Teslimat öncesi alıcıya gönderen bilgisi verilmez.</span>
+            <span className="block text-[14px] font-bold text-[#1F2937]">{t("co.surprise")}</span>
+            <span className="block text-[12.5px] text-[#6B7280] mt-0.5">{t("co.surpriseDesc")}</span>
           </span>
         </button>
       </Card>
@@ -967,6 +973,7 @@ function StepGonderen(p: {
 
 /* ---------------------------- Adım: Ek Ürünler -------------------------- */
 function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, number>; setAddon: (id: number, q: number) => void }) {
+  const { t } = useI18n();
   const count = p.addons.reduce((s, a) => s + (p.addonQty[a.id] || 0), 0);
   const cats = useMemo(() => {
     const set: string[] = [];
@@ -984,9 +991,9 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
             <Sparkles className="h-5 w-5 text-[#C4B5FD]" />
           </span>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#C4B5FD]">Siparişinizi tamamlayın</p>
-            <h2 className="mt-1 text-[20px] font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>Müşteriler Bunları da Ekledi</h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-[#B9AECF]">Çiçeğinize uygun tamamlayıcıları seçin; istemediklerinizi eklemeden devam edebilirsiniz.</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#C4B5FD]">{t("co.completeYourOrder")}</p>
+            <h2 className="mt-1 text-[20px] font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{t("co.addonsTitle")}</h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#B9AECF]">{t("co.addonsDesc")}</p>
           </div>
         </div>
 
@@ -995,7 +1002,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
             {["Tümü", ...cats].map((cat) => (
               <button key={cat} onClick={() => setTab(cat)}
                 className={`shrink-0 rounded-full border px-4 py-2 text-[12px] font-bold transition-all ${tab === cat ? "border-[#A855F7] bg-[#8B5CF6] text-white shadow-[0_8px_22px_-10px_rgba(168,85,247,0.95)]" : "border-white/15 bg-white/[0.06] text-[#D8CFF0] hover:border-[#8B5CF6]/70 hover:bg-[#7C3AED]/20"}`}>
-                {cat}
+                {cat === "Tümü" ? t("common.all") : cat}
               </button>
             ))}
           </div>
@@ -1006,7 +1013,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
         {list.map((a, index) => {
           const q = p.addonQty[a.id] || 0;
           const on = q > 0;
-          const badge = index === 0 ? "En Çok Tercih" : index === 1 ? "Popüler" : index === 2 ? "Yeni" : null;
+          const badge = index === 0 ? t("co.mostPreferred") : index === 1 ? t("co.popular") : index === 2 ? t("co.badgeNew") : null;
           return (
             <article key={a.id} className={`group overflow-hidden rounded-[20px] border transition-all ${on ? "border-[#A855F7] bg-[#29104C] shadow-[0_18px_35px_-22px_rgba(168,85,247,0.95)]" : "border-white/10 bg-[#1C0A38] hover:-translate-y-0.5 hover:border-[#7C3AED]/70"}`}>
               <div className="relative aspect-[4/3] overflow-hidden bg-white/95">
@@ -1015,14 +1022,14 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
               </div>
               <div className="p-3.5">
                 <p className="min-h-[38px] text-[12.5px] font-bold leading-snug text-white line-clamp-2">{a.name}</p>
-                <p className="mt-1 text-[11px] text-[#A99BBC]">{a.category || "Tamamlayıcı Ürün"}</p>
+                <p className="mt-1 text-[11px] text-[#A99BBC]">{a.category || t("co.addonProduct")}</p>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="text-[16px] font-extrabold text-[#D8B4FE]">+{money(a.priceMinor)}</span>
                   {on ? (
                     <div className="flex items-center rounded-full border border-[#A855F7]/55 bg-[#7C3AED] p-0.5">
                       <button onClick={() => p.setAddon(a.id, q - 1)} aria-label="Azalt" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Minus className="h-3.5 w-3.5" /></button>
                       <span className="min-w-6 text-center text-[12px] font-bold">{q}</span>
-                      <button onClick={() => p.setAddon(a.id, q + 1)} aria-label="Artır" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Plus className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => p.setAddon(a.id, q + 1)} aria-label={t("common.increase")} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Plus className="h-3.5 w-3.5" /></button>
                     </div>
                   ) : (
                     <button onClick={() => p.setAddon(a.id, 1)} aria-label={`${a.name} ekle`} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] text-white transition-colors hover:border-[#A855F7] hover:bg-[#7C3AED]">
@@ -1036,14 +1043,14 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
         })}
       </div>
 
-      {list.length === 0 && <p className="px-7 pb-7 text-[13px] text-[#B9AECF]">Bu kategoride gösterilecek aktif tamamlayıcı ürün bulunmuyor.</p>}
+      {list.length === 0 && <p className="px-7 pb-7 text-[13px] text-[#B9AECF]">{t("co.noAddons")}</p>}
 
       <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { icon: Sparkles, title: "Taze Çiçek Garantisi", text: "7–10 gün taze kalma garantisi." },
-          { icon: Truck, title: "Aynı Gün Teslimat", text: "Uygun bölgelerde 14:00'a kadar." },
-          { icon: ShieldCheck, title: "Güvenli Sipariş", text: "SSL ile korunan sipariş bağlantısı." },
-          { icon: Package, title: "Özel Paketleme", text: "Özenli sunum ve hediye notu." },
+          { icon: Sparkles, title: t("co.trust.fresh"), text: t("co.trust.freshDesc") },
+          { icon: Truck, title: t("co.trust.sameDay"), text: t("co.trust.sameDayDesc") },
+          { icon: ShieldCheck, title: t("co.trust.secure"), text: t("co.trust.secureDesc") },
+          { icon: Package, title: t("co.trust.pack"), text: t("co.trust.packDesc") },
         ].map(({ icon: Icon, title, text }) => (
           <div key={title} className="flex gap-3 border-white/10 px-5 py-4 sm:[&:nth-child(odd)]:border-r lg:border-r lg:last:border-r-0">
             <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#C084FC]" />
@@ -1054,7 +1061,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
 
       {count > 0 && (
         <div className="flex items-center gap-2 border-t border-[#A855F7]/25 bg-[#7C3AED]/15 px-6 py-3 text-[12.5px] font-bold text-[#DDD6FE]">
-          <ShoppingBag className="h-4 w-4" /> {count} tamamlayıcı ürün sepete eklendi
+          <ShoppingBag className="h-4 w-4" /> {t("co.addonsAdded", { n: count })}
         </div>
       )}
     </section>
@@ -1072,17 +1079,18 @@ function StepOdeme(p: {
   applyCoupon: () => void; removeCoupon: () => void;
   paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[]; cardEnabled: boolean;
 }) {
+  const { t } = useI18n();
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const methods = ([
-    { key: "card" as const, icon: CreditCard, title: "Kredi / Banka Kartı", sub: "Visa, Mastercard · 3D Secure" },
-    { key: "havale" as const, icon: Landmark, title: "Havale / EFT", sub: "IBAN'a transfer · onaylı" },
+    { key: "card" as const, icon: CreditCard, title: t("co.pay.card"), sub: "Visa, Mastercard · 3D Secure" },
+    { key: "havale" as const, icon: Landmark, title: t("co.pay.bank"), sub: t("co.pay.bankDesc") },
   ]).filter((m) => m.key !== "card" || p.cardEnabled);
   const hasDiscount = !!p.coupon && p.coupon.discount_minor > 0;
   return (
-    <Card title="Ödeme" subtitle="Ödeme yönteminizi seçin ve siparişinizi tamamlayın.">
+    <Card title={t("co.pay.title")} subtitle={t("co.pay.desc")}>
       {/* Ödeme yöntemi seçici */}
       <div className="mb-5">
-        <div className="text-[11px] font-semibold text-[#8B5CF6] uppercase tracking-wide mb-2.5">Ödeme Yöntemi</div>
+        <div className="text-[11px] font-semibold text-[#8B5CF6] uppercase tracking-wide mb-2.5">{t("co.pay.method")}</div>
         <div className={`grid ${methods.length > 1 ? "grid-cols-2" : "grid-cols-1"} gap-2.5`}>
           {methods.map((m) => {
             const on = p.paymentMethod === m.key;
@@ -1103,17 +1111,17 @@ function StepOdeme(p: {
         {p.paymentMethod === "card" && (
           <div className="mt-3 flex items-center gap-2 text-[12px] text-[#6B7280] bg-[#F9FAFB] border border-[#F1F0F5] rounded-xl px-3.5 py-2.5">
             <ShieldCheck className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
-            Kart bilgileriniz güvenli PayTR ekranında alınır; bizim sunucumuza iletilmez.
+            {t("co.cardSecureNote")}
           </div>
         )}
 
         {p.paymentMethod === "havale" && (
           <div className="mt-3 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-4">
             {p.bankAccounts.length === 0 ? (
-              <div className="text-[12.5px] text-[#6B7280]">Havale/EFT hesabı şu an tanımlı değil. Lütfen kart ile ödeyin veya bizimle iletişime geçin.</div>
+              <div className="text-[12.5px] text-[#6B7280]">{t("co.bankNotSet")}</div>
             ) : (
               <>
-                <div className="text-[12px] font-semibold text-[#6D28D9] mb-2">Aşağıdaki hesaba transfer edin; açıklamaya sipariş numaranızı yazın:</div>
+                <div className="text-[12px] font-semibold text-[#6D28D9] mb-2">{t("co.bankInstr")}</div>
                 <div className="space-y-2.5">
                   {p.bankAccounts.map((b) => (
                     <div key={b.public_id} className="rounded-xl bg-white border border-[#EDE9FE] px-3.5 py-2.5">
@@ -1123,7 +1131,7 @@ function StepOdeme(p: {
                     </div>
                   ))}
                 </div>
-                <div className="text-[11.5px] text-[#9CA3AF] mt-2.5">Siparişiniz "ödeme bekliyor" olarak oluşturulur; transferiniz onaylanınca hazırlanır.</div>
+                <div className="text-[11.5px] text-[#9CA3AF] mt-2.5">{t("co.bankPendingNote")}</div>
               </>
             )}
           </div>
@@ -1137,13 +1145,13 @@ function StepOdeme(p: {
 
       {/* İndirim Kodu */}
       <div className="mt-4 pt-4 border-t border-[#F1F0F5]">
-        <label className="block text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-2">İndirim Kodu</label>
+        <label className="block text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-2">{t("common.couponCode")}</label>
         {hasDiscount ? (
           <div className="flex items-center justify-between rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
             <span className="flex items-center gap-2 text-[13.5px] font-semibold text-[#15803D]">
-              <TicketPercent className="w-4 h-4" /> {p.coupon!.code} uygulandı
+              <TicketPercent className="w-4 h-4" /> {t("co.couponApplied", { code: p.coupon!.code })}
             </span>
-            <button onClick={p.removeCoupon} className="text-[12.5px] font-semibold text-[#6B7280] hover:text-[#991B1B]">Kaldır</button>
+            <button onClick={p.removeCoupon} className="text-[12.5px] font-semibold text-[#6B7280] hover:text-[#991B1B]">{t("common.remove")}</button>
           </div>
         ) : (
           <>
@@ -1166,34 +1174,34 @@ function StepOdeme(p: {
       </div>
 
       <div className="mt-4 pt-4 border-t border-[#F1F0F5] space-y-3">
-        <RevRow icon={User} label="Alıcı" value={`${p.recipientName || "—"}${occasionLabel(p.occasion) ? " · " + occasionLabel(p.occasion) : ""}`} />
+        <RevRow icon={User} label={t("co.recipient")} value={`${p.recipientName || "—"}${p.occasion ? " · " + (OCCASIONS.find((o) => o.id === p.occasion)?.emoji ?? "") + " " + t(("occ." + p.occasion) as DictKey) : ""}`} />
         <RevRow icon={MapPin} label="Teslimat" value={`${p.region ? p.region + " — " : ""}${p.address || "—"}`} />
         <RevRow icon={Calendar} label="Tarih & Saat" value={`${p.dateStr ?? "—"}${p.slotStr ? " · " + p.slotStr : ""}`} />
         {p.typeStr && <RevRow icon={Truck} label="Teslimat Tipi" value={p.typeStr} />}
-        {p.cardMessage && <RevRow icon={MessageSquareText} label="Kart Mesajı" value={`“${p.cardMessage}”`} />}
+        {p.cardMessage && <RevRow icon={MessageSquareText} label={t("co.cardMessage")} value={`“${p.cardMessage}”`} />}
       </div>
 
       <div className="mt-5 pt-4 border-t border-[#F1F0F5] space-y-2">
         {hasDiscount && (
           <>
             <div className="flex items-center justify-between text-[13.5px] text-[#6B7280]">
-              <span>Ara Toplam</span><span>{money(p.subtotal)}</span>
+              <span>{t("common.subtotal")}</span><Num>{money(p.subtotal)}</Num>
             </div>
             <div className="flex items-center justify-between text-[13.5px] font-semibold text-[#15803D]">
-              <span>İndirim ({p.coupon!.code})</span><span>−{money(p.coupon!.discount_minor)}</span>
+              <span>{t("co.discountWith", { code: p.coupon!.code })}</span><Num>−{money(p.coupon!.discount_minor)}</Num>
             </div>
           </>
         )}
         <div className="flex items-center justify-between">
-          <span className="text-[14px] font-semibold text-[#6B7280]">Toplam</span>
-          <span className="text-[22px] font-bold text-[#111827]">{money(p.total)}</span>
+          <span className="text-[14px] font-semibold text-[#6B7280]">{t("common.total")}</span>
+          <Num className="text-[22px] font-bold text-[#111827]">{money(p.total)}</Num>
         </div>
       </div>
       <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
         {p.paymentMethod === "card"
-          ? "Ödemeye geçtiğinizde güvenli PayTR ekranına yönlendirilirsiniz."
-          : "Sipariş numaranız havale açıklamasına yazılmak üzere size verilecektir."}
+          ? t("co.pay.cardNote")
+          : t("co.pay.bankNote")}
       </p>
     </Card>
   );
@@ -1234,8 +1242,9 @@ function LivingReceipt(p: {
   /** Fişteki bilgi grubundan ilgili adıma atla (checkout'tan çıkmadan). */
   onEditStep?: (key: "alici" | "kart" | "gonderen" | "ekurun") => void;
 }) {
+  const { t } = useI18n();
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
-  const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? "İsimsiz gönderim" : "Tamamen gizli gönderim";
+  const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? t("co.anonymous") : t("co.fullyHidden");
   return (
     // V85 PREMIUM — koyu ürün paneli. Fotoğraf beyaz stüdyo çerçevesinde kalır:
     // katalog görsellerimiz beyaz zeminli kesme, V85'in object-cover full-bleed'i
@@ -1247,10 +1256,10 @@ function LivingReceipt(p: {
     >
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>✦ Siparişiniz</h3>
+          <h3 className="text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{t("co.yourOrder")}</h3>
           {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini yerinde açar. */}
           {p.onEditDelivery && (
-            <button type="button" onClick={p.onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-white/70 hover:text-white transition-colors"><Pencil className="w-3 h-3" /> Düzenle</button>
+            <button type="button" onClick={p.onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-white/70 hover:text-white transition-colors"><Pencil className="w-3 h-3" /> {t("common.edit")}</button>
           )}
         </div>
 
@@ -1268,7 +1277,7 @@ function LivingReceipt(p: {
       <div className="px-5 pb-5">
 
       {selected.length > 0 && (
-        <ReceiptGroup label="Ek Ürünler" onEdit={p.onEditStep ? () => p.onEditStep?.("ekurun") : undefined}>
+        <ReceiptGroup label={t("co.addons")} onEdit={p.onEditStep ? () => p.onEditStep?.("ekurun") : undefined}>
           {selected.map((a) => (
             <div key={a.id} className="flex items-center justify-between">
               <span className="text-[12.5px] text-[#4B5563] flex items-center gap-1.5 min-w-0"><Gift className="w-3 h-3 text-[#A78BDA] shrink-0" /><span className="truncate">{a.name} ×{p.addonQty[a.id]}</span></span>
@@ -1287,17 +1296,17 @@ function LivingReceipt(p: {
       </ReceiptGroup>
 
       {(p.recipientName || p.occasion) && (
-        <ReceiptGroup label="Alıcı" onEdit={p.onEditStep ? () => p.onEditStep?.("alici") : undefined}>
+        <ReceiptGroup label={t("co.recipient")} onEdit={p.onEditStep ? () => p.onEditStep?.("alici") : undefined}>
           {p.recipientName && <RLine icon={User} value={p.recipientName} />}
-          {occasionLabel(p.occasion) && <RLine icon={Heart} value={occasionLabel(p.occasion)!} />}
+          {p.occasion && OCCASIONS.some((o) => o.id === p.occasion) && <RLine icon={Heart} value={`${OCCASIONS.find((o) => o.id === p.occasion)?.emoji ?? ""} ${t(("occ." + p.occasion) as DictKey)}`} />}
         </ReceiptGroup>
       )}
 
-      {p.cardMessage && <ReceiptGroup label="Kart Mesajı" onEdit={p.onEditStep ? () => p.onEditStep?.("kart") : undefined}><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
+      {p.cardMessage && <ReceiptGroup label={t("co.cardMessage")} onEdit={p.onEditStep ? () => p.onEditStep?.("kart") : undefined}><RLine icon={MessageSquareText} value={`“${p.cardMessage}”`} /></ReceiptGroup>}
       {(senderLine || p.surprise) && (
-        <ReceiptGroup label="Gönderen" onEdit={p.onEditStep ? () => p.onEditStep?.("gonderen") : undefined}>
+        <ReceiptGroup label={t("co.sender")} onEdit={p.onEditStep ? () => p.onEditStep?.("gonderen") : undefined}>
           {senderLine && <RLine icon={User} value={senderLine} />}
-          {p.surprise && <RLine icon={Gift} value="🎁 Sürpriz sipariş" />}
+          {p.surprise && <RLine icon={Gift} value={t("co.surpriseOrder")} />}
         </ReceiptGroup>
       )}
 
@@ -1305,7 +1314,7 @@ function LivingReceipt(p: {
           {p.coupon && p.coupon.discount_minor > 0 && (
             <>
               <div className="flex items-center justify-between text-[12px] text-white/40">
-                <span>Ara Toplam</span><span>{money(p.subtotal)}</span>
+                <span>{t("common.subtotal")}</span><Num>{money(p.subtotal)}</Num>
               </div>
               <div className="flex items-center justify-between text-[12px] font-semibold text-[#86EFAC]">
                 <span className="flex items-center gap-1"><TicketPercent className="w-3 h-3" />{p.coupon.code}</span>
@@ -1322,7 +1331,7 @@ function LivingReceipt(p: {
 
       {/* Güven şeridi — V85; bağırmayan, kısa ve gerçek */}
       <div className="flex items-center gap-5 px-5 py-4" style={{ borderTop: "1px solid rgba(196,181,253,0.08)" }}>
-        {[{ icon: Truck, text: "Aynı Gün" }, { icon: ShieldCheck, text: "SSL Güvenli" }].map(({ icon: Icon, text }) => (
+        {[{ icon: Truck, text: t("common.sameDay") }, { icon: ShieldCheck, text: t("common.sslSecure") }].map(({ icon: Icon, text }) => (
           <div key={text} className="flex items-center gap-1.5">
             <Icon className="w-3 h-3 shrink-0" style={{ color: "#8B5CF6" }} />
             <span className="text-white/30 text-[10.5px]">{text}</span>
@@ -1333,6 +1342,7 @@ function LivingReceipt(p: {
   );
 }
 function ReceiptGroup({ label, children, onEdit }: { label: string; children: React.ReactNode; onEdit?: () => void }) {
+  const { t } = useI18n();
   const arr = Array.isArray(children) ? children : [children];
   if (!arr.some(Boolean)) return null;
   return (
@@ -1343,7 +1353,7 @@ function ReceiptGroup({ label, children, onEdit }: { label: string; children: Re
         <p className="text-[10px] tracking-[0.14em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{label}</p>
         {onEdit && (
           <button type="button" onClick={onEdit} className="flex items-center gap-1 text-[11px] font-semibold text-white/55 hover:text-white transition-colors">
-            <Pencil className="w-2.5 h-2.5" /> Düzenle
+            <Pencil className="w-2.5 h-2.5" /> {t("common.edit")}
           </button>
         )}
       </div>

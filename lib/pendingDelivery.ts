@@ -46,6 +46,8 @@ export interface PendingDelivery {
 }
 
 const KEY = "cy_pending_delivery";
+/** Popup adres yazdığında yayınlanır; PDP planlayıcı dinler (tek kayıt, ikinci state yok). */
+export const PENDING_ADDRESS_EVENT = "cy:pending-address";
 const VERSION = 2;
 
 export function savePendingDelivery(p: PendingDelivery): void {
@@ -94,6 +96,8 @@ export function savePendingAddress(a: {
     lat: a.lat ?? null,
     lng: a.lng ?? null,
   });
+  // Aynı sayfada mount olmuş DeliveryPlanner (popup PDP üzerinde açıldıysa) adresi alsın.
+  try { window.dispatchEvent(new CustomEvent(PENDING_ADDRESS_EVENT)); } catch { /* geç */ }
 }
 
 /** Teslimat SEÇİMİNİ (slot/mode/tarih/ürün) geçersiz kılar, ADRESİ korur.

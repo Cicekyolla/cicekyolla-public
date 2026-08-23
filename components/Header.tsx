@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { balanceMegaColumns, type MegaGroup } from "@/lib/headerNav";
 import { BrandWordmark } from "./BrandWordmark";
 import { useCart } from "@/lib/cart";
+import { useI18n } from "@/lib/i18n";
+import { LanguageSelector } from "./LanguageSelector";
 
 const fallbackGroup = (label: string, href: string): MegaGroup => ({
   href,
@@ -63,6 +65,7 @@ export function Header({ menu, nav, search, brand }: {
 
   const { itemCount: cartCount } = useCart();
   const router = useRouter();
+  const { t } = useI18n();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
@@ -139,21 +142,21 @@ export function Header({ menu, nav, search, brand }: {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
           <Link
             href="/kategori/turkiye-geneli-kargo"
-            className="hidden lg:block text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap text-white/90 hover:text-white transition-colors"
-            aria-label="Türkiye geneli kargo sayfasına git"
+            className="hidden lg:block min-w-0 max-w-[58vw] truncate text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap text-white/90 hover:text-white transition-colors"
+            aria-label={t("header.bandLink")}
           >
-            İstanbul&apos;da Aynı Gün Hızlı Teslimat &nbsp;·&nbsp; Türkiye Geneli 1–3 İş Günü Kargo
+            {t("header.band")}
           </Link>
-          <nav aria-label="Müşteri işlemleri" className="flex items-center justify-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+          <nav aria-label={t("header.customerOps")} className="flex items-center justify-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
             <Link href="/giris" className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
               <UserRound className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Giriş Yap / Üye Ol</span>
-              <span className="sm:hidden">Üyelik</span>
+              <span className="hidden sm:inline">{t("header.login")}</span>
+              <span className="sm:hidden">{t("header.loginShort")}</span>
             </Link>
             <span aria-hidden className="h-4 w-px bg-white/30" />
             <Link href="/sepet" className="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
               <ShoppingCart className="w-3.5 h-3.5" />
-              Sepet
+              {t("header.cart")}
               {cartCount > 0 && (
                 <span className="min-w-4 h-4 px-1 rounded-full bg-white text-[#7C3AED] text-[9px] font-bold flex items-center justify-center">
                   {cartCount}
@@ -163,8 +166,8 @@ export function Header({ menu, nav, search, brand }: {
             <span aria-hidden className="h-4 w-px bg-white/30" />
             <Link href="/siparis-takibi" className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
               <PackageCheck className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sipariş Durumu</span>
-              <span className="sm:hidden">Takip</span>
+              <span className="hidden sm:inline">{t("header.orderStatus")}</span>
+              <span className="sm:hidden">{t("header.track")}</span>
             </Link>
           </nav>
         </div>
@@ -191,7 +194,7 @@ export function Header({ menu, nav, search, brand }: {
             <Link
               href="/"
               className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-[#F5F3FF]"
-              aria-label="ÇiçekYolla ana sayfa"
+              aria-label={t("header.home")}
             >
               <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} />
             </Link>
@@ -242,6 +245,8 @@ export function Header({ menu, nav, search, brand }: {
 
             {/* ── Actions ── */}
             <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Dil seçici — Figma 117 (desktop pill / mobile bottom sheet) */}
+              <LanguageSelector />
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
                 className="w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
@@ -337,14 +342,14 @@ export function Header({ menu, nav, search, brand }: {
 
                       {/* Statik bağlantılar */}
                       {[
-                        { label: "🌿 Dekorasyon & Peyzaj", href: "/dekorasyon" },
-                        { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
-                        { label: "Hakkımızda", href: "/hakkimizda" },
+                        { label: t("header.decor"), href: "/dekorasyon" },
+                        { label: t("header.deliveryAreas"), href: "/teslimat-bolgeleri" },
+                        { label: t("header.about"), href: "/hakkimizda" },
                         { label: "Blog", href: "/blog" },
                         { label: "Kurumsal", href: "/kurumsal" },
                         { label: "SSS", href: "/sss" },
-                        { label: "İletişim", href: "/iletisim" },
-                        { label: "Sepetim", href: "/sepet" },
+                        { label: t("header.contact"), href: "/iletisim" },
+                        { label: t("cart.title"), href: "/sepet" },
                       ].map((item) => (
                         <Link
                           key={item.href}
@@ -403,14 +408,14 @@ export function Header({ menu, nav, search, brand }: {
                         router.push(`/arama?q=${encodeURIComponent(term)}`);
                       }
                     }}
-                    placeholder="Gül, orkide, buket, özel gün ara..."
+                    placeholder={t("header.searchPlaceholder")}
                     className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
                   />
                   {/* Yazarken canlı ürün + kategori önerileri */}
                   {query.trim().length >= 2 && (searching || productResults.length > 0 || categoryResults.length > 0) && (
                     <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-[70] max-h-[440px] overflow-y-auto">
                       {searching && productResults.length === 0 && (
-                        <div className="px-4 py-4 text-sm text-[#9CA3AF]">Ürünler aranıyor…</div>
+                        <div className="px-4 py-4 text-sm text-[#9CA3AF]">{t("header.searching")}</div>
                       )}
                       {productResults.map((product) => {
                         const price = Math.round(Number(product.price_minor) / 100).toLocaleString("tr-TR");
@@ -441,7 +446,7 @@ export function Header({ menu, nav, search, brand }: {
                           onClick={() => { setSearchOpen(false); setQuery(""); setProductResults([]); }}
                           className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0"
                         >
-                          <span><span className="text-[10px] uppercase tracking-wider text-[#9CA3AF] mr-2">Kategori</span>{category.name}</span>
+                          <span><span className="text-[10px] uppercase tracking-wider text-[#9CA3AF] mr-2">{t("header.category")}</span>{category.name}</span>
                           <ArrowRight className="w-3.5 h-3.5 text-[#D1D5DB]" />
                         </Link>
                       ))}
@@ -505,7 +510,7 @@ export function Header({ menu, nav, search, brand }: {
                             <div key={`${col.href}-${ci}`}>
                               {col.continued ? (
                                 <p className="text-[11px] font-semibold text-[#9CA3AF] pb-1 tracking-wide">
-                                  {col.title} <span className="font-normal">· devamı</span>
+                                  {col.title} <span className="font-normal">{t("header.more")}</span>
                                 </p>
                               ) : (
                                 <Link
@@ -559,7 +564,7 @@ export function Header({ menu, nav, search, brand }: {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                     <div className="absolute bottom-0 left-0 p-5">
-                      <p className="text-[10px] tracking-widest text-[#E9D5FF] uppercase font-semibold mb-1">Koleksiyon</p>
+                      <p className="text-[10px] tracking-widest text-[#E9D5FF] uppercase font-semibold mb-1">{t("header.collection")}</p>
                       <h3
                         style={{ fontFamily: "var(--font-display)", lineHeight: 1.1, whiteSpace: "pre-line" }}
                         className="text-white text-xl font-semibold mb-3"

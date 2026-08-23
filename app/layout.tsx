@@ -16,6 +16,7 @@ import { EcommercePaymentInfoTracker } from "@/components/analytics/EcommercePay
 import { BreadcrumbSchemaTracker } from "@/components/analytics/BreadcrumbSchemaTracker";
 import { CategoryImageEnhancer } from "@/components/CategoryImageEnhancer";
 import { CartProvider } from "@/lib/cart";
+import { I18nProvider } from "@/lib/i18n";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
@@ -111,7 +112,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const footerBrandLight = footerBrand ? { ...footerBrand, logoUrl: undefined } : undefined;
 
   return (
-    <html lang="tr" style={headerColors ? {
+    <html lang="tr" suppressHydrationWarning style={headerColors ? {
       "--header-bg-color": headerColors.bg,
       "--header-text-color": headerColors.text,
       "--promo-bar-color": headerColors.promoBar,
@@ -125,6 +126,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Kullanıcı seçim yaptığında ConsentManager 'consent update' gönderir.
           GTM container (GTM-54FJNMT2) ve mevcut dataLayer event'leri DEĞİŞMEDİ.
         */}
+        <Script id="cy-lang-dir" strategy="beforeInteractive">
+          {`(function(){try{var m=/(?:^|;[ ]*)cy_lang=([a-z]{2})/.exec(document.cookie);var l=m&&m[1];if(l&&/^(tr|en|ar|zh|nl|de|it|ja|pt|ko|ru|es|az|fr)$/.test(l)){document.documentElement.lang=l;document.documentElement.dir=l==="ar"?"rtl":"ltr";}}catch(e){}})();`}
+        </Script>
         <Script id="consent-mode-default" strategy="beforeInteractive">
           {`
             (function(){
@@ -164,6 +168,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         </Script>
       </head>
       <body>
+        <I18nProvider>
         <noscript>
           <iframe
             src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
@@ -188,6 +193,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <ConsentManager />
         <NewMemberPopup />
         <DeliveryAddressPopup />
+        </I18nProvider>
         <CategoryImageEnhancer />
       </body>
     </html>

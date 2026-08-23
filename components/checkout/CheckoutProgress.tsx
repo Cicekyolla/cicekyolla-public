@@ -17,20 +17,23 @@
 // ---------------------------------------------------------------------------
 
 import { Check } from "lucide-react";
+import { useI18n, Num } from "@/lib/i18n";
 
 export const CHECKOUT_PHASES = ["Teslimat", "Bilgiler", "Ödeme", "Tamamlandı"] as const;
 
 /** 1 = Teslimat, 2 = Bilgiler, 3 = Ödeme, 4 = Tamamlandı */
 export function CheckoutProgress({ current }: { current: 1 | 2 | 3 | 4 }) {
+  const { t } = useI18n();
+  const PHASES = [t("co.steps.delivery"), t("co.steps.info"), t("co.steps.payment"), t("co.steps.done")];
   return (
-    <nav aria-label="Sipariş adımları" className="w-full">
+    <nav aria-label={t("co.stepsAria")} className="w-full">
       {/* Mobil: kompakt "2 / 4 · Bilgiler" — dört node mobilde okunmuyordu. */}
       <p className="sm:hidden text-center text-[12px] font-semibold text-[#7C3AED]">
-        {current} / {CHECKOUT_PHASES.length} · {CHECKOUT_PHASES[current - 1]}
+        <Num>{current} / {PHASES.length}</Num> · {PHASES[current - 1]}
       </p>
 
       <ol className="hidden sm:flex items-center justify-center">
-        {CHECKOUT_PHASES.map((label, idx) => {
+        {PHASES.map((label, idx) => {
           const step = idx + 1;
           const done = step < current;
           const active = step === current;

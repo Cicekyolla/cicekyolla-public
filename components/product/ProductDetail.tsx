@@ -26,6 +26,7 @@ import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery, clearPendingSelection, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
+import { useI18n, Num } from "@/lib/i18n";
 
 const WHATSAPP = "905458813450";
 
@@ -159,6 +160,7 @@ export function ProductDetail({
   // Adet — tek CTA sepete ürünü bu adetle yazar (funnel: ürün + variant + quantity + teslimat).
   const [quantity, setQuantity] = useState(1);
   const [wish, setWish] = useState(false);
+  const { t, locale } = useI18n();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
   const [deliverySelection, setDeliverySelection] = useState<PendingDelivery | null>(null);
@@ -194,9 +196,9 @@ export function ProductDetail({
       {/* Breadcrumb */}
       <div className="max-w-[1280px] mx-auto px-5 md:px-8 pt-6">
         <nav className="flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
-          <Link href="/" className="hover:text-[#7C3AED] transition-colors">Ana Sayfa</Link>
+          <Link href="/" className="hover:text-[#7C3AED] transition-colors">{t("common.homePage")}</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#6B7280]">{TYPE_LABEL[product.product_type] ?? "Ürün"}</span>
+          <span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>
           <ChevronRight className="w-3 h-3" />
           <span className="text-[#111827] font-medium truncate max-w-[220px]">{product.name}</span>
         </nav>
@@ -236,18 +238,18 @@ export function ProductDetail({
             {/* Badge'ler */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
               {hasSale && (
-                <span className="px-3 py-1.5 rounded-full bg-[#DC2626] text-white text-[11px] font-bold tracking-wider">%{discountPct} İNDİRİM</span>
+                <span className="px-3 py-1.5 rounded-full bg-[#DC2626] text-white text-[11px] font-bold tracking-wider"><Num>{t("pdp.discount", { pct: discountPct })}</Num></span>
               )}
               {product.is_bestseller && (
-                <span className="px-3 py-1.5 rounded-full bg-[#F59E0B] text-white text-[11px] font-bold tracking-wider">ÇOK SATAN</span>
+                <span className="px-3 py-1.5 rounded-full bg-[#F59E0B] text-white text-[11px] font-bold tracking-wider">{t("pdp.bestseller")}</span>
               )}
               {product.is_new && (
-                <span className="px-3 py-1.5 rounded-full bg-[#7C3AED] text-white text-[11px] font-bold tracking-wider">YENİ</span>
+                <span className="px-3 py-1.5 rounded-full bg-[#7C3AED] text-white text-[11px] font-bold tracking-wider">{t("pdp.new")}</span>
               )}
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); setWish((w) => !w); }}
-              aria-label="Favorilere ekle"
+              aria-label={t("pdp.wishlist")}
               className="absolute top-4 right-4 z-[2] w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center transition-all hover:scale-110"
             >
               <Heart className={`w-5 h-5 transition-colors ${wish ? "fill-[#DC2626] text-[#DC2626]" : "text-[#6B7280]"}`} />
@@ -295,9 +297,9 @@ export function ProductDetail({
 
           {/* Fiyat */}
           <div className="mt-6 flex items-end gap-3">
-            <span className="text-[32px] font-bold text-[#111827]">{formatMinorTRY(shown)}</span>
+            <Num className="text-[32px] font-bold text-[#111827]">{formatMinorTRY(shown)}</Num>
             {hasSale && (
-              <span className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{formatMinorTRY(basePrice)}</span>
+              <Num className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{formatMinorTRY(basePrice)}</Num>
             )}
           </div>
 
@@ -305,14 +307,14 @@ export function ProductDetail({
           {sizeProducts.length >= 3 && (
             <section aria-labelledby="auto-size-title" className="mt-7">
               <h2 id="auto-size-title" className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
-                Boyut Seçin
+                {t("pdp.sizeTitle")}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {sizeProducts.slice(0, 3).map((item, index) => {
                   const labels = [
-                    ["Küçük", "Standart"],
-                    ["Orta", "Premium"],
-                    ["Büyük", "Deluxe"],
+                    [t("pdp.size.small"), "Standart"],
+                    [t("pdp.size.medium"), "Premium"],
+                    [t("pdp.size.large"), "Deluxe"],
                   ] as const;
                   const [label, tier] = labels[index];
                   return (
@@ -407,7 +409,7 @@ export function ProductDetail({
           {/* Varyantlar */}
           {variants.length > 0 && (
             <div className="mt-6">
-              <div className="text-[12px] font-bold text-[#9CA3AF] tracking-wider mb-3">SEÇENEK</div>
+              <div className="text-[12px] font-bold text-[#9CA3AF] tracking-wider mb-3">{t("pdp.option")}</div>
               <div className="flex flex-wrap gap-2.5">
                 {variants.map((v) => (
                   <button
@@ -417,7 +419,7 @@ export function ProductDetail({
                   >
                     {v.title}
                     {v.price_minor != null && (
-                      <span className="ml-2 opacity-70">{formatMinorTRY(v.price_minor)}</span>
+                      <Num className="ml-2 opacity-70">{formatMinorTRY(v.price_minor)}</Num>
                     )}
                   </button>
                 ))}
@@ -427,11 +429,11 @@ export function ProductDetail({
 
           {/* Adet — sepet sayfasındaki kontrolle aynı dil (rounded-full, lilac kenar) */}
           <div className="mt-6">
-            <div className="text-[12px] font-bold text-[#9CA3AF] tracking-wider mb-3">ADET</div>
+            <div className="text-[12px] font-bold text-[#9CA3AF] tracking-wider mb-3">{t("pdp.quantity")}</div>
             <div className="inline-flex items-center rounded-full border border-[#EDE9FE] bg-white text-[#111827]">
               <button
                 type="button"
-                aria-label="Adet azalt"
+                aria-label={t("common.decrease")}
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 disabled={quantity <= 1}
                 className="grid h-12 w-14 place-items-center text-[#6B7280] disabled:text-[#D1D5DB] disabled:cursor-not-allowed"
@@ -441,7 +443,7 @@ export function ProductDetail({
               <span className="min-w-10 text-center text-[15px] font-bold">{quantity}</span>
               <button
                 type="button"
-                aria-label="Adet arttır"
+                aria-label={t("common.increase")}
                 onClick={() => setQuantity((q) => Math.min(99, q + 1))}
                 className="grid h-12 w-14 place-items-center text-[#6B7280]"
               >
@@ -469,36 +471,36 @@ export function ProductDetail({
               className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-[15px] font-bold transition-all ${deliverySelection ? "text-white hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]" : "cursor-not-allowed bg-[#DDD6FE] text-white"}`}
               style={deliverySelection ? { background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" } : undefined}
             >
-              <ShoppingBag className="w-5 h-5" /> Sipariş Ver
+              <ShoppingBag className="w-5 h-5" /> {t("pdp.order")}
             </button>
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
               target="_blank"
               rel="nofollow noopener noreferrer"
-              aria-label="WhatsApp ile Sipariş"
+              aria-label={t("pdp.whatsappOrder")}
               className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-[#25D366] text-white text-[14px] font-bold transition-all hover:brightness-105 hover:scale-[1.01]"
             >
               <MessageCircle className="w-5 h-5" /> <span className="hidden sm:inline">WhatsApp</span>
             </a>
             <button
               onClick={() => setWish(!wish)}
-              aria-label="Favorilere ekle"
+              aria-label={t("pdp.wishlist")}
               className={`grid place-items-center w-14 rounded-2xl border transition-all ${wish ? "bg-[#FFF1F2] border-[#FECDD3] text-[#E11D48]" : "bg-white border-[#E5E7EB] text-[#9CA3AF] hover:border-[#C4B5FD]"}`}
             >
               <Heart className={`w-5 h-5 ${wish ? "fill-[#E11D48]" : ""}`} />
             </button>
           </div>
-          {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">Önce teslimatı planlayalım — bu çiçeğin nereye ve ne zaman ulaşacağını birlikte belirleyelim.</p>}
+          {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">{t("pdp.planFirst")}</p>}
 
           {/* Güven ikonları — gerçek özellikler (sahte yorum/yıldız/satış YOK) */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
             {[
-              { icon: Camera, t: "Fotoğraftaki ürün gönderilir", show: true },
-              { icon: Leaf, t: "Taze hazırlanır", show: true },
-              { icon: ShieldCheck, t: "Güvenli bağlantı", show: true },
-              { icon: Zap, t: "Aynı gün teslimat", show: product.same_day_available },
-              { icon: Gift, t: "Hediye notu eklenebilir", show: true },
-              { icon: Check, t: "Görsel onay desteği", show: true },
+              { icon: Camera, t: t("pdp.trust.photo"), show: true },
+              { icon: Leaf, t: t("pdp.trust.fresh"), show: true },
+              { icon: ShieldCheck, t: t("pdp.trust.secure"), show: true },
+              { icon: Zap, t: t("pdp.trust.sameDay"), show: product.same_day_available },
+              { icon: Gift, t: t("pdp.trust.gift"), show: true },
+              { icon: Check, t: t("pdp.trust.visual"), show: true },
             ].filter((x) => x.show).map((x, i) => (
               <div key={i} className="flex items-center gap-2 text-[12px] text-[#4B5563]">
                 <span className="grid place-items-center w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] shrink-0"><x.icon className="w-3.5 h-3.5" /></span>
@@ -511,14 +513,14 @@ export function ProductDetail({
           <div className="mt-5 rounded-2xl bg-[#F5F3FF] border border-[#EDE9FE] p-4 flex items-start gap-3">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-white text-[#7C3AED] shrink-0"><Camera className="w-[18px] h-[18px]" /></span>
             <div>
-              <div className="text-[13.5px] font-bold text-[#111827]">Görsel Onay</div>
-              <p className="text-[12.5px] text-[#6B7280] mt-0.5 leading-relaxed">Hazırlanan ürünün fotoğrafını teslimat öncesi sizinle paylaşabiliriz.</p>
+              <div className="text-[13.5px] font-bold text-[#111827]">{t("pdp.visualTitle")}</div>
+              <p className="text-[12.5px] text-[#6B7280] mt-0.5 leading-relaxed">{t("pdp.visualDesc")}</p>
             </div>
           </div>
 
           {/* Teslimat notu — şeffaf */}
           <p className="mt-3 text-[11.5px] text-[#9CA3AF] leading-relaxed">
-            Teslimat saatleri bölge yoğunluğu, hava ve trafik durumuna göre değişebilir.
+            {t("pdp.deliveryNote")}
           </p>
 
           {/* Ürün bilgileri — tek satırlı sekmeler; aynı anda yalnız seçilen içerik görünür */}
@@ -528,12 +530,12 @@ export function ProductDetail({
             const intro = sections.find((s) => s.isIntro);
             const panels = sections.filter((s) => !s.isIntro);
             return (
-              <section aria-label="Ürün detayları" className="mt-9 pt-7 border-t border-[#F3F4F6]">
-                <div role="tablist" aria-label="Ürün bilgi sekmeleri" className="flex gap-7 overflow-x-auto border-b border-[#D1D5DB] scrollbar-none">
+              <section aria-label={t("pdp.tabs.info")} className="mt-9 pt-7 border-t border-[#F3F4F6]">
+                <div role="tablist" aria-label={t("pdp.tabs.info")} className="flex gap-7 overflow-x-auto border-b border-[#D1D5DB] scrollbar-none">
                   {[
-                    ["description", "Ürün Açıklaması"],
-                    ["details", "Ürün Bilgileri"],
-                    ["delivery", "Gönderim Detayları"],
+                    ["description", t("pdp.tabs.desc")],
+                    ["details", t("pdp.tabs.info")],
+                    ["delivery", t("pdp.tabs.shipping")],
                   ].map(([key, label]) => (
                     <button
                       key={key}
@@ -574,16 +576,16 @@ export function ProductDetail({
                           </div>
                         );
                       }) : (
-                        <p className="text-[14px] text-[#6B7280]">Bu ürün için ek içerik bilgisi bulunmuyor.</p>
+                        <p className="text-[14px] text-[#6B7280]">{t("pdp.noContent")}</p>
                       )}
                     </div>
                   )}
 
                   {infoTab === "delivery" && (
                     <div role="tabpanel" className="text-[14px] text-[#4B5563] leading-[1.85] space-y-3">
-                      <p>Teslimat bölgesi: <b className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</b>.{product.same_day_available ? " Aynı gün teslimat uygundur." : ""}</p>
-                      <p>Uygun teslimat günü ve saati sipariş adımında, bölgenizdeki yoğunluğa göre belirlenir. Teslimat saatleri hava ve trafik durumuna göre değişebilir.</p>
-                      <p>Hediye notunuzu sipariş adımında ekleyebilir; hazırlanan ürünün görsel onayını talep edebilirsiniz.</p>
+                      <p>{t("pdp.region")} <b className="text-[#111827]">{SCOPE_LABEL[product.delivery_scope] ?? "İstanbul"}</b>.{product.same_day_available ? " " + t("pdp.regionSameDay") : ""}</p>
+                      <p>{t("pdp.shippingNote1")}</p>
+                      <p>{t("pdp.shippingNote2")}</p>
                     </div>
                   )}
                 </div>
@@ -600,8 +602,8 @@ export function ProductDetail({
         style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
         <div className="shrink-0">
-          <div className="text-[11px] text-[#9CA3AF] leading-none">Fiyat</div>
-          <div className="text-[18px] font-bold text-[#111827] leading-tight">{formatMinorTRY(shown)}</div>
+          <div className="text-[11px] text-[#9CA3AF] leading-none">{t("common.price")}</div>
+          <Num className="text-[18px] font-bold text-[#111827] leading-tight">{formatMinorTRY(shown)}</Num>
         </div>
         {/* Mobil karşılığı — MASAÜSTÜYLE AYNI aksiyon ve aynı teslimat kilidi.
             İkinci bir müşteri yolu değildir; kilitliyken planlayıcıya kaydırır. */}
@@ -618,13 +620,13 @@ export function ProductDetail({
           className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white text-[14px] font-bold transition-all ${deliverySelection ? "shadow-[0_6px_18px_rgba(124,58,237,0.3)]" : "bg-[#DDD6FE]"}`}
           style={deliverySelection ? { background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" } : undefined}
         >
-          <ShoppingBag className="w-[18px] h-[18px]" /> {deliverySelection ? "Sipariş Ver" : "Teslimatı Planla"}
+          <ShoppingBag className="w-[18px] h-[18px]" /> {deliverySelection ? t("pdp.order") : t("pdp.planDelivery")}
         </button>
         <a
           href={`https://wa.me/${WHATSAPP}?text=${waText}`}
           target="_blank"
           rel="nofollow noopener noreferrer"
-          aria-label="WhatsApp ile Sipariş"
+          aria-label={t("pdp.whatsappOrder")}
           className="grid place-items-center w-12 h-12 rounded-xl bg-[#25D366] text-white shrink-0"
         >
           <MessageCircle className="w-5 h-5" />

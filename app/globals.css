@@ -131,3 +131,27 @@ header a[href="/sepet"] span::after {
 @media (prefers-reduced-motion: reduce) {
   .cy-img-shimmer { animation: none; }
 }
+
+/* ── i18n: script-bazlı font fallback (Manrope/Fraunces Arapça/CJK glyph içermez → tofu önlenir).
+   Logo asset'tir, etkilenmez. Latin/Kiril diller mevcut stack'i kullanır. ───────────────── */
+html[lang="ar"] body, html[lang="ar"] [class*="font-display"] {
+  font-family: "Segoe UI", "Noto Naskh Arabic", "Noto Sans Arabic", Tahoma, system-ui, sans-serif;
+}
+html[lang="zh"] body, html[lang="zh"] [class*="font-display"] {
+  font-family: "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+}
+html[lang="ja"] body, html[lang="ja"] [class*="font-display"] {
+  font-family: "Manrope", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, "Noto Sans JP", system-ui, sans-serif;
+}
+html[lang="ko"] body, html[lang="ko"] [class*="font-display"] {
+  font-family: "Manrope", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+html[lang="zh"] body, html[lang="ja"] body, html[lang="ko"] body { line-height: 1.65; }
+
+/* ── RTL (Arapça): metin akışı ve form yönü; görsel/logo/galeri MIRROR EDİLMEZ. ───────────── */
+html[dir="rtl"] body { text-align: start; }
+html[dir="rtl"] input[type="tel"], html[dir="rtl"] input[type="email"], html[dir="rtl"] input[type="url"],
+html[dir="rtl"] input[inputmode="numeric"], html[dir="rtl"] input[inputmode="decimal"] {
+  direction: ltr; text-align: start; unicode-bidi: isolate;
+}
+html[dir="rtl"] img, html[dir="rtl"] video, html[dir="rtl"] svg.cy-no-mirror { transform: none; }

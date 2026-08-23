@@ -1,24 +1,15 @@
-import { LockKeyhole, MessageCircle, ShieldCheck } from "lucide-react";
+"use client";
 
-const assurances = [
-  {
-    icon: LockKeyhole,
-    title: "Şifreli bağlantı",
-    text: "Sipariş bilgileriniz güvenli HTTPS bağlantısı üzerinden iletilir.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Kart bilgisi saklanmaz",
-    text: "Mevcut sipariş akışında kart bilgisi istenmez veya Çiçek Yolla sunucularında tutulmaz.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Gerçek destek",
-    text: "Sipariş öncesi ve sonrasında WhatsApp üzerinden bize ulaşabilirsiniz.",
-  },
-] as const;
+import { LockKeyhole, MessageCircle, ShieldCheck } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export function ProductTrustPanel() {
+  const t = useT();
+  const assurances = [
+    { icon: LockKeyhole, title: t("trust.a1"), text: t("trust.a1d") },
+    { icon: ShieldCheck, title: t("trust.a2"), text: t("trust.a2d") },
+    { icon: MessageCircle, title: t("trust.a3"), text: t("trust.a3d") },
+  ] as const;
   return (
     <aside
       aria-labelledby="product-trust-title"
@@ -26,17 +17,17 @@ export function ProductTrustPanel() {
     >
       <div className="px-7 pb-6 pt-7">
         <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.32em] text-[#8B5CF6]">
-          Ödeme &amp; Sipariş Güvencesi
+          {t("trust.eyebrow")}
         </p>
         <h2
           id="product-trust-title"
           className="max-w-md text-[24px] font-semibold leading-[1.2] text-[#24182F]"
           style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
         >
-          Her adımda içiniz rahat.
+          {t("trust.title")}
         </h2>
         <p className="mt-3 max-w-md text-[13.5px] leading-6 text-[#71667C]">
-          Sade, şeffaf ve ihtiyaç duyduğunuzda gerçek destek sunan bir sipariş deneyimi.
+          {t("trust.desc")}
         </p>
       </div>
 
@@ -59,11 +50,11 @@ export function ProductTrustPanel() {
 
       <details className="group mx-7 my-6 border-t border-[#DED5E8] pt-5">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[12.5px] font-semibold text-[#493457] outline-none transition hover:text-[#7C3AED] focus-visible:ring-2 focus-visible:ring-[#C4B5FD] [&::-webkit-details-marker]:hidden">
-          Ödeme güvenliği hakkında
+          {t("trust.faq")}
           <span aria-hidden="true" className="text-lg font-light text-[#8B5CF6] transition-transform group-open:rotate-45">+</span>
         </summary>
         <p className="mt-3 pr-5 text-[12px] leading-5 text-[#7A7084]">
-          Aktif olmayan kart veya taksit seçenekleri müşteriye gösterilmez. Online ödeme açıldığında yalnız doğrulanmış seçenekler ödeme adımında yayınlanır.
+          {t("trust.faqd")}
         </p>
       </details>
 
@@ -73,7 +64,7 @@ export function ProductTrustPanel() {
         rel="noopener noreferrer"
         className="flex items-center justify-between border-t border-[#E4DCEB] bg-white/45 px-7 py-4 text-[12.5px] font-semibold text-[#5C3A73] transition hover:bg-white/70 hover:text-[#7C3AED]"
       >
-        WhatsApp’tan bilgi alın
+        {t("trust.wa")}
         <span aria-hidden="true" className="text-base">→</span>
       </a>
     </aside>

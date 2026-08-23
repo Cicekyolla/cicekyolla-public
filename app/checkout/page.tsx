@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, ShoppingBag } from "lucide-react";
 import CheckoutFlow, { type CheckoutAddon } from "@/components/checkout/CheckoutFlow";
 import { useCart, type CartItem } from "@/lib/cart";
 import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { useI18n } from "@/lib/i18n";
 
 function deliveryFingerprint(delivery?: PendingDelivery) {
   if (!delivery) return null;
@@ -19,6 +20,7 @@ function deliveryFingerprint(delivery?: PendingDelivery) {
 
 export default function CartCheckoutPage() {
   const { items, hydrated, subtotalMinor, clearCart, updateAllDelivery } = useCart();
+  const { t } = useI18n();
   const first = items[0];
   const firstDelivery = first?.delivery;
   const fingerprint = deliveryFingerprint(firstDelivery);
@@ -71,14 +73,14 @@ export default function CartCheckoutPage() {
       ? frozen.current
       : null;
 
-  if (!hydrated) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center text-muted-foreground">Sepetiniz hazırlanıyor…</main>;
+  if (!hydrated) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center text-muted-foreground">{t("co.preparing")}</main>;
   // view yoksa sepet gerçekten boştur. Sipariş tamamlandıysa view dolu kalır ve
   // başarı ekranı (sipariş numarası) ekranda durmaya devam eder.
-  if (!view) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center"><ShoppingBag className="mx-auto h-12 w-12 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">Sepetiniz boş</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> Alışverişe dön</Link></main>;
+  if (!view) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center"><ShoppingBag className="mx-auto h-12 w-12 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">{t("co.emptyTitle")}</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> {t("co.emptyBack")}</Link></main>;
 
   // Teslimat doğrulaması yalnız sipariş ÖNCESİ anlamlıdır; sipariş verildikten
   // sonra sepet boşaldığı için bu kontrol tetiklenip başarı ekranını gizlemesin.
-  if (!ordered && (!deliveryIsComplete || !sameDelivery)) return <main className="min-h-[60vh] bg-background px-6 py-16"><section className="mx-auto max-w-2xl rounded-[24px] border border-border bg-card p-8 text-center shadow-[0_18px_55px_rgba(45,22,72,.05)]"><AlertTriangle className="mx-auto h-11 w-11 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">Teslimat seçimini doğrulayın</h1><p className="mt-3 leading-7 text-muted-foreground">Siparişteki bütün ürünler için aynı teslimat adresi, tarihi ve saat aralığı seçilmelidir. Eski veya farklı teslimatlı ürünü sepetten çıkarıp ürün sayfasından geçerli slotla yeniden ekleyin.</p><Link href="/sepet" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> Sepete dön</Link></section></main>;
+  if (!ordered && (!deliveryIsComplete || !sameDelivery)) return <main className="min-h-[60vh] bg-background px-6 py-16"><section className="mx-auto max-w-2xl rounded-[24px] border border-border bg-card p-8 text-center shadow-[0_18px_55px_rgba(45,22,72,.05)]"><AlertTriangle className="mx-auto h-11 w-11 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">{t("co.verifyTitle")}</h1><p className="mt-3 leading-7 text-muted-foreground">{t("co.mixedDelivery")}</p><Link href="/sepet" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> {t("co.backToCart")}</Link></section></main>;
 
   // Tüm alanlar view'dan okunur: sepet temizlendikten sonra da başarı ekranının
   // ihtiyaç duyduğu ana ürün verisi (ad, görsel, fiyat, adet) elde kalır.

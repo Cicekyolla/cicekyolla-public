@@ -14,7 +14,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
-import { readPendingDelivery, hasPendingAddress } from "@/lib/pendingDelivery";
+import { readPendingDelivery, hasPendingAddress, PENDING_ADDRESS_EVENT } from "@/lib/pendingDelivery";
+import { useI18n, Num } from "@/lib/i18n";
 
 // --- Endpoint yanıt tipleri (backend sözleşmesi) ---------------------------
 interface Slot {
@@ -70,23 +71,28 @@ interface Props {
 }
 
 // --- Tarih yardımcıları -----------------------------------------------------
-const fmtDay = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long" });
-const fmtWd = new Intl.DateTimeFormat("tr-TR", { weekday: "long" });
-const fmtWdShort = new Intl.DateTimeFormat("tr-TR", { weekday: "short" });
+// Tarih etiketleri locale'e göre biçimlenir (yalnız SUNUM; ISO tarih/slot değeri değişmez).
+function makeFmts(intl: string) {
+  return {
+    fmtDay: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long" }),
+    fmtWd: new Intl.DateTimeFormat(intl, { weekday: "long" }),
+    fmtWdShort: new Intl.DateTimeFormat(intl, { weekday: "short" }),
+  };
+}
 
 function isoOf(offset: number): string {
   const d = new Date();
   d.setDate(d.getDate() + offset);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function labelOf(offset: number): { label: string; sub: string } {
+function labelOfFor(offset: number, f: ReturnType<typeof makeFmts>, today: string, tomorrow: string): { label: string; sub: string } {
   const d = new Date();
   d.setDate(d.getDate() + offset);
-  return { label: offset === 0 ? "Bugün" : offset === 1 ? "Yarın" : fmtWd.format(d), sub: fmtDay.format(d) };
+  return { label: offset === 0 ? today : offset === 1 ? tomorrow : f.fmtWd.format(d), sub: f.fmtDay.format(d) };
 }
 
-function feeText(minor?: number): string {
-  if (minor == null || minor === 0) return "Ücretsiz";
+function feeTextFor(minor: number | undefined, free: string): string {
+  if (minor == null || minor === 0) return free;
   return `${(minor / 100).toLocaleString("tr-TR", { minimumFractionDigits: 0 })} ₺`;
 }
 
@@ -138,6 +144,15 @@ function hhmmToMin(v: string | null | undefined): number | null {
 }
 
 export default function DeliveryPlanner({ product, onSelect }: Props) {
+  const { t, intl } = useI18n();
+  // DİL DEĞİŞİMİ = SUNUM: t kimliği değişince check/slot YENİDEN ÇALIŞMAZ (slot korunur). Hata metinleri ref ile.
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; });
+  const fmts = useMemo(() => makeFmts(intl), [intl]);
+  const labelOf = useCallback((offset: number) => labelOfFor(offset, fmts, t("common.today"), t("common.tomorrow")), [fmts, t]);
+  const feeText = useCallback((minor?: number) => feeTextFor(minor, t("common.free")), [t]);
+  // Backend est_text TR sabitidir ("1-3 iş günü"); sunumda locale metni kullanılır (değer aynı: 1-3 iş günü).
+  const etaText = t("common.businessDays13");
   const [address, setAddress] = useState<AddressResult | null>(null);
   const [dayOffset, setDayOffset] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -151,18 +166,24 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   const reqSeq = useRef(0);
   const passedRef = useRef(false);
 
-  const days = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ offset: i, ...labelOf(i) })), []);
+  const days = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ offset: i, ...labelOf(i) })), [labelOf]);
 
   // POPUP → PDP: ortak kayıtta doğrulanmış adres varsa (Teslimat Adresi popup'ı / önceki PDP)
   // adres tekrar sorulmaz; aynı delivery-check motoru bu adresle çalışır. Slot/mode TAŞINMAZ
   // (ürün bazlı karar her PDP'de yeniden hesaplanır — state sızması yok).
   useEffect(() => {
-    const p = readPendingDelivery();
-    if (!hasPendingAddress(p) || !p.address) return;
-    setAddress({
-      formattedAddress: p.address, placeId: p.placeId ?? "", placeName: p.placeName ?? null,
-      lat: p.lat, lng: p.lng, il: p.city ?? null, ilce: p.district ?? null, mahalle: p.neighborhood ?? null,
-    });
+    const seed = () => {
+      const p = readPendingDelivery();
+      if (!hasPendingAddress(p) || !p.address) return;
+      setAddress({
+        formattedAddress: p.address, placeId: p.placeId ?? "", placeName: p.placeName ?? null,
+        lat: p.lat, lng: p.lng, il: p.city ?? null, ilce: p.district ?? null, mahalle: p.neighborhood ?? null,
+      });
+    };
+    seed();
+    // Popup aynı sayfada (PDP) adres yazarsa planlayıcı canlı güncellenir.
+    window.addEventListener(PENDING_ADDRESS_EVENT, seed);
+    return () => window.removeEventListener(PENDING_ADDRESS_EVENT, seed);
   }, []);
   const quickDays = days.slice(0, 3);
 
@@ -206,7 +227,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                   .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
                   .join(" · ")
               : json?.error ?? `HTTP ${resp.status}`;
-          setErrDetail(`Teslimat kontrolü başarısız (${resp.status}) — ${detail}`);
+          setErrDetail(tRef.current("planner.errPrefix", { status: resp.status, detail }));
           setResult(null);
         } else {
           setErrDetail(null);
@@ -219,7 +240,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         }
       } catch {
         if (seq === reqSeq.current) {
-          setErrDetail("Teslimat servisine ulaşılamadı. Lütfen tekrar deneyin.");
+          setErrDetail(tRef.current("planner.errNetwork"));
           setResult(null);
         }
       } finally {
@@ -322,10 +343,10 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       {/* Başlık */}
       <div className="flex items-center gap-2 text-[13px] font-semibold text-[#4B5563]">
         <MapPin className="w-4 h-4 text-[#7C3AED]" />
-        Teslimat adresi
+        {t("planner.title")}
         {sd?.available && (
           <span className="ml-auto inline-flex items-center gap-1 text-[11.5px] font-bold text-[#059669]">
-            <Zap className="w-3.5 h-3.5" /> Aynı gün uygun
+            <Zap className="w-3.5 h-3.5" /> {t("planner.sameDayOk")}
           </span>
         )}
       </div>
@@ -333,7 +354,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       {/* Adres seçici */}
       <div className="mt-3">
         <AddressAutocomplete
-          placeholder="Teslimat adresini yazın (mahalle / cadde / AVM)"
+          placeholder={t("planner.placeholder")}
           defaultValue={address?.formattedAddress ?? ""}
           onSelect={(r) => {
             // ADRES DEĞİŞTİ → eski teslimat seçimi (İstanbul slotu dahil) GEÇERSİZ:
@@ -348,7 +369,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
       {!address && (
         <p className="mt-3 flex items-start gap-1.5 text-[12px] text-[#9CA3AF] leading-relaxed">
           <Clock className="w-3.5 h-3.5 mt-[1px] shrink-0" />
-          Adresinizi seçin; bölgenize uygun teslimat günü ve saatlerini anında gösterelim.
+          {t("planner.hint")}
         </p>
       )}
 
@@ -373,7 +394,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                 >
                   <div className="text-[13px] font-bold leading-tight">{d.label}</div>
                   <div className={`text-[11px] mt-0.5 ${isTodayClosed ? "text-[#B91C1C] font-semibold" : dayOffset === d.offset ? "text-white/80" : "text-[#9CA3AF]"}`}>
-                    {isTodayClosed ? "Kapandı" : d.sub}
+                    {isTodayClosed ? t("planner.closed") : d.sub}
                   </div>
                 </button>
               );
@@ -386,7 +407,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
             className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#7C3AED] hover:text-[#6D28D9] transition-colors"
           >
             <CalendarDays className="w-4 h-4" />
-            {dayOffset > 2 ? `Seçili: ${labelOf(dayOffset).label}, ${labelOf(dayOffset).sub}` : "Takvimden gün seç (30 gün)"}
+            {dayOffset > 2 ? t("planner.selected", { day: labelOf(dayOffset).label, date: labelOf(dayOffset).sub }) : t("planner.calendar")}
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showCalendar ? "rotate-180" : ""}`} />
           </button>
 
@@ -402,7 +423,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                       : "bg-[#FBFAFE] text-[#374151] border-transparent hover:border-[#C4B5FD]"
                   }`}
                 >
-                  <div className="text-[10.5px] font-semibold leading-none">{fmtWdShort.format(new Date(Date.now() + d.offset * 86400000))}</div>
+                  <div className="text-[10.5px] font-semibold leading-none">{fmts.fmtWdShort.format(new Date(Date.now() + d.offset * 86400000))}</div>
                   <div className="text-[12px] font-bold mt-0.5">{new Date(Date.now() + d.offset * 86400000).getDate()}</div>
                 </button>
               ))}
@@ -413,7 +434,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
           <div className="mt-4">
             {loading ? (
               <div className="flex items-center gap-2 text-[13px] text-[#7C3AED] py-3">
-                <Loader2 className="w-4 h-4 animate-spin" /> Uygun teslimat kontrol ediliyor…
+                <Loader2 className="w-4 h-4 animate-spin" /> {t("planner.checking")}
               </div>
             ) : errDetail ? (
               <div className="flex items-start gap-2 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-3 text-[12.5px] text-[#B91C1C]">
@@ -439,7 +460,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                   <style>{`@keyframes cyExpand{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
                   {/* TESLİMAT SEÇENEĞİ KARTLARI */}
-                  <div className="text-[11px] font-bold text-[#9CA3AF] tracking-wider mb-2">TESLİMAT SEÇENEĞİ</div>
+                  <div className="text-[11px] font-bold text-[#9CA3AF] tracking-wider mb-2">{t("planner.option")}</div>
                   <div className={`grid gap-2.5 ${showSameday && showCargo ? "sm:grid-cols-2" : "grid-cols-1"}`}>
                     {showSameday && (
                       <button
@@ -450,15 +471,15 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                             : "border-[#EDE9FE] bg-white hover:border-[#C4B5FD] hover:shadow-[0_4px_16px_rgba(124,58,237,0.1)]"
                         }`}
                       >
-                        <span className="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857]">AYNI GÜN</span>
+                        <span className="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857]">{t("planner.sameDayBadge")}</span>
                         {mode === "sameday" && <Check className="w-4 h-4 text-[#7C3AED] absolute bottom-2.5 right-2.5" />}
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center mb-2">
                           <Truck className="w-[18px] h-[18px] text-white" />
                         </div>
-                        <div className="text-[13.5px] font-bold text-[#111827]">Aynı Gün Teslimat</div>
+                        <div className="text-[13.5px] font-bold text-[#111827]">{t("planner.sameDayTitle")}</div>
                         <div className="text-[11.5px] text-[#6B7280] mt-0.5">
-                          {dayOffset === 0 ? "Bugün teslim" : "Seçili gün teslim"}
-                          {sd?.est_min_minutes != null && sd?.est_max_minutes != null ? ` · ${sd.est_min_minutes}-${sd.est_max_minutes} dk` : ""}
+                          {dayOffset === 0 ? t("planner.deliverToday") : t("planner.deliverSelected")}
+                          {sd?.est_min_minutes != null && sd?.est_max_minutes != null ? <> · <Num>{sd.est_min_minutes}-{sd.est_max_minutes}</Num> {t("planner.min")}</> : ""}
                         </div>
                       </button>
                     )}
@@ -471,13 +492,13 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                             : "border-[#EDE9FE] bg-white hover:border-[#C4B5FD] hover:shadow-[0_4px_16px_rgba(124,58,237,0.1)]"
                         }`}
                       >
-                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center">1-3<br />İŞ GÜNÜ</span>
+                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857] leading-[1.1] text-center"><Num>1-3</Num><br />{t("planner.businessDay")}</span>
                         {mode === "cargo" && <Check className="w-4 h-4 text-[#7C3AED] absolute bottom-2.5 right-2.5" />}
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center mb-2">
                           <Package className="w-[18px] h-[18px] text-white" />
                         </div>
-                        <div className="text-[13.5px] font-bold text-[#111827]">{cargoFree ? "Ücretsiz Kargo" : "Kargo"}</div>
-                        <div className="text-[11.5px] text-[#6B7280] mt-0.5">Türkiye Geneli · {cargo?.est_text ?? "1-3 iş günü"}</div>
+                        <div className="text-[13.5px] font-bold text-[#111827]">{cargoFree ? t("planner.freeCargo") : t("common.cargo")}</div>
+                        <div className="text-[11.5px] text-[#6B7280] mt-0.5">{t("planner.nationwide")} · <Num>{etaText}</Num></div>
                       </button>
                     )}
                   </div>
@@ -488,13 +509,13 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                       <div>
                         {/* band + süre + ücret + son alım */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] mb-2">
-                          <span className="inline-flex items-center gap-1 font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> Aynı gün teslimat</span>
+                          <span className="inline-flex items-center gap-1 font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> {t("planner.sameDaySmall")}</span>
                           {sd!.band && <span className="text-[#6B7280]">{sd!.band.replace("İstanbul - ", "")}</span>}
                           {sd!.est_min_minutes != null && sd!.est_max_minutes != null && (
-                            <span className="text-[#6B7280]">· {sd!.est_min_minutes}-{sd!.est_max_minutes} dk</span>
+                            <span className="text-[#6B7280]">· <Num>{sd!.est_min_minutes}-{sd!.est_max_minutes}</Num> {t("planner.min")}</span>
                           )}
-                          <span className="text-[#6B7280]">· Teslimat {feeText(sd!.fee_minor)}</span>
-                          {sd!.cutoff_time && <span className="text-[#6B7280]">· Son alım {String(sd!.cutoff_time).slice(0, 5)}</span>}
+                          <span className="text-[#6B7280]">· {t("planner.deliveryFee", { fee: feeText(sd!.fee_minor) })}</span>
+                          {sd!.cutoff_time && <span className="text-[#6B7280]">· {t("planner.lastPickup", { time: "" })}<Num>{String(sd!.cutoff_time).slice(0, 5)}</Num></span>}
                         </div>
 
                         {/* Cut-off canlı geri sayım (sadece BUGÜN; kesme saati API'den) */}
@@ -506,8 +527,8 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                           return (
                             <div className={`flex items-center gap-2 rounded-xl px-3 py-2 mb-2.5 text-[12.5px] font-semibold border ${urgent ? "bg-[#FEF2F2] border-[#FCA5A5] text-[#B91C1C] animate-pulse" : "bg-[#F5F3FF] border-[#DDD6FE] text-[#6D28D9]"}`}>
                               <Clock className="w-4 h-4 shrink-0" />
-                              <span>Bugün teslimat için kalan süre:</span>
-                              <span className="ml-auto tabular-nums font-bold tracking-tight text-[14px]">{hh}:{mm}:{ss}</span>
+                              <span>{t("planner.remaining")}</span>
+                              <Num className="ms-auto tabular-nums font-bold tracking-tight text-[14px]">{hh}:{mm}:{ss}</Num>
                             </div>
                           );
                         })()}
@@ -527,13 +548,13 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                                 className={`relative rounded-xl px-2 py-2.5 text-center transition-all border text-[13px] font-semibold ${disabled ? "bg-[#F3F4F6] text-[#C4C4C4] border-[#EEE] cursor-not-allowed line-through" : activeSlot ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_12px_rgba(124,58,237,0.3)]" : "bg-white text-[#374151] border-[#EDE9FE] hover:border-[#7C3AED] hover:shadow-[0_2px_8px_rgba(124,58,237,0.12)]"}`}
                               >
                                 {activeSlot && <Check className="w-3.5 h-3.5 absolute top-1.5 right-1.5" />}
-                                {s.label}
+                                <Num>{s.label}</Num>
                                 {!disabled && s.extra_fee_minor > 0 && (
                                   <div className={`text-[10px] font-medium mt-0.5 ${activeSlot ? "text-white/80" : "text-[#9CA3AF]"}`}>+{feeText(s.extra_fee_minor)}</div>
                                 )}
                                 {disabled && (
                                   <div className="text-[9.5px] font-semibold mt-0.5 text-[#B91C1C] no-underline">
-                                    {timePassed ? "Süresi geçti" : "Doldu"}
+                                    {timePassed ? t("planner.slotPassed") : t("planner.slotFull")}
                                   </div>
                                 )}
                               </button>
@@ -542,7 +563,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                         </div>
                         {slotId != null && (
                           <p className="mt-2.5 flex items-center gap-1.5 text-[12px] font-medium text-[#059669]">
-                            <Check className="w-4 h-4" /> Teslimat saatiniz seçildi — sipariş adımında onaylanacak.
+                            <Check className="w-4 h-4" /> {t("planner.slotChosen")}
                           </p>
                         )}
                       </div>
@@ -550,23 +571,23 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                       <div className="rounded-[18px] border border-[#DDD6FE] bg-gradient-to-b from-[#F5F3FF] to-white p-4 shadow-[0_4px_18px_rgba(124,58,237,0.1)]">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-8 h-8 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><Package className="w-4 h-4 text-[#7C3AED]" /></div>
-                          <div className="text-[13px] font-extrabold tracking-wide text-[#6D28D9]">{cargoFree ? "ÜCRETSİZ KARGO" : "KARGO"}</div>
+                          <div className="text-[13px] font-extrabold tracking-wide text-[#6D28D9]">{cargoFree ? t("planner.freeCargoBadge") : t("planner.cargoUpper")}</div>
                         </div>
                         <ul className="space-y-1.5 text-[12.5px] text-[#374151]">
-                          <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#059669] shrink-0" /> Siparişiniz siparişe özel hazırlanır.</li>
-                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> Kargo ile {cargo!.est_text ?? "1-3 iş günü"} içinde teslim edilir · saat slotu yoktur.</li>
+                          <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#059669] shrink-0" /> {t("planner.prepared")}</li>
+                          <li className="flex items-center gap-2"><Truck className="w-4 h-4 text-[#7C3AED] shrink-0" /> {t("planner.cargoDesc", { eta: etaText })}</li>
                         </ul>
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">
-                            <div className="text-[10.5px] text-[#9CA3AF] font-semibold">Tahmini teslimat</div>
-                            <div className="text-[13px] font-bold text-[#111827] mt-0.5">{cargo!.est_text ?? "1-3 iş günü"}</div>
+                            <div className="text-[10.5px] text-[#9CA3AF] font-semibold">{t("planner.estDelivery")}</div>
+                            <div className="text-[13px] font-bold text-[#111827] mt-0.5"><Num>{etaText}</Num></div>
                           </div>
                           <div className="rounded-xl bg-white border border-[#EDE9FE] p-2.5">
-                            <div className="text-[10.5px] text-[#9CA3AF] font-semibold">Kargo ücreti</div>
-                            <div className="text-[13px] font-bold text-[#7C3AED] mt-0.5">{cargoFree ? "Ücretsiz" : feeText(cargo!.fee_minor)}</div>
+                            <div className="text-[10.5px] text-[#9CA3AF] font-semibold">{t("planner.cargoFee")}</div>
+                            <div className="text-[13px] font-bold text-[#7C3AED] mt-0.5"><Num>{cargoFree ? t("common.free") : feeText(cargo!.fee_minor)}</Num></div>
                           </div>
                         </div>
-                        <p className="text-[11px] text-[#9CA3AF] mt-2.5">Tahmini teslimat süreleri bulunduğunuz ile göre değişebilir.</p>
+                        <p className="text-[11px] text-[#9CA3AF] mt-2.5">{t("planner.cargoNote")}</p>
                       </div>
                     ) : null}
                   </div>
