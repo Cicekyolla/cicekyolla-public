@@ -28,7 +28,7 @@ import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
-import { useI18n, Num } from "@/lib/i18n";
+import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { formatMinorTRY } from "@/lib/api";
 import { CheckoutProgress } from "./CheckoutProgress";
 
@@ -695,7 +695,7 @@ function StepAlici(p: {
             return (
               <button key={o.id} onClick={() => p.setOccasion(o.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[13.5px] font-semibold transition-all ${on ? "bg-[#7C3AED] text-white scale-[1.03] shadow-[0_8px_20px_-8px_rgba(124,58,237,0.7)]" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
-                <span>{o.emoji}</span> {o.label}
+                <span>{o.emoji}</span> {t(("occ." + o.id) as DictKey)}
               </button>
             );
           })}
@@ -709,7 +709,7 @@ function StepAlici(p: {
             return (
               <button key={d.id} onClick={() => p.toggleNote(d.id)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-all border ${on ? "bg-[#F5F3FF] border-[#C4B5FD] text-[#6D28D9]" : "bg-white border-[#E9E7F0] text-[#6B7280] hover:border-[#DDD6FE]"}`}>
-                {on && <Check className="w-3.5 h-3.5" />} {d.label}
+                {on && <Check className="w-3.5 h-3.5" />} {t(("note." + d.id) as DictKey)}
               </button>
             );
           })}
@@ -744,7 +744,8 @@ function lsWrite(key: string, arr: string[]) {
 function StepKart(p: { occasion: string | null; recipientName: string; cardMessage: string; setCardMessage: (v: string) => void }) {
   const { t } = useI18n();
   const [tone, setTone] = useState<Tone>("samimi");
-  const [lang, setLang] = useState<Lang>("tr");
+  const { locale: siteLocale } = useI18n();
+  const [lang, setLang] = useState<Lang>(siteLocale === "tr" ? "tr" : "en");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
@@ -804,10 +805,10 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
 
       {/* Ton + Dil */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        {TONES.map((t) => (
-          <button key={t.id} onClick={() => setTone(t.id)}
-            className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tone === t.id ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
-            {t.label}
+        {TONES.map((tn) => (
+          <button key={tn.id} onClick={() => setTone(tn.id)}
+            className={`px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-all ${tone === tn.id ? "bg-[#7C3AED] text-white" : "bg-[#F7F6FB] text-[#4B5563] hover:bg-[#F0EEF9]"}`}>
+            {t(("tone." + tn.id) as DictKey)}
           </button>
         ))}
         <div className="ml-auto inline-flex rounded-full bg-[#F1F0F5] p-0.5">
@@ -1173,7 +1174,7 @@ function StepOdeme(p: {
       </div>
 
       <div className="mt-4 pt-4 border-t border-[#F1F0F5] space-y-3">
-        <RevRow icon={User} label={t("co.recipient")} value={`${p.recipientName || "—"}${occasionLabel(p.occasion) ? " · " + occasionLabel(p.occasion) : ""}`} />
+        <RevRow icon={User} label={t("co.recipient")} value={`${p.recipientName || "—"}${p.occasion ? " · " + (OCCASIONS.find((o) => o.id === p.occasion)?.emoji ?? "") + " " + t(("occ." + p.occasion) as DictKey) : ""}`} />
         <RevRow icon={MapPin} label="Teslimat" value={`${p.region ? p.region + " — " : ""}${p.address || "—"}`} />
         <RevRow icon={Calendar} label="Tarih & Saat" value={`${p.dateStr ?? "—"}${p.slotStr ? " · " + p.slotStr : ""}`} />
         {p.typeStr && <RevRow icon={Truck} label="Teslimat Tipi" value={p.typeStr} />}
@@ -1297,7 +1298,7 @@ function LivingReceipt(p: {
       {(p.recipientName || p.occasion) && (
         <ReceiptGroup label={t("co.recipient")} onEdit={p.onEditStep ? () => p.onEditStep?.("alici") : undefined}>
           {p.recipientName && <RLine icon={User} value={p.recipientName} />}
-          {occasionLabel(p.occasion) && <RLine icon={Heart} value={occasionLabel(p.occasion)!} />}
+          {p.occasion && OCCASIONS.some((o) => o.id === p.occasion) && <RLine icon={Heart} value={`${OCCASIONS.find((o) => o.id === p.occasion)?.emoji ?? ""} ${t(("occ." + p.occasion) as DictKey)}`} />}
         </ReceiptGroup>
       )}
 
