@@ -1,4 +1,5 @@
 "use client";
+import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 import Link from "next/link";
 import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
@@ -42,6 +43,9 @@ export function Footer({
   categories?: { name: string; href: string }[];
   brand?: FooterBrand;
 }) {
+  // Faz 2: onaylı kategori çevirisi varsa footer etiketi (href aynı)
+  const catTx = useCategoryTranslations();
+  const cn = (name: string, href?: string | null) => catTx.bySlug[slugFromHref(href)]?.name ?? name;
   const contactPhone = brand?.contactPhone?.trim() || "0507 441 34 74";
   const contactEmail = brand?.contactEmail?.trim() || "info@cicekyolla.com.tr";
   const phoneDigits = contactPhone.replace(/\D/g, "");
@@ -118,7 +122,7 @@ export function Footer({
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                    {item.name}
+                    {cn(item.name, item.href)}
                   </Link>
                 </li>
               ))}

@@ -12,6 +12,7 @@ import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useT, Num } from "@/lib/i18n";
+import { useProductName } from "@/lib/i18n/content";
 
 export type Product = {
   id: number;
@@ -89,6 +90,8 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 
 export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean }) {
   const tr = useT();
+  // Faz 2: onaylı çeviri varsa GÖRÜNEN ad; id/slug/fiyat/href değişmez.
+  const shownName = useProductName(product.id, product.name);
   const [wish, setWish] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [hoverImage, setHoverImage] = useState<string | null>(null);
@@ -130,7 +133,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
         <div className="relative overflow-hidden bg-white" style={{ aspectRatio: "4/5" }}>
           <ProductImage
             src={product.image}
-            alt={product.name}
+            alt={shownName}
             scale={hovered ? 1.06 : 1}
             padding="0px"
             derivatives={product.derivatives}
@@ -142,7 +145,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={hoverImage}
-              alt={`${product.name} yaşam alanında`}
+              alt={`${shownName} yaşam alanında`}
               draggable={false}
               loading="lazy"
               decoding="async"
@@ -245,7 +248,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
             className="text-[#111827] font-semibold leading-snug transition-colors duration-200 group-hover:text-[#7C3AED]"
             style={{ fontSize: "14.5px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: "2.55em" }}
           >
-            {product.name}
+            {shownName}
           </h3>
           {tags.length > 0 ? (
             // V65 cila (polish): etiketler TEK satırda hizalı kalır, taşan zarifçe kırpılır

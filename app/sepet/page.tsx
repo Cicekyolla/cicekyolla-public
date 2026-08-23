@@ -7,6 +7,7 @@ import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useState } from "react";
 import { useI18n, Num } from "@/lib/i18n";
+import { ProductDisplayName } from "@/lib/i18n/content";
 
 function money(minor: number) {
   return `₺${(minor / 100).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
@@ -108,7 +109,7 @@ export default function CartPage() {
                       <div className="flex flex-1 flex-col justify-between gap-6">
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <h2 className="text-xl font-bold">{item.name}</h2>
+                            <h2 className="text-xl font-bold"><ProductDisplayName id={item.productId} fallback={item.name} /></h2>
                             {item.variantTitle ? <p className="mt-1 text-sm text-[#8b94a6]">{item.variantTitle}</p> : null}
                             {/* Teslimat satırın parçası — ÇiçekSepeti'nde de sepette görünür. */}
                             {deliveryLine(item.delivery, intl, t("cart.deliveryCargo")) ? (
