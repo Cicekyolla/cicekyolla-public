@@ -11,6 +11,7 @@ import { BrandWordmark } from "./BrandWordmark";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSelector } from "./LanguageSelector";
+import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 const fallbackGroup = (label: string, href: string): MegaGroup => ({
   href,
@@ -66,6 +67,9 @@ export function Header({ menu, nav, search, brand }: {
   const { itemCount: cartCount } = useCart();
   const router = useRouter();
   const { t } = useI18n();
+  // Faz 2: onaylı kategori çevirisi varsa menü etiketi değişir (href/slug AYNI kalır).
+  const catTx = useCategoryTranslations();
+  const cn = (name: string, href?: string | null) => catTx.bySlug[slugFromHref(href)] ?? name;
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
@@ -237,7 +241,7 @@ export function Header({ menu, nav, search, brand }: {
                       textTransform: "uppercase",
                     }}
                   >
-                    {key}
+                    {cn(key, menuData[key].href)}
                   </Link>
                 </div>
               ))}
@@ -295,7 +299,7 @@ export function Header({ menu, nav, search, brand }: {
                               onClick={() => setMobileOpen(false)}
                               className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
                             >
-                              {cat.label}
+                              {cn(cat.label, cat.href)}
                               <ArrowRight className="w-3.5 h-3.5 opacity-40" />
                             </Link>
                           );
@@ -321,7 +325,7 @@ export function Header({ menu, nav, search, brand }: {
                                   onClick={() => setMobileOpen(false)}
                                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12.5px] font-semibold text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
                                 >
-                                  Tüm {cat.label}
+                                  {t("common.all")} {cn(cat.label, cat.href)}
                                   <ArrowRight className="w-3 h-3 opacity-60" />
                                 </Link>
                                 {subs.map((s) => (
@@ -331,7 +335,7 @@ export function Header({ menu, nav, search, brand }: {
                                     onClick={() => setMobileOpen(false)}
                                     className="block px-4 py-2.5 rounded-lg text-[12.5px] text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
                                   >
-                                    {s.name}
+                                    {cn(s.name, s.href)}
                                   </Link>
                                 ))}
                               </div>
@@ -357,7 +361,7 @@ export function Header({ menu, nav, search, brand }: {
                           onClick={() => setMobileOpen(false)}
                           className="flex items-center justify-between px-4 py-3.5 rounded-xl text-[13px] font-semibold text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all uppercase tracking-wide"
                         >
-                          {item.label}
+                          {cn(item.label, item.href)}
                           <ArrowRight className="w-3.5 h-3.5 opacity-40" />
                         </Link>
                       ))}
@@ -510,7 +514,7 @@ export function Header({ menu, nav, search, brand }: {
                             <div key={`${col.href}-${ci}`}>
                               {col.continued ? (
                                 <p className="text-[11px] font-semibold text-[#9CA3AF] pb-1 tracking-wide">
-                                  {col.title} <span className="font-normal">{t("header.more")}</span>
+                                  {cn(col.title, col.href)} <span className="font-normal">{t("header.more")}</span>
                                 </p>
                               ) : (
                                 <Link
@@ -518,7 +522,7 @@ export function Header({ menu, nav, search, brand }: {
                                   onClick={() => setActiveMenu(null)}
                                   className="block text-[13.5px] font-semibold text-[#111827] hover:text-[#8B5CF6] transition-colors pb-1"
                                 >
-                                  {col.title}
+                                  {cn(col.title, col.href)}
                                 </Link>
                               )}
                               {col.links.length > 0 && (
@@ -530,7 +534,7 @@ export function Header({ menu, nav, search, brand }: {
                                         onClick={() => setActiveMenu(null)}
                                         className="block text-[13px] leading-[1.4] text-[#6B7280] hover:text-[#8B5CF6] transition-colors truncate"
                                       >
-                                        {l.name}
+                                        {cn(l.name, l.href)}
                                       </Link>
                                     </li>
                                   ))}

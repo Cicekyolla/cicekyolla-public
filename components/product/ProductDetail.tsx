@@ -27,6 +27,7 @@ import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery, clearPendingSelection, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 import { useI18n, Num } from "@/lib/i18n";
+import { useProductTranslation } from "@/lib/i18n/content";
 
 const WHATSAPP = "905458813450";
 
@@ -161,6 +162,11 @@ export function ProductDetail({
   const [quantity, setQuantity] = useState(1);
   const [wish, setWish] = useState(false);
   const { t, locale } = useI18n();
+  // Faz 2: onaylı çeviri varsa ad/açıklama SUNUMDA değişir; id/slug/fiyat/varyant/sepet TR kaynak kayıttır.
+  const tx = useProductTranslation(product.slug);
+  const displayName = tx?.name || product.name;
+  const displayShort = tx?.short_description ?? product.short_description;
+  const displayLong = tx?.long_description ?? product.long_description;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
   const [deliverySelection, setDeliverySelection] = useState<PendingDelivery | null>(null);
@@ -179,7 +185,7 @@ export function ProductDetail({
   );
 
   const cover = gallery[active];
-  const productIntroSource = (product.short_description || product.long_description || "")
+  const productIntroSource = (displayShort || displayLong || "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;|&#160;/gi, " ")
     .replace(/&amp;/gi, "&")
@@ -200,7 +206,7 @@ export function ProductDetail({
           <ChevronRight className="w-3 h-3" />
           <span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#111827] font-medium truncate max-w-[220px]">{product.name}</span>
+          <span className="text-[#111827] font-medium truncate max-w-[220px]">{displayName}</span>
         </nav>
       </div>
 
@@ -289,7 +295,7 @@ export function ProductDetail({
 
         {/* BİLGİ */}
         <div>
-          <h1 className="text-[28px] md:text-[34px] font-bold text-[#111827] leading-tight tracking-tight">{product.name}</h1>
+          <h1 className="text-[28px] md:text-[34px] font-bold text-[#111827] leading-tight tracking-tight">{displayName}</h1>
 
           {productIntro && (
             <p className="mt-3 max-w-2xl text-[15px] leading-[1.75] text-[#6B7280]">{productIntro}</p>
@@ -524,8 +530,8 @@ export function ProductDetail({
           </p>
 
           {/* Ürün bilgileri — tek satırlı sekmeler; aynı anda yalnız seçilen içerik görünür */}
-          {product.long_description && (() => {
-            const sections = parseDescriptionSections(product.long_description);
+          {displayLong && (() => {
+            const sections = parseDescriptionSections(displayLong);
             if (!sections.length) return null;
             const intro = sections.find((s) => s.isIntro);
             const panels = sections.filter((s) => !s.isIntro);
