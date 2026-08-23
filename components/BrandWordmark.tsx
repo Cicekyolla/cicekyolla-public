@@ -1,5 +1,8 @@
 import { mediaUrl } from "@/lib/media";
 
+/** Footer rozet logosu (yuvarlak altın ÇiçekYolla). Operatör varlığı: public/brand/ */
+const BADGE_LOGO = "/brand/cicekyolla-badge.webp";
+
 export function BrandWordmark({
   logoUrl,
   alt = "ÇiçekYolla",
@@ -10,9 +13,26 @@ export function BrandWordmark({
   logoUrl?: string;
   alt?: string;
   tagline?: string;
-  size?: "header" | "compact" | "footer";
+  size?: "header" | "compact" | "footer" | "badge";
   inverse?: boolean;
 }) {
+  // badge: kırpma YOK — kare/yuvarlak rozet logosu (footer). Header/compact/footer modları DEĞİŞMEDİ.
+  if (size === "badge") {
+    return (
+      <div className="flex w-fit flex-col items-center" aria-label={alt}>
+        <img
+          src={mediaUrl(logoUrl || BADGE_LOGO)}
+          alt={alt}
+          className="block h-[112px] w-[112px] xl:h-[124px] xl:w-[124px] rounded-full object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+          decoding="async"
+          draggable={false}
+        />
+        <span className={`mt-3 text-[9px] xl:text-[10px] ${inverse ? "text-[#C084FC]" : "text-[#6D28D9]"} text-center font-bold uppercase leading-none tracking-[0.32em]`}>
+          {tagline || "Premium Çiçekçi"}
+        </span>
+      </div>
+    );
+  }
   const isFooter = size === "footer";
   const isCompact = size === "compact";
   const frameClass = isFooter
