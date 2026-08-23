@@ -23,7 +23,7 @@ import {
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, clearPendingDelivery, savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/DeliveryPlanner";
-import { OCCASIONS, DELIVERY_NOTES, occasionLabel } from "@/lib/checkoutConfig";
+import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
