@@ -395,6 +395,10 @@ const tr = {
   "tone.duygusal": "Duygusal",
   "tone.resmi": "Resmi",
   "tone.esprili": "Esprili",
+  "pdp.sizeTitle": "Boyut Seçin",
+  "pdp.size.small": "Küçük",
+  "pdp.size.medium": "Orta",
+  "pdp.size.large": "Büyük",
 };
 
 export type Dict = typeof tr;

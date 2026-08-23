@@ -384,6 +384,10 @@ const zh: Dict = {
   "tone.duygusal": "感性",
   "tone.resmi": "正式",
   "tone.esprili": "幽默",
+  "pdp.sizeTitle": "选择尺寸",
+  "pdp.size.small": "小",
+  "pdp.size.medium": "中",
+  "pdp.size.large": "大",
 };
 
 export default zh;

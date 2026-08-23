@@ -384,6 +384,10 @@ const az: Dict = {
   "tone.duygusal": "Duyğusal",
   "tone.resmi": "Rəsmi",
   "tone.esprili": "Zarafatlı",
+  "pdp.sizeTitle": "Ölçü seçin",
+  "pdp.size.small": "Kiçik",
+  "pdp.size.medium": "Orta",
+  "pdp.size.large": "Böyük",
 };
 
 export default az;

@@ -385,6 +385,10 @@ const ar: Dict = {
   "tone.duygusal": "عاطفي",
   "tone.resmi": "رسمي",
   "tone.esprili": "مرح",
+  "pdp.sizeTitle": "اختر الحجم",
+  "pdp.size.small": "صغير",
+  "pdp.size.medium": "متوسط",
+  "pdp.size.large": "كبير",
 };
 
 export default ar;

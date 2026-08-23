@@ -384,6 +384,10 @@ const ru: Dict = {
   "tone.duygusal": "Трогательный",
   "tone.resmi": "Официальный",
   "tone.esprili": "С юмором",
+  "pdp.sizeTitle": "Выберите размер",
+  "pdp.size.small": "Маленький",
+  "pdp.size.medium": "Средний",
+  "pdp.size.large": "Большой",
 };
 
 export default ru;

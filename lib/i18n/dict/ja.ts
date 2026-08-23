@@ -384,6 +384,10 @@ const ja: Dict = {
   "tone.duygusal": "感動的",
   "tone.resmi": "フォーマル",
   "tone.esprili": "ユーモア",
+  "pdp.sizeTitle": "サイズを選択",
+  "pdp.size.small": "小",
+  "pdp.size.medium": "中",
+  "pdp.size.large": "大",
 };
 
 export default ja;

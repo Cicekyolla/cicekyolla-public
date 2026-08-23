@@ -384,6 +384,10 @@ const nl: Dict = {
   "tone.duygusal": "Gevoelvol",
   "tone.resmi": "Formeel",
   "tone.esprili": "Grappig",
+  "pdp.sizeTitle": "Kies formaat",
+  "pdp.size.small": "Klein",
+  "pdp.size.medium": "Middel",
+  "pdp.size.large": "Groot",
 };
 
 export default nl;

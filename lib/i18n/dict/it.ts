@@ -384,6 +384,10 @@ const it: Dict = {
   "tone.duygusal": "Emozionante",
   "tone.resmi": "Formale",
   "tone.esprili": "Spiritoso",
+  "pdp.sizeTitle": "Scegli la dimensione",
+  "pdp.size.small": "Piccolo",
+  "pdp.size.medium": "Medio",
+  "pdp.size.large": "Grande",
 };
 
 export default it;

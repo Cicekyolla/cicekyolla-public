@@ -307,14 +307,14 @@ export function ProductDetail({
           {sizeProducts.length >= 3 && (
             <section aria-labelledby="auto-size-title" className="mt-7">
               <h2 id="auto-size-title" className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
-                Boyut Seçin
+                {t("pdp.sizeTitle")}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {sizeProducts.slice(0, 3).map((item, index) => {
                   const labels = [
-                    ["Küçük", "Standart"],
-                    ["Orta", "Premium"],
-                    ["Büyük", "Deluxe"],
+                    [t("pdp.size.small"), "Standart"],
+                    [t("pdp.size.medium"), "Premium"],
+                    [t("pdp.size.large"), "Deluxe"],
                   ] as const;
                   const [label, tier] = labels[index];
                   return (

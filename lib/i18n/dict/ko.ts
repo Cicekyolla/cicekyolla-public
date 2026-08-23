@@ -384,6 +384,10 @@ const ko: Dict = {
   "tone.duygusal": "감성적",
   "tone.resmi": "격식",
   "tone.esprili": "유머러스",
+  "pdp.sizeTitle": "사이즈 선택",
+  "pdp.size.small": "소",
+  "pdp.size.medium": "중",
+  "pdp.size.large": "대",
 };
 
 export default ko;
