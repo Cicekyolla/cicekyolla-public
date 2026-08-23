@@ -26,7 +26,7 @@ export function useProductTranslation(slug: string | null | undefined): ProductC
     if (!key) { setTx(null); return; }
     if (productCache.has(key)) { setTx(productCache.get(key) ?? null); return; }
     let alive = true;
-    fetch(`/api/i18n/product?slug=${encodeURIComponent(slug!)}&locale=${locale}`, { cache: "force-cache" })
+    fetch(`/api/i18n/product?slug=${encodeURIComponent(slug!)}&locale=${locale}`, { cache: "no-store" })
       .then((r) => r.json()).then((j) => { const v = (j?.data as ProductContentTx | null) ?? null; productCache.set(key, v); if (alive) setTx(v); })
       .catch(() => { if (alive) setTx(null); });
     return () => { alive = false; };
@@ -46,7 +46,7 @@ export function useCategoryTranslations(): CategoryContentTx {
     // Aynı anda mount olan header/footer/başlık tek istek paylaşır (in-flight tekilleştirme).
     let p = categoryInflight.get(key);
     if (!p) {
-      p = fetch(`/api/i18n/categories?locale=${locale}`, { cache: "force-cache" })
+      p = fetch(`/api/i18n/categories?locale=${locale}`, { cache: "no-store" })
         .then((r) => r.json()).then((j) => { const d = j?.data; const v: CategoryContentTx = d && d.bySlug ? d : EMPTY_CAT; categoryCache.set(key, v); return v; })
         .catch(() => EMPTY_CAT).finally(() => categoryInflight.delete(key));
       categoryInflight.set(key, p);
@@ -75,7 +75,7 @@ function flushPending() {
     pending.delete(locale);
     const list = [...ids].slice(0, 200);
     if (!list.length) continue;
-    fetch(`/api/i18n/products?ids=${list.join(",")}&locale=${locale}`, { cache: "force-cache" })
+    fetch(`/api/i18n/products?ids=${list.join(",")}&locale=${locale}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         const got = (j?.data ?? {}) as Record<string, string>;
