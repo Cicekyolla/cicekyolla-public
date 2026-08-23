@@ -142,7 +142,7 @@ export function Header({ menu, nav, search, brand }: {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
           <Link
             href="/kategori/turkiye-geneli-kargo"
-            className="hidden lg:block text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap text-white/90 hover:text-white transition-colors"
+            className="hidden lg:block min-w-0 max-w-[58vw] truncate text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap text-white/90 hover:text-white transition-colors"
             aria-label={t("header.bandLink")}
           >
             {t("header.band")}
