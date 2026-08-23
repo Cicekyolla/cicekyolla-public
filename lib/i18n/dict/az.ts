@@ -351,6 +351,18 @@ const az: Dict = {
   "co.discountWith": "Endirim ({code})",
   "co.kvkkNote": "Telefon və e-poçtunuz heç bir halda alıcıya göstərilmir (KVKK uyğun).",
   "co.steps.confirm": "Təsdiq",
+  "trust.eyebrow": "Ödəniş və sifariş zəmanəti",
+  "trust.title": "Hər addımda rahatlıq.",
+  "trust.desc": "Sadə, şəffaf və lazım olduqda real dəstək təqdim edən sifariş təcrübəsi.",
+  "trust.a1": "Şifrəli bağlantı",
+  "trust.a1d": "Sifariş məlumatlarınız təhlükəsiz HTTPS bağlantısı ilə ötürülür.",
+  "trust.a2": "Kart məlumatı saxlanılmır",
+  "trust.a2d": "Mövcud sifariş axınında kart məlumatı istənilmir və ÇiçekYolla serverlərində saxlanılmır.",
+  "trust.a3": "Real dəstək",
+  "trust.a3d": "Sifarişdən əvvəl və sonra WhatsApp vasitəsilə bizə çata bilərsiniz.",
+  "trust.faq": "Ödəniş təhlükəsizliyi haqqında",
+  "trust.faqd": "Aktiv olmayan kart və ya taksit seçimləri göstərilmir. Onlayn ödəniş açıldıqda yalnız təsdiqlənmiş seçimlər ödəniş addımında görünür.",
+  "trust.wa": "WhatsApp-dan məlumat alın",
 };
 
 export default az;

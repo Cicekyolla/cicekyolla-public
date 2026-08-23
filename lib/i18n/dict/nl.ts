@@ -351,6 +351,18 @@ const nl: Dict = {
   "co.discountWith": "Korting ({code})",
   "co.kvkkNote": "Uw telefoon en e-mail worden nooit aan de ontvanger getoond (KVKK/AVG-conform).",
   "co.steps.confirm": "Bevestiging",
+  "trust.eyebrow": "Betaal- & bestelzekerheid",
+  "trust.title": "Gerust bij elke stap.",
+  "trust.desc": "Een eenvoudige, transparante bestelervaring met echte ondersteuning wanneer u die nodig heeft.",
+  "trust.a1": "Versleutelde verbinding",
+  "trust.a1d": "Uw bestelgegevens gaan via een beveiligde HTTPS-verbinding.",
+  "trust.a2": "Kaartgegevens niet opgeslagen",
+  "trust.a2d": "In de huidige flow worden geen kaartgegevens gevraagd of op ÇiçekYolla-servers bewaard.",
+  "trust.a3": "Echte ondersteuning",
+  "trust.a3d": "Voor en na uw bestelling bereikt u ons via WhatsApp.",
+  "trust.faq": "Over betaalbeveiliging",
+  "trust.faqd": "Inactieve kaart- of termijnopties worden nooit getoond. Bij online betaling verschijnen alleen geverifieerde opties.",
+  "trust.wa": "Info via WhatsApp",
 };
 
 export default nl;

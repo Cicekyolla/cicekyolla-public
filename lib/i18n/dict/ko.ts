@@ -351,6 +351,18 @@ const ko: Dict = {
   "co.discountWith": "할인 ({code})",
   "co.kvkkNote": "전화번호와 이메일은 어떤 경우에도 받는 분에게 표시되지 않습니다 (KVKK 준수).",
   "co.steps.confirm": "확인",
+  "trust.eyebrow": "결제 및 주문 보장",
+  "trust.title": "모든 단계에서 안심.",
+  "trust.desc": "간단하고 투명한 주문 경험과 필요할 때 제공되는 실제 지원.",
+  "trust.a1": "암호화된 연결",
+  "trust.a1d": "주문 정보는 안전한 HTTPS 연결로 전송됩니다.",
+  "trust.a2": "카드 정보 미저장",
+  "trust.a2d": "현재 주문 흐름에서는 카드 정보를 요구하지 않으며 ÇiçekYolla 서버에 저장하지 않습니다.",
+  "trust.a3": "실제 지원",
+  "trust.a3d": "주문 전후로 WhatsApp을 통해 연락하실 수 있습니다.",
+  "trust.faq": "결제 보안 안내",
+  "trust.faqd": "비활성 카드 또는 할부 옵션은 표시되지 않습니다. 온라인 결제가 활성화되면 검증된 옵션만 결제 단계에 표시됩니다.",
+  "trust.wa": "WhatsApp으로 문의",
 };
 
 export default ko;

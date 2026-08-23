@@ -351,6 +351,18 @@ const ja: Dict = {
   "co.discountWith": "割引（{code}）",
   "co.kvkkNote": "お電話番号とメールアドレスはお届け先に一切表示されません（KVKK 準拠）。",
   "co.steps.confirm": "確認",
+  "trust.eyebrow": "決済・注文の安心保証",
+  "trust.title": "すべてのステップで安心。",
+  "trust.desc": "シンプルで透明性のある注文体験と、必要なときの確かなサポート。",
+  "trust.a1": "暗号化された接続",
+  "trust.a1d": "ご注文情報は安全な HTTPS 接続で送信されます。",
+  "trust.a2": "カード情報は保存されません",
+  "trust.a2d": "現在の注文フローではカード情報を求めず、ÇiçekYolla のサーバーにも保存しません。",
+  "trust.a3": "確かなサポート",
+  "trust.a3d": "ご注文の前後に WhatsApp でお問い合わせいただけます。",
+  "trust.faq": "決済の安全性について",
+  "trust.faqd": "無効なカード・分割払いオプションは表示されません。オンライン決済有効時は確認済みのオプションのみ表示されます。",
+  "trust.wa": "WhatsApp で問い合わせる",
 };
 
 export default ja;

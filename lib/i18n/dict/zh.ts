@@ -351,6 +351,18 @@ const zh: Dict = {
   "co.discountWith": "折扣（{code}）",
   "co.kvkkNote": "您的电话和邮箱绝不会向收件人显示（符合 KVKK）。",
   "co.steps.confirm": "确认",
+  "trust.eyebrow": "支付与订单保障",
+  "trust.title": "每一步都安心。",
+  "trust.desc": "简单、透明的订购体验，需要时提供真实支持。",
+  "trust.a1": "加密连接",
+  "trust.a1d": "您的订单信息通过安全的 HTTPS 连接传输。",
+  "trust.a2": "不保存银行卡信息",
+  "trust.a2d": "当前流程不索取银行卡信息，也不会保存在 ÇiçekYolla 服务器上。",
+  "trust.a3": "真实支持",
+  "trust.a3d": "下单前后均可通过 WhatsApp 联系我们。",
+  "trust.faq": "关于支付安全",
+  "trust.faqd": "不会显示未启用的银行卡或分期选项。开启在线支付后，结账时仅显示经过验证的选项。",
+  "trust.wa": "通过 WhatsApp 咨询",
 };
 
 export default zh;

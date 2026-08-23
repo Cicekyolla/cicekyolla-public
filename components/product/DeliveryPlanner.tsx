@@ -145,6 +145,9 @@ function hhmmToMin(v: string | null | undefined): number | null {
 
 export default function DeliveryPlanner({ product, onSelect }: Props) {
   const { t, intl } = useI18n();
+  // DİL DEĞİŞİMİ = SUNUM: t kimliği değişince check/slot YENİDEN ÇALIŞMAZ (slot korunur). Hata metinleri ref ile.
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; });
   const fmts = useMemo(() => makeFmts(intl), [intl]);
   const labelOf = useCallback((offset: number) => labelOfFor(offset, fmts, t("common.today"), t("common.tomorrow")), [fmts, t]);
   const feeText = useCallback((minor?: number) => feeTextFor(minor, t("common.free")), [t]);
@@ -224,7 +227,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                   .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
                   .join(" · ")
               : json?.error ?? `HTTP ${resp.status}`;
-          setErrDetail(t("planner.errPrefix", { status: resp.status, detail }));
+          setErrDetail(tRef.current("planner.errPrefix", { status: resp.status, detail }));
           setResult(null);
         } else {
           setErrDetail(null);
@@ -237,14 +240,14 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
         }
       } catch {
         if (seq === reqSeq.current) {
-          setErrDetail(t("planner.errNetwork"));
+          setErrDetail(tRef.current("planner.errNetwork"));
           setResult(null);
         }
       } finally {
         if (seq === reqSeq.current) setLoading(false);
       }
     },
-    [product.id, product.product_type, t],
+    [product.id, product.product_type],
   );
 
   // Adres seçilince / gün değişince otomatik kontrol

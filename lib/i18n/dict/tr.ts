@@ -362,6 +362,18 @@ const tr = {
   "co.discountWith": "İndirim ({code})",
   "co.kvkkNote": "Telefon ve e-postanız hiçbir koşulda alıcıya gösterilmez (KVKK uyumlu).",
   "co.steps.confirm": "Onay",
+  "trust.eyebrow": "Ödeme & Sipariş Güvencesi",
+  "trust.title": "Her adımda içiniz rahat.",
+  "trust.desc": "Sade, şeffaf ve ihtiyaç duyduğunuzda gerçek destek sunan bir sipariş deneyimi.",
+  "trust.a1": "Şifreli bağlantı",
+  "trust.a1d": "Sipariş bilgileriniz güvenli HTTPS bağlantısı üzerinden iletilir.",
+  "trust.a2": "Kart bilgisi saklanmaz",
+  "trust.a2d": "Mevcut sipariş akışında kart bilgisi istenmez veya Çiçek Yolla sunucularında tutulmaz.",
+  "trust.a3": "Gerçek destek",
+  "trust.a3d": "Sipariş öncesi ve sonrasında WhatsApp üzerinden bize ulaşabilirsiniz.",
+  "trust.faq": "Ödeme güvenliği hakkında",
+  "trust.faqd": "Aktif olmayan kart veya taksit seçenekleri müşteriye gösterilmez. Online ödeme açıldığında yalnız doğrulanmış seçenekler ödeme adımında yayınlanır.",
+  "trust.wa": "WhatsApp'tan bilgi alın",
 };
 
 export type Dict = typeof tr;

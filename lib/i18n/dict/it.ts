@@ -351,6 +351,18 @@ const it: Dict = {
   "co.discountWith": "Sconto ({code})",
   "co.kvkkNote": "Telefono ed email non vengono mai mostrati al destinatario (conforme KVKK/GDPR).",
   "co.steps.confirm": "Conferma",
+  "trust.eyebrow": "Garanzia pagamento e ordine",
+  "trust.title": "Tranquillità a ogni passo.",
+  "trust.desc": "Un'esperienza d'ordine semplice e trasparente, con supporto reale quando serve.",
+  "trust.a1": "Connessione cifrata",
+  "trust.a1d": "I dati del tuo ordine viaggiano su una connessione HTTPS sicura.",
+  "trust.a2": "Dati carta non salvati",
+  "trust.a2d": "Nel flusso attuale non vengono richiesti dati carta né conservati sui server ÇiçekYolla.",
+  "trust.a3": "Supporto reale",
+  "trust.a3d": "Puoi contattarci su WhatsApp prima e dopo l'ordine.",
+  "trust.faq": "Sulla sicurezza dei pagamenti",
+  "trust.faqd": "Le opzioni carta o rate non attive non vengono mai mostrate. Con il pagamento online attivo compaiono solo opzioni verificate.",
+  "trust.wa": "Informazioni su WhatsApp",
 };
 
 export default it;
