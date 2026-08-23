@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
-import { readPendingDelivery, hasPendingAddress } from "@/lib/pendingDelivery";
+import { readPendingDelivery, hasPendingAddress, PENDING_ADDRESS_EVENT } from "@/lib/pendingDelivery";
 import { useI18n, Num } from "@/lib/i18n";
 
 // --- Endpoint yanıt tipleri (backend sözleşmesi) ---------------------------
@@ -169,12 +169,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   // adres tekrar sorulmaz; aynı delivery-check motoru bu adresle çalışır. Slot/mode TAŞINMAZ
   // (ürün bazlı karar her PDP'de yeniden hesaplanır — state sızması yok).
   useEffect(() => {
-    const p = readPendingDelivery();
-    if (!hasPendingAddress(p) || !p.address) return;
-    setAddress({
-      formattedAddress: p.address, placeId: p.placeId ?? "", placeName: p.placeName ?? null,
-      lat: p.lat, lng: p.lng, il: p.city ?? null, ilce: p.district ?? null, mahalle: p.neighborhood ?? null,
-    });
+    const seed = () => {
+      const p = readPendingDelivery();
+      if (!hasPendingAddress(p) || !p.address) return;
+      setAddress({
+        formattedAddress: p.address, placeId: p.placeId ?? "", placeName: p.placeName ?? null,
+        lat: p.lat, lng: p.lng, il: p.city ?? null, ilce: p.district ?? null, mahalle: p.neighborhood ?? null,
+      });
+    };
+    seed();
+    // Popup aynı sayfada (PDP) adres yazarsa planlayıcı canlı güncellenir.
+    window.addEventListener(PENDING_ADDRESS_EVENT, seed);
+    return () => window.removeEventListener(PENDING_ADDRESS_EVENT, seed);
   }, []);
   const quickDays = days.slice(0, 3);
 
