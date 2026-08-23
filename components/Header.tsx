@@ -69,7 +69,7 @@ export function Header({ menu, nav, search, brand }: {
   const { t } = useI18n();
   // Faz 2: onaylı kategori çevirisi varsa menü etiketi değişir (href/slug AYNI kalır).
   const catTx = useCategoryTranslations();
-  const cn = (name: string, href?: string | null) => catTx.bySlug[slugFromHref(href)] ?? name;
+  const cn = (name: string, href?: string | null) => catTx.bySlug[slugFromHref(href)]?.name ?? name;
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);

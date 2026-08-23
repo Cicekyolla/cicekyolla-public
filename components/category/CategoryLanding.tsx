@@ -13,6 +13,7 @@ import { FilterBar } from "@/components/category/FilterBar";
 import { CategoryProductGrid } from "@/components/category/CategoryProductGrid";
 import { CargoCategoryExperience } from "@/components/category/CargoCategoryExperience";
 import { absoluteUrl } from "@/lib/site-config";
+import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
 
 /**
@@ -263,14 +264,14 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               style={{ fontFamily: "var(--font-display)", lineHeight: 1.08, letterSpacing: "-0.02em" }}
               className="text-4xl md:text-5xl lg:text-[56px] font-semibold text-white max-w-[820px]"
             >
-              {page.h1}
+              <CategoryHeadingText slug={slug} fallback={page.h1} />
             </h1>
 
             {/* Kısa kategori açıklaması — Category Center SEO (meta_description); yoksa nazik fallback */}
             <p className="mt-4 text-[15px] lg:text-[17px] leading-[1.7] text-white/58 max-w-[760px]">
-              {page.meta_description && page.meta_description.trim()
+              <CategoryHeadingText slug={slug} field="description" fallback={page.meta_description && page.meta_description.trim()
                 ? page.meta_description
-                : `${trail[trail.length - 1]?.name || page.h1?.trim() || "Bu koleksiyonda"} kategorisinde özenle seçilmiş, taze ve premium çiçek & bitki seçenekleri; özel günlerden kurumsal hediyelere her anı değerli kılar. Aynı gün teslimat imkânıyla.`}
+                : `${trail[trail.length - 1]?.name || page.h1?.trim() || "Bu koleksiyonda"} kategorisinde özenle seçilmiş, taze ve premium çiçek & bitki seçenekleri; özel günlerden kurumsal hediyelere her anı değerli kılar. Aynı gün teslimat imkânıyla.`} />
             </p>
 
           </div>

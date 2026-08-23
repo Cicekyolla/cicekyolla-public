@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveUpstream } from "@/lib/i18n/proxy";
 
 /**
  * 14 dil Faz 2 — dinamik içerik çevirisi proxy'si (API: /api/public/translations/*).
@@ -8,29 +9,13 @@ import { NextResponse } from "next/server";
  * Yalnız ONAYLI çeviriler döner; hata/boşta null → istemci TR'ye düşer. Fiyat/slot yok.
  */
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
-const LOCALES = new Set(["en", "ar", "zh", "nl", "de", "it", "ja", "pt", "ko", "ru", "es", "az", "fr"]);
-
 export const revalidate = 300;
 
 export async function GET(request: Request, { params }: { params: { kind: string } }) {
-  const url = new URL(request.url);
-  const locale = url.searchParams.get("locale") ?? "";
-  if (!LOCALES.has(locale)) return NextResponse.json({ data: null });
-  let upstream: string | null = null;
-  if (params.kind === "product") {
-    const slug = (url.searchParams.get("slug") ?? "").trim();
-    if (!/^[a-z0-9-]{1,200}$/i.test(slug)) return NextResponse.json({ data: null });
-    upstream = `${API_ORIGIN}/api/public/translations/product/${encodeURIComponent(slug)}?locale=${locale}`;
-  } else if (params.kind === "products") {
-    const ids = (url.searchParams.get("ids") ?? "").split(",").filter((s) => /^\d{1,10}$/.test(s)).slice(0, 200).join(",");
-    if (!ids) return NextResponse.json({ data: {} });
-    upstream = `${API_ORIGIN}/api/public/translations/products?locale=${locale}&ids=${ids}`;
-  } else if (params.kind === "categories") {
-    upstream = `${API_ORIGIN}/api/public/translations/categories?locale=${locale}`;
-  }
-  if (!upstream) return NextResponse.json({ data: null }, { status: 404 });
+  const d = resolveUpstream(params.kind, new URL(request.url).searchParams, API_ORIGIN);
+  if (!("upstream" in d)) return NextResponse.json(d);
   try {
-    const resp = await fetch(upstream, { next: { revalidate: 300 } });
+    const resp = await fetch(d.upstream, { next: { revalidate: 300 } });
     const json = await resp.json().catch(() => null);
     return NextResponse.json(resp.ok && json ? json : { data: null }, {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },

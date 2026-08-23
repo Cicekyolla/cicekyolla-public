@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
 import { Truck, Sparkles, ChevronLeft, PackageCheck } from "lucide-react";
 import { fetchProducts, fetchProductsPaged, type PublicProductListItem } from "@/lib/api";
@@ -145,7 +146,7 @@ export default async function DeliveryCityPage({
                     )}
                   </div>
                   <div className="mt-2.5 text-[13.5px] font-semibold text-[#111827] leading-tight line-clamp-2 group-hover:text-[#7C3AED] transition-colors">
-                    {p.name}
+                    <ProductDisplayName id={p.id} fallback={p.name} />
                   </div>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-[15px] font-bold text-[#111827]">{tl(shown)}</span>

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil, LogIn, UserPlus } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useProductName } from "@/lib/i18n/content";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { CheckoutProgress } from "./CheckoutProgress";
@@ -31,6 +32,8 @@ const TRUST_KEYS = ["co.gate.secure256", "co.trust.sameDay", "co.gate.ssl", "co.
 
 type Props = {
   productName: string;
+  /** Görünen ad overlay'i için (Faz 2); payload/operasyon productName (TR) kullanır. */
+  productId?: number | null;
   priceMinor: number;
   coverUrl?: string | null;
   productSlug: string;
@@ -43,7 +46,7 @@ type Props = {
   onEditDelivery?: () => void;
 };
 
-export default function AccountGate({ productName, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, delivery, onContinue, onEditDelivery }: Props) {
+export default function AccountGate({ productName, productId, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, delivery, onContinue, onEditDelivery }: Props) {
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
   const [member, setMember] = useState<{ name: string; email: string } | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);
@@ -57,6 +60,7 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
   }, [delivery]);
 
   const { t, intl } = useI18n();
+  const shownName = useProductName(productId, productName);
   const TRUST = TRUST_ICONS.map((icon, i) => ({ icon, label: t(TRUST_KEYS[i] as "co.gate.ssl") }));
   const dateStr = formatDate(pd?.date, intl);
   const typeStr = pd?.mode === "cargo" ? t("co.gate.freeCargo") : pd?.mode === "sameday" ? t("co.trust.sameDay") : null;
@@ -88,9 +92,9 @@ export default function AccountGate({ productName, priceMinor, coverUrl, product
       </div>
 
       <div className="relative w-full overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
-        <ProductImage src={coverUrl ?? undefined} alt={productName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" />
+        <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" />
       </div>
-      <p className="mt-3.5 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "19px", letterSpacing: "-0.01em" }}>{productName}</p>
+      <p className="mt-3.5 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "19px", letterSpacing: "-0.01em" }}>{shownName}</p>
       <div className="mt-1 flex items-baseline gap-2">
         {quantity > 1 && <span className="text-white/40 text-[12px]">×{quantity}</span>}
         <span className="text-white/70 text-[13.5px] font-medium">{money(priceMinor * quantity)}</span>

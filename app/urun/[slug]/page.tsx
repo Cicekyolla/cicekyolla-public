@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
@@ -285,7 +286,7 @@ export default async function ProductPage({ params }: PageProps) {
                       className="text-[13px] font-semibold leading-snug text-white sm:text-[14px]"
                       style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
                     >
-                      {p.name}
+                      <ProductDisplayName id={p.id} fallback={p.name} />
                     </h3>
                     <div className="mt-auto flex items-end justify-between gap-3 pt-4">
                       <span className="text-lg font-bold text-[#D8B4FE]" style={{ fontFamily: "var(--font-display)" }}>

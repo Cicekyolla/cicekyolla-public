@@ -40,6 +40,7 @@ export default function CheckoutFlow({ productName, productId, variantId, priceM
     return (
       <AccountGate
         productName={productName}
+        productId={productId}
         priceMinor={priceMinor}
         coverUrl={coverUrl}
         productSlug={productSlug}

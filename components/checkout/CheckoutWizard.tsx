@@ -29,6 +29,7 @@ import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
+import { useProductName } from "@/lib/i18n/content";
 import { formatMinorTRY } from "@/lib/api";
 import { CheckoutProgress } from "./CheckoutProgress";
 
@@ -77,6 +78,8 @@ type Props = { productName: string; productId: number | null; variantId?: number
 
 export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false }: Props) {
   const { t, intl } = useI18n();
+  // Faz 2: müşteriye GÖRÜNEN ürün adı (onaylı çeviri); sipariş payload/operasyon TR productName kullanır.
+  const shownName = useProductName(productId, productName);
   const steps = useMemo(() => {
     const base = [
       { key: "urun", label: t("common.product") },
@@ -375,13 +378,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 60%, #120328 100%)" }}
         >
           <div className="relative mx-auto w-[132px] overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
-            <ProductImage src={coverUrl ?? undefined} alt={productName} padding="8px" protect={false} sizes="132px" />
+            <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="8px" protect={false} sizes="132px" />
           </div>
           <p className="mt-5 text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{t("co.done")}</p>
           <h1 className="mt-2 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>
             {t("co.doneTitle")}
           </h1>
-          <p className="mt-2 text-white/45 text-[13.5px] leading-relaxed">{productName}</p>
+          <p className="mt-2 text-white/45 text-[13.5px] leading-relaxed">{shownName}</p>
 
           <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
             <p className="text-white/40 text-[12px]">{t("co.orderNo")}</p>
@@ -431,10 +434,10 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(139,92,246,0.10)" }}
       >
         <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-[#EDE9FE]">
-          <ProductImage src={coverUrl ?? undefined} alt={productName} padding="2px" protect={false} />
+          <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="2px" protect={false} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-semibold text-[#111827] truncate">{productName}</p>
+          <p className="text-[12px] font-semibold text-[#111827] truncate">{shownName}</p>
           {qty > 1 && <p className="text-[10px]" style={{ color: "#8B5CF6" }}>×{qty}</p>}
         </div>
         <span className="shrink-0 font-semibold text-[#111827]" style={{ fontFamily: "var(--font-display)", fontSize: "17px" }}>{money(total)}</span>
@@ -449,7 +452,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       <div className="grid lg:grid-cols-[360px_1fr] gap-6 lg:gap-8 items-start mt-8">
         <div className="order-2 lg:order-1">
           <LivingReceipt
-            productName={productName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug}
+            productName={shownName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug}
             addons={addons} addonQty={addonQty} coupon={coupon}
             regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
             placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
@@ -539,7 +542,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
               {stepKey === "ekurun" && <StepAddons addons={addons} addonQty={addonQty} setAddon={setAddon} />}
               {stepKey === "odeme" && (
                 <StepOdeme
-                  productName={productName} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal}
+                  productName={shownName} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal}
                   addons={addons} addonQty={addonQty}
                   recipientName={recipientName} occasion={occasion}
                   address={address} region={`${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}

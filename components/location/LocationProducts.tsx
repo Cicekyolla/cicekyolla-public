@@ -1,4 +1,5 @@
 "use client";
+import { ProductDisplayName } from "@/lib/i18n/content";
 
 // ---------------------------------------------------------------------------
 // LOKASYON ÜRÜN GRID'İ (ADDITIVE — Faz 1/3). Coverage Engine'in public ucundan
@@ -171,7 +172,7 @@ export function LocationProducts({
                 <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">
                   {p.sameDay ? "Aynı Gün Teslimat" : "Premium Aranjman"}
                 </p>
-                <h3 className="mt-2 text-lg font-semibold text-[#171020] group-hover:text-[#6d28d9]">{p.name}</h3>
+                <h3 className="mt-2 text-lg font-semibold text-[#171020] group-hover:text-[#6d28d9]"><ProductDisplayName id={p.id} fallback={p.name} /></h3>
                 <p className="mt-2 flex items-baseline gap-2">
                   <span className="text-xl font-bold text-[#141020]">₺{p.price.toLocaleString("tr-TR")}</span>
                   {p.originalPrice ? (
