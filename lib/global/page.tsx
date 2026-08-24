@@ -256,9 +256,23 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         <h1 style={S.h1}>{surface.name}</h1>
         {surface.description ? <p style={S.p}>{surface.description}</p> : null}
         <div style={{ ...S.grid, marginTop: 24 }}>
-          {surface.products.map((p) => (
-            <Link key={p.slug} href={`/${locale}/${seg.product}/${p.slug}`} style={S.card}>{p.name}</Link>
-          ))}
+          {surface.products.map((p) => {
+            const priceMinor = p.sale_price_minor ?? p.price_minor;
+            return (
+              <Link key={p.slug} href={`/${locale}/${seg.product}/${p.slug}`} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+                {p.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.image_url} alt={p.name} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+                ) : null}
+                <span style={{ display: "block", padding: "10px 12px 4px", fontWeight: 600 }}>{p.name}</span>
+                {priceMinor != null ? (
+                  <span style={{ display: "block", padding: "0 12px 12px", fontSize: 14, fontWeight: 700 }}>
+                    <bdi dir="ltr">{formatMinorTRY(priceMinor)}</bdi>
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
         </div>
       </main>
     );
