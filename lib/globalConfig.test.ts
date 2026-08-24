@@ -27,12 +27,14 @@ test("parseLocalePath: home/product/category/unknown", () => {
   assert.equal(parseLocalePath("de", ["produkt", "a", "b"]).kind, "unknown");
 });
 
-test("parseLocalePath: lokasyon yüzeyleri — yalnız İstanbul kapısı (Faz 2)", () => {
+test("parseLocalePath: lokasyon yüzeyleri — yalnız İstanbul kapısı", () => {
   assert.deepEqual(parseLocalePath("de", ["istanbul"]), { kind: "page", key: "istanbul" });
   assert.deepEqual(parseLocalePath("en", ["istanbul", "kadikoy"]), { kind: "page", key: "istanbul/kadikoy" });
-  // Başka şehir kurul kararı olmadan açılmaz; derinlik 2 ile sınırlı; büyük harf red
+  // Mahalle seviyesi (3 segment) tanınır; render yalnız approved sayfayla olur.
+  assert.deepEqual(parseLocalePath("de", ["istanbul", "kadikoy", "moda"]), { kind: "page", key: "istanbul/kadikoy/moda" });
+  // Başka şehir kurul kararı olmadan açılmaz; derinlik 3 ile sınırlı; büyük harf red
   assert.equal(parseLocalePath("de", ["ankara"]).kind, "unknown");
-  assert.equal(parseLocalePath("de", ["istanbul", "kadikoy", "moda"]).kind, "unknown");
+  assert.equal(parseLocalePath("de", ["istanbul", "kadikoy", "moda", "x"]).kind, "unknown");
   assert.equal(parseLocalePath("de", ["istanbul", "Kadikoy"]).kind, "unknown");
 });
 
