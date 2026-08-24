@@ -94,9 +94,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [dict, setDict] = useState<Dict | undefined>(tr);
   const [ready, setReady] = useState(false);
 
-  // Mount: cookie → dil. Sözlük yüklenene kadar TR gösterilir.
+  // Mount: URL locale (/de, /en) > cookie (GLOBAL kanunu: URL = SEO source of
+  // truth; cookie yalnız sunum tercihi ve URL'siz sayfalarda geçerli).
   useEffect(() => {
-    const l = parseLangCookie(document.cookie);
+    const urlLocale = /^\/(de|en)(?:\/|$)/.exec(window.location.pathname)?.[1];
+    const l = urlLocale && isLocale(urlLocale) ? urlLocale : parseLangCookie(document.cookie);
     if (l === DEFAULT_LOCALE) { setReady(true); applyHtml(l); return; }
     let alive = true;
     loadDict(l).then((d) => { if (!alive) return; setDict(d); setLocaleState(l); applyHtml(l); setReady(true); })

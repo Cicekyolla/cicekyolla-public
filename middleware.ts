@@ -11,6 +11,7 @@ import {
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveManagedRedirect } from "@/lib/managed-redirects";
+import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
    statik listeden (/kategori/{eski-slug}) üretir. Kategori Merkezi'nden onaylı
@@ -23,6 +24,11 @@ async function flattenManagedTarget(target: string): Promise<string> {
   return managed?.to ?? target;
 }
 export async function middleware(req: NextRequest) {
+  // GLOBAL Faz 1: /de ve /en locale yüzeyleri legacy redirect/location
+  // resolver'larına GİRMEZ (kanun: locale path'leri yutulmamalı).
+  if (isGlobalLocalePath(req.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
 const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
     return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);
