@@ -80,7 +80,7 @@ export interface CategorySurface {
   meta_description: string | null;
   indexable: boolean;
   updated_at: string;
-  products: { slug: string; name: string; tr_slug: string }[];
+  products: { slug: string; name: string; tr_slug: string; price_minor?: string | null; sale_price_minor?: string | null; image_url?: string | null }[];
   locales: { locale: string; slug: string; indexable: boolean }[];
 }
 
