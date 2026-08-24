@@ -35,6 +35,8 @@ export const SITEMAP_TYPES = [
 
 export type SitemapType = (typeof SITEMAP_TYPES)[number];
 
+import { GLOBAL_LOCALES } from "@/lib/global/config";
+
 const XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
 
 function escapeXml(value: string): string {
@@ -238,7 +240,11 @@ export function renderSitemapIndex(): string {
   if (!SITE_INDEXABLE) {
     return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
   }
-  const nodes = SITEMAP_TYPES.map(
+  // GLOBAL Faz 2 (ADDITIVE): locale sitemap discovery — TR tip listesi ve
+  // envanteri DEĞİŞMEDİ; index'e yalnız locale-de/locale-en girişleri eklenir.
+  // Bu dosyalar sadece approved+indexable Global URL'leri taşır (boşsa boş urlset).
+  const allTypes: string[] = [...SITEMAP_TYPES, ...GLOBAL_LOCALES.map((l) => `locale-${l}`)];
+  const nodes = allTypes.map(
     (type) => `<sitemap><loc>${escapeXml(absoluteUrl(`/sitemaps/${type}.xml`))}</loc></sitemap>`,
   ).join("");
   return `${XML_HEADER}<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${nodes}</sitemapindex>`;
