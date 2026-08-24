@@ -51,9 +51,9 @@ const HOME_FALLBACK: Record<GlobalLocale, { title: string; h1: string; p: string
   },
 };
 
-const UI: Record<GlobalLocale, { categories: string; popular: string; faq: string; viewTr: string }> = {
-  de: { categories: "Kategorien", popular: "Beliebte Blumen für Istanbul", faq: "Häufige Fragen", viewTr: "Auf Türkisch ansehen / bestellen" },
-  en: { categories: "Categories", popular: "Popular flowers for Istanbul delivery", faq: "Frequently asked questions", viewTr: "View / order in Turkish" },
+const UI: Record<GlobalLocale, { categories: string; popular: string; faq: string; orderCta: string; orderNote: string }> = {
+  de: { categories: "Kategorien", popular: "Beliebte Blumen für Istanbul", faq: "Häufige Fragen", orderCta: "Jetzt bestellen →", orderNote: "Die Bestellung wird in unserem Shop abgeschlossen (Türkisch; internationale Visa/Mastercard werden akzeptiert)." },
+  en: { categories: "Categories", popular: "Popular flowers for Istanbul delivery", faq: "Frequently asked questions", orderCta: "Order now →", orderNote: "Checkout completes in our store (Turkish; international Visa/Mastercard accepted)." },
 };
 
 const NOINDEX = { index: false, follow: false } as const;
@@ -290,11 +290,22 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         {surface.long_description ? (
           <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: surface.long_description }} />
         ) : null}
-        <p style={{ marginTop: 32 }}>
-          <Link href={`/urun/${surface.tr_slug}`} style={{ fontSize: 13, color: "#8B5CF6" }}>
-            {UI[locale].viewTr}
+        {/* Commerce handoff (kanun §6): içerik zinciri locale'de kalır; satın alma
+            bilinçli olarak mevcut TR commerce core'una geçer (checkout localization
+            sonraki faz). Bu bir content-fallback değil, sipariş CTA'sıdır. */}
+        <div style={{ marginTop: 32 }}>
+          <Link
+            href={`/urun/${surface.tr_slug}`}
+            style={{
+              display: "inline-block", background: "#8B5CF6", color: "#fff",
+              padding: "12px 28px", borderRadius: 10, fontSize: 15, fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            {UI[locale].orderCta}
           </Link>
-        </p>
+          <p style={{ fontSize: 11.5, color: "#6b7280", marginTop: 8 }}>{UI[locale].orderNote}</p>
+        </div>
       </main>
     );
   }
