@@ -7,7 +7,7 @@
 // ============================================================================
 import { absoluteUrl } from "@/lib/site-config";
 import { GLOBAL_LOCALES, SEGMENTS, type GlobalLocale } from "./config";
-import { fetchLocaleInventory } from "./api";
+import { fetchLocaleInventory, fetchGlobalPagesInventory } from "./api";
 
 export const LOCALE_SITEMAP_TYPES = GLOBAL_LOCALES.map((l) => `locale-${l}`);
 
@@ -36,9 +36,16 @@ function node(path: string, updatedAt: string | null): string {
 }
 
 export async function renderLocaleSitemap(locale: GlobalLocale): Promise<string> {
-  const inv = await fetchLocaleInventory(locale);
+  const [inv, pages] = await Promise.all([
+    fetchLocaleInventory(locale),
+    fetchGlobalPagesInventory(locale),
+  ]);
   const seg = SEGMENTS[locale];
   const nodes = [
+    // global_pages (yalnız approved+indexable döner): home → /de, diğerleri → /de/<page_key>
+    ...(pages ?? []).map((g) =>
+      node(g.page_key === "home" ? `/${locale}` : `/${locale}/${g.page_key}`, g.updated_at)
+    ),
     ...inv.products.map((p) => node(`/${locale}/${seg.product}/${p.slug}`, p.updated_at)),
     ...inv.categories.map((c) => node(`/${locale}/${seg.category}/${c.slug}`, c.updated_at)),
   ];

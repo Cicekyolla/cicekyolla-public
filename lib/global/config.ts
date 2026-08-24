@@ -29,9 +29,13 @@ export type ParsedLocalePath =
   | { kind: "home" }
   | { kind: "product"; slug: string }
   | { kind: "category"; slug: string }
+  | { kind: "page"; key: string } // global_pages: istanbul, istanbul/<ilçe>
   | { kind: "unknown" };
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** Faz 2 destinasyon kapısı: yalnız İstanbul (kanun §4). Yeni şehir = kurul kararı. */
+export const DESTINATION_ROOT = "istanbul";
 
 /** [[...path]] segmentleri → sayfa türü. Bilinmeyen her şey "unknown" (=404). */
 export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLocalePath {
@@ -40,6 +44,10 @@ export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLoc
   if (segs.length === 2 && SLUG_RE.test(segs[1])) {
     if (segs[0] === seg.product) return { kind: "product", slug: segs[1] };
     if (segs[0] === seg.category) return { kind: "category", slug: segs[1] };
+  }
+  // Lokasyon yüzeyleri: /de/istanbul, /de/istanbul/kadikoy (coğrafi adlar korunur — kanun §8).
+  if (segs[0] === DESTINATION_ROOT && segs.length <= 2 && segs.every((s) => SLUG_RE.test(s))) {
+    return { kind: "page", key: segs.join("/") };
   }
   return { kind: "unknown" };
 }

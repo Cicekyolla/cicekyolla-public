@@ -54,6 +54,68 @@ export function fetchProductLocaleCluster(productId: number | string): Promise<P
   );
 }
 
+// ---- Faz 2: global_pages + kategori yüzeyi + katalog ------------------------
+
+export interface GlobalPage {
+  locale: string;
+  page_key: string;
+  h1: string | null;
+  seo_title: string | null;
+  meta_description: string | null;
+  intro_html: string | null;
+  content_html: string | null;
+  faq: { q: string; a: string }[] | null;
+  indexable: boolean;
+  updated_at: string;
+  locales: { locale: string; indexable: boolean }[];
+}
+
+export interface CategorySurface {
+  category_id: number | string;
+  tr_slug: string;
+  name: string | null;
+  description: string | null;
+  slug: string;
+  seo_title: string | null;
+  meta_description: string | null;
+  indexable: boolean;
+  updated_at: string;
+  products: { slug: string; name: string; tr_slug: string }[];
+  locales: { locale: string; slug: string; indexable: boolean }[];
+}
+
+export interface LocaleCatalog {
+  categories: { slug: string; name: string }[];
+  products: { slug: string; name: string; tr_slug: string }[];
+}
+
+export function fetchGlobalPage(locale: GlobalLocale, key: string): Promise<GlobalPage | null> {
+  return getJson<GlobalPage>(
+    `/api/public/global/page?locale=${locale}&key=${encodeURIComponent(key)}`
+  );
+}
+
+export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string }[] | null> {
+  return getJson<{ page_key: string; updated_at: string }[]>(
+    `/api/public/global/pages-inventory?locale=${locale}`
+  );
+}
+
+export function fetchCategorySurface(locale: GlobalLocale, slug: string): Promise<CategorySurface | null> {
+  return getJson<CategorySurface>(
+    `/api/public/translations/surface/category/${encodeURIComponent(slug)}?locale=${locale}`
+  );
+}
+
+export async function fetchLocaleCatalog(locale: GlobalLocale): Promise<LocaleCatalog> {
+  return (
+    (await getJson<LocaleCatalog>(`/api/public/translations/surface/catalog?locale=${locale}`)) ?? {
+      categories: [],
+      products: [],
+    }
+  );
+}
+
 export async function fetchLocaleInventory(locale: GlobalLocale): Promise<LocaleInventory> {
   return (
     (await getJson<LocaleInventory>(`/api/public/translations/surface/inventory?locale=${locale}`)) ?? {
