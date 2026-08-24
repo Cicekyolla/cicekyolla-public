@@ -45,8 +45,10 @@ export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLoc
     if (segs[0] === seg.product) return { kind: "product", slug: segs[1] };
     if (segs[0] === seg.category) return { kind: "category", slug: segs[1] };
   }
-  // Lokasyon yüzeyleri: /de/istanbul, /de/istanbul/kadikoy (coğrafi adlar korunur — kanun §8).
-  if (segs[0] === DESTINATION_ROOT && segs.length <= 2 && segs.every((s) => SLUG_RE.test(s))) {
+  // Lokasyon yüzeyleri: /de/istanbul, /de/istanbul/kadikoy, /de/istanbul/kadikoy/moda
+  // (coğrafi adlar korunur — kanun §8; mahalle sayfaları yalnız approved ise render,
+  // NOINDEX politikası global_pages.indexable ile yönetilir).
+  if (segs[0] === DESTINATION_ROOT && segs.length <= 3 && segs.every((s) => SLUG_RE.test(s))) {
     return { kind: "page", key: segs.join("/") };
   }
   return { kind: "unknown" };
