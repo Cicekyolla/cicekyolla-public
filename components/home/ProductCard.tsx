@@ -88,7 +88,7 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
   promo: "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]",
 };
 
-export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean }) {
+export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false, href }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean; href?: string }) {
   const tr = useT();
   // Faz 2: onaylı çeviri varsa GÖRÜNEN ad; id/slug/fiyat/href değişmez.
   const shownName = useProductName(product.id, product.name);
@@ -118,7 +118,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
       transition={{ delay: idx * 0.09, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
     >
       <Link
-        href={`/urun/${product.slug}`}
+        href={href ?? `/urun/${product.slug}`}
         className={`group flex flex-col h-full rounded-[20px] border bg-white overflow-hidden transition-all duration-300 hover:border-[#EDE9FE] ${
           polish
             ? "border-[#EDE9FE] shadow-[0_8px_24px_rgba(17,12,34,0.06)] hover:shadow-[0_18px_44px_rgba(124,58,237,0.14)]"

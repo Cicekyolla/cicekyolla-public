@@ -19,7 +19,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl } from "@/lib/site-config";
-import { fetchProductBySlug, formatMinorTRY } from "@/lib/api";
+import { fetchProductBySlug, fetchProducts, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
+import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
+import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import {
   type GlobalLocale,
   parseLocalePath,
@@ -36,6 +38,38 @@ import {
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
+
+// ---- TR mağaza ailesine köprü ---------------------------------------------
+// Kart rozetleri müşteri-dilinde (core badge TR üretir; burada locale karşılığı).
+const BADGE_L10N: Record<GlobalLocale, Record<string, string>> = {
+  de: { "İndirim": "Angebot", "Yeni": "Neu", "Çok Satan": "Bestseller" },
+  en: { "İndirim": "Sale", "Yeni": "New", "Çok Satan": "Bestseller" },
+};
+
+/** Core ürün detayını mevcut ProductCard tipine çevirir (mediaUrl'lü görsel,
+    gerçek fiyat/indirim/rozet); ad localized yüzeyden gelir. */
+function detailToCard(locale: GlobalLocale, d: PublicProductDetail, localizedName: string): CardProductUi {
+  const pr = d.product;
+  const cover = d.images.find((i) => i.role === "cover") ?? d.images[0];
+  const hasSale = pr.sale_price_minor != null && Number(pr.sale_price_minor) > 0 && Number(pr.sale_price_minor) < Number(pr.price_minor);
+  const rawBadge = hasSale ? "İndirim" : pr.is_new ? "Yeni" : pr.is_bestseller ? "Çok Satan" : undefined;
+  return {
+    id: pr.id,
+    name: localizedName,
+    slug: pr.slug,
+    price: Math.round((hasSale ? Number(pr.sale_price_minor) : Number(pr.price_minor)) / 100),
+    originalPrice: hasSale ? Math.round(Number(pr.price_minor) / 100) : undefined,
+    image: cover?.url ?? "",
+    badge: rawBadge ? (BADGE_L10N[locale][rawBadge] ?? rawBadge) : undefined,
+    productType: pr.product_type,
+    sameDay: pr.same_day_available,
+    scope: pr.delivery_scope,
+    hasSale,
+    categoryId: null,
+    derivatives: cover?.derivatives ?? null,
+    blurhash: cover?.blurhash ?? null,
+  };
+}
 
 // Foundation yedek metinleri — global_pages 'home' onaylanana kadar (noindex).
 const HOME_FALLBACK: Record<GlobalLocale, { title: string; h1: string; p: string }> = {
@@ -251,28 +285,22 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     const surface = await fetchCategorySurface(locale, parsed.slug);
     if (!surface) notFound();
     const seg = SEGMENTS[locale];
+    // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
+    // gerçek fiyat/rozet/derivatives) + localized ad + locale PDP linki.
+    const members = surface.products.slice(0, 24);
+    const details = await Promise.all(members.map((m) => fetchProductBySlug(m.tr_slug)));
+    const cards = members
+      .map((m, i) => ({ m, d: details[i] }))
+      .filter((x): x is { m: (typeof members)[number]; d: PublicProductDetail } => !!x.d)
+      .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
     return (
-      <main lang={locale} dir="ltr" style={S.main}>
-        <h1 style={S.h1}>{surface.name}</h1>
-        {surface.description ? <p style={S.p}>{surface.description}</p> : null}
-        <div style={{ ...S.grid, marginTop: 24 }}>
-          {surface.products.map((p) => {
-            const priceMinor = p.sale_price_minor ?? p.price_minor;
-            return (
-              <Link key={p.slug} href={`/${locale}/${seg.product}/${p.slug}`} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-                {p.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image_url} alt={p.name} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
-                ) : null}
-                <span style={{ display: "block", padding: "10px 12px 4px", fontWeight: 600 }}>{p.name}</span>
-                {priceMinor != null ? (
-                  <span style={{ display: "block", padding: "0 12px 12px", fontSize: 14, fontWeight: 700 }}>
-                    <bdi dir="ltr">{formatMinorTRY(priceMinor)}</bdi>
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
+      <main lang={locale} dir="ltr" className="mx-auto w-full max-w-6xl px-4 py-10">
+        <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 10 }}>{surface.name}</h1>
+        {surface.description ? <p style={{ fontSize: 15, lineHeight: 1.65, maxWidth: 720, color: "#374151" }}>{surface.description}</p> : null}
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+          {cards.map(({ card: c, href }, idx) => (
+            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+          ))}
         </div>
       </main>
     );
@@ -281,45 +309,64 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
   if (parsed.kind === "product") {
     const surface = await fetchProductSurface(locale, parsed.slug);
     if (!surface) notFound();
-    const core = await fetchProductBySlug(surface.tr_slug);
-    const image = core?.images?.slice().sort((a, b) => a.sort_order - b.sort_order)[0] ?? null;
-    const priceMinor = core?.product ? (core.product.sale_price_minor ?? core.product.price_minor) : null;
+    const data = await fetchProductBySlug(surface.tr_slug);
+    if (!data) notFound();
+    const { product } = data;
+    const seg = SEGMENTS[locale];
+
+    // TR PDP ile AYNI kompozisyon: ProductDetail (galeri/fiyat/varyant/CTA/sepet
+    // — UI metinleri dict'ten, ad/açıklama Faz 2 overlay'inden locale'e göre) +
+    // aynı kategoriden boyut önerileri + yalnız LOCALIZED yüzeyi olan related'lar.
+    const primaryCat = data.categories.find((c) => c.is_primary) ?? data.categories[0];
+    const relatedRows = primaryCat
+      ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: "created_at_desc" })
+      : [];
+    const availableRelated = relatedRows.filter((r) => r.slug !== product.slug && r.cover_image_url);
+    const price = product.sale_price_minor && Number(product.sale_price_minor) > 0 ? product.sale_price_minor : product.price_minor;
+    const currentPriceMinor = Number(price);
+    const catalog = await fetchLocaleCatalog(locale);
+    const localizedBySlug = new Map(catalog.products.map((cp) => [cp.tr_slug, cp]));
+    const sizeProducts: AutoSizeProduct[] = [...availableRelated]
+      .sort((a, b) => {
+        const aP = Number(a.sale_price_minor && Number(a.sale_price_minor) > 0 ? a.sale_price_minor : a.price_minor);
+        const bP = Number(b.sale_price_minor && Number(b.sale_price_minor) > 0 ? b.sale_price_minor : b.price_minor);
+        return Math.abs(aP - currentPriceMinor) - Math.abs(bP - currentPriceMinor);
+      })
+      .slice(0, 3)
+      .map((r) => {
+        const hasSale = r.sale_price_minor != null && Number(r.sale_price_minor) > 0 && Number(r.sale_price_minor) < Number(r.price_minor);
+        return {
+          id: r.id, slug: r.slug, name: localizedBySlug.get(r.slug)?.name ?? r.name,
+          price: Math.round((hasSale ? Number(r.sale_price_minor) : Number(r.price_minor)) / 100),
+          image: r.cover_image_url ?? "",
+        } as AutoSizeProduct;
+      })
+      .sort((a, b) => a.price - b.price);
+
+    // Zincir kuralı (§10): related kartlar yalnız locale yüzeyi olan ürünlerden.
+    const relatedCards = availableRelated
+      .filter((r) => localizedBySlug.has(r.slug))
+      .slice(0, 4)
+      .map(async (r) => {
+        const d = await fetchProductBySlug(r.slug);
+        if (!d) return null;
+        const lp = localizedBySlug.get(r.slug)!;
+        return { card: detailToCard(locale, d, lp.name), href: `/${locale}/${seg.product}/${lp.slug}` };
+      });
+    const related = (await Promise.all(relatedCards)).filter((x): x is { card: CardProductUi; href: string } => !!x);
+
     return (
-      <main lang={locale} dir="ltr" style={{ ...S.main, maxWidth: 720 }}>
-        <h1 style={{ ...S.h1, fontSize: 26 }}>{surface.name ?? surface.tr_slug}</h1>
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image.url}
-            alt={surface.name ?? image.alt ?? ""}
-            style={{ maxWidth: "100%", borderRadius: 12, marginBottom: 16 }}
-          />
-        ) : null}
-        {priceMinor != null ? (
-          <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>
-            <bdi dir="ltr">{formatMinorTRY(priceMinor)}</bdi>
-          </p>
-        ) : null}
-        {surface.short_description ? <p style={{ ...S.p, marginBottom: 12 }}>{surface.short_description}</p> : null}
-        {surface.long_description ? (
-          <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: surface.long_description }} />
-        ) : null}
-        {/* Commerce handoff (kanun §6): içerik zinciri locale'de kalır; satın alma
-            bilinçli olarak mevcut TR commerce core'una geçer (checkout localization
-            sonraki faz). Bu bir content-fallback değil, sipariş CTA'sıdır. */}
-        <div style={{ marginTop: 32 }}>
-          <Link
-            href={`/urun/${surface.tr_slug}`}
-            style={{
-              display: "inline-block", background: "#8B5CF6", color: "#fff",
-              padding: "12px 28px", borderRadius: 10, fontSize: 15, fontWeight: 700,
-              textDecoration: "none",
-            }}
-          >
-            {UI[locale].orderCta}
-          </Link>
-          <p style={{ fontSize: 11.5, color: "#6b7280", marginTop: 8 }}>{UI[locale].orderNote}</p>
-        </div>
+      <main lang={locale} dir="ltr" className="mx-auto w-full max-w-6xl px-4 py-8">
+        <ProductDetail data={data} sizeProducts={sizeProducts} />
+        {related.length > 0 && (
+          <section className="mt-12">
+            <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
+              {related.map(({ card: c, href }, idx) => (
+                <ProductCard key={c.id} product={c} idx={idx} href={href} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     );
   }
