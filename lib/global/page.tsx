@@ -21,6 +21,7 @@ import Link from "next/link";
 import { absoluteUrl } from "@/lib/site-config";
 import { fetchProductBySlug, fetchProducts, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
 import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
+import { ProductImage } from "@/components/product/ProductImage";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 import {
@@ -101,6 +102,22 @@ const HOME_FALLBACK: Record<GlobalLocale, { title: string; h1: string; p: string
   zh: { title: "ÇiçekYolla — 伊斯坦布尔鲜花速递", h1: "送花到伊斯坦布尔", p: "ÇiçekYolla 是位于伊斯坦布尔的花店。伊斯坦布尔市内当日送达，土耳其全国 1–3 个工作日发货。" },
   ja: { title: "ÇiçekYolla — イスタンブールへの花のお届け", h1: "イスタンブールに花を贈る", p: "ÇiçekYolla はイスタンブールのフラワーショップです。イスタンブール市内は当日配達、トルコ全土へは1〜3営業日でお届けします。" },
   ko: { title: "ÇiçekYolla — 이스탄불 꽃 배달", h1: "이스탄불로 꽃 보내기", p: "ÇiçekYolla는 이스탄불의 꽃집입니다. 이스탄불 내 당일 배송, 튀르키예 전역 1–3 영업일 배송." },
+};
+
+const SHOP: Record<GlobalLocale, { unit: string; shopAll: string; from: string }> = {
+  de: { unit: "Produkte", shopAll: "Alle ansehen →", from: "Ausgewählt für Istanbul" },
+  en: { unit: "products", shopAll: "View all →", from: "Selected for Istanbul" },
+  fr: { unit: "produits", shopAll: "Tout voir →", from: "Sélection pour Istanbul" },
+  nl: { unit: "producten", shopAll: "Alles bekijken →", from: "Geselecteerd voor Istanbul" },
+  it: { unit: "prodotti", shopAll: "Vedi tutto →", from: "Selezionati per Istanbul" },
+  es: { unit: "productos", shopAll: "Ver todo →", from: "Selección para Estambul" },
+  pt: { unit: "produtos", shopAll: "Ver tudo →", from: "Seleção para Istambul" },
+  az: { unit: "məhsul", shopAll: "Hamısına bax →", from: "İstanbul üçün seçilmiş" },
+  ru: { unit: "товаров", shopAll: "Смотреть все →", from: "Выбрано для Стамбула" },
+  ar: { unit: "منتجات", shopAll: "عرض الكل ←", from: "مختارة لإسطنبول" },
+  zh: { unit: "件商品", shopAll: "查看全部 →", from: "为伊斯坦布尔精选" },
+  ja: { unit: "点", shopAll: "すべて見る →", from: "イスタンブールへの厳選" },
+  ko: { unit: "개 상품", shopAll: "전체 보기 →", from: "이스탄불을 위한 셀렉션" },
 };
 
 const UI: Record<GlobalLocale, { categories: string; popular: string; faq: string; orderCta: string; orderNote: string }> = {
@@ -226,31 +243,113 @@ const S = {
   chip: { display: "inline-block", border: "1px solid #E9E5F5", borderRadius: 999, padding: "6px 14px", margin: "0 8px 8px 0", fontSize: 13.5, textDecoration: "none", color: "#6D28D9" } as const,
 };
 
-function CatalogSections({ locale, catalog }: { locale: GlobalLocale; catalog: LocaleCatalog }) {
+/**
+ * Global ana sayfa vitrini — TR mağaza ailesiyle AYNI ProductCard'ı kullanır.
+ * Kaynak tek gerçek: localeCatalog (üyelik ∧ locale approved+slug ∧ product active),
+ * yani Global Merkezi'nin "N canlı" dediği sayı ile birebir aynı küme.
+ * 0 canlı ürünlü kategori vitrine çıkmaz (müşteriye boş raf gösterilmez).
+ */
+async function CatalogSections({ locale, catalog }: { locale: GlobalLocale; catalog: LocaleCatalog }) {
   const seg = SEGMENTS[locale];
   const ui = UI[locale];
+  const shop = SHOP[locale];
+
+  // Locale adı: locale slug → çevrilmiş ad (kart adı TR'ye düşmesin)
+  const adBySlug = new Map(catalog.products.map((p) => [p.slug, p.name]));
+  const trBySlug = new Map(catalog.products.map((p) => [p.slug, p.tr_slug]));
+
+  // Vitrinde gösterilecek tüm ürünler TEK seferde toplanır (aynı ürün iki kez çekilmez).
+  const dolu = catalog.categories.filter((c) => (c.live_products ?? 0) > 0);
+  const one = catalog.products.slice(0, 8).map((p) => p.slug);
+  const raflar = dolu
+    .filter((c) => (c.live_products ?? 0) >= 3)
+    .slice(0, 3)
+    .map((c) => ({ cat: c, slugs: (c.product_slugs ?? []).slice(0, 4) }));
+  const kapakSlug = new Map<string, string>(); // kategori slug → kapak ürün slug
+  for (const c of dolu) { const ilk = (c.product_slugs ?? [])[0]; if (ilk) kapakSlug.set(c.slug, ilk); }
+
+  const gerekli = [...new Set([...one, ...raflar.flatMap((r) => r.slugs), ...kapakSlug.values()])];
+  const detaylar = await Promise.all(
+    gerekli.map(async (localeSlug) => {
+      const tr = trBySlug.get(localeSlug);
+      if (!tr) return null;
+      const d = await fetchProductBySlug(tr);
+      return d ? ([localeSlug, d] as const) : null;
+    })
+  );
+  const byLocaleSlug = new Map(detaylar.filter(Boolean) as (readonly [string, PublicProductDetail])[]);
+
+  const kart = (localeSlug: string) => {
+    const d = byLocaleSlug.get(localeSlug);
+    if (!d) return null;
+    return { card: detailToCard(locale, d, adBySlug.get(localeSlug) ?? d.product.name), href: `/${locale}/${seg.product}/${localeSlug}` };
+  };
+  const oneKartlar = one.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[];
+
   return (
     <>
-      {catalog.categories.length > 0 && (
-        <section>
-          <h2 style={S.h2}>{ui.categories}</h2>
-          <div>
-            {catalog.categories.map((c) => (
-              <Link key={c.slug} href={`/${locale}/${seg.category}/${c.slug}`} style={S.chip}>{c.name}</Link>
+      {/* Kategori vitrini — gerçek ürün fotoğrafı + o dildeki canlı ürün sayısı */}
+      {dolu.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 text-[19px] font-semibold text-[#1C0838]">{ui.categories}</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {dolu.map((c) => {
+              const kapak = kapakSlug.get(c.slug);
+              const d = kapak ? byLocaleSlug.get(kapak) : undefined;
+              const img = d ? (d.images.find((i) => i.role === "cover") ?? d.images[0])?.url : undefined;
+              return (
+                <Link
+                  key={c.slug}
+                  href={`/${locale}/${seg.category}/${c.slug}`}
+                  className="group overflow-hidden rounded-[18px] border border-[#EDE9FE] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.10)]"
+                >
+                  <div className="relative aspect-[4/5] overflow-hidden bg-[#FAF9FE]">
+                    {img ? <ProductImage src={img} alt={c.name} padding="10px" sizes="(max-width:640px) 50vw, 220px" /> : null}
+                  </div>
+                  <div className="px-3.5 py-3">
+                    <p className="truncate text-[14px] font-bold text-[#111827]">{c.name}</p>
+                    <p className="mt-0.5 text-[11.5px] text-[#8B5CF6]">{c.live_products} {shop.unit}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Öne çıkan ürünler — TR mağazasıyla aynı ProductCard */}
+      {oneKartlar.length > 0 && (
+        <section className="mt-12">
+          <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
+          <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
+          <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
+            {oneKartlar.map(({ card: c, href }, idx) => (
+              <ProductCard key={c.id} product={c} idx={idx} href={href} />
             ))}
           </div>
         </section>
       )}
-      {catalog.products.length > 0 && (
-        <section>
-          <h2 style={S.h2}>{ui.popular}</h2>
-          <div style={S.grid}>
-            {catalog.products.slice(0, 12).map((p) => (
-              <Link key={p.slug} href={`/${locale}/${seg.product}/${p.slug}`} style={S.card}>{p.name}</Link>
-            ))}
-          </div>
-        </section>
-      )}
+
+      {/* Kategori rafları — yalnız o dilde yeterli canlı ürünü olan kategoriler */}
+      {raflar.map((r) => {
+        const kartlar = r.slugs.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[];
+        if (kartlar.length < 2) return null;
+        return (
+          <section key={r.cat.slug} className="mt-12">
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <h2 className="text-[19px] font-semibold text-[#1C0838]">{r.cat.name}</h2>
+              <Link href={`/${locale}/${seg.category}/${r.cat.slug}`} className="shrink-0 text-[12.5px] font-semibold text-[#7C3AED] hover:underline">
+                {shop.shopAll}
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
+              {kartlar.map(({ card: c, href }, idx) => (
+                <ProductCard key={c.id} product={c} idx={idx} href={href} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </>
   );
 }
@@ -270,18 +369,20 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
   );
 }
 
-function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog }) {
+async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog }) {
   return (
-    <main lang={locale} dir={DIR[locale]} style={S.main}>
+    // Vitrin ürün fotoğraflarına yer açsın diye geniş kap; metin blokları okunur
+    // genişlikte kalır (premium/butik his, marketplace kalabalığı değil).
+    <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
       <h1 style={S.h1}>{row.h1}</h1>
-      {row.intro_html ? <div style={S.p} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
+      {row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
       <CatalogSections locale={locale} catalog={catalog} />
       {row.content_html ? (
-        <section style={{ marginTop: 32 }}>
+        <section style={{ marginTop: 40, maxWidth: 720 }}>
           <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: row.content_html }} />
         </section>
       ) : null}
-      <FaqSection locale={locale} faq={row.faq} />
+      <div style={{ maxWidth: 720 }}><FaqSection locale={locale} faq={row.faq} /></div>
     </main>
   );
 }
@@ -296,7 +397,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     if (row) return <GlobalPageBody locale={locale} row={row} catalog={catalog} />;
     const copy = HOME_FALLBACK[locale];
     return (
-      <main lang={locale} dir={DIR[locale]} style={S.main}>
+      <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
         <h1 style={S.h1}>{copy.h1}</h1>
         <p style={S.p}>{copy.p}</p>
         <CatalogSections locale={locale} catalog={catalog} />

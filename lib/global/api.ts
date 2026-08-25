@@ -85,7 +85,8 @@ export interface CategorySurface {
 }
 
 export interface LocaleCatalog {
-  categories: { slug: string; name: string }[];
+  // live_products / product_slugs: API additive alanları (Global Merkezi ile aynı formül).
+  categories: { slug: string; name: string; live_products?: number; product_slugs?: string[] }[];
   products: { slug: string; name: string; tr_slug: string }[];
 }
 
