@@ -25,6 +25,10 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 import {
+  TrustStrip, EmotionSection, DistanceSection, AtelierSection,
+  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta,
+} from "./sections";
+import {
   type GlobalLocale,
   parseLocalePath,
   localeProductPath,
@@ -374,15 +378,26 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
     // Vitrin ürün fotoğraflarına yer açsın diye geniş kap; metin blokları okunur
     // genişlikte kalır (premium/butik his, marketplace kalabalığı değil).
     <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
+      {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. */}
       <h1 style={S.h1}>{row.h1}</h1>
       {row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
+      <TrustStrip locale={locale} />
+      {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
+      <EmotionSection locale={locale} catalog={catalog} />
       <CatalogSections locale={locale} catalog={catalog} />
+      {/* Uzaklık → insan kanıtı → kişisel yardım → teslimat kanıtı → mesaj */}
+      <DistanceSection locale={locale} />
+      <AtelierSection locale={locale} />
+      <ConciergeSection locale={locale} />
+      <DeliveryProofSection locale={locale} />
+      <MessageSection locale={locale} />
       {row.content_html ? (
         <section style={{ marginTop: 40, maxWidth: 720 }}>
           <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: row.content_html }} />
         </section>
       ) : null}
       <div style={{ maxWidth: 720 }}><FaqSection locale={locale} faq={row.faq} /></div>
+      <FinalCta locale={locale} catalog={catalog} />
     </main>
   );
 }
