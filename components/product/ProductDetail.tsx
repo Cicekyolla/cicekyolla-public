@@ -127,6 +127,8 @@ export type AutoSizeProduct = {
   id: number;
   name: string;
   slug: string;
+  /** Locale vitrinleri kendi PDP yolunu verir; TR'de verilmez → /urun/<slug> korunur. */
+  href?: string;
   image: string;
   price: number;
   derivatives?: PublicProductImage["derivatives"];
@@ -318,15 +320,15 @@ export function ProductDetail({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {sizeProducts.slice(0, 3).map((item, index) => {
                   const labels = [
-                    [t("pdp.size.small"), "Standart"],
-                    [t("pdp.size.medium"), "Premium"],
-                    [t("pdp.size.large"), "Deluxe"],
+                    [t("pdp.size.small"), t("pdp.size.tier.standard")],
+                    [t("pdp.size.medium"), t("pdp.size.tier.premium")],
+                    [t("pdp.size.large"), t("pdp.size.tier.deluxe")],
                   ] as const;
                   const [label, tier] = labels[index];
                   return (
                     <Link
                       key={item.id}
-                      href={`/urun/${item.slug}`}
+                      href={item.href ?? `/urun/${item.slug}`}
                       aria-label={`${label}: ${item.name}, ₺${item.price}`}
                       className={`group overflow-hidden rounded-[18px] border bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] ${
                         index === 1 ? "border-[#8B5CF6] bg-[#F8F5FF] shadow-[0_7px_20px_rgba(124,58,237,0.10)]" : "border-[#EDE9FE]"
@@ -362,7 +364,7 @@ export function ProductDetail({
                 })}
               </div>
               <p className="mt-2.5 text-[10.5px] leading-relaxed text-[#9CA3AF]">
-                Her seçenek ayrı bir gerçek üründür. Seçtiğinizde ilgili ürün sayfası açılır.
+                {t("pdp.size.note")}
               </p>
             </section>
           )}

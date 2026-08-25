@@ -388,6 +388,10 @@ const nl: Dict = {
   "pdp.size.small": "Klein",
   "pdp.size.medium": "Middel",
   "pdp.size.large": "Groot",
+  "pdp.size.note": "Elke optie is een apart product. Bij selectie opent de bijbehorende productpagina.",
+  "pdp.size.tier.standard": "Standaard",
+  "pdp.size.tier.premium": "Premium",
+  "pdp.size.tier.deluxe": "Deluxe",
 };
 
 export default nl;

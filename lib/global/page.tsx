@@ -354,7 +354,10 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     const currentPriceMinor = Number(price);
     const catalog = await fetchLocaleCatalog(locale);
     const localizedBySlug = new Map(catalog.products.map((cp) => [cp.tr_slug, cp]));
-    const sizeProducts: AutoSizeProduct[] = [...availableRelated]
+    // Zincir kuralı (§10): beden önerileri de locale ailesi İÇİNDE kalır —
+    // yalnız o dilde yayımlanmış ürünler, locale PDP yolu ve locale adıyla.
+    const sizeProducts: AutoSizeProduct[] = availableRelated
+      .filter((r) => localizedBySlug.has(r.slug))
       .sort((a, b) => {
         const aP = Number(a.sale_price_minor && Number(a.sale_price_minor) > 0 ? a.sale_price_minor : a.price_minor);
         const bP = Number(b.sale_price_minor && Number(b.sale_price_minor) > 0 ? b.sale_price_minor : b.price_minor);
@@ -363,8 +366,10 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
       .slice(0, 3)
       .map((r) => {
         const hasSale = r.sale_price_minor != null && Number(r.sale_price_minor) > 0 && Number(r.sale_price_minor) < Number(r.price_minor);
+        const lp = localizedBySlug.get(r.slug)!;
         return {
-          id: r.id, slug: r.slug, name: localizedBySlug.get(r.slug)?.name ?? r.name,
+          id: r.id, slug: r.slug, name: lp.name,
+          href: `/${locale}/${seg.product}/${lp.slug}`,
           price: Math.round((hasSale ? Number(r.sale_price_minor) : Number(r.price_minor)) / 100),
           image: r.cover_image_url ?? "",
         } as AutoSizeProduct;

@@ -399,6 +399,10 @@ const tr = {
   "pdp.size.small": "Küçük",
   "pdp.size.medium": "Orta",
   "pdp.size.large": "Büyük",
+  "pdp.size.note": "Her seçenek ayrı bir gerçek üründür. Seçtiğinizde ilgili ürün sayfası açılır.",
+  "pdp.size.tier.standard": "Standart",
+  "pdp.size.tier.premium": "Premium",
+  "pdp.size.tier.deluxe": "Deluxe",
 };
 
 export type Dict = typeof tr;

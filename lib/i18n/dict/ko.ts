@@ -388,6 +388,10 @@ const ko: Dict = {
   "pdp.size.small": "소",
   "pdp.size.medium": "중",
   "pdp.size.large": "대",
+  "pdp.size.note": "각 옵션은 개별 상품입니다. 선택하면 해당 상품 페이지가 열립니다.",
+  "pdp.size.tier.standard": "스탠다드",
+  "pdp.size.tier.premium": "프리미엄",
+  "pdp.size.tier.deluxe": "디럭스",
 };
 
 export default ko;

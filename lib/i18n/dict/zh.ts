@@ -388,6 +388,10 @@ const zh: Dict = {
   "pdp.size.small": "小",
   "pdp.size.medium": "中",
   "pdp.size.large": "大",
+  "pdp.size.note": "每个选项都是独立商品，选择后将打开对应的商品页面。",
+  "pdp.size.tier.standard": "标准",
+  "pdp.size.tier.premium": "高级",
+  "pdp.size.tier.deluxe": "豪华",
 };
 
 export default zh;
