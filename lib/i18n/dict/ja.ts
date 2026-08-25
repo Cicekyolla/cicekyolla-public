@@ -388,6 +388,10 @@ const ja: Dict = {
   "pdp.size.small": "小",
   "pdp.size.medium": "中",
   "pdp.size.large": "大",
+  "pdp.size.note": "各オプションはそれぞれ独立した商品です。選択すると該当の商品ページが開きます。",
+  "pdp.size.tier.standard": "スタンダード",
+  "pdp.size.tier.premium": "プレミアム",
+  "pdp.size.tier.deluxe": "デラックス",
 };
 
 export default ja;

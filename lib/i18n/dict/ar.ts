@@ -389,6 +389,10 @@ const ar: Dict = {
   "pdp.size.small": "صغير",
   "pdp.size.medium": "متوسط",
   "pdp.size.large": "كبير",
+  "pdp.size.note": "كل خيار منتج مستقل. عند الاختيار تُفتح صفحة المنتج المعنية.",
+  "pdp.size.tier.standard": "قياسي",
+  "pdp.size.tier.premium": "بريميوم",
+  "pdp.size.tier.deluxe": "ديلوكس",
 };
 
 export default ar;

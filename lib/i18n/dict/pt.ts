@@ -388,6 +388,10 @@ const pt: Dict = {
   "pdp.size.small": "Pequeno",
   "pdp.size.medium": "Médio",
   "pdp.size.large": "Grande",
+  "pdp.size.note": "Cada opção é um produto separado. Ao selecioná-la, abre-se a respetiva página do produto.",
+  "pdp.size.tier.standard": "Padrão",
+  "pdp.size.tier.premium": "Premium",
+  "pdp.size.tier.deluxe": "Deluxe",
 };
 
 export default pt;

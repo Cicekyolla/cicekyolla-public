@@ -388,6 +388,10 @@ const ru: Dict = {
   "pdp.size.small": "Маленький",
   "pdp.size.medium": "Средний",
   "pdp.size.large": "Большой",
+  "pdp.size.note": "Каждый вариант — отдельный товар. При выборе откроется его страница.",
+  "pdp.size.tier.standard": "Стандарт",
+  "pdp.size.tier.premium": "Премиум",
+  "pdp.size.tier.deluxe": "Делюкс",
 };
 
 export default ru;

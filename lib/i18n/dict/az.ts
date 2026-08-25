@@ -388,6 +388,10 @@ const az: Dict = {
   "pdp.size.small": "Kiçik",
   "pdp.size.medium": "Orta",
   "pdp.size.large": "Böyük",
+  "pdp.size.note": "Hər seçim ayrıca bir məhsuldur. Seçdiyinizdə həmin məhsulun səhifəsi açılır.",
+  "pdp.size.tier.standard": "Standart",
+  "pdp.size.tier.premium": "Premium",
+  "pdp.size.tier.deluxe": "Deluxe",
 };
 
 export default az;
