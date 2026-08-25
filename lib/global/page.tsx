@@ -22,6 +22,7 @@ import { absoluteUrl } from "@/lib/site-config";
 import { fetchProductBySlug, fetchProducts, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
 import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
+import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 import {
   type GlobalLocale,
   parseLocalePath,
@@ -324,7 +325,14 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     return (
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
         <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 10 }}>{surface.name}</h1>
-        {surface.description ? <p style={{ fontSize: 15, lineHeight: 1.65, maxWidth: 720, color: "#374151" }}>{surface.description}</p> : null}
+        {surface.description ? (
+          // DB’deki açıklama HTML’dir (<p>, <h2>…). Metin olarak basılırsa etiketler
+          // müşteriye görünür. Ürün açıklamasıyla AYNI güvenli yol: sanitize + prose.
+          <div
+            className={`mt-2 max-w-[720px] ${DESC_PROSE}`}
+            dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(surface.description) }}
+          />
+        ) : null}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {cards.map(({ card: c, href }, idx) => (
             <ProductCard key={c.id} product={c} idx={idx} href={href} />
