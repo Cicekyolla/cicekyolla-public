@@ -43,6 +43,20 @@ test("localeProductPath: locale'e özgü segment", () => {
   assert.equal(localeProductPath("en", "red-roses"), "/en/product/red-roses");
 });
 
-test("GLOBAL_LOCALES: Faz 1 = de + en (yeni dil eklerken bilinçli genişletilir)", () => {
-  assert.deepEqual([...GLOBAL_LOCALES], ["de", "en"]);
+test("GLOBAL_LOCALES: 13 hedef dil (API TRANSLATION_LOCALES ile birebir küme)", () => {
+  assert.deepEqual([...GLOBAL_LOCALES].sort(), ["ar","az","de","en","es","fr","it","ja","ko","nl","pt","ru","zh"]);
+});
+
+test("isGlobalLocalePath: yeni diller tanınır, TR path'leri asla", () => {
+  assert.equal(isGlobalLocalePath("/fr"), true);
+  assert.equal(isGlobalLocalePath("/ru/istanbul/kadikoy"), true);
+  assert.equal(isGlobalLocalePath("/arama"), false); // /ar öneki /arama'yı YAKALAMAMALI
+  assert.equal(isGlobalLocalePath("/koleksiyonlar"), false);
+  assert.equal(isGlobalLocalePath("/esenyurt"), false);
+});
+
+test("parseLocalePath: locale'e özgü segmentler (yeni diller)", () => {
+  assert.deepEqual(parseLocalePath("fr", ["produit", "roses-rouges"]), { kind: "product", slug: "roses-rouges" });
+  assert.deepEqual(parseLocalePath("ru", ["product", "red-roses"]), { kind: "product", slug: "red-roses" });
+  assert.equal(parseLocalePath("fr", ["product", "x"]).kind, "unknown");
 });

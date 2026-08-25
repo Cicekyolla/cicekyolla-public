@@ -127,7 +127,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           GTM container (GTM-54FJNMT2) ve mevcut dataLayer event'leri DEĞİŞMEDİ.
         */}
         <Script id="cy-lang-dir" strategy="beforeInteractive">
-          {`(function(){try{var pm=/^\/(de|en)(?:\/|$)/.exec(location.pathname);var m=/(?:^|;[ ]*)cy_lang=([a-z]{2})/.exec(document.cookie);var l=pm?pm[1]:(m&&m[1]);if(l&&/^(tr|en|ar|zh|nl|de|it|ja|pt|ko|ru|es|az|fr)$/.test(l)){document.documentElement.lang=l;document.documentElement.dir=l==="ar"?"rtl":"ltr";}}catch(e){}})();`}
+          {`(function(){try{var pm=/^\/(de|en|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?:\/|$)/.exec(location.pathname);var m=/(?:^|;[ ]*)cy_lang=([a-z]{2})/.exec(document.cookie);var l=pm?pm[1]:(m&&m[1]);if(l&&/^(tr|en|ar|zh|nl|de|it|ja|pt|ko|ru|es|az|fr)$/.test(l)){document.documentElement.lang=l;document.documentElement.dir=l==="ar"?"rtl":"ltr";}}catch(e){}})();`}
         </Script>
         <Script id="consent-mode-default" strategy="beforeInteractive">
           {`

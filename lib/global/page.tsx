@@ -28,6 +28,7 @@ import {
   localeProductPath,
   isGlobalLocale,
   SEGMENTS,
+  DIR,
 } from "./config";
 import {
   fetchProductSurface,
@@ -44,6 +45,17 @@ import {
 const BADGE_L10N: Record<GlobalLocale, Record<string, string>> = {
   de: { "İndirim": "Angebot", "Yeni": "Neu", "Çok Satan": "Bestseller" },
   en: { "İndirim": "Sale", "Yeni": "New", "Çok Satan": "Bestseller" },
+  fr: { "İndirim": "Promo", "Yeni": "Nouveau", "Çok Satan": "Best-seller" },
+  nl: { "İndirim": "Korting", "Yeni": "Nieuw", "Çok Satan": "Bestseller" },
+  it: { "İndirim": "Offerta", "Yeni": "Novità", "Çok Satan": "Bestseller" },
+  es: { "İndirim": "Oferta", "Yeni": "Nuevo", "Çok Satan": "Superventas" },
+  pt: { "İndirim": "Promoção", "Yeni": "Novo", "Çok Satan": "Mais vendido" },
+  az: { "İndirim": "Endirim", "Yeni": "Yeni", "Çok Satan": "Bestseller" },
+  ru: { "İndirim": "Скидка", "Yeni": "Новинка", "Çok Satan": "Хит продаж" },
+  ar: { "İndirim": "خصم", "Yeni": "جديد", "Çok Satan": "الأكثر مبيعًا" },
+  zh: { "İndirim": "特惠", "Yeni": "新品", "Çok Satan": "畅销" },
+  ja: { "İndirim": "セール", "Yeni": "新作", "Çok Satan": "ベストセラー" },
+  ko: { "İndirim": "할인", "Yeni": "신상품", "Çok Satan": "베스트셀러" },
 };
 
 /** Core ürün detayını mevcut ProductCard tipine çevirir (mediaUrl'lü görsel,
@@ -72,22 +84,38 @@ function detailToCard(locale: GlobalLocale, d: PublicProductDetail, localizedNam
 }
 
 // Foundation yedek metinleri — global_pages 'home' onaylanana kadar (noindex).
+// Foundation yedek metinleri — locale'in approved 'home' sayfası olana kadar
+// (bu yüzeyler NOINDEX'tir; vitrin açılışı Admin onayıyla olur).
 const HOME_FALLBACK: Record<GlobalLocale, { title: string; h1: string; p: string }> = {
-  de: {
-    title: "ÇiçekYolla — Blumen nach Istanbul verschicken",
-    h1: "Blumen nach Istanbul verschicken",
-    p: "ÇiçekYolla ist ein Blumenladen in Istanbul. Taggleiche Lieferung in Istanbul, türkeiweiter Versand in 1–3 Werktagen.",
-  },
-  en: {
-    title: "ÇiçekYolla — Send Flowers to Istanbul",
-    h1: "Send Flowers to Istanbul",
-    p: "ÇiçekYolla is a florist based in Istanbul. Same-day delivery in Istanbul, nationwide shipping across Turkey in 1–3 business days.",
-  },
+  de: { title: "ÇiçekYolla — Blumen nach Istanbul verschicken", h1: "Blumen nach Istanbul verschicken", p: "ÇiçekYolla ist ein Blumenladen in Istanbul. Taggleiche Lieferung in Istanbul, türkeiweiter Versand in 1–3 Werktagen." },
+  en: { title: "ÇiçekYolla — Send Flowers to Istanbul", h1: "Send Flowers to Istanbul", p: "ÇiçekYolla is a florist based in Istanbul. Same-day delivery in Istanbul, nationwide shipping across Turkey in 1–3 business days." },
+  fr: { title: "ÇiçekYolla — Livraison de fleurs à Istanbul", h1: "Faire livrer des fleurs à Istanbul", p: "ÇiçekYolla est un fleuriste basé à Istanbul. Livraison le jour même à Istanbul, expédition dans toute la Turquie en 1 à 3 jours ouvrés." },
+  nl: { title: "ÇiçekYolla — Bloemen bezorgen in Istanbul", h1: "Bloemen bezorgen in Istanbul", p: "ÇiçekYolla is een bloemist in Istanbul. Bezorging dezelfde dag in Istanbul, verzending door heel Turkije in 1–3 werkdagen." },
+  it: { title: "ÇiçekYolla — Consegna fiori a Istanbul", h1: "Consegna di fiori a Istanbul", p: "ÇiçekYolla è un fiorista di Istanbul. Consegna in giornata a Istanbul, spedizione in tutta la Turchia in 1–3 giorni lavorativi." },
+  es: { title: "ÇiçekYolla — Enviar flores a Estambul", h1: "Enviar flores a Estambul", p: "ÇiçekYolla es una floristería de Estambul. Entrega el mismo día en Estambul y envíos a toda Turquía en 1–3 días laborables." },
+  pt: { title: "ÇiçekYolla — Entrega de flores em Istambul", h1: "Enviar flores para Istambul", p: "A ÇiçekYolla é uma florista de Istambul. Entrega no mesmo dia em Istambul e envio para toda a Turquia em 1–3 dias úteis." },
+  az: { title: "ÇiçekYolla — İstanbula gül çatdırılması", h1: "İstanbula gül göndərin", p: "ÇiçekYolla İstanbulda yerləşən gül mağazasıdır. İstanbulda elə həmin gün çatdırılma, Türkiyə üzrə 1–3 iş gününə göndərmə." },
+  ru: { title: "ÇiçekYolla — Доставка цветов в Стамбуле", h1: "Доставка цветов в Стамбул", p: "ÇiçekYolla — цветочный магазин в Стамбуле. Доставка в день заказа по Стамбулу, отправка по всей Турции за 1–3 рабочих дня." },
+  ar: { title: "ÇiçekYolla — توصيل الزهور في اسطنبول", h1: "إرسال الزهور إلى اسطنبول", p: "ÇiçekYolla متجر زهور في اسطنبول. توصيل في نفس اليوم داخل اسطنبول، وشحن إلى جميع أنحاء تركيا خلال 1–3 أيام عمل." },
+  zh: { title: "ÇiçekYolla — 伊斯坦布尔鲜花速递", h1: "送花到伊斯坦布尔", p: "ÇiçekYolla 是位于伊斯坦布尔的花店。伊斯坦布尔市内当日送达，土耳其全国 1–3 个工作日发货。" },
+  ja: { title: "ÇiçekYolla — イスタンブールへの花のお届け", h1: "イスタンブールに花を贈る", p: "ÇiçekYolla はイスタンブールのフラワーショップです。イスタンブール市内は当日配達、トルコ全土へは1〜3営業日でお届けします。" },
+  ko: { title: "ÇiçekYolla — 이스탄불 꽃 배달", h1: "이스탄불로 꽃 보내기", p: "ÇiçekYolla는 이스탄불의 꽃집입니다. 이스탄불 내 당일 배송, 튀르키예 전역 1–3 영업일 배송." },
 };
 
 const UI: Record<GlobalLocale, { categories: string; popular: string; faq: string; orderCta: string; orderNote: string }> = {
-  de: { categories: "Kategorien", popular: "Beliebte Blumen für Istanbul", faq: "Häufige Fragen", orderCta: "Jetzt bestellen →", orderNote: "Die Bestellung wird in unserem Shop abgeschlossen (Türkisch; internationale Visa/Mastercard werden akzeptiert)." },
-  en: { categories: "Categories", popular: "Popular flowers for Istanbul delivery", faq: "Frequently asked questions", orderCta: "Order now →", orderNote: "Checkout completes in our store (Turkish; international Visa/Mastercard accepted)." },
+  de: { categories: "Kategorien", popular: "Beliebte Blumen für Istanbul", faq: "Häufige Fragen", orderCta: "Jetzt bestellen →", orderNote: "Die Bestellung wird in unserem Shop abgeschlossen (internationale Visa/Mastercard werden akzeptiert)." },
+  en: { categories: "Categories", popular: "Popular flowers for Istanbul delivery", faq: "Frequently asked questions", orderCta: "Order now →", orderNote: "Checkout completes in our store (international Visa/Mastercard accepted)." },
+  fr: { categories: "Catégories", popular: "Fleurs populaires pour Istanbul", faq: "Questions fréquentes", orderCta: "Commander →", orderNote: "La commande se termine dans notre boutique (cartes Visa/Mastercard internationales acceptées)." },
+  nl: { categories: "Categorieën", popular: "Populaire bloemen voor Istanbul", faq: "Veelgestelde vragen", orderCta: "Nu bestellen →", orderNote: "De bestelling wordt afgerond in onze winkel (internationale Visa/Mastercard geaccepteerd)." },
+  it: { categories: "Categorie", popular: "Fiori più richiesti per Istanbul", faq: "Domande frequenti", orderCta: "Ordina ora →", orderNote: "L'ordine si completa nel nostro negozio (carte Visa/Mastercard internazionali accettate)." },
+  es: { categories: "Categorías", popular: "Flores populares para Estambul", faq: "Preguntas frecuentes", orderCta: "Pedir ahora →", orderNote: "El pedido se completa en nuestra tienda (se aceptan Visa/Mastercard internacionales)." },
+  pt: { categories: "Categorias", popular: "Flores populares para Istambul", faq: "Perguntas frequentes", orderCta: "Encomendar →", orderNote: "A encomenda é concluída na nossa loja (aceitamos Visa/Mastercard internacionais)." },
+  az: { categories: "Kateqoriyalar", popular: "İstanbul üçün populyar güllər", faq: "Tez-tez verilən suallar", orderCta: "Sifariş et →", orderNote: "Sifariş mağazamızda tamamlanır (beynəlxalq Visa/Mastercard qəbul olunur)." },
+  ru: { categories: "Категории", popular: "Популярные цветы для Стамбула", faq: "Частые вопросы", orderCta: "Заказать →", orderNote: "Оформление завершается в нашем магазине (принимаются международные Visa/Mastercard)." },
+  ar: { categories: "الفئات", popular: "أشهر الزهور للتوصيل في اسطنبول", faq: "الأسئلة الشائعة", orderCta: "← اطلب الآن", orderNote: "تكتمل عملية الشراء في متجرنا (نقبل بطاقات Visa/Mastercard الدولية)." },
+  zh: { categories: "分类", popular: "伊斯坦布尔热门鲜花", faq: "常见问题", orderCta: "立即订购 →", orderNote: "订单在本店完成结算（支持国际 Visa/Mastercard）。" },
+  ja: { categories: "カテゴリー", popular: "イスタンブールで人気の花", faq: "よくある質問", orderCta: "今すぐ注文 →", orderNote: "ご注文は当店で完了します（海外発行の Visa/Mastercard がご利用いただけます）。" },
+  ko: { categories: "카테고리", popular: "이스탄불 인기 꽃", faq: "자주 묻는 질문", orderCta: "지금 주문 →", orderNote: "주문은 본 매장에서 완료됩니다 (해외 발급 Visa/Mastercard 사용 가능)." },
 };
 
 const NOINDEX = { index: false, follow: false } as const;
@@ -243,7 +271,7 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
 
 function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog }) {
   return (
-    <main lang={locale} dir="ltr" style={S.main}>
+    <main lang={locale} dir={DIR[locale]} style={S.main}>
       <h1 style={S.h1}>{row.h1}</h1>
       {row.intro_html ? <div style={S.p} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
       <CatalogSections locale={locale} catalog={catalog} />
@@ -267,7 +295,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     if (row) return <GlobalPageBody locale={locale} row={row} catalog={catalog} />;
     const copy = HOME_FALLBACK[locale];
     return (
-      <main lang={locale} dir="ltr" style={S.main}>
+      <main lang={locale} dir={DIR[locale]} style={S.main}>
         <h1 style={S.h1}>{copy.h1}</h1>
         <p style={S.p}>{copy.p}</p>
         <CatalogSections locale={locale} catalog={catalog} />
@@ -294,7 +322,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
       .filter((x): x is { m: (typeof members)[number]; d: PublicProductDetail } => !!x.d)
       .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
     return (
-      <main lang={locale} dir="ltr" className="mx-auto w-full max-w-6xl px-4 py-10">
+      <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
         <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 10 }}>{surface.name}</h1>
         {surface.description ? <p style={{ fontSize: 15, lineHeight: 1.65, maxWidth: 720, color: "#374151" }}>{surface.description}</p> : null}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
@@ -356,7 +384,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     const related = (await Promise.all(relatedCards)).filter((x): x is { card: CardProductUi; href: string } => !!x);
 
     return (
-      <main lang={locale} dir="ltr" className="mx-auto w-full max-w-6xl px-4 py-8">
+      <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-8">
         <ProductDetail data={data} sizeProducts={sizeProducts} />
         {related.length > 0 && (
           <section className="mt-12">

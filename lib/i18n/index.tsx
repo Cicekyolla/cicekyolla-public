@@ -94,10 +94,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [dict, setDict] = useState<Dict | undefined>(tr);
   const [ready, setReady] = useState(false);
 
-  // Mount: URL locale (/de, /en) > cookie (GLOBAL kanunu: URL = SEO source of
-  // truth; cookie yalnız sunum tercihi ve URL'siz sayfalarda geçerli).
+  // Mount: URL locale (13 global dil) > cookie (URL = SEO source of truth;
+  // cookie sunum tercihi). DİL SÜREKLİLİĞİ: /xx'te gezen müşteri öneksiz
+  // sayfalara (sepet, checkout) geçince dili kaybetmesin diye URL locale'i
+  // cookie'ye yazılır; TR müşteride davranış değişmez (önek yoksa dokunulmaz).
   useEffect(() => {
-    const urlLocale = /^\/(de|en)(?:\/|$)/.exec(window.location.pathname)?.[1];
+    const urlLocale = /^\/(de|en|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?:\/|$)/.exec(window.location.pathname)?.[1];
+    if (urlLocale && isLocale(urlLocale)) {
+      try {
+        document.cookie = `${LANG_COOKIE}=${urlLocale}; path=/; max-age=${LANG_COOKIE_MAX_AGE}; samesite=lax`;
+      } catch { /* cookie kapalıysa oturum içi devam */ }
+    }
     const l = urlLocale && isLocale(urlLocale) ? urlLocale : parseLangCookie(document.cookie);
     if (l === DEFAULT_LOCALE) { setReady(true); applyHtml(l); return; }
     let alive = true;

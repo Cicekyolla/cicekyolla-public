@@ -93,7 +93,33 @@ export function LanguageSelector() {
     };
   }, [open]);
 
-  const pick = (code: Locale) => { setLocale(code); setOpen(false); setSheetOpen(false); };
+  // GLOBAL 14-dil (kanun §10): dil seçimi yalnız sunum cookie'si DEĞİL —
+  // hedef dilin public vitrini HAZIRSA (approved home) gerçek locale rotasına gider.
+  //  1) Sayfadaki hreflang cluster'ında hedef dilin karşılığı varsa → o URL
+  //     (core ID/translation cluster; slug tahmini yok).
+  //  2) Yoksa hedef dil available-locales'taysa → /<locale> anasayfası.
+  //  3) Vitrin hazır değilse → mevcut davranış (yalnız sunum çevirisi).
+  // TR: locale path'indeysek TR karşılık = hreflang tr yoksa ana sayfa.
+  const [availableLocales, setAvailableLocales] = useState<string[]>([]);
+  useEffect(() => {
+    fetch('/api/global/available-locales', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((b) => setAvailableLocales(Array.isArray(b.data) ? b.data : []))
+      .catch(() => {});
+  }, []);
+  const pick = (code: Locale) => {
+    setOpen(false); setSheetOpen(false);
+    const onLocalePath = /^\/(de|en|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?:\/|$)/.test(window.location.pathname);
+    if (code === 'tr') {
+      setLocale(code);
+      if (onLocalePath) window.location.assign('/');
+      return;
+    }
+    const alt = document.querySelector(`link[rel="alternate"][hreflang="${code}"]`) as HTMLLinkElement | null;
+    if (alt?.href) { setLocale(code); window.location.assign(alt.href); return; }
+    if (availableLocales.includes(code)) { setLocale(code); window.location.assign(`/${code}`); return; }
+    setLocale(code); // vitrin hazır değil: mevcut sunum-çevirisi davranışı
+  };
 
   const panel = open && pos && typeof document !== "undefined" ? createPortal(
     <div
