@@ -390,7 +390,15 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
 
     return (
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-8">
-        <ProductDetail data={data} sizeProducts={sizeProducts} />
+        <ProductDetail
+          data={data}
+          sizeProducts={sizeProducts}
+          presentation={{
+            name: surface.name,
+            short_description: surface.short_description,
+            long_description: surface.long_description,
+          }}
+        />
         {related.length > 0 && (
           <section className="mt-12">
             <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
