@@ -138,9 +138,13 @@ export type AutoSizeProduct = {
 export function ProductDetail({
   data,
   sizeProducts = [],
+  presentation,
 }: {
   data: PublicProductDetail;
   sizeProducts?: AutoSizeProduct[];
+  /** Locale vitrini onaylı çeviriyi SUNUCUDA verir → ilk HTML doğru dilde çıkar
+   *  (client fetch'i beklemez). TR çağrısı vermez; sepet/sipariş adı TR kalır. */
+  presentation?: { name?: string | null; short_description?: string | null; long_description?: string | null };
 }) {
   const { product, images, variants } = data;
   const sortedImages: PublicProductImage[] = [...images].sort((a, b) => {
@@ -166,9 +170,9 @@ export function ProductDetail({
   const { t, locale } = useI18n();
   // Faz 2: onaylı çeviri varsa ad/açıklama SUNUMDA değişir; id/slug/fiyat/varyant/sepet TR kaynak kayıttır.
   const tx = useProductTranslation(product.slug);
-  const displayName = tx?.name || product.name;
-  const displayShort = tx?.short_description ?? product.short_description;
-  const displayLong = tx?.long_description ?? product.long_description;
+  const displayName = tx?.name || presentation?.name || product.name;
+  const displayShort = tx?.short_description ?? presentation?.short_description ?? product.short_description;
+  const displayLong = tx?.long_description ?? presentation?.long_description ?? product.long_description;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
   const [deliverySelection, setDeliverySelection] = useState<PendingDelivery | null>(null);
