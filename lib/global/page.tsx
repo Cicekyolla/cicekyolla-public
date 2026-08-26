@@ -25,6 +25,10 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 import {
+  parseLocationKey, fetchLocaleDistricts, fetchLocaleNeighborhoods, fetchLocationNames,
+} from "./locationTree";
+import { LocationBreadcrumb, LocationGrid, ilceBasligi, mahalleBasligi } from "./locationNav";
+import {
   TrustStrip, EmotionSection, DistanceSection, AtelierSection,
   ConciergeSection, DeliveryProofSection, MessageSection, FinalCta,
 } from "./sections";
@@ -374,13 +378,49 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
 }
 
 async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog }) {
+  // Lokasyon yüzeyi ise: üst hiyerarşi (crawlable kırıntı) + bir alt seviyenin
+  // GERÇEK listesi. Veri TR location core ∩ o dilde yayında olan yüzeyler.
+  const loc = parseLocationKey(row.page_key);
+  let kirinti: React.ReactNode = null;
+  let izgara: React.ReactNode = null;
+  if (loc) {
+    if (loc.kind === "city") {
+      const ilceler = await fetchLocaleDistricts(locale, loc.city);
+      const ad = await fetchLocationNames(loc.city);
+      kirinti = null; // kök: kendisi zaten hub
+      izgara = (
+        <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}`} items={ilceler} title={ilceBasligi(locale)} />
+      );
+      void ad;
+    } else if (loc.kind === "district") {
+      const { cityName, districtName, items } = await fetchLocaleNeighborhoods(locale, loc.city, loc.district);
+      kirinti = (
+        <LocationBreadcrumb locale={locale} city={loc.city} cityName={cityName} district={loc.district} districtName={districtName} />
+      );
+      izgara = (
+        <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}/${loc.district}`} items={items}
+          title={mahalleBasligi(locale, districtName)} />
+      );
+    } else {
+      const { cityName, districtName, neighborhoodName } = await fetchLocationNames(loc.city, loc.district, loc.neighborhood);
+      kirinti = (
+        <LocationBreadcrumb locale={locale} city={loc.city} cityName={cityName} district={loc.district}
+          districtName={districtName} neighborhoodName={neighborhoodName} />
+      );
+      // Mahalle sayfası: kardeş mahalleler ilçe sayfasında; burada kırıntı yeterli.
+    }
+  }
   return (
     // Vitrin ürün fotoğraflarına yer açsın diye geniş kap; metin blokları okunur
     // genişlikte kalır (premium/butik his, marketplace kalabalığı değil).
     <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
+      {/* Lokasyon kırıntısı — üst seviyeler gerçek <a href> */}
+      {kirinti}
       {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. */}
       <h1 style={S.h1}>{row.h1}</h1>
       {row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
+      {/* Lokasyon keşfi: İstanbul→ilçe, ilçe→mahalle (gerçek <a href>) */}
+      {izgara}
       <TrustStrip locale={locale} />
       {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
       <EmotionSection locale={locale} catalog={catalog} />

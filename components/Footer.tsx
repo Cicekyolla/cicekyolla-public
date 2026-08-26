@@ -1,4 +1,6 @@
 "use client";
+import { usePathname } from "next/navigation";
+import { GLOBAL_LOCALES } from "@/lib/global/config";
 import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 import Link from "next/link";
@@ -23,6 +25,22 @@ const FOOTER_DELIVERY_LINKS = [
   { label: "İzmir", href: "/izmir/konak" },
 ];
 
+/**
+ * Locale zinciri korunur: /ru/... içindeyken teslimat kısayolu kullanıcıyı TR
+ * URL'sine atmaz, /ru/istanbul/... verir. Global tarafta yalnız İstanbul yüzeyi
+ * yayında olduğu için diğer iller locale modunda gizlenir (404 üretmemek için).
+ * TR yolunda liste ve davranış BİREBİR aynıdır.
+ */
+function teslimatLinkleri(pathname: string | null) {
+  const m = /^\/([a-z]{2})(?:\/|$)/.exec(pathname ?? "");
+  const locale = m && (GLOBAL_LOCALES as readonly string[]).includes(m[1]) ? m[1] : null;
+  if (!locale) return FOOTER_DELIVERY_LINKS;
+  return FOOTER_DELIVERY_LINKS.filter((l) => l.href.startsWith("/istanbul/")).map((l) => ({
+    ...l,
+    href: `/${locale}${l.href}`,
+  }));
+}
+
 const FALLBACK_COLLECTION_LINKS = [
   { name: "Güller", href: "/kategori/guller" },
   { name: "Buketler", href: "/kategori/buketler" },
@@ -44,6 +62,7 @@ export function Footer({
   brand?: FooterBrand;
 }) {
   // Faz 2: onaylı kategori çevirisi varsa footer etiketi (href aynı)
+  const pathname = usePathname();
   const catTx = useCategoryTranslations();
   const cn = (name: string, href?: string | null) => catTx.bySlug[slugFromHref(href)]?.name ?? name;
   const contactPhone = brand?.contactPhone?.trim() || "0507 441 34 74";
@@ -152,7 +171,7 @@ export function Footer({
             </ul>
             <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-4">Teslimat</h4>
             <ul className="space-y-3">
-              {FOOTER_DELIVERY_LINKS.map((item) => (
+              {teslimatLinkleri(pathname).map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
