@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readMetaAttribution } from "@/lib/metaPixel";
 import Link from "next/link";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 
@@ -71,6 +72,10 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
     }
     setLoading(true);
     try {
+      // 077 — Meta attribution çerezleri. Bu iki değer CAPI'ye gitmezse satış
+      // hiçbir kampanyaya atfedilemez. Onay verilmemişse null gider; sipariş
+      // akışı bundan ETKİLENMEZ.
+      const metaAttr = readMetaAttribution();
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,6 +86,7 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
           delivery_address: f.delivery_address || null, delivery_district: f.delivery_district || null,
           delivery_date: f.delivery_date || null, delivery_time_slot: f.delivery_time_slot || null,
           card_message: f.card_message || null, source: "web",
+          meta_fbc: metaAttr.fbc, meta_fbp: metaAttr.fbp,
          items: [{ product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) }],
         }),
       });

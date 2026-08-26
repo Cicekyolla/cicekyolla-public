@@ -27,6 +27,12 @@ declare global {
 
 let loaded = false;
 
+/* Pixel henüz yüklenmemişken gelen event'ler burada bekler (en fazla birkaç
+   tane; sayfa başına 1–2 event olur). loadMetaPixel() sonunda boşaltılır. */
+type BekleyenEvent = { name: string; data: MetaTrackCustomData; eventId?: string };
+const bekleyenler: BekleyenEvent[] = [];
+const BEKLEME_SINIRI = 10;
+
 /** Pazarlama onayı verildiğinde (veya sayfa açılışında onay zaten varsa) çağrılır. İdempotent. */
 export function loadMetaPixel(): void {
   if (typeof window === "undefined" || loaded || window.fbq) { loaded = true; return; }
@@ -56,6 +62,32 @@ export function loadMetaPixel(): void {
 
   w.fbq("init", META_PIXEL_ID);
   w.fbq("track", "PageView");
+
+  /* Pixel hazır olmadan tetiklenen event'leri şimdi gönder (aksi halde
+     kaybolurlardı — ViewContent'in düşük görünmesinin sebebi buydu). */
+  while (bekleyenler.length) {
+    const e = bekleyenler.shift();
+    if (!e) break;
+    if (e.eventId) w.fbq("track", e.name, e.data, { eventID: e.eventId });
+    else w.fbq("track", e.name, e.data);
+  }
+}
+
+/**
+ * 077 — Meta attribution çerezleri. Meta Pixel yüklendiğinde _fbp'yi kendisi
+ * yazar; _fbc ise reklam tıklamasında (fbclid) oluşur. Bu iki değer CAPI'ye
+ * gitmezse satış hiçbir kampanyaya ATFEDİLEMEZ.
+ *
+ * Onay verilmemişse pixel hiç yüklenmez → çerezler yoktur → null döner
+ * (sipariş akışı bundan ETKİLENMEZ, yalnız attribution zayıflar).
+ */
+export function readMetaAttribution(): { fbc: string | null; fbp: string | null } {
+  if (typeof document === "undefined") return { fbc: null, fbp: null };
+  const oku = (ad: string): string | null => {
+    const m = document.cookie.match(new RegExp("(?:^|; )" + ad + "=([^;]*)"));
+    return m ? decodeURIComponent(m[1]).slice(0, 255) : null;
+  };
+  return { fbc: oku("_fbc"), fbp: oku("_fbp") };
 }
 
 export interface MetaTrackCustomData {
@@ -68,7 +100,14 @@ export interface MetaTrackCustomData {
 
 /** window.fbq yoksa (onay yok / henüz yüklenmedi) sessizce no-op. eventId verilirse dedup için Meta'nın eventID alanına geçer. */
 export function metaTrack(eventName: string, data: MetaTrackCustomData, eventId?: string): void {
-  if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+  if (typeof window === "undefined") return;
+  if (typeof window.fbq !== "function") {
+    /* Pixel henüz yüklenmedi. Onay VARSA birazdan yüklenecek → kuyruğa al.
+       Onay YOKSA loadMetaPixel hiç çağrılmaz, kuyruk boşaltılmaz ve hiçbir
+       event gitmez — KVKK davranışı korunur. */
+    if (bekleyenler.length < BEKLEME_SINIRI) bekleyenler.push({ name: eventName, data, eventId });
+    return;
+  }
   if (eventId) {
     window.fbq("track", eventName, data, { eventID: eventId });
   } else {
