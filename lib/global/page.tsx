@@ -427,7 +427,12 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
   }
 
   if (parsed.kind === "category") {
-    const surface = await fetchCategorySurface(locale, parsed.slug);
+    // Katalog, sayfa altındaki "ilgili kategoriler" iç bağlantıları için; yüzeyle
+    // PARALEL çekilir (ek gecikme yok).
+    const [surface, catalog] = await Promise.all([
+      fetchCategorySurface(locale, parsed.slug),
+      fetchLocaleCatalog(locale),
+    ]);
     if (!surface) notFound();
     const seg = SEGMENTS[locale];
     // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
@@ -438,22 +443,64 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
       .map((m, i) => ({ m, d: details[i] }))
       .filter((x): x is { m: (typeof members)[number]; d: PublicProductDetail } => !!x.d)
       .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
+    // İlgili kategoriler: AYNI dilde canlı ürünü olan diğer kategoriler (iç bağlantı).
+    const ilgili = (catalog.categories ?? [])
+      .filter((c) => c.slug !== surface.slug && (c.live_products ?? 0) > 0)
+      .slice(0, 8);
+    const ui = UI[locale];
+    const shop = SHOP[locale];
     return (
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
         <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 10 }}>{surface.name}</h1>
-        {surface.description ? (
-          // DB’deki açıklama HTML’dir (<p>, <h2>…). Metin olarak basılırsa etiketler
-          // müşteriye görünür. Ürün açıklamasıyla AYNI güvenli yol: sanitize + prose.
-          <div
-            className={`mt-2 max-w-[720px] ${DESC_PROSE}`}
-            dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(surface.description) }}
-          />
+
+        {/* 1) Kısa giriş — kategorinin kendi locale metni (meta_description; 2–3 satır,
+            özgün ve dile uygun). İlk <p> kör kesilmez; uzun makale burada BASILMAZ. */}
+        {surface.meta_description ? (
+          <p className="mt-2 max-w-[720px] text-[15px] leading-[1.75] text-[#4B5563]">
+            {surface.meta_description}
+          </p>
         ) : null}
+
+        {/* 2) Ürün vitrini — müşteri önce satın alınabilir ürünü görür. */}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {cards.map(({ card: c, href }, idx) => (
             <ProductCard key={c.id} product={c} idx={idx} href={href} />
           ))}
         </div>
+
+        {/* 3) Uzun SEO/hikâye içeriği — TAMAMI korunur, yalnız ürünlerin ALTINA taşındı.
+            DB'deki açıklama HTML'dir (<p>, <h2>…); ürün açıklamasıyla aynı güvenli yol. */}
+        {surface.description ? (
+          <section className="mt-14 border-t border-[#EDE9FE] pt-10">
+            <div
+              className={`max-w-[720px] ${DESC_PROSE}`}
+              dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(surface.description) }}
+            />
+          </section>
+        ) : null}
+
+        {/* 4) İlgili iç bağlantılar */}
+        {ilgili.length > 0 && (
+          <section className="mt-12">
+            <h2 className="mb-4 text-[19px] font-semibold text-[#1C0838]">{ui.categories}</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {ilgili.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/${locale}/${seg.category}/${c.slug}`}
+                  className="rounded-[16px] border border-[#EDE9FE] bg-white px-4 py-3.5 transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.10)]"
+                >
+                  <p className="truncate text-[14px] font-bold text-[#111827]">{c.name}</p>
+                  <p className="mt-0.5 text-[11.5px] text-[#8B5CF6]">{c.live_products} {shop.unit}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 5) Güven + 6) WhatsApp concierge — ana sayfayla AYNI bileşenler (13 dil). */}
+        <TrustStrip locale={locale} />
+        <ConciergeSection locale={locale} />
       </main>
     );
   }
