@@ -461,27 +461,10 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
           </p>
         ) : null}
 
-        {/* 2) Ürün vitrini — müşteri önce satın alınabilir ürünü görür. */}
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-          {cards.map(({ card: c, href }, idx) => (
-            <ProductCard key={c.id} product={c} idx={idx} href={href} />
-          ))}
-        </div>
-
-        {/* 3) Uzun SEO/hikâye içeriği — TAMAMI korunur, yalnız ürünlerin ALTINA taşındı.
-            DB'deki açıklama HTML'dir (<p>, <h2>…); ürün açıklamasıyla aynı güvenli yol. */}
-        {surface.description ? (
-          <section className="mt-14 border-t border-[#EDE9FE] pt-10">
-            <div
-              className={`max-w-[720px] ${DESC_PROSE}`}
-              dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(surface.description) }}
-            />
-          </section>
-        ) : null}
-
-        {/* 4) İlgili iç bağlantılar */}
+        {/* 2) Kategori keşfi — müşteri bulunduğu koleksiyonu ve komşularını
+            ürünlerden ÖNCE görür (alışveriş akışı: anla → keşfet → satın al). */}
         {ilgili.length > 0 && (
-          <section className="mt-12">
+          <section className="mt-9">
             <h2 className="mb-4 text-[19px] font-semibold text-[#1C0838]">{ui.categories}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {ilgili.map((c) => (
@@ -497,6 +480,25 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
             </div>
           </section>
         )}
+
+        {/* 3) Ürün vitrini — keşiften hemen sonra satın alınabilir ürünler. */}
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+          {cards.map(({ card: c, href }, idx) => (
+            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+          ))}
+        </div>
+
+        {/* 4) Uzun SEO/hikâye içeriği — TAMAMI korunur; kategori keşfinin de ürün
+            vitrininin de ALTINDA durur, alışveriş akışını kesmez.
+            DB'deki açıklama HTML'dir (<p>, <h2>…); ürün açıklamasıyla aynı güvenli yol. */}
+        {surface.description ? (
+          <section className="mt-14 border-t border-[#EDE9FE] pt-10">
+            <div
+              className={`max-w-[720px] ${DESC_PROSE}`}
+              dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(surface.description) }}
+            />
+          </section>
+        ) : null}
 
         {/* 5) Güven + 6) WhatsApp concierge — ana sayfayla AYNI bileşenler (13 dil). */}
         <TrustStrip locale={locale} />
