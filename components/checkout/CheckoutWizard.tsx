@@ -28,6 +28,8 @@ import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
+import { readAdsAttribution } from "@/lib/adsAttribution";
+import { readMetaAttribution } from "@/lib/metaPixel";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { useProductName } from "@/lib/i18n/content";
 import { formatMinorTRY } from "@/lib/api";
@@ -302,6 +304,11 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         }),
       ];
 
+      // Reklam kaynağı: tıklama kimlikleri sipariş anında okunur. Havale onayı
+      // saatler sonra tarayıcı olmadan geldiği için değerin siparişle birlikte
+      // saklanması şart. Onay yoksa hepsi null gider, sipariş normal akar.
+      const adsAttr = readAdsAttribution();
+      const metaAttr = readMetaAttribution();
       const orderBody = {
         customer_name: senderName, customer_phone: senderPhone,
         customer_email: senderEmail || null,
@@ -314,6 +321,11 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         delivery_slot_id: pd?.mode === "cargo" ? null : (pd?.slotId ?? null),
         delivery_method: pd?.mode === "cargo" ? "cargo" : pd?.mode === "sameday" ? "courier" : null,
         card_message: composedCard, source: "web",
+        ads_gclid: adsAttr.gclid,
+        ads_gbraid: adsAttr.gbraid,
+        ads_wbraid: adsAttr.wbraid,
+        meta_fbc: metaAttr.fbc,
+        meta_fbp: metaAttr.fbp,
         occasion: occasion || null,
         sender_visibility: visibility,
         is_surprise: surprise,
