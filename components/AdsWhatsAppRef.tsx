@@ -23,25 +23,35 @@ import { readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
 
 export function AdsWhatsAppRef() {
   useEffect(() => {
-    const attr = readAdsAttribution();
-    const ref = attr.gclid ?? attr.gbraid ?? attr.wbraid;
-    if (!ref) return; // reklamdan gelmeyen ziyaretçide hiçbir şey değişmez
-
+    /* KRİTİK: kimlik TIKLAMA ANINDA okunur, mount anında DEĞİL.
+       GTM'in Conversion Linker'ı _gcl_aw çerezini sayfa yüklendikten kısa süre
+       SONRA yazıyor. Değeri mount'ta bir kez okumak, canlıda her ziyarette BİR
+       ÖNCEKİ ziyaretin gclid'ini taşıyordu (production read-back ile yakalandı).
+       Tıklama anında okumak bu yarışı tamamen ortadan kaldırır ve sayfalar arası
+       istemci-taraflı geçişlerde de doğru değeri verir. */
     const isle = (e: Event) => {
       const hedef = e.target as Element | null;
-      const a = hedef?.closest?.("a[href]") as HTMLAnchorElement | null;
+      const a = hedef?.closest?.('a[href]') as HTMLAnchorElement | null;
       if (!a) return;
-      const yeni = withWhatsAppRef(a.getAttribute("href") ?? "", ref, window.location.origin);
-      if (yeni) a.href = yeni;
+
+      // Açılış sayfasında URL parametresi en taze kaynaktır; çerez ise sonraki
+      // sayfalarda (parametre kaybolduğunda) devreye girer.
+      const urlGclid = new URLSearchParams(window.location.search).get('gclid');
+      const attr = readAdsAttribution();
+      const ref = urlGclid?.slice(0, 255) || attr.gclid || attr.gbraid || attr.wbraid;
+      if (!ref) return; // reklamdan gelmeyen ziyaretçide hiçbir şey değişmez
+
+      const yeniHref = withWhatsAppRef(a.getAttribute('href') ?? '', ref, window.location.origin);
+      if (yeniHref) a.href = yeniHref;
     };
 
     // pointerdown tıklamanın varsayılan davranışından ÖNCE çalışır; click de
     // klavye ile açılan bağlantılar için yedek. İkisi de yalnız href yazar.
-    document.addEventListener("pointerdown", isle, true);
-    document.addEventListener("click", isle, true);
+    document.addEventListener('pointerdown', isle, true);
+    document.addEventListener('click', isle, true);
     return () => {
-      document.removeEventListener("pointerdown", isle, true);
-      document.removeEventListener("click", isle, true);
+      document.removeEventListener('pointerdown', isle, true);
+      document.removeEventListener('click', isle, true);
     };
   }, []);
 
