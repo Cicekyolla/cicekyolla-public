@@ -83,6 +83,10 @@ export function withWhatsAppRef(href: string, ref: string, taban: string): strin
   const mevcut = url.searchParams.get("text") ?? "";
   if (mevcut.includes(WA_REF_ETIKETI)) return null; // ikinci kez eklenmesin
 
-  url.searchParams.set("text", `${mevcut}${mevcut ? "\n" : ""}${WA_REF_ETIKETI} ${ref}]`);
+  // ONEMLI: referans AYNI SATIRA eklenir. Alt satir denendi ve canlida basarisiz
+  // oldu: WhatsApp hazir metni gonderirken ilk satirdan sonrasini dusuruyor —
+  // yazma ekraninda iki satir gorunuyor, karsi tarafa yalniz ilk satir ulasiyordu
+  // (27 Agu 2026, uc gercek mesajla dogrulandi).
+  url.searchParams.set("text", `${mevcut}${mevcut ? " " : ""}${WA_REF_ETIKETI} ${ref}]`);
   return url.toString();
 }
