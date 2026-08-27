@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { readMetaAttribution } from "@/lib/metaPixel";
+import { readAdsAttribution } from "@/lib/adsAttribution";
 import Link from "next/link";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 
@@ -76,6 +77,8 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
       // hiçbir kampanyaya atfedilemez. Onay verilmemişse null gider; sipariş
       // akışı bundan ETKİLENMEZ.
       const metaAttr = readMetaAttribution();
+      // 078 — Google Ads tıklama kimliği; aynı sözleşme, onay yoksa null.
+      const adsAttr = readAdsAttribution();
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,6 +90,7 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
           delivery_date: f.delivery_date || null, delivery_time_slot: f.delivery_time_slot || null,
           card_message: f.card_message || null, source: "web",
           meta_fbc: metaAttr.fbc, meta_fbp: metaAttr.fbp,
+          ads_gclid: adsAttr.gclid, ads_gbraid: adsAttr.gbraid, ads_wbraid: adsAttr.wbraid,
          items: [{ product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) }],
         }),
       });
