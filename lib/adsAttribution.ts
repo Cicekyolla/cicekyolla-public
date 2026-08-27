@@ -49,3 +49,40 @@ export function readAdsAttribution(): AdsAttribution {
     return BOS;
   }
 }
+
+/* --------------------------------------------------------------------------
+ * WhatsApp geçişinde reklam kaynağını taşıma.
+ *
+ * Sitedeki wa.me bağlantıları sunucuda üretiliyor; tıklama kimliği ise yalnız
+ * tarayıcıda bilinir. Bu yüzden bağlantı tıklama anında zenginleştirilir.
+ * Etiket biçimi API tarafındaki `bridgeExtractAdsRef` deseniyle BİREBİR aynı.
+ * ------------------------------------------------------------------------ */
+
+/** WhatsApp hazır mesajına eklenen etiketin başlangıcı. */
+export const WA_REF_ETIKETI = "[ref:";
+
+function waBaglantisiMi(url: URL): boolean {
+  return url.hostname === "wa.me" || url.hostname === "api.whatsapp.com";
+}
+
+/**
+ * `href` bir WhatsApp bağlantısıysa hazır metnin sonuna referans satırı
+ * eklenmiş yeni URL'i döndürür. WhatsApp bağlantısı değilse, çözümlenemiyorsa
+ * veya etiket zaten varsa `null` döner — çağıran taraf o zaman hiçbir şey
+ * değiştirmez.
+ */
+export function withWhatsAppRef(href: string, ref: string, taban: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(href, taban);
+  } catch {
+    return null;
+  }
+  if (!waBaglantisiMi(url)) return null;
+
+  const mevcut = url.searchParams.get("text") ?? "";
+  if (mevcut.includes(WA_REF_ETIKETI)) return null; // ikinci kez eklenmesin
+
+  url.searchParams.set("text", `${mevcut}${mevcut ? "\n" : ""}${WA_REF_ETIKETI} ${ref}]`);
+  return url.toString();
+}

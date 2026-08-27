@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer, type FooterBrand } from "@/components/Footer";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
@@ -190,6 +191,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <MemberNewsletterBand />
         <Footer categories={footerOrUndef} brand={footerBrandLight} />
         <WhatsAppButton />
+        {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
+        <AdsWhatsAppRef />
         <ConsentManager />
         <NewMemberPopup />
         <DeliveryAddressPopup />
