@@ -102,6 +102,52 @@ export async function getIndexableNeighborhoods(): Promise<SeoInventoryItem[]> {
   );
 }
 
+// ---------------------------------------------------------------------------
+// EK (MAHALLE SHARD) — ADDITIVE.
+// Türkiye geneli lokasyon geri açılışıyla neighborhoods.xml 70 binin üzerine
+// çıkıyor; Google'ın sitemap başına sınırı 50.000 URL / 50 MB. Tek dosya hem bu
+// sınırı hem de bellek profilini kırar. Bu yüzden mahalleler deterministik
+// shard'lara bölünür: neighborhoods-1.xml, neighborhoods-2.xml, ...
+//
+// Güvenlik payı: 20.000 (limitin %40'ı). Sıralama envanter sırasına sabittir,
+// yani aynı veri için aynı URL hep aynı shard'a düşer.
+//
+// BUGÜN NO-OP: yayında 1.280 mahalle var → tek shard, içeriği bugünküyle
+// birebir aynı. Çıplak /sitemaps/neighborhoods.xml adresi de çalışmaya devam
+// eder (shard 1 ile aynı) — daha önce gönderilmiş olabileceği için kırılmaz.
+// ---------------------------------------------------------------------------
+export const NEIGHBORHOOD_SHARD_SIZE = 20_000;
+
+/** "neighborhoods-3" -> 3 ; "neighborhoods" -> 1 ; eşleşmezse null. */
+export function parseNeighborhoodShard(type: string): number | null {
+  if (type === "neighborhoods") return 1;
+  const m = type.match(/^neighborhoods-(\d+)$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}
+
+/** Saf: toplam URL sayısından shard adedi (en az 1). */
+export function shardCountOf(total: number): number {
+  return Math.max(1, Math.ceil(total / NEIGHBORHOOD_SHARD_SIZE));
+}
+
+/** Saf: 1 tabanlı shard dilimi; aralık dışıysa boş dizi. */
+export function shardSliceOf<T>(items: readonly T[], shard: number): T[] {
+  const start = (shard - 1) * NEIGHBORHOOD_SHARD_SIZE;
+  return start < 0 ? [] : items.slice(start, start + NEIGHBORHOOD_SHARD_SIZE);
+}
+
+export async function neighborhoodShardCount(): Promise<number> {
+  return shardCountOf((await getIndexableNeighborhoods()).length);
+}
+
+/** 1 tabanlı shard; aralık dışıysa boş urlset (geçerli XML). */
+export async function renderNeighborhoodShard(shard: number): Promise<string> {
+  const nodes = shardSliceOf(await getIndexableNeighborhoods(), shard).map(urlNode);
+  return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${nodes.join("")}</urlset>`;
+}
+
 function matchesType(item: SeoInventoryItem, type: SitemapType): boolean {
   switch (type) {
     case "pages":
@@ -236,14 +282,24 @@ export async function renderSitemap(type: SitemapType): Promise<string> {
   return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imageNamespace}>${nodes.join("")}</urlset>`;
 }
 
-export function renderSitemapIndex(): string {
+export async function renderSitemapIndex(): Promise<string> {
   if (!SITE_INDEXABLE) {
     return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
   }
   // GLOBAL Faz 2 (ADDITIVE): locale sitemap discovery — TR tip listesi ve
   // envanteri DEĞİŞMEDİ; index'e yalnız locale-de/locale-en girişleri eklenir.
   // Bu dosyalar sadece approved+indexable Global URL'leri taşır (boşsa boş urlset).
-  const allTypes: string[] = [...SITEMAP_TYPES, ...GLOBAL_LOCALES.map((l) => `locale-${l}`)];
+  // EK (MAHALLE SHARD): index'te tekil "neighborhoods" yerine gerçek shard
+  // sayısı kadar neighborhoods-N girişi listelenir. Bugün shard sayısı 1 olduğu
+  // için index'e giren tek satır "neighborhoods-1.xml" olur; içeriği bugünkü
+  // neighborhoods.xml ile birebir aynıdır.
+  const shardCount = await neighborhoodShardCount();
+  const neighborhoodTypes = Array.from({ length: shardCount }, (_, i) => `neighborhoods-${i + 1}`);
+  const allTypes: string[] = [
+    ...SITEMAP_TYPES.filter((t) => t !== "neighborhoods"),
+    ...neighborhoodTypes,
+    ...GLOBAL_LOCALES.map((l) => `locale-${l}`),
+  ];
   const nodes = allTypes.map(
     (type) => `<sitemap><loc>${escapeXml(absoluteUrl(`/sitemaps/${type}.xml`))}</loc></sitemap>`,
   ).join("");

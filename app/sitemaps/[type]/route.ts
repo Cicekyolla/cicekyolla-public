@@ -1,5 +1,11 @@
 import { notFound } from "next/navigation";
-import { renderSitemap, SITEMAP_TYPES, type SitemapType } from "@/lib/sitemap";
+import {
+  parseNeighborhoodShard,
+  renderNeighborhoodShard,
+  renderSitemap,
+  SITEMAP_TYPES,
+  type SitemapType,
+} from "@/lib/sitemap";
 import { localeOfSitemapType, renderLocaleSitemap } from "@/lib/global/sitemap";
 
 export const revalidate = 300;
@@ -10,6 +16,18 @@ export async function GET(_request: Request, { params }: { params: { type: strin
   const globalLocale = localeOfSitemapType(type);
   if (globalLocale) {
     return new Response(await renderLocaleSitemap(globalLocale), {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
+  }
+  // EK (MAHALLE SHARD) — ADDITIVE: neighborhoods-1.xml, neighborhoods-2.xml ...
+  // Çıplak "neighborhoods" shard 1'e denk gelir; bugün tek shard olduğu için
+  // çıktı bugünküyle birebir aynıdır (geriye dönük uyumlu).
+  const shard = parseNeighborhoodShard(type);
+  if (shard !== null) {
+    return new Response(await renderNeighborhoodShard(shard), {
       headers: {
         "Content-Type": "application/xml; charset=utf-8",
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",

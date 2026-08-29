@@ -198,6 +198,24 @@ async function dynamicDeliveryParts(path: string): Promise<DynDelivery | null> {
   if (!city) return null;
   const district = parts[1] ? city.districts.find((d) => d.slug === parts[1]) : undefined;
   if (parts[1] && !district) return null;
+  // ── EK (MAHALLE DOĞRULAMASI) — ADDITIVE, DAR KAPSAM ──────────────────────
+  // Bu üretici il ve ilçeyi doğruluyordu ama mahalle segmentini HİÇ kontrol
+  // etmiyordu; syntheticDynamicDeliveryPage ise index_state:"index" veriyor.
+  // Sonuç canlıda kanıtlandı: /adana/ceyhan/asdfghjkl → 200 + index + self
+  // canonical. Yani il/ilçe geçerli olduğu sürece SONSUZ bir URL uzayının
+  // tamamı indexlenebilirdi (sabit-il yolunda aynı risk noindex ile
+  // kapatılmıştı, dinamik yolda açık kalmış).
+  // Mahalle artık location core'a (Delivery Motor) karşı doğrulanır:
+  //   gerçek mahalle -> 200 (davranış değişmez)
+  //   uydurma mahalle -> null -> 404
+  // Yayınlanmış sayfalar etkilenmez: resolvePage() önce fetchSeoPage()'i dener,
+  // buraya yalnız seo_page kaydı OLMAYAN yollar düşer.
+  // FAIL-SAFE: core erişilemezse (null) doğrulama yapılmaz ve bugünkü davranış
+  // birebir sürer — geçici API kesintisi gerçek sayfaları 404 yapmaz.
+  if (parts[2]) {
+    const core = await fetchDistrictNeighborhoods(parts[0], parts[1]);
+    if (core && !core.neighborhoods.some((n) => n.slug === parts[2])) return null;
+  }
   return {
     parts,
     cityName: city.city,
