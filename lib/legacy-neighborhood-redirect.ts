@@ -26,6 +26,13 @@ const API_ORIGIN =
 
 /** Hedefler statik (tek seferlik üretim) — uzun TTL güvenli. */
 const TTL_MS = 24 * 60 * 60_000;
+/**
+ * OLUMSUZ sonuç için ÇOK daha kısa TTL.
+ * Bir "hedef yok" yanıtı kalıcı gerçek değildir: API'nin deploy/soğuk başlatma
+ * penceresinde dönen geçici bir 404, uzun TTL ile saklanırsa o legacy URL bir
+ * gün boyunca ilçeye düşmeye devam eder. Production'da tam bu yaşandı.
+ */
+const NEGATIVE_TTL_MS = 10 * 60_000;
 /** Edge'de isteği bloklamamak için kısa; aşılırsa yönlendirme atlanır. */
 const TIMEOUT_MS = 1500;
 /** Edge örneği başına önbellek tavanı; aşılırsa en eski kayıt düşer. */
@@ -48,7 +55,7 @@ function remember(key: string, to: string | null): string | null {
     const ilk = cache.keys().next();
     if (!ilk.done) cache.delete(ilk.value);
   }
-  cache.set(key, { to, expiresAt: Date.now() + TTL_MS });
+  cache.set(key, { to, expiresAt: Date.now() + (to ? TTL_MS : NEGATIVE_TTL_MS) });
   return to;
 }
 

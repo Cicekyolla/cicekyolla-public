@@ -11,6 +11,8 @@
 //   - döngü koruması (hedef == kaynak)
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 const {
   looksLikeLegacyNeighborhood,
@@ -134,4 +136,27 @@ test("önbellek: aynı yol için ikinci kez ağa çıkılmaz", async () => {
   await resolveLegacyNeighborhoodRedirect(p);
   await resolveLegacyNeighborhoodRedirect(p + "/");
   assert.equal(istekSayisi, sonra, "önbellek isabet etmeli");
+});
+
+test("REGRESYON: olumsuz sonuc KISA sureli onbelleklenir", () => {
+  // Bir 'hedef yok' yaniti kalici gercek degildir: API'nin deploy/soguk
+  // baslatma penceresinde donen gecici bir 404 uzun TTL ile saklanirsa, o
+  // legacy URL bir gun boyunca ilceye dusmeye devam eder. Production'da
+  // tam bu yasandi. Sabitler kaynak metninden dogrulanir.
+  const src = readFileSync(
+    path.join(import.meta.dirname, "legacy-neighborhood-redirect.ts"),
+    "utf8",
+  );
+  const say = (ad: string): number => {
+    const m = src.match(new RegExp("const " + ad + " = ([^;]+);"));
+    assert.ok(m, ad + " bulunamadi");
+    return Function("return (" + m[1] + ")")() as number;
+  };
+  const olumlu = say("TTL_MS"), olumsuz = say("NEGATIVE_TTL_MS");
+  assert.ok(olumsuz < olumlu, "olumsuz TTL, olumlu TTL'den kisa olmali");
+  assert.ok(olumsuz <= 15 * 60_000, "olumsuz TTL en fazla 15 dakika olmali");
+  assert.ok(
+    src.includes("expiresAt: Date.now() + (to ? TTL_MS : NEGATIVE_TTL_MS)"),
+    "olumlu/olumsuz TTL ayrimi kaybolmus",
+  );
 });
