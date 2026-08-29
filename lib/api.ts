@@ -154,6 +154,35 @@ export async function fetchCityDistricts(citySlug: string): Promise<CityDistrict
   return out.sort((a, b) => a.name.localeCompare(b.name, "tr"));
 }
 
+// ADDITIVE (SITEMAP): mahalle sitemap shard kaynağı.
+// /api/public/seo/inventory, 70 bin mahalle yayına açıldıktan sonra ~10,8 MB'a
+// çıktı. Sitemap'in ihtiyacı olan veri bunun küçük bir dilimi; bu uç yalnız
+// published+index mahalle URL'lerini sayfalı ve kompakt ([url, lastmod]) döner.
+// fetchSeoInventory() DEĞİŞMEDİ — diğer sitemap tipleri aynı yolu kullanır.
+export interface NeighborhoodUrlPage {
+  total: number;
+  items: Array<[string, string]>;
+}
+
+export async function fetchNeighborhoodUrlPage(
+  limit: number,
+  offset: number,
+): Promise<NeighborhoodUrlPage> {
+  const url = `${API_ORIGIN}/api/public/seo/neighborhood-urls?limit=${limit}&offset=${offset}`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return { total: 0, items: [] };
+    const json = (await res.json()) as { data?: NeighborhoodUrlPage };
+    const data = json?.data;
+    return {
+      total: Number(data?.total) || 0,
+      items: Array.isArray(data?.items) ? data.items : [],
+    };
+  } catch {
+    return { total: 0, items: [] };
+  }
+}
+
 export async function fetchSeoInventory(): Promise<SeoInventoryItem[]> {
   const url = `${API_ORIGIN}/api/public/seo/inventory`;
   try {
