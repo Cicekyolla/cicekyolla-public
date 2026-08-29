@@ -1,4 +1,4 @@
-import { fetchProductsPaged, fetchSeoInventory, type SeoInventoryItem } from "@/lib/api";
+import { fetchNeighborhoodUrlPage, fetchProductsPaged, fetchSeoInventory, type SeoInventoryItem } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getBlogPosts } from "@/lib/blog";
 
@@ -118,6 +118,11 @@ export async function getIndexableNeighborhoods(): Promise<SeoInventoryItem[]> {
 // ---------------------------------------------------------------------------
 export const NEIGHBORHOOD_SHARD_SIZE = 20_000;
 
+// Tek fetch yanıtının boyutu. 10.000 kayıt ≈ 0,62 MB (gerçek production verisiyle
+// ölçüldü) — tüm envanteri (~10,8 MB) çekmeye kıyasla ~17× küçük. SHARD_SIZE bunun
+// TAM KATI olmalı (20.000 / 10.000 = 2 sayfa), yoksa shard sınırları kayar.
+export const NEIGHBORHOOD_PAGE_SIZE = 10_000;
+
 /** "neighborhoods-3" -> 3 ; "neighborhoods" -> 1 ; eşleşmezse null. */
 export function parseNeighborhoodShard(type: string): number | null {
   if (type === "neighborhoods") return 1;
@@ -139,13 +144,45 @@ export function shardSliceOf<T>(items: readonly T[], shard: number): T[] {
 }
 
 export async function neighborhoodShardCount(): Promise<number> {
-  return shardCountOf((await getIndexableNeighborhoods()).length);
+  if (!SITE_INDEXABLE) return 1;
+  // Acil şalter aktifse kilit TAM liste üzerinde uygulanmalı — eski yol korunur.
+  if (SITEMAP_PROVINCE_LOCK.length > 0) {
+    return shardCountOf((await getIndexableNeighborhoods()).length);
+  }
+  return shardCountOf((await fetchNeighborhoodUrlPage(1, 0)).total);
 }
 
 /** 1 tabanlı shard; aralık dışıysa boş urlset (geçerli XML). */
 export async function renderNeighborhoodShard(shard: number): Promise<string> {
-  const nodes = shardSliceOf(await getIndexableNeighborhoods(), shard).map(urlNode);
+  const nodes = await neighborhoodShardNodes(shard);
   return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${nodes.join("")}</urlset>`;
+}
+
+/** Bir shard'ın URL düğümleri — yalnız o pencereyi çeker, tam envanteri DEĞİL. */
+async function neighborhoodShardNodes(shard: number): Promise<string[]> {
+  if (!SITE_INDEXABLE || shard < 1) return [];
+  if (SITEMAP_PROVINCE_LOCK.length > 0) {
+    return shardSliceOf(await getIndexableNeighborhoods(), shard).map(urlNode);
+  }
+  const start = (shard - 1) * NEIGHBORHOOD_SHARD_SIZE;
+  const nodes: string[] = [];
+  for (let off = start; off < start + NEIGHBORHOOD_SHARD_SIZE; off += NEIGHBORHOOD_PAGE_SIZE) {
+    const page = await fetchNeighborhoodUrlPage(NEIGHBORHOOD_PAGE_SIZE, off);
+    for (const row of page.items) nodes.push(neighborhoodUrlNode(row));
+    if (page.items.length < NEIGHBORHOOD_PAGE_SIZE) break;
+  }
+  return nodes;
+}
+
+/** Kompakt [url_path, updated_at] çiftinden <url> düğümü. */
+function neighborhoodUrlNode(row: readonly [string, string]): string {
+  const lastmod = row[1] ? validDate(row[1]) : null;
+  return [
+    "<url>",
+    `<loc>${escapeXml(absoluteUrl(row[0]))}</loc>`,
+    lastmod ? `<lastmod>${lastmod}</lastmod>` : "",
+    "</url>",
+  ].join("");
 }
 
 function matchesType(item: SeoInventoryItem, type: SitemapType): boolean {
