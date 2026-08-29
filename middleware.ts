@@ -6,6 +6,7 @@ import {
   resolveMidCicek,
   resolveSayfaLegacy,
   resolveKategoriLegacy,
+  resolveCicekleriLegacy,
   locationFallback,
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
@@ -35,6 +36,17 @@ export async function middleware(req: NextRequest) {
      (ERR_TOO_MANY_REDIRECTS). Legacy listelerden hiçbir şey silinmedi.
      FAIL-SAFE: API erişilemezse false → bugünkü davranış birebir sürer. */
   const legacyMuaf = await isManagedRedirectTarget(req.nextUrl.pathname);
+  /* EK (ÖZEL GÜN "-cicekleri") — next.config.js'ten TAŞINDI (bkz.
+     legacy-recovery.ts::resolveCicekleriLegacy). Config katmanı middleware'den
+     ÖNCE çalıştığı ve statik olduğu için operatör onaylı yönetilen 301'i
+     eziyordu: /masa-cicekleri → 308 /kategori/masa → 404, oysa onaylı hedef
+     /kategori/nikah-masasi-cicekleri (200).
+     Kural zincirin BAŞINDA kalır (config'teki yeriyle aynı sıra); tek fark:
+     adres yönetilen bir 301'in KAYNAĞI ya da HEDEFİ ise devreye girmez. */
+  const cicekleriTarget = resolveCicekleriLegacy(req.nextUrl.pathname);
+  if (cicekleriTarget && !legacyMuaf && !(await resolveManagedRedirect(req.nextUrl.pathname))) {
+    return NextResponse.redirect(new URL(cicekleriTarget, req.nextUrl.origin), 308);
+  }
 const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
     return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);

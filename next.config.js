@@ -53,12 +53,15 @@ const nextConfig = {
   async redirects() {
     return [
       // ÜRÜN: /52604-Renkli-Lavantali.html → /urun/renkli-lavantali
+      // Burada KALIR: middleware matcher noktalı yolları (.*\..*) dışladığı için
+      // ".html" adresleri middleware'e hiç ulaşmaz.
       { source: '/:id(\\d+)-:slug(.+)\\.html', destination: '/urun/:slug', permanent: true },
 
-      // ÖZEL GÜN: /anneler-gunu-cicekleri-45 → /kategori/anneler-gunu
-      { source: '/:gun([a-z-]+)-cicekleri-:id(\\d+)', destination: '/kategori/:gun', permanent: true },
-      { source: '/:gun([a-z-]+)-cicekleri', destination: '/kategori/:gun', permanent: true },
-
+      // ÖZEL GÜN "-cicekleri" kuralları buradan KALDIRILDI → middleware.ts.
+      // Sebep: next.config redirect'leri middleware'den ÖNCE çalışır ve statiktir;
+      // canlı yönetilen yönlendirme haritasına bakamadıkları için operatör onaylı
+      // 301'leri gölgeliyorlardı (/masa-cicekleri → 308 /kategori/masa → 404).
+      // Hedef hesabı değişmedi: lib/legacy-recovery.ts::resolveCicekleriLegacy.
     ];
   },
 };
