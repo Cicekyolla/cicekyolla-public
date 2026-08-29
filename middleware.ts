@@ -12,6 +12,7 @@ import {
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveManagedRedirect, isManagedRedirectTarget } from "@/lib/managed-redirects";
+import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
@@ -56,6 +57,25 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
   const kategoriTarget = legacyMuaf ? null : resolveKategoriLegacy(req.nextUrl.pathname);
   if (kategoriTarget) {
     return NextResponse.redirect(new URL(kategoriTarget, req.nextUrl.origin), 301);
+  }
+  /* EK (LEGACY MAHALLE TAŞINMASI) — ADDITIVE, tek hop 301.
+     10 Mayıs 2026 migration'ında eksik kalan EXACT mahalle taşınması: 70.132
+     doğrulanmış "eski URL -> bugünkü mahalle URL'i" çifti.
+     Neden aşağıdaki resolveLegacyLocation YETMİYOR: o, eski slug'daki parantezli
+     köy adını atıyor ("cakmak-mahallesi-(akdurak-koyu)"), bugünkü slug ise onu
+     KORUYOR ("cakmak-mah-akdurak-koyu"). Ölçüldü: 70.132 kaydın 28.133'ü ilçe
+     sayfasına düşüyordu. Sözlük 5,9 MB olduğu için bundle'a gömülemez; bu yüzden
+     managed-redirects ile aynı desende public uç + TTL önbellek kullanılır.
+     SIRA: mevcut tüm kurallar (yönetilen 301 muafiyeti, -cicekleri, sayfa,
+     kategori) ÖNCE çalışır — hiçbiri değişmedi. Burada yalnız sözlükte BİREBİR
+     karşılığı olan yollar yakalanır; tahmin üretilmez.
+     FAIL-SAFE: API erişilemezse null döner ve istek bugünkü davranışıyla
+     (ilçe sayfasına 301) devam eder. */
+  const legacyMahalle = legacyMuaf
+    ? null
+    : await resolveLegacyNeighborhoodRedirect(req.nextUrl.pathname);
+  if (legacyMahalle) {
+    return NextResponse.redirect(new URL(legacyMahalle, req.nextUrl.origin), 301);
   }
   const legacyLocation: LegacyLocationResult = legacyMuaf
     ? { matched: false }
