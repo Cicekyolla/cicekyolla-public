@@ -153,3 +153,89 @@ test("FIX 2: bilinen 264 legacy slug'ın tamamı için kural hâlâ doğru hedef
   );
   assert.deepEqual(hatali, []);
 });
+
+// ---------------------------------------------------------------------------
+// MATCHER KAPSAMI — 256'lık production taramasında yakalanan regresyonun guard'ı
+//
+// Kural next.config.js'ten middleware'e taşınınca, genel matcher dışlama listesi
+// önekleri SINIR OLMADAN eşlediği için "/sepette-aranjmanlar-cicekleri" adresi
+// "sepet" token'ına takılıp middleware'e hiç ulaşmıyordu:
+//   MAIN 308 -> /kategori/sepette-aranjmanlar -> 200   ama   PREVIEW 404
+// Matcher'a dar kapsamlı iki girdi eklendi. Bu testler hem sınıfın kapsandığını
+// hem de gerçek ticari rotaların kapsam DIŞINDA kaldığını sabitler.
+// ---------------------------------------------------------------------------
+
+// Matcher GERÇEK middleware.ts dosyasından okunur. Modülü import etmek yerine
+// kaynaktan okumak, testi next/server ve @/ alias zincirine bağımlı kılmaz;
+// yine de doğrulanan şey production'da çalışan yapılandırmanın ta kendisidir.
+const middlewareSrc = readFileSync(path.join(REPO_KOK, "middleware.ts"), "utf8");
+const matcherBlok = middlewareSrc.match(/matcher:\s*\[([\s\S]*?)\n\s*\],/)?.[1];
+assert.ok(matcherBlok, "middleware.ts içinde matcher dizisi bulunamadı");
+const matcher: string[] = [
+  ...matcherBlok!
+    // Yorumlar içinde tırnaklı metin var; önce onları çıkar.
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "")
+    .matchAll(/"((?:[^"\\]|\\.)*)"/g),
+].map((m) => JSON.parse(`"${m[1]}"`) as string);
+
+/** Matcher girdisindeki ":ad(desen)" parçalarını yakalama grubuna çevirir. */
+function matcherRegex(entry: string): RegExp {
+  return new RegExp(`^${entry.replace(/:[A-Za-z]+\(([^)]*)\)/g, "($1)")}$`);
+}
+/** Yol, matcher'daki DAR "-cicekleri" girdilerinden biriyle eşleşiyor mu? */
+function darGirdilerEsliyorMu(pathname: string): boolean {
+  return matcher
+    .filter((e) => e.includes("-cicekleri"))
+    .some((e) => matcherRegex(e).test(pathname));
+}
+
+test("MATCHER: '-cicekleri' sınıfı için dar girdiler tanımlı", () => {
+  const dar = matcher.filter((e) => e.includes("-cicekleri"));
+  assert.equal(dar.length, 2, `beklenen 2 dar girdi, bulunan: ${JSON.stringify(dar)}`);
+});
+
+test("MATCHER REGRESYON: /sepette-aranjmanlar-cicekleri middleware'e ULAŞIYOR ve doğru hedefi alıyor", () => {
+  const yol = "/sepette-aranjmanlar-cicekleri";
+  // 1) Genel girdi bu yolu "sepet" öneki yüzünden dışlıyor (regresyonun kaynağı).
+  const genel = matcher.find((e) => e.includes("(?!api"))!;
+  assert.equal(matcherRegex(genel).test(yol), false, "genel girdi bu yolu hâlâ dışlıyor olmalı");
+  // 2) Dar girdi yakalıyor -> middleware çalışıyor.
+  assert.equal(darGirdilerEsliyorMu(yol), true);
+  // 3) Middleware içinde doğru hedefe çözülüyor.
+  assert.equal(resolveCicekleriLegacy(yol), "/kategori/sepette-aranjmanlar");
+  assert.ok(kategoriEnvanteri.includes("sepette-aranjmanlar"), "hedef envanterde gerçek bir kategori olmalı");
+});
+
+test("MATCHER: gerçek ticari rotalar dar girdilere ALINMIYOR", () => {
+  for (const yol of [
+    "/sepet",
+    "/sepet/hediye-notu",
+    "/checkout",
+    "/giris",
+    "/hesabim",
+    "/hesabim/siparislerim",
+    "/siparis-takibi",
+    "/siparis-takip",
+    "/api/orders",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/sitemaps/categories.xml",
+  ]) {
+    assert.equal(darGirdilerEsliyorMu(yol), false, yol);
+  }
+});
+
+test("MATCHER: dar girdiler yalnız TEK SEGMENTLİ '-cicekleri' yollarını kapsıyor", () => {
+  for (const [yol, beklenen] of [
+    ["/anneler-gunu-cicekleri", true],
+    ["/anneler-gunu-cicekleri-45", true],
+    ["/sepette-aranjmanlar-cicekleri", true],
+    ["/kategori/mevsim-cicekleri", false], // çok segment
+    ["/MASA-CICEKLERI", false], // büyük harf
+    ["/101-cicekleri", false], // rakamlı taban
+    ["/masa-cicekler", false],
+  ] as Array<[string, boolean]>) {
+    assert.equal(darGirdilerEsliyorMu(yol), beklenen, yol);
+  }
+});

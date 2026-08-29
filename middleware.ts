@@ -137,5 +137,17 @@ export const config = {
   matcher: [
     "/onizleme",
     "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|sitemaps|checkout|sepet|hesabim|giris|siparis-takibi|siparis-takip|.*\\..*).*)",
+    /* EK (ÖZEL GÜN "-cicekleri") — DAR KAPSAM.
+       Kural next.config.js'ten middleware'e taşındığı için bu sınıfın middleware'e
+       ULAŞMASI gerekiyor. Yukarıdaki genel dışlama listesi önekleri SINIR OLMADAN
+       eşliyor: "sepette-aranjmanlar-cicekleri" adresi "sepet" token'ına takılıp
+       middleware'e hiç ulaşmıyordu (308 -> 404 regresyonu).
+       Genel matcher semantiği DEĞİŞMEDİ; yalnız "-cicekleri" ile biten TEK SEGMENTLİ
+       yollar ek olarak kapsanır — taşınan kuralın kendi kalıbıyla birebir aynı
+       karakter sınıfı ([a-z-]+). Gerçek /sepet, /sepet/..., /checkout, /giris,
+       /hesabim, /siparis-takibi rotaları bu kalıba uymadığı için etkilenmez.
+       Genel önek dışlaması (sepet/giris/hesabim...) bu PR'da ELE ALINMIYOR. */
+    "/:slug([a-z-]+)-cicekleri",
+    "/:slug([a-z-]+)-cicekleri-:id(\\d+)",
   ],
 };
