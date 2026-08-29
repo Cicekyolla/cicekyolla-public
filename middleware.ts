@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SITE_INDEXABLE } from "@/lib/site-config";
-import { resolveLegacyLocation } from "@/lib/legacy-location-redirect";
+import { resolveLegacyLocation, type LegacyLocationResult } from "@/lib/legacy-location-redirect";
 import {
   resolveMidCicek,
   resolveSayfaLegacy,
@@ -10,7 +10,7 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-import { resolveManagedRedirect } from "@/lib/managed-redirects";
+import { resolveManagedRedirect, isManagedRedirectTarget } from "@/lib/managed-redirects";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
@@ -29,17 +29,25 @@ export async function middleware(req: NextRequest) {
   if (isGlobalLocalePath(req.nextUrl.pathname)) {
     return NextResponse.next();
   }
-const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
+  /* EK (DÖNGÜ GUARD) — ADDITIVE: gelen yol, onaylı bir yönetilen 301'in HEDEFİ
+     ise o yol canlı bir sayfadır; legacy kurallar onu yutmamalı. Aksi halde
+     "/il → /il-cicekci" ile legacy "/il-cicekci → /il" birbirini kovalar
+     (ERR_TOO_MANY_REDIRECTS). Legacy listelerden hiçbir şey silinmedi.
+     FAIL-SAFE: API erişilemezse false → bugünkü davranış birebir sürer. */
+  const legacyMuaf = await isManagedRedirectTarget(req.nextUrl.pathname);
+const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
     return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);
   }
   // EK (KATEGORİ KONUM KURTARMA): /kategori/{il}-{ilce}-cicek-yolla → /il/ilce 301.
   // Yalnızca konum çözülürse yönlendirir; gerçek kategori sayfaları etkilenmez.
-  const kategoriTarget = resolveKategoriLegacy(req.nextUrl.pathname);
+  const kategoriTarget = legacyMuaf ? null : resolveKategoriLegacy(req.nextUrl.pathname);
   if (kategoriTarget) {
     return NextResponse.redirect(new URL(kategoriTarget, req.nextUrl.origin), 301);
   }
-  const legacyLocation = resolveLegacyLocation(req.nextUrl.pathname);
+  const legacyLocation: LegacyLocationResult = legacyMuaf
+    ? { matched: false }
+    : resolveLegacyLocation(req.nextUrl.pathname);
   if (legacyLocation.matched && legacyLocation.destination) {
     return NextResponse.redirect(
       new URL(legacyLocation.destination, req.nextUrl.origin),
@@ -74,14 +82,14 @@ const sayfaTarget = resolveSayfaLegacy(req.nextUrl.pathname);
   }
   // EK (kurtarma): "{il}-cicek-{ilce}-{id}" ortada-cicek formatı. Ana resolver
   // soneki sonda aradığı için bunu kaçırır; burada güvenli konuma çözülür.
-  const midCicek = resolveMidCicek(req.nextUrl.pathname);
+  const midCicek = legacyMuaf ? null : resolveMidCicek(req.nextUrl.pathname);
   if (midCicek) {
     return NextResponse.redirect(new URL(midCicek, req.nextUrl.origin), 301);
   }
   // Konum kalıbına girmeyen eski "/kategori-slug-123" adreslerini korur.
   // GUARD: hedef kategori gerçekten yoksa var olmayan kategoriye 301 verilmez
   // (301→404 zinciri engellenir); güvenli hedefe (/urunler) düşülür.
-  if (!legacyLocation.matched) {
+  if (!legacyMuaf && !legacyLocation.matched) {
     const legacyCategory = req.nextUrl.pathname.match(/^\/([a-z0-9-]+)-\d+\/?$/);
     if (legacyCategory) {
       return NextResponse.redirect(

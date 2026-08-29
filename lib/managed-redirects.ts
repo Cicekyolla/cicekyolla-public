@@ -94,3 +94,46 @@ export async function resolveManagedRedirect(
     return null;
   }
 }
+
+// ============================================================================
+// EK (DÖNGÜ GUARD) — ADDITIVE. Mevcut hiçbir fonksiyon değiştirilmedi.
+//
+// SORUN: Lokasyon SEO Merkezi'nde "SEO Dili" seçilince sistem "/il → /il-{ek}"
+// biçiminde yönetilen bir 301 kuruyor. Aynı "/il-{ek}" adresi legacy konum
+// kuralına da uyduğu için middleware onu "/il"e geri 301'liyor → iki adımlı
+// sonsuz döngü (ERR_TOO_MANY_REDIRECTS). 81 ilin ve üç düğmenin tamamında.
+//
+// ÇÖZÜM: Gelen yol, onaylı bir yönetilen 301'in HEDEFİ ise o yol artık canlı
+// bir sayfadır; legacy kurallar onu yutmamalıdır. Legacy listeler (SUFFIXES,
+// public-targets) OLDUĞU GİBİ KALIR — hiçbir sonek silinmez, mevcut ~73 bin
+// legacy yönlendirme aynen çalışır.
+//
+// FAIL-SAFE: harita boşsa / API erişilemezse false döner → bugünkü davranış
+// birebir korunur. Bugün yayındaki 15 yönetilen 301'in hiçbirinin hedefi
+// legacy kurala takılmıyor, yani guard bugün NO-OP'tur.
+// ============================================================================
+
+/** Saf yardımcı (test edilebilir): yol, verilen hedef kümesinde mi? */
+export function isManagedTargetPath(
+  pathname: string,
+  targets: ReadonlySet<string>,
+): boolean {
+  return targets.has(normalize(pathname));
+}
+
+/** Onaylı yönetilen 301'lerin hedef kümesi (önbellekten; ek ağ isteği yok). */
+export async function managedRedirectTargets(): Promise<ReadonlySet<string>> {
+  try {
+    const map = await getMap();
+    const targets = new Set<string>();
+    for (const entry of map.values()) targets.add(entry.to);
+    return targets;
+  } catch {
+    return new Set<string>();
+  }
+}
+
+/** Bu yol yönetilen bir 301'in hedefi mi? Evetse legacy kurallar atlanır. */
+export async function isManagedRedirectTarget(pathname: string): Promise<boolean> {
+  return isManagedTargetPath(pathname, await managedRedirectTargets());
+}
