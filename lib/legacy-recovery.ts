@@ -158,6 +158,16 @@ export function resolveKategoriLegacy(pathname: string): string | null {
   const match = clean.match(/^kategori\/(.+)$/);
   if (!match) return null;
   const raw = match[1].replace(/\/+$/, "");
+  // EK (GERÇEK KATEGORİ KORUMASI) — ADDITIVE.
+  // Bu kural "konuma çözülüyor mu?" diye soruyor ama "bu kategori GERÇEKTEN var mı?"
+  // diye hiç sormuyordu. Slug'ın ilk parçası bir il adıysa (locationSafeTarget'ın
+  // firstCity dalı) yayındaki gerçek kategori il sayfasına 301'leniyordu:
+  //   /kategori/istanbul-teslimat -> 301 /istanbul   (sitemap'te ilan edilmiş URL!)
+  // Envanterde kayıtlı bir kategori artık dokunulmadan geçer. guardedCategoryTarget
+  // ile aynı veri kaynağı ve aynı desen; yeni liste/servis yok.
+  // Kontrol suffix SOYULMADAN ham slug üzerinde yapılır: "van-baskale-cicek-yolla"
+  // gibi legacy konum-kategori adresleri envanterde olmadığı için 301'leri sürer.
+  if (categorySlugs.has(raw)) return null;
   const slug = raw.replace(/-\d+$/, "");
   const SUFFIXES = [
     "cicek-gonderme", "cicek-siparisi", "cicek-siparsi",
@@ -170,4 +180,27 @@ export function resolveKategoriLegacy(pathname: string): string | null {
   // Konum çözülemediyse (SAFE_FALLBACK döndüyse) DOKUNMA: gerçek kategori
   // sayfaları (yapay-cicek-dekor vb.) yanlışlıkla anasayfaya yönlendirilmesin.
   return target === SAFE_FALLBACK ? null : target;
+}
+/* ============================================================================
+   EK (ÖZEL GÜN "-cicekleri") — next.config.js'ten TAŞINDI, mantık AYNI.
+
+   Kural önceden next.config.js'teydi:
+     { source: '/:gun([a-z-]+)-cicekleri-:id(\\d+)', destination: '/kategori/:gun' }
+     { source: '/:gun([a-z-]+)-cicekleri',           destination: '/kategori/:gun' }
+
+   next.config redirect'leri middleware'DEN ÖNCE çalışır ve statiktir; canlı
+   yönetilen yönlendirme haritasına bakamazlar. Bu yüzden operatörün Onay
+   Merkezi'nde onayladığı hedefi gölgeliyorlardı:
+     /masa-cicekleri  beklenen: 301 /kategori/nikah-masasi-cicekleri (200)
+                      gerçek  : 308 /kategori/masa -> 404
+   Kural artık middleware'de; yönetilen bir yönlendirmenin KAYNAĞI olan adreste
+   devreye girmez, operatör onaylı hedef kazanır. Diğer tüm adreslerde hedef
+   hesabı birebir aynıdır (bilinen 264 legacy kategori slug'ı korunur).
+
+   Eşleşme HAM yol üzerinde yapılır (normalizePath ile değil): config'teki
+   [a-z-]+ büyük harf kabul etmiyordu, davranış birebir korunsun diye burada da
+   etmiyor. */
+export function resolveCicekleriLegacy(pathname: string): string | null {
+  const match = pathname.match(/^\/([a-z-]+)-cicekleri(?:-\d+)?\/?$/);
+  return match ? `/kategori/${match[1]}` : null;
 }
