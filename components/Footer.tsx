@@ -157,6 +157,7 @@ export function Footer({
                 { label: "Hakkımızda", href: "/hakkimizda" },
                 { label: "Blog", href: "/blog" },
                 { label: "Kurumsal Hizmetler", href: "/kurumsal" },
+                { label: "Çiçek Aboneliği", href: "/abonelik" },
                 { label: "Teslimat Bölgeleri", href: "/teslimat-bolgeleri" },
                 { label: "Sık Sorulan Sorular", href: "/sik-sorulan-sorular" },
                 { label: "İletişim", href: "/iletisim" },

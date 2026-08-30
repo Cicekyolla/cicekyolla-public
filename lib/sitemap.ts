@@ -18,6 +18,7 @@ const STATIC_INDEXABLE_PAGES = [
   "/kurumsal",
   "/dekorasyon",
   "/teslimat-bolgeleri",
+  "/abonelik",
   "/kvkk",
   "/mesafeli-satis-sozlesmesi",
 ] as const;
