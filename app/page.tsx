@@ -23,11 +23,13 @@ import { DistrictDelivery } from "../components/home/DistrictDelivery";
 import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
 import { getPublishedHomepage } from "@/lib/homepage";
+import { getHomepageBlogPosts } from "@/lib/blog";
 import { HomepageRenderer } from "../components/home/HomepageRenderer";
 import { buildShowcaseFills, getShowcaseSlots } from "@/lib/homepageShowcase";
 import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
+import { BlogRail } from "../components/home/BlogRail";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
 import { isLegacyPleskMedia } from "@/lib/media";
 
@@ -136,6 +138,10 @@ function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
 }
 
 export default async function HomePage() {
+  // §ÇiçekYolla Rehber (ana sayfa blog bölümü): yalnız gereken 3 yazı çekilir —
+  // tüm blog listesi ana sayfaya yüklenmez. Seçim ve sıra Admin'den yönetilir
+  // ("Ana sayfada göster" + sıra); sabit slug listesi yoktur.
+  const homeBlogPosts = await getHomepageBlogPosts(3);
   // Homepage Collections TEK KAYNAK: canlı Category Center ağacı (getCategoryTree).
   const tree = await getCategoryTree();
   const liveItems = tree ? mapTreeToItems(tree) : [];
@@ -264,6 +270,7 @@ export default async function HomePage() {
         <CorporateReferences clients={corporateClients} />
         {/* Çiçeğin Yolculuğu — vitrinlerden sonra, footer'dan hemen önce (Figma Servis Deneyimi) */}
         <FlowerJourney />
+        <BlogRail posts={homeBlogPosts} />
       </>
     );
   }
@@ -304,6 +311,7 @@ export default async function HomePage() {
       <Newsletter />
       {/* Çiçeğin Yolculuğu — footer'dan hemen önce (CMS'siz fallback'te de aynı konum) */}
       <FlowerJourney />
+        <BlogRail posts={homeBlogPosts} />
     </>
   );
 }
