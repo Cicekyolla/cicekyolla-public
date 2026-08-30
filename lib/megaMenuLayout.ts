@@ -34,6 +34,29 @@ export interface MegaColumn {
 }
 
 /* ----------------------------------------------------------------------------
+   MEGA MENÜ — KATEGORİ OLMAYAN EK SÜTUNLAR
+
+   Mega menü kategori ağacından beslenir ve link'ler `/kategori/<slug>` üretir.
+   Kategori OLMAYAN sayfalar (ör. /abonelik) bu yolla menüye giremez; kategori
+   uydurmak da yanlış olur — sahte bir kategori yanlış URL ve yanlış SEO demektir.
+
+   Bu harita, o sayfalar için TEK ve AÇIK istisnadır: nav başlığına manuel bir
+   sütun ekler. Kategori verisi DEĞİŞMEZ, tek kaynak korunur.
+
+   ⚠️ Buraya yalnız gerçekten var olan bir route eklenir. Var olmayan bir yola
+   link vermek header'da ölü link üretir.
+   ---------------------------------------------------------------------------- */
+export const MEGA_EXTRA_COLUMNS: Record<string, MegaColumn[]> = {
+  Kampanyalar: [
+    {
+      title: 'Abonelik',
+      href: '/abonelik',
+      links: [{ name: 'Çiçek Aboneliği', href: '/abonelik' }],
+    },
+  ],
+};
+
+/* ----------------------------------------------------------------------------
    MEGA MENÜ DENGELEME
    Sorun: kolon sayısı = child sayısı (Çiçekler → 16 kolon) ve Güller gibi uzun
    aileler tek sütunda dikey liste oluşturup yan sütunları boş bırakıyordu.

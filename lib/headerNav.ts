@@ -1,6 +1,6 @@
 import { isCategoryVisible, type CategoryNode } from "./api";
 import { mediaUrl } from "./media";
-import { HEADER_NAV_CONFIG, balanceMegaColumns, type HeaderNavItem, type MegaColumn } from "./megaMenuLayout";
+import { HEADER_NAV_CONFIG, balanceMegaColumns, MEGA_EXTRA_COLUMNS, type HeaderNavItem, type MegaColumn } from "./megaMenuLayout";
 
 /* ============================================================================
    CICEKYOLLA — HEADER CURATION (Sales First)
@@ -58,7 +58,12 @@ export function buildHeaderMenu(
       href: `/kategori/${c.slug}`,
       links: visibleChildren(c).map((g) => ({ name: g.name, href: `/kategori/${g.slug}` })),
     }));
-    const cols = columns.length > 0 ? columns : [{ title: `Tüm ${item.label}`, href, links: [] }];
+    // Kategori olmayan sayfalar (ör. /abonelik) için açık istisna. Kategori
+    // verisine dokunulmaz; yalnız sunum katmanına ek sütun eklenir.
+    const extra = MEGA_EXTRA_COLUMNS[item.label] ?? [];
+    const cols = columns.length > 0
+      ? [...columns, ...extra]
+      : [{ title: `Tüm ${item.label}`, href, links: [] }, ...extra];
     const banner = (node as { banner_image?: unknown }).banner_image;
     menu[item.label] = {
       href,
