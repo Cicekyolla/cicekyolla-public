@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, Minus, Plus, ShieldCheck, ShoppingBag, Tag, Truck, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
+import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useState } from "react";
 import { useI18n, Num } from "@/lib/i18n";
@@ -188,6 +189,14 @@ export default function CartPage() {
                     </div>
                   )}
                   <p className="mt-5 text-center text-[12.5px] text-white/35">{t("cart.note")}</p>
+
+                  {/* %100 ÇiçekYolla Garantisi — devam CTA'sının hemen altında kompakt
+                      güven satırı. Toplam/indirim/teslimat hiyerarşisi ve CTA konumu
+                      değişmedi; panel koyu olduğu için beyaz (inverse) master kullanılır. */}
+                  <div className="mt-6 flex items-center justify-center gap-2.5">
+                    <FlowerGuaranteeBadge color="#ffffff" className="h-11 w-11 shrink-0 opacity-80 lg:h-12 lg:w-12" />
+                    <span className="text-[12.5px] font-semibold text-white/70">%100 ÇiçekYolla Garantisi</span>
+                  </div>
 
                   {/* Güven şeridi — checkout paneliyle aynı */}
                   <div className="mt-6 flex items-center justify-center gap-5 pt-5" style={{ borderTop: "1px solid rgba(196,181,253,0.08)" }}>

@@ -10,6 +10,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
+import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useT, Num } from "@/lib/i18n";
 import { useProductName } from "@/lib/i18n/content";
@@ -203,6 +204,28 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
           >
             <Heart className={`w-4 h-4 transition-colors ${wish ? "fill-[#8B5CF6] text-[#8B5CF6]" : "text-[#9CA3AF]"}`} />
           </button>
+
+          {/* %100 ÇiçekYolla Garantisi — fotoğraf alanının sağ-alt köşesi.
+              Sol üstteki "Yeni" etiketi ve sağ üstteki favori butonuyla köşe paylaşmaz.
+              Hover'da aşağıdan gelen Quick-add butonu bu köşeyi kapladığı için mühür
+              o anda yumuşakça silinir (çakışma yok, kart hover koreografisine katılır).
+              Mobilde hover yoktur → mühür her zaman görünür kalır.
+              pointer-events-none: kartın /urun/[slug] linkini ve favori dokunuşunu engellemez. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-3 right-3 opacity-90 transition-opacity duration-300 group-hover:opacity-0"
+          >
+            {/* OPTİK ÖLÇÜ (operatörün "kör sabit değer değil, kart boyutuna göre
+                optical uygulanmalı" talimatı uyarınca ölçülerek belirlendi):
+                  375px → kart 156px. 40px mühür kartın %25,7'sini kaplıyor ve
+                  36px'lik favori butonundan büyük kalıyordu → kaba duruyordu.
+                  36px ile oran %23'e iner ve favori butonuyla aynı ölçek ailesine girer.
+                  1440px → kart 323px; 48px mühür %14,8 — zarif, hedef aralıkta. */}
+            <FlowerGuaranteeBadge
+              color="#0BADA6"
+              className="h-9 w-9 drop-shadow-[0_2px_6px_rgba(255,255,255,0.9)] md:h-11 md:w-11 lg:h-12 lg:w-12"
+            />
+          </div>
 
           {/* Quick add — slides up on hover */}
           <motion.div

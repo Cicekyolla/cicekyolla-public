@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, Minus, Plus, type LucideIcon } from "lucide-react";
 import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 import galleryMapJson from "@/lib/gallery-map.json";
+import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 
 /** Ürün slug'ı → yaşam alanı galeri görselleri (/galeri/...).
  *  KURAL: Kapak her zaman beyaz stüdyo kalır; bu görseller yalnızca
@@ -459,6 +460,20 @@ export function ProductDetail({
             </button>
           </div>
           {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">{t("pdp.planFirst")}</p>}
+
+          {/* %100 ÇiçekYolla Garantisi — satın alma kararının hemen yanında, CTA ile
+              güven ikonları arasında. Panel değil, tek satır: CTA'yı aşağı itmez,
+              ürün fotoğrafını küçültmez. Açıklama olarak YENİ bir vaat yazılmadı;
+              zaten doğrulanmış ve 14 dile çevrili olan pdp.trust.fresh kullanıldı
+              (mesafeli satış sözleşmesi çiçekte cayma istisnası öngördüğü için
+              iade/para iade ifadesi bilinçli olarak KULLANILMADI). */}
+          <div className="mt-6 flex items-center gap-3">
+            <FlowerGuaranteeBadge color="#0BADA6" className="h-12 w-12 shrink-0 lg:h-16 lg:w-16" />
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold leading-tight text-[#111827]">%100 ÇiçekYolla Garantisi</p>
+              <p className="mt-0.5 text-[12.5px] text-[#6B7280]">{t("pdp.trust.fresh")}</p>
+            </div>
+          </div>
 
           {/* Güven ikonları — gerçek özellikler (sahte yorum/yıldız/satış YOK) */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
