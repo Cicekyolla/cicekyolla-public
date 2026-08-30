@@ -68,7 +68,14 @@ export function buildHeaderMenu(
     menu[item.label] = {
       href,
       columns: cols,
-      categories: kids.map((c) => ({ name: c.name, href: `/kategori/${c.slug}` })),
+      // MOBİL DRAWER bu diziyi okur (Header.tsx → group.categories), `columns`'ı
+      // DEĞİL. Ek sütun yalnız `columns`'a eklenirse masaüstünde görünür,
+      // mobilde kaybolur — production acceptance'ta böyle yakalandı.
+      // Aynı `extra` kaydı buraya da düşer; kategori verisi yine değişmez.
+      categories: [
+        ...kids.map((c) => ({ name: c.name, href: `/kategori/${c.slug}` })),
+        ...extra.map((c) => ({ name: c.title, href: c.href })),
+      ],
       // R2 URL'i TR'de bloklu → /r2/ proxy (ürün görselleriyle aynı yol).
       featured: { title: item.label, href, image: typeof banner === "string" && banner ? mediaUrl(banner) : null },
     };
