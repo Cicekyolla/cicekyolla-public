@@ -2,7 +2,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Clock3, Tag } from "lucide-react";
-export type BlogPost={title:string;slug:string;category:string;image:string;excerpt:string;content:string};
+// ADDITIVE: yayın/SEO/ana sayfa alanları opsiyoneldir — alan gelmediğinde davranış
+// bugünküyle birebir aynı kalır (mevcut kayıtlar ve kod fallback'i bozulmaz).
+export type BlogPostState="published"|"draft"|"unpublished"|"deleted";
+export type BlogPost={
+  title:string;slug:string;category:string;image:string;excerpt:string;content:string;
+  state?:BlogPostState;
+  indexState?:"index"|"noindex";
+  seoTitle?:string;
+  metaDescription?:string;
+  canonical?:string;
+  publishedAt?:string;
+  featured?:boolean;
+  homeOrder?:number;
+};
 export function BlogExperience({posts}:{posts:BlogPost[]}){const cats=["Tümü",...Array.from(new Set(posts.map(p=>p.category)))];const [cat,setCat]=useState("Tümü");const shown=cat==="Tümü"?posts:posts.filter(p=>p.category===cat);const featured=shown[0];return <>
  <section className="relative overflow-hidden bg-[#0b0319] px-6 py-24 text-white lg:px-14 lg:py-32"><div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(168,85,247,.35),transparent_36%),radial-gradient(circle_at_20%_80%,rgba(76,29,149,.3),transparent_40%)]"/><div className="relative mx-auto max-w-[1320px]"><div className="inline-flex rounded-full border border-white/15 bg-white/10 px-5 py-2 text-xs font-bold uppercase tracking-[.24em] text-[#ddd6fe]">Blog</div><h1 className="mt-8 max-w-4xl font-serif text-5xl font-semibold leading-[.98] md:text-7xl lg:text-8xl">Çiçek Dünyasından<br/><span className="text-[#c084fc]">İlham & Bilgi</span></h1><p className="mt-8 max-w-2xl text-lg text-[#c4b5d4]">Bakım rehberleri, çiçeklerin anlamları, dekorasyon önerileri ve özel gün fikirleri.</p></div></section>
  <main className="bg-[#fbfafd] px-6 py-16 lg:px-14"><div className="mx-auto max-w-[1320px]">{featured&&<Link href={`/blog/${featured.slug}`} className="grid overflow-hidden rounded-[30px] border border-[#e8e1f0] bg-white shadow-[0_30px_80px_rgba(45,22,72,.09)] lg:grid-cols-[1.15fr_.85fr]"><div className="aspect-[4/3] overflow-hidden bg-[#f2eef6] lg:aspect-auto"><img src={featured.image} alt={featured.title} className="h-full w-full object-cover"/></div><div className="flex flex-col justify-center p-8 lg:p-12"><span className="text-xs font-bold uppercase tracking-[.2em] text-[#8b5cf6]">Öne Çıkan · {featured.category}</span><h2 className="mt-5 font-serif text-4xl font-semibold leading-tight text-[#160d22]">{featured.title}</h2><p className="mt-5 leading-7 text-[#746b80]">{featured.excerpt}</p><span className="mt-8 flex items-center gap-2 font-bold text-[#8b5cf6]">Devamını Oku <ArrowUpRight className="h-4 w-4"/></span></div></Link>}

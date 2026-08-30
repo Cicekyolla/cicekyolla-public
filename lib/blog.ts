@@ -1,7 +1,7 @@
 import { fetchSeoPage } from "@/lib/api";
-import type { BlogPost } from "@/components/blog/BlogExperience";
+import type { BlogPost, BlogPostState } from "@/components/blog/BlogExperience";
 const FALLBACK:BlogPost[]=[{title:"Gül Renklerinin Anlamları: Doğru Mesaj İçin Çiçek Seçme Rehberi",slug:"gul-renklerinin-anlamlari",category:"Rehber",image:"https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=85",excerpt:"Kırmızıdan beyaza, pembeden sarıya her gül rengi farklı bir duygu taşır. Hediye edeceğiniz gülün mesajını bilinçli seçin.",content:"Güller yalnızca zarif görünümleriyle değil, taşıdıkları güçlü anlamlarla da özel günlerin vazgeçilmezidir. Doğru renk seçimi, söylemek istediğiniz duyguyu kelimelere ihtiyaç bırakmadan anlatır.\n\nKırmızı gül romantik sevginin ve tutkunun en güçlü simgesidir. Eşinize ya da sevgilinize gönderdiğiniz kırmızı güller, kalıcı ve derin bir bağlılığı ifade eder.\n\nBeyaz güller saflığı, zarafeti ve yeni başlangıçları temsil eder. Düğünlerde, kutlamalarda ve içten bir teşekkür sunmak istediğiniz anlarda seçilebilir.\n\nPembe güller hayranlık, incelik ve mutluluk mesajı taşır; sarı güller ise dostluğu, enerjiyi ve neşeyi anlatır. Turuncu güller coşku ve heyecanı öne çıkarır.\n\nÇiçek seçerken yalnızca renge değil, alıcının tarzına ve aranızdaki bağa da dikkat edin. ÇiçekYolla’nın usta floristleri, duygunuzu en doğru renk ve aranjmanla yansıtmanız için her tasarımı özenle hazırlar."},{title:"Orkide Bakımı: Evde Uzun Süre Çiçekli Tutmanın 9 Yolu",slug:"orkide-bakimi-uzun-sure-cicekli-tutma",category:"Bakım",image:"https://images.unsplash.com/photo-1610397648930-477b8c7f0943?auto=format&fit=crop&w=1600&q=85",excerpt:"Orkidenizin doğru ışık, sulama ve nem dengesiyle aylarca sağlıklı kalmasını sağlayacak uygulanabilir bakım rehberi.",content:"Orkide, doğru koşullar sağlandığında aylarca çiçekli kalabilen zarif ve dayanıklı bir bitkidir. Bakımın temelinde doğrudan güneşten koruma, kontrollü sulama ve hava alan bir kök yapısı bulunur.\n\nOrkidenizi aydınlık fakat filtrelenmiş ışık alan bir pencere yakınına yerleştirin. Yapraklarda sararma fazla ışığa, koyu yeşil görünüm ise yetersiz ışığa işaret edebilir.\n\nSulamadan önce kökleri kontrol edin. Gri ve mat kökler su ihtiyacını, canlı yeşil kökler yeterli nemi gösterir. Saksı tabağında su bırakmayın; köklerin havasız kalması çürümeye yol açabilir.\n\nOda sıcaklığındaki suyu tercih edin ve yaprakların birleşim noktasında su birikmesini önleyin. Çiçeklenme döneminde dengeli orkide besinini önerilen ölçüde kullanın.\n\nÇiçekler döküldüğünde bitkinizi atmayın. Sağlıklı bir boğumun üzerinden yapılan doğru budama ve sabırlı bakım, orkidenin yeniden çiçeklenmesini destekler. ÇiçekYolla’dan gelen orkideniz için bakım kartındaki özel önerileri de uygulayın."},{"title":"Balkon ve Teras Peyzajı: Küçük Alanlarda Etkileyici Bitki Düzeni","slug":"balkon-teras-peyzaji-bitki-duzeni","category":"Peyzaj","image":"https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1600&q=85","excerpt":"Küçük balkon ve terasları doğru bitki, saksı ve katmanlama seçimleriyle dört mevsim yaşayan ferah alanlara dönüştürün.","content":"İyi tasarlanmış bir balkon veya teras, evin yalnızca dış mekânı değil; günün temposundan uzaklaşabileceğiniz yaşayan bir dinlenme alanıdır. Başarılı peyzajın ilk adımı, alanın güneş alma süresini ve rüzgâr yönünü doğru değerlendirmektir.\n\nGüneşli balkonlarda lavanta, sardunya ve biberiye; yarı gölgeli alanlarda ortanca, begonya ve eğrelti otu güçlü seçeneklerdir. Aynı bakım ihtiyacına sahip bitkileri bir arada kullanmak hem daha dengeli bir görünüm hem de kolay bakım sağlar.\n\nDar alanlarda zemini doldurmak yerine duvar saksıları, bitki rafları ve askılı çözümlerle dikey katmanlar oluşturun. Büyük bir odak bitkisini orta boy yeşiller ve sarkıcı türlerle tamamlamak profesyonel bir derinlik etkisi yaratır.\n\nSaksı seçiminde renk birliği kurun; iki veya üç materyalle sınırlı bir palet, bitkilerin doğal dokusunu öne çıkarır. Drenaj deliği ve kaliteli toprak kullanımı, estetik kadar bitki sağlığı açısından da önemlidir.\n\nMevsim geçişlerinde kuruyan yaprakları temizleyin, bitkileri ışık ihtiyacına göre yeniden konumlandırın ve boşalan alanları mevsimlik çiçeklerle yenileyin. Böylece küçük alanınız yıl boyunca düzenli, ferah ve davetkâr kalır."},{"title":"2026 Düğün Çiçeği Trendleri: Zarif ve Zamansız Bir Konsept Nasıl Kurulur?","slug":"2026-dugun-cicegi-trendleri","category":"Düğün","image":"https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=1600&q=85","excerpt":"Gelin buketinden masa aranjmanına 2026 düğün çiçeği trendlerini, renk paletlerini ve şık konsept kurmanın püf noktalarını keşfedin.","content":"2026 düğün çiçeği trendleri, gösterişli kalabalıklar yerine güçlü bir hikâyesi olan doğal ve rafine tasarımlara yöneliyor. Çiçek seçimini mekân, mevsim ve çiftin kişisel tarzıyla birlikte düşünmek bütünlüklü bir atmosfer yaratıyor.\n\nŞakayık, bahçe gülü, lisyantus ve orkide zarif dokularıyla öne çıkarken; zeytin dalı ve okaliptüs gibi yeşillikler aranjmanlara doğal hareket kazandırıyor. Tek bir baskın renk yerine aynı rengin farklı tonlarını kullanmak fotoğraflarda zamansız bir sonuç veriyor.\n\nGelin buketinde elbisenin formunu dengelemek önemlidir. Sade bir elbise heykelsi bir buketi taşıyabilir; yoğun işlemeli modellerde ise daha kontrollü ve ince bir tasarım görünümü tamamlar.\n\nMasa çiçeklerinde misafirlerin görüşünü engellemeyen alçak aranjmanlar ile belirli noktalarda kullanılan yüksek tasarımlar birlikte değerlendirilebilir. Giriş, nikâh alanı ve fotoğraf köşesinde aynı çiçek dilini sürdürmek konsepti güçlendirir.\n\nMevsiminde bulunan çiçeklere öncelik vermek tazeliği artırır ve bütçeyi daha verimli kullanmanızı sağlar. ÇiçekYolla’nın kurumsal ve organizasyon ekibi, mekâna özel ölçülendirme ve kurulum planıyla düğününüz için kişisel bir çiçek hikâyesi tasarlar."},{"title":"Yapay Çiçek Dekorasyonu: Kalıcı ve Premium Görünüm İçin Tasarım Rehberi","slug":"yapay-cicek-dekorasyonu-premium-rehber","category":"Yapay Çiçekler","image":"https://images.unsplash.com/photo-1487412912498-0447578fcca8?auto=format&fit=crop&w=1600&q=85","excerpt":"Kaliteli yapay çiçekleri doğru renk, doku ve vazo seçimiyle ev, ofis ve mağazalarda doğal görünümlü kalıcı dekorasyona dönüştürün.","content":"Yeni nesil yapay çiçekler, doğru seçildiğinde canlı çiçeklerin zarafetini uzun ömürlü kullanım avantajıyla birleştirir. Premium görünümün sırrı çok sayıda tür kullanmak değil; gerçekçi doku, dengeli renk ve doğru ölçek seçmektir.\n\nYaprak damarları, doğal renk geçişleri ve mat yüzeyler kaliteli bir yapay çiçeği ayırt eden temel detaylardır. Fazla parlak plastik yüzeylerden kaçının ve aynı aranjmanda benzer mevsime ait türleri bir araya getirin.\n\nVazonun yüksekliği ile sapların boyu arasında dengeli bir oran kurun. Büyük salonlarda heykelsi dallar ve hacimli tasarımlar etkili olurken, çalışma masalarında daha sade ve düşük aranjmanlar ferahlığı korur.\n\nEv dekorasyonunda mevcut tekstil ve duvar renklerinden bir veya iki tonu çiçeklerde tekrar etmek bütünlük sağlar. Ofis, otel ve mağazalarda marka renklerini küçük vurgularla kullanmak profesyonel bir kimlik yaratır.\n\nYapay çiçekleri düzenli olarak yumuşak bir bez veya düşük ayarlı hava ile temizleyin; doğrudan güneşte uzun süre bırakmayın. ÇiçekYolla’nın tasarım ekibi, mekânın ölçüsüne ve kullanım amacına göre kalıcı, bakım kolaylığı yüksek dekorasyon çözümleri hazırlar."}];
-export async function getBlogPosts(){const managed=await fetchSeoPage("/blog");const saved=(managed?.body_blocks??[]).filter(b=>b.type==="blog-post"&&typeof b.title==="string"&&typeof b.value==="string").map(b=>({title:String(b.title),slug:String(b.value),category:String(b.kind||"Rehber"),image:String(b.note||""),excerpt:String(b.text||""),content:String(b.label||"")}));return saved.length?saved:FALLBACK.concat(NEW_BLOG_POSTS,AUGUST_BLOG_POSTS);}
+// (eski getBlogPosts tanimi 30.08.2026 tarihinde dosya sonundaki yonetilen-kaynak blogua tasindi)
 
 // 5 yeni blog yazısı — 27.08.2026 additive ekleme. Mevcut FALLBACK kayıtlarına dokunulmadı.
 // Renderer (app/blog/[slug]/page.tsx) içeriği \n\n ile paragraflara böler; HTML render etmez.
@@ -22,3 +22,77 @@ const AUGUST_BLOG_POSTS:BlogPost[]=[
 {title:"Doğum Gününe Çiçek Gönderirken Nelere Dikkat Etmeli?",slug:"dogum-gunune-cicek-gonderirken",category:"Rehber",image:"/blog/blog-4-dogum-gunu-cicek-secimi.jpg",excerpt:"Anneye, sevgiliye, arkadaşa ya da iş arkadaşına: doğum günü çiçeği seçerken kime, hangi tarzda ve nereye gönderdiğiniz her şeyi değiştirir.",content:"Kısa cevap: doğum günü çiçeğinde yanlış cevap yoktur ama “daha doğru” cevap vardır. Kime gittiği, kişinin tarzı, yaşı ve teslimat adresi sorularını cevapladığınızda doğru buket kendiliğinden ortaya çıkar.\n\nKime gidiyor sorusu her şeyin başıdır. Anneye, sevgiliye, arkadaşa ve iş arkadaşına giden buket aynı buket olmamalıdır. Anne için şakayık, ortanca ya da pastel tonlarda karışık bir aranjman her zaman iş yapar. Sevgiliye kırmızı ya da pembe gülün önüne pek bir şey geçemez. Arkadaşa gerbera, papatya ve ayçiçeği gibi neşeli çiçekler hem daha samimi durur hem de yanlış anlaşılma riski taşımaz. İş arkadaşına gönderiyorsanız abartısız, sade bir aranjman seçin; dev kırmızı güller ofiste biraz fazla konuşulur.\n\nKişiliği de hesaba katın. Bazı insanlar sade şıklığı sever, bazıları gösterişi. Minimalist birine kocaman, kurdeleli, balonlu bir set göndermek iyi niyetli ama isabetsiz bir hamledir. Kararsızsanız sade ama kaliteli bir buket her iki tarafa da uyar.\n\nYaşa göre ufak tercihler işe yarar. Gençlere canlı renkler ve modern sade sarımlar; daha olgun alıcılara klasik aranjmanlar ve orkide gibi kalıcı saksı çiçekleri genelde daha çok beğenilir.\n\nTeslimat nereye sorusunu atlamayın. Ofise giden buketin vazolu gitmesi pratiktir; çalışan kişinin “bunu nereye koyacağım” derdi olmaz. Eve gidiyorsa sarılı buket daha şık bir sürpriz olur.\n\nNot kartını es geçmeyin. Buket ne kadar güzel olursa olsun, üzerindeki iki satır el yazısı kadar hatırlanmaz. “İyi ki doğdun” bile yazsanız kendi cümlenizle yazın; kopyala-yapıştır kutlama mesajları her yerden belli olur.\n\nSon bir pratik not: doğum günü yoğun günlere denk geliyorsa, örneğin hafta sonlarına ya da bayram arifelerine, teslimat saatini esnek tutmak çiçeğin tam doğum günü sabahı kapıda olmasında ısrar etmekten daha garantilidir.\n\nSık sorulan sorular: Doğum gününde çiçek sabah mı gönderilmeli? Sabah teslimat günün tamamına yayılan bir sürpriz sağlar; ancak yoğun günlerde gün içi esnek bir aralık seçmek teslimat garantisini artırır.\n\nAnneye doğum gününde hangi çiçek gönderilir? Şakayık, ortanca, pastel karışık aranjmanlar ve orkide en çok beğenilen seçimlerdir.\n\nİş arkadaşına doğum günü çiçeği uygun mu? Uygundur; ölçek küçük ve renkler sade olduğu sürece kurumsal ortamda hoş karşılanır. Ekipçe ortak bir kart eklemek de iyi bir fikirdir.\n\nBuket mi saksı çiçeği mi daha iyi? Buket anın coşkusunu, saksı çiçeği ise kalıcılığı temsil eder. Uzun ömürlü bir hediye istiyorsanız orkide doğum gününde de çok iyi çalışır.\n\nDoğru çiçeği bulmanın formülü basittir: önce kişiyi düşünün, sonra çiçeği seçin — tersini değil."},
 {title:"Ağustos Ayında Hangi Çiçekler Var? Yaz Buketlerinin Yıldızları",slug:"agustos-ayinda-hangi-cicekler-var",category:"Mevsim",image:"/blog/blog-5-yaz-cicekleri-mevsimlik.jpg",excerpt:"Ayçiçeği, lisyantus, lavanta, glayöl... Ağustos ayında mevsiminde olan çiçekler ve yaz sıcağında buketi taze tutmanın püf noktaları.",content:"Kısa cevap: ağustosta ayçiçeği, gerbera, lisyantus, glayöl, delphinium, ortanca ve lavanta tam mevsimindedir. Çiçekçiye yazın gidenler kışın gördükleri şakayığı ya da laleyi bulamaz; ama yaz aslında çiçekçinin en renkli dönemidir — sadece farklı çiçeklerle.\n\nAyçiçeği yazın tartışmasız yıldızıdır; hem tarlada hem bukette. Tek başına kocaman bir demeti bile “bu ay hediye gelmiş” hissi verir ve ağustos tam mevsimidir.\n\nGerbera neredeyse yıl boyu bulunsa da yaz aylarında en canlı renklerine ulaşır: turuncu, sarı, fuşya. Doğum günü buketlerinde bu kadar çok tercih edilmesi boşuna değildir.\n\nLisyantus, yani eflatun gülü, yaz buketlerinin gizli kahramanıdır. Güle benzeyen katmerli çiçekleri vardır ama gülün yaz sıcağındaki hassasiyetini taşımaz; vazoda çok daha uzun dayanır.\n\nGlayöl ve delphinium gibi uzun saplı, gösterişli çiçekler de yaz mevsiminin ürünüdür ve büyük aranjmanlara boy ile ihtişam katarlar.\n\nOrtanca hazirandan itibaren bahçeleri doldurur ve yaz buketlerinde tek dalıyla bile dolgunluk sağlar.\n\nLavanta ise hem taze hem kuru hâliyle tam bir ağustos çiçeğidir; kokusu da cabasıdır.\n\nYaz sıcağında çiçek alırken birkaç şeye dikkat etmekte fayda vardır. Mümkünse sabah teslim alın ya da gönderin, buketi arabada güneşte bırakmayın ve eve gelir gelmez sapları kesip suya koyun. Sıcak havada vazodaki suyu her gün değiştirmek kışınkinden daha da önemlidir: ısı, bakterilerin bayramıdır.\n\nSaksı çiçeği düşünüyorsanız yaz, orkide ve antoryum gibi iç mekân çiçekleri için iyi bir dönemdir; sıcak ve ışık onlara yarar.\n\nSık sorulan sorular: Ağustosta şakayık bulunur mu? Şakayığın sezonu ilkbahar ve erken yazdır; ağustosta genellikle bulunmaz. Benzer dolgun görünüm için lisyantus ve bahçe gülü iyi alternatiflerdir.\n\nYaz sıcağında en uzun dayanan çiçek hangisi? Lisyantus, gerbera, ayçiçeği ve glayöl sıcağa gülden daha dayanıklıdır.\n\nYazın çiçek göndermek riskli mi? Değildir; teslimatın sabah saatlerine alınması ve buketin güneşte bekletilmemesi yeterlidir.\n\nKurutulmuş çiçek yaz için mantıklı mı? Çok mantıklıdır. Lavanta başta olmak üzere kuru çiçekler sıcaktan etkilenmez ve aylarca kalır.\n\nMevsiminde çiçek seçmek hem daha taze bir buket hem de daha iyi bir fiyat demektir."}
 ];
+
+// ============================================================================
+// ADDITIVE (30.08.2026) — Blog tek gerçek kaynağı: Admin/DB (seo_page "/blog").
+// Yukarıdaki FALLBACK / NEW_BLOG_POSTS / AUGUST_BLOG_POSTS dizileri artık
+// GÜVENLİK AĞI'dır: DB'ye ulaşılamazsa ya da bir kayıt DB'de yoksa site boş kalmaz.
+// ----------------------------------------------------------------------------
+// ESKİ DAVRANIŞ (kaldırıldı):  saved.length ? saved : FALLBACK.concat(...)
+//   DB'ye tek bir yazı yazıldığı anda koddaki TÜM yazılar bir anda kayboluyordu
+//   (all-or-nothing). Admin'deki eski "Blog Yönetimi" ekranı 5 yazı kaydettiğinde
+//   canlı blog 15 → 5'e düşecekti.
+// YENİ DAVRANIŞ: slug bazlı BİRLEŞTİRME.
+//   • DB'de kaydı olan yazı → DB kazanır (operatör neyi yazdıysa o).
+//   • DB'de karşılığı olmayan kod kaydı → listede KALIR.
+//   • Bir yazıyı listeden çıkarmak ancak DB'de açık bir işaretle olur:
+//     state:'unpublished' (adres ayakta, noindex) veya state:'deleted' (404).
+//   Sonuç: eksik/kısmi bir DB yazması hiçbir koşulda içerik kaybettiremez.
+// ============================================================================
+
+import {
+  type ManagedBlock,
+  parseBlocks,
+  mergeSources,
+  isPublished,
+  isIndexable,
+  isReachableDetail,
+  selectHomepagePosts,
+} from "./blogMerge";
+
+/** Kod tarafındaki güvenlik ağı. Fonksiyon: modül yükleme sırası (TDZ) riski yok. */
+function codePosts(): BlogPost[] {
+  return FALLBACK.concat(NEW_BLOG_POSTS, AUGUST_BLOG_POSTS);
+}
+
+/** Yönetilen + kod kayıtlarının birleşimi. Kalıcı silinenler hariç, diğer tüm durumlar. */
+export async function getManagedBlogPosts(): Promise<BlogPost[]> {
+  let saved: BlogPost[] = [];
+  try {
+    const managed = await fetchSeoPage("/blog");
+    saved = parseBlocks((managed?.body_blocks ?? []) as ManagedBlock[]);
+  } catch {
+    saved = []; // DB'ye ulaşılamadı → güvenlik ağı devrede, site boş kalmaz.
+  }
+  return mergeSources(saved, codePosts());
+}
+
+/** Blog listesi ve /api/blog: yalnız yayında olanlar. */
+export async function getBlogPosts(): Promise<BlogPost[]> {
+  return (await getManagedBlogPosts()).filter(isPublished);
+}
+
+/**
+ * Detay sayfası kaynağı. Yayından kaldırılan yazının ADRESİ ayakta kalır
+ * (noindex ile) — canlı bir URL tek tıkla 404'e düşmez. Taslak ve kalıcı
+ * silinen yazı ise public'te yoktur → 404.
+ */
+export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+  const post = (await getManagedBlogPosts()).find((p) => p.slug === slug);
+  if (!post) return null;
+  return isReachableDetail(post) ? post : null;
+}
+
+/** Sitemap: yayında VE index olanlar. */
+export async function getIndexableBlogPosts(): Promise<BlogPost[]> {
+  return (await getManagedBlogPosts()).filter(isIndexable);
+}
+
+/**
+ * Ana sayfa rehber bölümü. Admin'de "Ana sayfada göster" işaretli yazılar,
+ * verilen sıraya göre. Hiç işaret yoksa en yeni yayınlar gösterilir
+ * (sabit slug listesi YOK — seçim tamamen Admin'den yönetilir).
+ */
+export async function getHomepageBlogPosts(limit = 3): Promise<BlogPost[]> {
+  return selectHomepagePosts(await getBlogPosts(), limit);
+}

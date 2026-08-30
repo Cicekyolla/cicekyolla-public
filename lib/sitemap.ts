@@ -1,6 +1,6 @@
 import { fetchNeighborhoodUrlPage, fetchProductsPaged, fetchSeoInventory, type SeoInventoryItem } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
-import { getBlogPosts } from "@/lib/blog";
+import { getIndexableBlogPosts } from "@/lib/blog";
 
 // ---------------------------------------------------------------------------
 // ADDITIVE — pages.xml için indexlenebilir statik kurumsal rotalar.
@@ -241,7 +241,7 @@ async function blogNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
   const nodes = invItems.map(urlNode);
   if (!invPaths.has("/blog")) nodes.push(pathNode("/blog"));
   try {
-    const posts = await getBlogPosts();
+    const posts = await getIndexableBlogPosts();
     for (const post of posts) {
       const slug = typeof post.slug === "string" ? post.slug.trim() : "";
       if (!slug || /[^a-z0-9-]/.test(slug)) continue;
