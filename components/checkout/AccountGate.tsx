@@ -13,6 +13,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil, LogIn, UserPlus } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { useProductName } from "@/lib/i18n/content";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
@@ -120,6 +121,15 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
       <div className="mt-4 pt-4 flex items-baseline justify-between" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
         <span className="text-[12px] text-white/40">{t("common.total")}</span>
         <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(totalMinor ?? priceMinor * quantity)}</span>
+      </div>
+
+      {/* %100 ÇiçekYolla Garantisi — checkout'un İLK ekranı (hesap adımı) da
+          sipariş özeti paneli gösteriyor; mühür yalnız CheckoutWizard'a eklenince
+          müşteri checkout'a girdiğinde onu göremiyordu. Wizard'daki kullanımla
+          birebir aynı: ödeme güvenliği rozeti değil, sakin marka güven imzası. */}
+      <div className="mt-5 flex items-center gap-2.5">
+        <FlowerGuaranteeBadge color="#ffffff" className="h-9 w-9 shrink-0 opacity-70 lg:h-11 lg:w-11" />
+        <span className="text-[11.5px] font-semibold text-white/55">%100 ÇiçekYolla Garantisi</span>
       </div>
     </motion.aside>
   );
