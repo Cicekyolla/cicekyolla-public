@@ -4,6 +4,7 @@ import { GLOBAL_LOCALES } from "@/lib/global/config";
 import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 import Link from "next/link";
+import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
 import { BrandWordmark } from "./BrandWordmark";
 import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
@@ -210,6 +211,19 @@ export function Footer({
                 <span className="text-sm text-[#6B7280] mt-1.5">İstanbul, Türkiye</span>
               </li>
             </ul>
+
+            {/* %100 ÇiçekYolla Garantisi — telefon/e-posta/adresin ALTINDAKİ doğal
+                boşlukta marka güven imzası. Footer koyu (#0D0520 → #070011) olduğu
+                için beyaz (inverse) master kullanılır. Footer düzeni değişmedi;
+                iletişim sütununun doğal devamı gibi okunur. */}
+            <div className="mt-8 flex items-center gap-3">
+              <FlowerGuaranteeBadge color="#ffffff" className="h-14 w-14 shrink-0 opacity-85 lg:h-16 lg:w-16" />
+              <span className="text-[12.5px] font-semibold leading-snug text-white/70">
+                %100 ÇiçekYolla
+                <br />
+                Garantisi
+              </span>
+            </div>
           </div>
         </div>
 

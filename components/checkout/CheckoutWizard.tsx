@@ -21,6 +21,7 @@ import {
   Sparkles, Star, RefreshCw, TicketPercent, CreditCard, Landmark, MessageCircle,
 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
+import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { readPendingDelivery, clearPendingDelivery, savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/DeliveryPlanner";
 import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
@@ -1342,6 +1343,16 @@ function LivingReceipt(p: {
             <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(p.total)}</span>
           </div>
         </div>
+      </div>
+
+      {/* %100 ÇiçekYolla Garantisi — checkout'taki EN SAKİN kullanım.
+          Ödeme güvenliği (SSL/PayTR) rozeti DEĞİLDİR ve onunla aynı satıra konmadı:
+          aşağıdaki güven şeridi ödeme/teslimat bilgisini taşımaya devam ediyor,
+          bu satır yalnız marka güven imzasıdır. Yeni panel açılmadı, form uzamadı,
+          ödeme CTA'sı yerinden oynamadı. */}
+      <div className="flex items-center gap-2.5 px-5 pt-4">
+        <FlowerGuaranteeBadge color="#ffffff" className="h-9 w-9 shrink-0 opacity-70 lg:h-11 lg:w-11" />
+        <span className="text-[11.5px] font-semibold text-white/55">%100 ÇiçekYolla Garantisi</span>
       </div>
 
       {/* Güven şeridi — V85; bağırmayan, kısa ve gerçek */}
