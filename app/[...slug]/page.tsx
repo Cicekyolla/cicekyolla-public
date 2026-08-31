@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { unstable_noStore as noStore } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
@@ -10,56 +9,10 @@ import { LocationProducts } from "@/components/location/LocationProducts";
 import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
 import { yonelme } from "@/lib/turkish";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
-import { getCategoryTree } from "@/lib/categories";
-import { findCategoryNodeBySlug } from "@/lib/catalog";
-import { CategoryLanding } from "@/components/category/CategoryLanding";
+import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { getLinkData } from "@/lib/linkData";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
-
-function syntheticCategoryPage(path: string, node: Record<string, unknown>): SeoPublicPage {
-  const name = typeof node.name === "string" ? node.name : "Koleksiyon";
-  const desc = typeof node.description === "string" ? node.description : "";
-  const str = (k: string): string | undefined => (typeof node[k] === "string" ? (node[k] as string) : undefined);
-  return {
-    url_path: path,
-    page_type: "category",
-    lang: "tr",
-    index_state: node.is_indexable === false ? "noindex" : "index",
-    canonical_url: str("canonical_url") || path,
-    // Marka EKLENMEZ: app/layout.tsx metadata şablonu zaten "%s | ÇiçekYolla"
-    // uyguluyor. Buraya marka yazmak "Güller — Cicekyolla | ÇiçekYolla" gibi
-    // çift markalı (ve diakritiksiz) başlık üretiyordu.
-    title_tag: str("seo_title") || name,
-    meta_description: str("seo_description") || desc || `${name} koleksiyonu — aynı gün teslimat.`,
-    h1: str("h1_title") || name,
-    intro_html: desc ? `<p>${desc}</p>` : null,
-    body_blocks: [],
-    faq: Array.isArray(node.faq_json) ? (node.faq_json as SeoPublicPage["faq"]) : [],
-    schema_jsonld: {},
-  };
-}
-
-// Admin'deki SEO kaydı yayında olduğu halde h1/title_tag/meta_description alanları
-// boş bırakılmış olabilir. O durumda sayfa boş <h1> ve boş <title> ile yayınlanıyor,
-// kategori rayının etiketi de "null Kategorileri" çıkıyordu. Boş alanları
-// syntheticCategoryPage'in ürettiği (canlı kategori ağacından gelen) değerlerle
-// tamamlar. DOLU gelen hiçbir alana dokunmaz → admin tek kaynak olmayı sürdürür.
-function withCategoryFallbacks(
-  seo: SeoPublicPage,
-  path: string,
-  node: Record<string, unknown>
-): SeoPublicPage {
-  const blank = (v: string | null | undefined): boolean => !v || v.trim() === "";
-  if (!blank(seo.h1) && !blank(seo.title_tag) && !blank(seo.meta_description)) return seo;
-  const derived = syntheticCategoryPage(path, node);
-  return {
-    ...seo,
-    h1: blank(seo.h1) ? derived.h1 : seo.h1,
-    title_tag: blank(seo.title_tag) ? derived.title_tag : seo.title_tag,
-    meta_description: blank(seo.meta_description) ? derived.meta_description : seo.meta_description,
-  };
-}
 
 const DELIVERY_CITIES = new Set(["istanbul", "ankara", "izmir", "bursa"]);
 const DELIVERY_DATA: Record<string, { label: string; districts: Record<string, { label: string; time: string; cutoff: string; neighborhoods: string[]; description: string }> }> = {
@@ -248,22 +201,14 @@ function syntheticDynamicDeliveryPage(path: string, dyn: DynDelivery): SeoPublic
 }
 
 async function resolvePage(path: string): Promise<SeoPublicPage | null> {
+  // /kategori/* ARTIK app/kategori/[...slug]/page.tsx rotasindan servis ediliyor.
+  // Bu dal yalniz LEGACY_CATEGORY_REDIRECTS (/cicekler, /orkideler) yollarinin
+  // generateMetadata'si icin duruyor: Page() o yollari yonlendirir ama metadata
+  // hedef kategoriden uretilir. Cozum mantigi lib/categoryPage.ts icinde BIREBIR
+  // korundu; null donerse eskisi gibi asagidaki dallara dusulur.
   if (path.startsWith("/kategori/")) {
-    const [seo, tree] = await Promise.all([fetchSeoPage(path), getCategoryTree()]);
-    const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
-    const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
-    // SEO kaydı VAR ama h1/title_tag/meta_description alanları boş olabilir
-    // (canlıda tüm kategorilerde null'dı → boş <h1>, boş <title>, "null Kategorileri").
-    // Bu alanları canlı kategori ağacından türet; hardcoded veri YOK, admin tek
-    // kaynak kalır. Dolu gelen her alan AYNEN korunur.
-    if (seo) return node ? withCategoryFallbacks(seo, path, node as unknown as Record<string, unknown>) : seo;
-    if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
-    // Render/API kısa süreli erişilemezse geçerli kategori URL'lerini 404 olarak
-    // önbelleğe alma. Ağaç geri geldiğinde admin verisi yeniden tek kaynak olur.
-    if (!tree && slug) {
-      noStore();
-      return syntheticCategoryPage(path, { name: prettySlug(slug) });
-    }
+    const category = await resolveCategoryPage(path);
+    if (category) return category;
   }
   const seo = await fetchSeoPage(path);
   if (seo) return seo;
@@ -472,7 +417,11 @@ const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = {
   "/orkideler": "/kategori/orkideler",
 };
 
-type PageProps = { params: { slug?: string[] }; searchParams?: { [k: string]: string | string[] | undefined } };
+// searchParams BİLEREK YOK: Next.js 14'te sayfa searchParams alırsa rotanın
+// TAMAMI dinamik render edilir ve aşağıdaki `revalidate` yok sayılır. ?sort/?page
+// yalnız kategori sayfalarında kullanılıyordu; o dal artık app/kategori/[...slug]
+// rotasında. Buraya searchParams EKLEMEYİN — 71.406 lokasyon URL'i önbellekten düşer.
+type PageProps = { params: { slug?: string[] } };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const requestedPath = slugToPath(params.slug);
@@ -525,7 +474,7 @@ async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<P
   };
 }
 
-export default async function Page({ params, searchParams }: PageProps) {
+export default async function Page({ params }: PageProps) {
   const requestedPath = slugToPath(params.slug);
   const redirectTarget = LEGACY_CATEGORY_REDIRECTS[requestedPath];
   if (redirectTarget) redirect(redirectTarget);
@@ -535,7 +484,6 @@ export default async function Page({ params, searchParams }: PageProps) {
   const faqLd = faqJsonLd(page);
   const rawSchema = page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
-  if (path.startsWith("/kategori/")) return <><CategoryLanding page={page} path={path} searchParams={searchParams} />{jsonLd}</>;
   if (deliveryParts(path)) return <><DeliveryLanding page={page} path={path} />{jsonLd}</>;
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
   const dyn = (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
