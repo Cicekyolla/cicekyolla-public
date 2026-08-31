@@ -463,6 +463,26 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 export const revalidate = 300;
 export const dynamicParams = true;
 
+// ═══════════ DENEY (yalniz preview olcumu) ═══════════
+// HIPOTEZ: dinamik segmentlerin onbeleklenmemesinin nedeni generateStaticParams
+// olmamasi. Bu deney YALNIZ Kartal + Maltepe mahallelerini build'de uretir.
+// Diger ~71.400 URL KONTROL GRUBUDUR: dynamicParams=true ile bugunku gibi
+// calismaya devam eder, davranisi degismez.
+// Slug listesi CANLI API'den gelir; hicbir sey hardcode edilmez.
+export async function generateStaticParams(): Promise<{ slug: string[] }[]> {
+  const out: { slug: string[] }[] = [];
+  for (const ilce of ['kartal', 'maltepe']) {
+    try {
+      const d = await fetchDistrictNeighborhoods('istanbul', ilce);
+      if (!d) continue;
+      out.push({ slug: ['istanbul', ilce] });
+      for (const m of d.neighborhoods) out.push({ slug: ['istanbul', ilce, m.slug] });
+    } catch { /* API erisilemezse bu ilce prerender edilmez; davranis degismez */ }
+  }
+  return out;
+}
+
+
 function slugToPath(slug: string[] | undefined): string {
   if (!slug || slug.length === 0) return "/";
   return "/" + slug.map((s) => decodeURIComponent(s)).join("/");
