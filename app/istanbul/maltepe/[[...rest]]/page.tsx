@@ -12,7 +12,7 @@ import type { Metadata } from "next";
 import CatchAllPage, { generateMetadata as catchAllMetadata } from "@/app/[...slug]/page";
 import { fetchDistrictNeighborhoods } from "@/lib/api";
 
-export const revalidate = 300;
+export const revalidate = 30;   // DENEY: bayatlik penceresi 300s -> 30s
 export const dynamicParams = true;
 
 type Props = { params: { rest?: string[] } };
