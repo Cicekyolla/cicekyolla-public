@@ -408,6 +408,25 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 export const revalidate = 300;
 export const dynamicParams = true;
 
+// generateStaticParams BOŞ DİZİ DÖNER — ve bu bilinçli.
+//
+// Next.js 14'te dinamik bir segment `generateStaticParams` EXPORT ETMİYORSA rota
+// tamamen dinamik sayılır: build çıktısında "ƒ (Dynamic) server-rendered on demand"
+// olarak listelenir, yukarıdaki `revalidate` yok sayılır ve her yanıt
+// `cache-control: private, no-cache, no-store` ile döner. Canlı ölçüm (public#196
+// sonrası): /istanbul/maltepe -> x-vercel-cache MISS, ikinci istekte de MISS.
+//
+// Boş dizi dönen bir generateStaticParams rotayı prerender manifest'e sokar;
+// build'de HİÇBİR sayfa üretilmez (build süresi değişmez), ama `dynamicParams = true`
+// sayesinde her yol ilk istekte üretilip ISR ile önbelleğe alınır ve 300 sn boyunca
+// oradan servis edilir. 71.406 lokasyon URL'i için tek çalışan yol budur.
+//
+// Burayı gerçek yollarla doldurmayın: 71.406 sayfayı build'de üretmek deploy'u
+// saatlerce sürdürür ve API'yi döver. Boş kalmalı.
+export function generateStaticParams(): { slug: string[] }[] {
+  return [];
+}
+
 function slugToPath(slug: string[] | undefined): string {
   if (!slug || slug.length === 0) return "/";
   return "/" + slug.map((s) => decodeURIComponent(s)).join("/");
