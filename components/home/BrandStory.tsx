@@ -88,7 +88,9 @@ export function BrandStory() {
             </p>
             <p className="text-[#6B7280] text-[16px] leading-relaxed mb-10">
               Uzman çiçek tasarımcılarımız her sabah pazarın en taze ürünlerini özenle seçer.
-              Her buket, el yapımı bir sanat eserine dönüşür.
+              Her buket, el yapımı bir sanat eserine dönüşür. 1986'dan bu yana hizmet veren bir
+              online çiçekçi olarak, İstanbul'da aynı gün teslimat ve Türkiye genelinde kargo ile
+              çiçeğinizi sevdiklerinize ulaştırıyoruz.
             </p>
 
             <div className="space-y-3.5 mb-11">
