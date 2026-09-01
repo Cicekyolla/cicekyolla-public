@@ -66,6 +66,23 @@ function waBaglantisiMi(url: URL): boolean {
 }
 
 /**
+ * Verilen href bir WhatsApp bağlantısı mı?
+ *
+ * `withWhatsAppRef` yalnız REKLAMDAN gelen ziyaretçide iş yapar (referans
+ * yoksa null döner), ama dönüşüm ölçümü HER WhatsApp tıklamasını görmelidir.
+ * Bu yüzden tespit ayrı bir fonksiyon olarak dışa açıldı; iki tarafın da aynı
+ * host listesini kullanması şart, yoksa ölçülen ile zenginleştirilen tıklama
+ * kümesi ayrışır.
+ */
+export function isWhatsAppHref(href: string, taban: string): boolean {
+  try {
+    return waBaglantisiMi(new URL(href, taban));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * `href` bir WhatsApp bağlantısıysa hazır metnin sonuna referans satırı
  * eklenmiş yeni URL'i döndürür. WhatsApp bağlantısı değilse, çözümlenemiyorsa
  * veya etiket zaten varsa `null` döner — çağıran taraf o zaman hiçbir şey
