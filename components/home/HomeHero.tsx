@@ -42,7 +42,9 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
   const heroRef = useRef<HTMLDivElement>(null);
   const [mediaFailed, setMediaFailed] = useState(false);
   const hasCustomHeadline = Boolean(config.headline?.trim());
-  const headline = config.headline?.trim() || "Her Duygu\nBir Çiçekle\nAnlam Kazanır";
+  // DIKKAT: bu varsayilan, asagidaki JSX fallback metniyle AYNI olmak zorunda.
+  // Ikisi ayrisirsa CMS li ve CMS siz kurulumlar farkli H1 gosterir (testi var).
+  const headline = config.headline?.trim() || "Sevdiklerine\nÇiçek Yolla\nAnlam Kazansın";
   const subtitle = config.subtitle?.trim() || "Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat.";
   const badge = config.badge?.trim() || "Aynı Gün Teslimat Aktif";
   const cta1 = {
@@ -196,7 +198,7 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
               className="text-[3.1rem] sm:text-[5rem] lg:text-[6.5rem] leading-[0.96] sm:leading-none font-semibold text-white mb-5 sm:mb-7"
             >
               {hasCustomHeadline ? <span className="whitespace-pre-line">{headline}</span> : <>
-                Her Duygu<br />
+                Sevdiklerine<br />
                 <em
                   className="not-italic"
                   style={{
@@ -205,8 +207,8 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
                   }}
-                >Bir Çiçekle</em><br />
-                Anlam Kazanır
+                >Çiçek Yolla</em><br />
+                Anlam Kazansın
               </>}
             </motion.h1>
 
