@@ -1,8 +1,14 @@
 "use client";
 
 /**
- * AdsWhatsAppRef — reklamdan gelen ziyaretçinin WhatsApp geçişine tıklama
- * kimliğini taşır.
+ * AdsWhatsAppRef — WhatsApp geçişini ölçer ve reklamdan gelen ziyaretçide
+ * tıklama kimliğini karşı tarafa taşır.
+ *
+ * İKİ AYRI İŞ, TEK DİNLEYİCİ: (1) her WhatsApp tıklaması `whatsapp_click`
+ * olayı olarak dataLayer'a yazılır — GTM bunu Google Ads "WhatsApp Sohbet"
+ * dönüşümüne bağlar; (2) ziyaretçi reklamdan geldiyse hazır mesaja referans
+ * eklenir. Bunlar tek yerde durur çünkü ikisi de AYNI tıklama anını ve aynı
+ * "bu bir WhatsApp bağlantısı mı" kararını paylaşır.
  *
  * NEDEN TEK YERDEN: sitede 17 ayrı dosyada sabit `wa.me` bağlantısı var ve
  * bunların çoğu sunucuda (SSR) üretiliyor. Tıklama kimliği ise YALNIZ
@@ -24,7 +30,8 @@
  */
 
 import { useEffect } from "react";
-import { readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
+import { isWhatsAppHref, readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
+import { pushEvent } from "@/lib/analytics";
 
 export function AdsWhatsAppRef() {
   useEffect(() => {
@@ -35,27 +42,47 @@ export function AdsWhatsAppRef() {
       const a = hedef?.closest?.("a[href]") as HTMLAnchorElement | null;
       if (!a) return;
 
+      const href = a.getAttribute("href") ?? "";
+      if (!isWhatsAppHref(href, window.location.origin)) return;
+
+      // Buradan sonrası KESİN bir WhatsApp tıklamasıdır: reklamdan gelsin
+      // gelmesin ölçülür. Google yalnız tıklama kimliği taşıyan oturumu kendine
+      // mal edebilir; gerisi "Tüm dönüşümler"de kalıp gerçek talebi gösterir.
+      const yeniSekme = a.target === "_blank";
+
       // Açılış sayfasında URL parametresi en taze kaynaktır; çerez ise sonraki
       // sayfalarda (parametre kaybolduğunda) devreye girer.
       const urlGclid = new URLSearchParams(window.location.search).get("gclid");
       const attr = readAdsAttribution();
       const ref = urlGclid?.slice(0, 255) || attr.gclid || attr.gbraid || attr.wbraid;
-      if (!ref) return; // reklamdan gelmeyen ziyaretçide hiçbir şey değişmez
 
-      // null dönerse WhatsApp bağlantısı değildir ya da referans zaten vardır:
-      // her iki halde de tıklamaya KARIŞMAYIZ.
-      const zenginlestirilmis = withWhatsAppRef(a.getAttribute("href") ?? "", ref, window.location.origin);
-      if (!zenginlestirilmis) return;
+      // null dönerse referans zaten vardır ya da eklenemiyordur: her iki halde
+      // de bağlantıya KARIŞMAYIZ, yalnız olayı göndeririz.
+      const zenginlestirilmis = ref ? withWhatsAppRef(href, ref, window.location.origin) : null;
+
+      if (!zenginlestirilmis) {
+        // Bağlantıyı biz taşımıyoruz; tarayıcı kendi akışında gidecek.
+        // Yeni sekmede sayfa ayakta kaldığı için etiket rahat çalışır; aynı
+        // sekmede ise beklemek yerine olayı gönderip bırakırız — burada zaten
+        // tıklama kimliği yok, yani Ads'in ilişkilendirebileceği bir şey yok.
+        pushEvent("whatsapp_click");
+        return;
+      }
 
       e.preventDefault();
-      const yeniSekme = a.target === "_blank";
+
       if (yeniSekme) {
-        // Kullanıcı hareketiyle tetiklendiği için engellenmez; yine de
-        // açılamazsa aynı sekmede devam ederiz — tıklama asla ölü kalmaz.
+        // Yeni sekme kullanıcı hareketiyle AÇILMALI, yoksa engellenir. Sayfa
+        // ayakta kaldığı için etiketi beklemeye gerek yok.
         const w = window.open(zenginlestirilmis, "_blank", "noopener,noreferrer");
+        pushEvent("whatsapp_click");
         if (!w) window.location.href = zenginlestirilmis;
       } else {
-        window.location.href = zenginlestirilmis;
+        // Aynı sekmede gidiyoruz: önce etiketlerin çalışmasını bekle, sonra
+        // git. pushEvent'in kendi zaman aşımı var; kullanıcı takılı kalmaz.
+        pushEvent("whatsapp_click", {}, () => {
+          window.location.href = zenginlestirilmis;
+        });
       }
     };
 
