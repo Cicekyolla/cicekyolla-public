@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
+import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
@@ -273,46 +274,28 @@ export function isCategoryVisible(node: { status?: unknown }): boolean {
 
 // Canlı kategori ağacını çeker. Env path yoksa veya backend not_found/hata
 // dönerse null → çağıran taraf mevcut kaynağa güvenle geri düşer.
+// MALİYET KAÇAĞI #1 (2 Eyl 2026): tam ağaç ~3,46 MB (telde ~855 KB). Vercel Data
+// Cache 2 MB üstünü SAKLAMAZ → `revalidate: 300` etkisizdi; her sayfa üretimi
+// Render'dan tam ağacı çekiyordu (12 saatte 62 bin çağrı, önbellek 0). Çözüm
+// ADDITIVE: önce HAFİF uç (/api/categories/public-tree — aynı ağaç, aynı sıra,
+// yalnız vitrinin okuduğu alanlar; ~66 KB → Data Cache'e girer). API eski
+// sürümdeyse (404) ya da kesintide mevcut tam ağaca düşülür → deploy sırasından
+// bağımsız, bugünkü davranış korunur. Kategori sayfasının SEO fallback'i
+// (description/faq_json/seo_*) tek kayıt için fetchCategoryById ile okunur.
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
-  const url = `${API_ORIGIN}${CATEGORIES_PATH}`;
+  // Deneme sırası ve dayanıklılık kuralı lib/categoryTreeFetch.ts'te (saf, testli):
+  // hafif uç (revalidate 300) → tam ağaç (revalidate 300) → tam ağaç no-store.
+  return fetchTreeViaAttempts<CategoryNode>(categoryTreeAttempts(API_ORIGIN, CATEGORIES_PATH, apiHeaders()));
+}
 
-  // Render/Vercel cold-start veya kısa ağ kesintilerinde ilk istek geçici olarak
-  // başarısız olabilir. İlk deneme normal ISR cache sözleşmesini korur; yalnız hata
-  // halinde tek bir no-store tekrar yapılır. Kategori verisi/slug/hiyerarşi değişmez.
-  const attempts = [
-    { headers: apiHeaders(), next: { revalidate: 300 } },
-    { headers: apiHeaders(), cache: "no-store" as const },
-  ];
-
-  for (const init of attempts) {
-    let res: Response;
-    try {
-      res = await fetch(url, init);
-    } catch {
-      continue;
-    }
-    if (!res.ok) continue;
-
-    let json: unknown;
-    try {
-      json = await res.json();
-    } catch {
-      continue;
-    }
-
-    // Zarf esnek: { data: [...] } ya da düz [...] — ikisini de kabul et.
-    const payload = (json as { data?: unknown } | null)?.data ?? json;
-    if (!Array.isArray(payload)) continue;
-
-    const nodes = payload.filter(
-      (n): n is CategoryNode =>
-        !!n &&
-        typeof (n as CategoryNode).name === "string" &&
-        typeof (n as CategoryNode).slug === "string"
-    );
-    if (nodes.length > 0) return nodes;
-  }
-  return null;
+/**
+ * Tek kategori kaydı (GET /api/categories/:id — mevcut sözleşme, ENRICHED alanlar:
+ * description, faq_json, seo_title, seo_description, h1_title, is_indexable …).
+ * Yalnız kategori sayfasının SEO fallback'i için, gerektiğinde çağrılır.
+ * Zarf esnek ({ data } ya da düz nesne); 404/hata → null, fırlatmaz.
+ */
+export async function fetchCategoryById(id: number): Promise<Record<string, unknown> | null> {
+  return fetchCategoryRowById(API_ORIGIN, CATEGORIES_PATH, apiHeaders(), id);
 }
 
 // ---------------------------------------------------------------------------
