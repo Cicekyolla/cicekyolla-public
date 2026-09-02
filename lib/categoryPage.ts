@@ -18,9 +18,10 @@
 // ============================================================================
 
 import { unstable_noStore as noStore } from "next/cache";
-import { fetchSeoPage, type SeoPublicPage } from "@/lib/api";
+import { fetchSeoPage, fetchCategoryById, type SeoPublicPage } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
+import { needsCategorySeoFields, isLightCategoryNode, mergeCategoryNode } from "@/lib/categoryNodeEnrich";
 
 // `app/[...slug]/page.tsx` içindeki prettySlug ile AYNI davranış. Oradaki kopya
 // lokasyon yollarında (il/ilçe/-mah) kullanılmayı sürdürdüğü için bilinçli olarak
@@ -94,9 +95,17 @@ export function withCategoryFallbacks(
 export async function resolveCategoryPage(path: string): Promise<SeoPublicPage | null> {
   const [seo, tree] = await Promise.all([fetchSeoPage(path), getCategoryTree()]);
   const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
-  const node = tree ? findCategoryNodeBySlug(tree, slug) : null;
-  if (seo) return node ? withCategoryFallbacks(seo, path, node as unknown as Record<string, unknown>) : seo;
-  if (node) return syntheticCategoryPage(path, node as unknown as Record<string, unknown>);
+  const found = tree ? findCategoryNodeBySlug(tree, slug) : null;
+  // HAFİF AĞAÇ (maliyet #1): ağaç düğümünde description/faq_json/seo_* yoktur.
+  // Bu alanlar yalnız SEO fallback'i gerekiyorsa (kayıt yok ya da başlık/h1/meta
+  // boş) tek kategori için mevcut /api/categories/:id ucundan okunur → çıktı,
+  // tam ağaçla üretilen sayfayla BİREBİR aynı kalır. Tam kayıt varsa ek istek yok.
+  let node: Record<string, unknown> | null = found ? (found as unknown as Record<string, unknown>) : null;
+  if (node && needsCategorySeoFields(seo) && isLightCategoryNode(node)) {
+    node = mergeCategoryNode(node, await fetchCategoryById(Number(node.id)));
+  }
+  if (seo) return node ? withCategoryFallbacks(seo, path, node) : seo;
+  if (node) return syntheticCategoryPage(path, node);
   if (!tree && slug) {
     noStore();
     return syntheticCategoryPage(path, { name: prettySlug(slug) });
