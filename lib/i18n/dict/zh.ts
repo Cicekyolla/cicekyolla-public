@@ -392,6 +392,18 @@ const zh: Dict = {
   "pdp.size.tier.standard": "标准",
   "pdp.size.tier.premium": "高级",
   "pdp.size.tier.deluxe": "豪华",
+  "loc.badge.prefix": "配送地点",
+  "loc.badge.change": "更改",
+  "cart.expiredRemoved": "因配送日期已过，{count} 件商品已从购物车中移除。",
+  "cart.expiredHint": "您可以选择新的配送日期后重新加入。",
+  "header.searchOpen": "搜索",
+  "header.searchClose": "关闭搜索",
+  "common.copy": "复制",
+  "common.copied": "已复制",
+  "common.copyFailed": "复制失败",
+  "co.copyIban": "复制 IBAN",
+  "co.copyHolder": "复制账户持有人姓名",
+
 };
 
 export default zh;

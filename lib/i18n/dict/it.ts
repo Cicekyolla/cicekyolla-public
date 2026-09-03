@@ -392,6 +392,18 @@ const it: Dict = {
   "pdp.size.tier.standard": "Standard",
   "pdp.size.tier.premium": "Premium",
   "pdp.size.tier.deluxe": "Deluxe",
+  "loc.badge.prefix": "Luogo di consegna",
+  "loc.badge.change": "Modifica",
+  "cart.expiredRemoved": "{count} articolo è stato rimosso dal carrello perché la data di consegna è passata.",
+  "cart.expiredHint": "Puoi aggiungerlo di nuovo con una nuova data di consegna.",
+  "header.searchOpen": "Ricerca",
+  "header.searchClose": "Chiudi la ricerca",
+  "common.copy": "Copia",
+  "common.copied": "Copiato",
+  "common.copyFailed": "Copia non riuscita",
+  "co.copyIban": "Copia l'IBAN",
+  "co.copyHolder": "Copia il nome dell'intestatario",
+
 };
 
 export default it;

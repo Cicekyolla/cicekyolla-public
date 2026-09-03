@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PendingDelivery } from "@/lib/pendingDelivery";
 import { pushEcommerceEvent } from "@/lib/analytics";
 import { metaTrack } from "@/lib/metaPixel";
+import { istanbulNow, partitionExpired, expiryStamp } from "@/lib/deliveryExpiry";
+import { anchorServerClock, graceMinutes, nowMs } from "@/lib/serverClock";
 
 export type CartItem = {
   key: string;
@@ -32,6 +34,12 @@ type CartContextValue = {
    *  içerdiği için yeniden hesaplanır, aksi halde aynı ürün+teslimat tekrar
    *  eklendiğinde mükerrer satır oluşurdu. */
   updateAllDelivery: (delivery: PendingDelivery) => void;
+  /** Teslimat tarihi geçmiş satırları güvenle temizler (sepet açılışı, sekmeye
+   *  dönüş ve checkout girişinde çağrılır). Tarihsiz satıra DOKUNMAZ. */
+  pruneExpiredDelivery: () => void;
+  /** Son temizlikte düşen satırlar — ekranda tek seferlik bilgi şeridi için. */
+  expiredNotice: { count: number; names: string[] } | null;
+  dismissExpiredNotice: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -47,6 +55,37 @@ function itemKey(item: Pick<CartItem, "productId" | "variantId" | "delivery">) {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [expiredNotice, setExpiredNotice] = useState<{ count: number; names: string[] } | null>(null);
+  // Aynı satır için tekrar tekrar bildirim göstermemek adına biriktirici.
+  const noticeSeen = useRef<Set<string>>(new Set());
+  // Temizlik state güncellemesi DIŞINDA karar verir; güncel liste burada tutulur.
+  const itemsRef = useRef<CartItem[]>([]);
+
+  /** Teslimat tarihi GERÇEKTEN geçmiş satırları düşürür.
+   *  Kural: tarihsiz satır asla silinmez; saat sunucuya demirlenmemişse
+   *  emniyet payı uygulanır (bkz. serverClock.ts / deliveryExpiry.ts). */
+  const pruneExpiredDelivery = useCallback(() => {
+    const current = itemsRef.current;
+    if (current.length === 0) return;
+    const { kept, expired } = partitionExpired(
+      current,
+      (row) => row.delivery,
+      istanbulNow(nowMs()),
+      graceMinutes(),
+    );
+    if (expired.length === 0) return;
+    const fresh = expired.filter((row) => !noticeSeen.current.has(row.key));
+    for (const row of fresh) noticeSeen.current.add(row.key);
+    itemsRef.current = kept;
+    setItems(kept);
+    if (fresh.length > 0) {
+      setExpiredNotice({ count: fresh.length, names: fresh.map((row) => row.name) });
+    }
+  }, []);
+
+  // Ref her commit'te tazelenir; AŞAĞIDAKİ etkilerden ÖNCE tanımlı olduğu için
+  // temizlik etkisi çalıştığında güncel listeyi görür (etkiler tanım sırasıyla koşar).
+  useEffect(() => { itemsRef.current = items; }, [items]);
 
   useEffect(() => {
     try {
@@ -65,6 +104,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [hydrated, items]);
+
+  // ── Süresi geçmiş teslimat temizliği ──────────────────────────────────────
+  // 1) Sepet okunur okunmaz (tarayıcı saati + emniyet payı ile ihtiyatlı tur).
+  // 2) Ardından sunucu saatine demirlenip kesin tur (yalnız tarihli satır varsa
+  //    ağa çıkılır — boş/tarihsiz sepette istek YOK).
+  // 3) Sekmeye geri dönüldüğünde tekrar (uzun süre açık kalan sekme).
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    pruneExpiredDelivery();
+    if (items.some((item) => expiryStamp(item.delivery) !== null)) {
+      void anchorServerClock().then((ok) => { if (ok && !cancelled) pruneExpiredDelivery(); });
+    }
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const recheck = () => { if (document.visibilityState === "visible") pruneExpiredDelivery(); };
+    document.addEventListener("visibilitychange", recheck);
+    window.addEventListener("focus", recheck);
+    return () => {
+      document.removeEventListener("visibilitychange", recheck);
+      window.removeEventListener("focus", recheck);
+    };
+  }, [hydrated, pruneExpiredDelivery]);
 
   const value = useMemo<CartContextValue>(() => ({
     items,
@@ -123,7 +189,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         })
       );
     },
-  }), [hydrated, items]);
+    pruneExpiredDelivery,
+    expiredNotice,
+    dismissExpiredNotice() { setExpiredNotice(null); },
+  }), [hydrated, items, pruneExpiredDelivery, expiredNotice]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

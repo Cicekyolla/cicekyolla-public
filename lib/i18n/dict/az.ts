@@ -392,6 +392,18 @@ const az: Dict = {
   "pdp.size.tier.standard": "Standart",
   "pdp.size.tier.premium": "Premium",
   "pdp.size.tier.deluxe": "Deluxe",
+  "loc.badge.prefix": "Çatdırılma yeri",
+  "loc.badge.change": "Dəyiş",
+  "cart.expiredRemoved": "Çatdırılma tarixi keçdiyi üçün {count} məhsul səbətdən silindi.",
+  "cart.expiredHint": "Yeni çatdırılma tarixi seçərək yenidən əlavə edə bilərsiniz.",
+  "header.searchOpen": "Axtarış",
+  "header.searchClose": "Axtarışı bağla",
+  "common.copy": "Kopyala",
+  "common.copied": "Kopyalandı",
+  "common.copyFailed": "Kopyalana bilmədi",
+  "co.copyIban": "IBAN-ı kopyala",
+  "co.copyHolder": "Hesab sahibinin adını kopyala",
+
 };
 
 export default az;
