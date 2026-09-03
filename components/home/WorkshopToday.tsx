@@ -11,6 +11,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Sparkles, Gift, Flower2, Clock3, Package, Headset, Gem } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Price } from "@/components/Price";
 
 /**
  * CMS'ten (Homepage CMS → "Atölyeden Bugün") gelen tek slot. Slot ya seçilen
@@ -21,6 +22,9 @@ export interface WorkshopSlot {
   title: string;
   tag?: string;
   text?: string;
+  /** Gerçek üründen gelen TRY kuruş fiyat. Varsa `text` yerine seçili para
+   *  biriminde yazılır; statik kartlarda (fiyatsız) `text` kullanılmaya devam eder. */
+  priceMinor?: number;
   image: string;
   href?: string;
   Icon?: LucideIcon;
@@ -146,7 +150,9 @@ export function WorkshopToday({
                 <h3 className="text-white text-lg font-semibold mb-1.5" style={{ fontFamily: "var(--font-display)" }}>
                   {card.title}
                 </h3>
-                {card.text ? (
+                {card.priceMinor != null ? (
+                  <p className="text-white/55 text-sm leading-relaxed"><Price minor={card.priceMinor} /></p>
+                ) : card.text ? (
                   <p className="text-white/55 text-sm leading-relaxed">{card.text}</p>
                 ) : null}
               </div>

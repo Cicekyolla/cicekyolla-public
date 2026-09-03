@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
+import { useCurrency } from "@/lib/currency";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ShieldCheck, Truck, Lock, FileCheck, CreditCard, Sparkles, Users, MapPin, Calendar, Clock, Package, ArrowRight, Pencil, LogIn, UserPlus } from "lucide-react";
@@ -19,7 +20,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { CheckoutProgress } from "./CheckoutProgress";
 
-const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
+// Para birimi duyarlı yazım bileşen içinde useCurrency().money ile alınır.
 
 function formatDate(d: string | undefined, intl: string): string | null {
   if (!d) return null;
@@ -48,6 +49,7 @@ type Props = {
 };
 
 export default function AccountGate({ productName, productId, priceMinor, coverUrl, productSlug, quantity = 1, totalMinor, returnPath, delivery, onContinue, onEditDelivery }: Props) {
+  const { money } = useCurrency();
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
   const [member, setMember] = useState<{ name: string; email: string } | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);

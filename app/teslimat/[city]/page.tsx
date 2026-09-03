@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Price } from "@/components/Price";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
 import { Truck, Sparkles, ChevronLeft, PackageCheck } from "lucide-react";
@@ -149,8 +150,8 @@ export default async function DeliveryCityPage({
                     <ProductDisplayName id={p.id} fallback={p.name} />
                   </div>
                   <div className="mt-1 flex items-center gap-2">
-                    <span className="text-[15px] font-bold text-[#111827]">{tl(shown)}</span>
-                    {hasSale && <span className="text-[12px] text-[#C4B5FD] line-through">{tl(p.price_minor)}</span>}
+                    <span className="text-[15px] font-bold text-[#111827]"><Price minor={shown} /></span>
+                    {hasSale && <span className="text-[12px] text-[#C4B5FD] line-through"><Price minor={p.price_minor} /></span>}
                   </div>
                 </Link>
               );

@@ -13,7 +13,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, Minus, Plus, type LucideIcon } from "lucide-react";
-import { formatMinorTRY, type PublicProductDetail, type PublicProductImage } from "@/lib/api";
+import { type PublicProductDetail, type PublicProductImage } from "@/lib/api";
+import { useCurrency } from "@/lib/currency";
 import galleryMapJson from "@/lib/gallery-map.json";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 
@@ -103,6 +104,8 @@ export function ProductDetail({
    *  (client fetch'i beklemez). TR çağrısı vermez; sepet/sipariş adı TR kalır. */
   presentation?: { name?: string | null; short_description?: string | null; long_description?: string | null };
 }) {
+  // Fiyat yazımı seçili para biriminde (TRY/USD/EUR). Taban DAİMA TRY kuruştur.
+  const { money } = useCurrency();
   const { product, images, variants } = data;
   const sortedImages: PublicProductImage[] = [...images].sort((a, b) => {
     if (a.role === "cover") return -1;
@@ -266,9 +269,9 @@ export function ProductDetail({
 
           {/* Fiyat */}
           <div className="mt-6 flex items-end gap-3">
-            <Num className="text-[32px] font-bold text-[#111827]">{formatMinorTRY(shown)}</Num>
+            <Num className="text-[32px] font-bold text-[#111827]">{money(shown)}</Num>
             {hasSale && (
-              <Num className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{formatMinorTRY(basePrice)}</Num>
+              <Num className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{money(basePrice)}</Num>
             )}
           </div>
 
@@ -290,7 +293,7 @@ export function ProductDetail({
                     <Link
                       key={item.id}
                       href={item.href ?? `/urun/${item.slug}`}
-                      aria-label={`${label}: ${item.name}, ₺${item.price}`}
+                      aria-label={`${label}: ${item.name}, ${money(item.price * 100)}`}
                       className={`group overflow-hidden rounded-[18px] border bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] ${
                         index === 1 ? "border-[#8B5CF6] bg-[#F8F5FF] shadow-[0_7px_20px_rgba(124,58,237,0.10)]" : "border-[#EDE9FE]"
                       }`}
@@ -311,7 +314,7 @@ export function ProductDetail({
                             <p className="text-[14px] font-bold text-[#111827]">{label}</p>
                             <p className="text-[11px] text-[#9CA3AF]">{tier}</p>
                           </div>
-                          <p className={`text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>₺{item.price}</p>
+                          <p className={`text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>{money(item.price * 100)}</p>
                         </div>
                         <p
                           className="mt-2 text-[11px] font-medium leading-[1.45] text-[#4B5563]"
@@ -388,7 +391,7 @@ export function ProductDetail({
                   >
                     {v.title}
                     {v.price_minor != null && (
-                      <Num className="ml-2 opacity-70">{formatMinorTRY(v.price_minor)}</Num>
+                      <Num className="ml-2 opacity-70">{money(v.price_minor)}</Num>
                     )}
                   </button>
                 ))}
@@ -586,7 +589,7 @@ export function ProductDetail({
       >
         <div className="shrink-0">
           <div className="text-[11px] text-[#9CA3AF] leading-none">{t("common.price")}</div>
-          <Num className="text-[18px] font-bold text-[#111827] leading-tight">{formatMinorTRY(shown)}</Num>
+          <Num className="text-[18px] font-bold text-[#111827] leading-tight">{money(shown)}</Num>
         </div>
         {/* Mobil karşılığı — MASAÜSTÜYLE AYNI aksiyon ve aynı teslimat kilidi.
             İkinci bir müşteri yolu değildir; kilitliyken planlayıcıya kaydırır. */}

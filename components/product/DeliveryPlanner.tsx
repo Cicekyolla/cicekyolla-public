@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCurrency } from "@/lib/currency";
 import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
@@ -91,9 +92,12 @@ function labelOfFor(offset: number, f: ReturnType<typeof makeFmts>, today: strin
   return { label: offset === 0 ? today : offset === 1 ? tomorrow : f.fmtWd.format(d), sub: f.fmtDay.format(d) };
 }
 
-function feeTextFor(minor: number | undefined, free: string): string {
+/** Teslimat/slot ek ücreti — TRY kuruş taban, seçili para biriminde yazılır.
+ *  Kargo ve slot ücreti ürün fiyatıyla AYNI para biriminde görünmek zorundadır;
+ *  "ürün USD + kargo TRY" gibi karışık bir ekran ASLA oluşamaz (§20). */
+function feeTextFor(minor: number | undefined, free: string, money: (m: number) => string): string {
   if (minor == null || minor === 0) return free;
-  return `${(minor / 100).toLocaleString("tr-TR", { minimumFractionDigits: 0 })} ₺`;
+  return money(minor);
 }
 
 // --- Yaka (Anadolu/Avrupa) tespiti + aynı gün son alım kuralı ----------------
@@ -148,9 +152,10 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   // DİL DEĞİŞİMİ = SUNUM: t kimliği değişince check/slot YENİDEN ÇALIŞMAZ (slot korunur). Hata metinleri ref ile.
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
+  const { money } = useCurrency();
   const fmts = useMemo(() => makeFmts(intl), [intl]);
   const labelOf = useCallback((offset: number) => labelOfFor(offset, fmts, t("common.today"), t("common.tomorrow")), [fmts, t]);
-  const feeText = useCallback((minor?: number) => feeTextFor(minor, t("common.free")), [t]);
+  const feeText = useCallback((minor?: number) => feeTextFor(minor, t("common.free"), money), [t, money]);
   // Backend est_text TR sabitidir ("1-3 iş günü"); sunumda locale metni kullanılır (değer aynı: 1-3 iş günü).
   const etaText = t("common.businessDays13");
   const [address, setAddress] = useState<AddressResult | null>(null);

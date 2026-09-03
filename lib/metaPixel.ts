@@ -94,7 +94,9 @@ export interface MetaTrackCustomData {
   content_ids: string[];
   content_type: "product";
   value: number;
-  currency: "TRY";
+  /** 086 — çoklu para birimi: müşteri USD/EUR seçtiyse olay o parada gider.
+   *  Meta çok para birimli hesaplarda değeri kendi tarafında normalize eder. */
+  currency: "TRY" | "USD" | "EUR";
   num_items?: number;
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Price } from "@/components/Price";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -365,7 +366,7 @@ export default async function ProductPage({ params }: PageProps) {
         </div>
       </section>
       {/* Fiyat özeti (SSR erişilebilirlik / no-JS fallback) */}
-      <span className="sr-only">{formatMinorTRY(price)}</span>
+      <span className="sr-only"><Price minor={price} isolate={false} /></span>
     </>
   );
 }

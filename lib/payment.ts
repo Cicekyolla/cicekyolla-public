@@ -21,8 +21,13 @@ export interface PaytrStatus {
   paid: boolean;
   status: string;
   order_number: string | null;
+  /** GERÇEK tahsil edilen tutar, `currency` para biriminin minor birimiyle. */
   total_amount_minor?: number;
-  currency?: string;
+  /** 086 — tahsilat para birimi. Eski (TRY) siparişlerde "TRY" döner. */
+  currency?: "TRY" | "USD" | "EUR";
+  /** Muhasebe/denetim için TRY karşılığı — analitiğe GİTMEZ. */
+  base_amount_minor?: number;
+  base_currency?: "TRY";
   items?: PaidOrderItem[];
 }
 

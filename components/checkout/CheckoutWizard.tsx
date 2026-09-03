@@ -33,12 +33,13 @@ import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { useProductName } from "@/lib/i18n/content";
-import { formatMinorTRY } from "@/lib/api";
+import { useCurrency, BASE_CURRENCY } from "@/lib/currency";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
-// Tek para formatı (PDP/sepet ile aynı): formatMinorTRY — kuruş gösterilmez (hesap değişmez, yalnız görüntü).
-const money = (m: number) => formatMinorTRY(m);
+// Tek para formatı — PDP/sepet ile AYNI fonksiyon (useCurrency().money).
+// Tüm tutarlar TRY kuruş TABANINDA taşınır; seçili para birimine çevrim tek
+// noktada (lib/currency) yapılır. Bu yüzden VİTRİN == SEPET == CHECKOUT == PAYTR.
 // Kart (PayTR) yalnız açık anahtar varken gösterilir. PayTR production anahtarı
 // gelince public Vercel'de NEXT_PUBLIC_PAYTR_ENABLED=true → kart görünür. Şimdilik
 // (sandbox) kapalı → müşteriye yalnız Havale/EFT gösterilir.
@@ -80,6 +81,10 @@ type Props = { productName: string; productId: number | null; variantId?: number
   initialEditDelivery?: boolean };
 
 export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false }: Props) {
+  // 086 — seçili para birimi. `money` TRY kuruş alır, seçili parada yazar.
+  // `currency`/`rateId` sipariş isteğine NİYET olarak eklenir; kuru ve tutarı
+  // sunucu yeniden hesaplar (istemciye ASLA güvenilmez).
+  const { money, currency, rateId } = useCurrency();
   const { t, intl } = useI18n();
   // Faz 2: müşteriye GÖRÜNEN ürün adı (onaylı çeviri); sipariş payload/operasyon TR productName kullanır.
   const shownName = useProductName(productId, productName);
@@ -338,6 +343,12 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         lat: pd?.lat ?? null,
         lng: pd?.lng ?? null,
         delivery_neighborhood: pd?.neighborhood || null,
+        // 086 — para birimi NİYETİ. Tutar/kur GÖNDERİLMEZ: sunucu ürün fiyatını
+        // DB'den, kuru TCMB'den alır ve toplamı kendisi hesaplar. `fx_rate_id`
+        // müşterinin fiyatı gördüğü bültendir; sunucudaki bülten değiştiyse
+        // 409 döner ve tutar sessizce değişmek yerine yeniden onaylatılır.
+        currency,
+        fx_rate_id: rateId,
         items,
       };
 
@@ -370,7 +381,16 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         ? t("co.err.slotGone")
         : reason === "product_not_deliverable_to_address"
           ? t("co.err.notDeliverable")
-          : t("co.err.generic"));
+          // 086 — kur gün içinde döndü: tutar sessizce DEĞİŞMEZ, müşteri
+          // güncel tutarı görüp yeniden onaylar (ekran zaten yeni kurla yazar).
+          : reason === "fx_rate_changed"
+            ? t("currency.changed", { amount: money(total) })
+          // Kur alınamıyor: döviz kapanır, TRY ile devam edilir.
+          : reason === "currency_unavailable"
+            ? t("currency.unavailable")
+          : reason === "havale_try_only"
+            ? t("currency.havaleTryOnly")
+            : t("co.err.generic"));
     } finally {
       setLoading(false);
     }
@@ -990,6 +1010,8 @@ function StepGonderen(p: {
 /* ---------------------------- Adım: Ek Ürünler -------------------------- */
 function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, number>; setAddon: (id: number, q: number) => void }) {
   const { t } = useI18n();
+  // Para yazımı seçili para biriminde; taban DAİMA TRY kuruş.
+  const { money } = useCurrency();
   const count = p.addons.reduce((s, a) => s + (p.addonQty[a.id] || 0), 0);
   const cats = useMemo(() => {
     const set: string[] = [];
@@ -1096,11 +1118,15 @@ function StepOdeme(p: {
   paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[]; cardEnabled: boolean;
 }) {
   const { t } = useI18n();
+  // 086 — Havale/EFT Türk banka hesabına yapılır; USD/EUR seçiliyken GÖSTERİLMEZ.
+  // Müşteriye ₺ IBAN'ı ile "$54,90 gönderin" denemez (backend de 409 ile reddeder).
+  const { currency: activeCurrency, money } = useCurrency();
+  const foreign = activeCurrency !== BASE_CURRENCY;
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const methods = ([
     { key: "card" as const, icon: CreditCard, title: t("co.pay.card"), sub: "Visa, Mastercard · 3D Secure" },
     { key: "havale" as const, icon: Landmark, title: t("co.pay.bank"), sub: t("co.pay.bankDesc") },
-  ]).filter((m) => m.key !== "card" || p.cardEnabled);
+  ]).filter((m) => (m.key !== "card" || p.cardEnabled) && (m.key !== "havale" || !foreign));
   const hasDiscount = !!p.coupon && p.coupon.discount_minor > 0;
   return (
     <Card title={t("co.pay.title")} subtitle={t("co.pay.desc")}>
@@ -1128,6 +1154,15 @@ function StepOdeme(p: {
           <div className="mt-3 flex items-center gap-2 text-[12px] text-[#6B7280] bg-[#F9FAFB] border border-[#F1F0F5] rounded-xl px-3.5 py-2.5">
             <ShieldCheck className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
             {t("co.cardSecureNote")}
+          </div>
+        )}
+
+        {/* Döviz seçiliyken tahsilatın hangi parada yapılacağı AÇIKÇA yazılır.
+            Müşteri ödeme ekranında sürprizle karşılaşmaz. */}
+        {foreign && (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#6B7280] bg-[#F9FAFB] border border-[#F1F0F5] rounded-xl px-3.5 py-2.5">
+            <ShieldCheck className="w-4 h-4 text-[#7C3AED] flex-shrink-0" />
+            {t("currency.chargedIn", { currency: activeCurrency })}
           </div>
         )}
 
@@ -1223,6 +1258,8 @@ function StepOdeme(p: {
   );
 }
 function LineItem({ name, qty, price, addon }: { name: string; qty: number; price: number; addon?: boolean }) {
+  // Para yazımı seçili para biriminde; taban DAİMA TRY kuruş.
+  const { money } = useCurrency();
   return (
     <div className="flex items-center justify-between">
       <span className="text-[13.5px] text-[#374151] flex items-center gap-2 min-w-0">
@@ -1259,6 +1296,8 @@ function LivingReceipt(p: {
   onEditStep?: (key: "alici" | "kart" | "gonderen" | "ekurun") => void;
 }) {
   const { t } = useI18n();
+  // Para yazımı seçili para biriminde; taban DAİMA TRY kuruş.
+  const { money } = useCurrency();
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? t("co.anonymous") : t("co.fullyHidden");
   return (

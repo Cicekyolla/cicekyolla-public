@@ -83,6 +83,9 @@ function detailToCard(locale: GlobalLocale, d: PublicProductDetail, localizedNam
     slug: pr.slug,
     price: Math.round((hasSale ? Number(pr.sale_price_minor) : Number(pr.price_minor)) / 100),
     originalPrice: hasSale ? Math.round(Number(pr.price_minor) / 100) : undefined,
+    // Para birimi çevriminin kaynağı: yuvarlanmış lira değil, gerçek kuruş.
+    priceMinor: Math.round(hasSale ? Number(pr.sale_price_minor) : Number(pr.price_minor)),
+    originalPriceMinor: hasSale ? Math.round(Number(pr.price_minor)) : undefined,
     image: cover?.url ?? "",
     badge: rawBadge ? (BADGE_L10N[locale][rawBadge] ?? rawBadge) : undefined,
     productType: pr.product_type,

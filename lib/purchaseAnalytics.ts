@@ -70,7 +70,9 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
         content_ids: contentIds,
         content_type: "product",
         value: status.total_amount_minor / 100,
-        currency: "TRY",
+        // 086 — sabit "TRY" DEĞİL: müşteri USD ödediyse Meta'ya USD gider.
+        // status.total_amount_minor artık GERÇEK tahsilat tutarıdır.
+        currency: status.currency || "TRY",
       },
       transactionId,
     );
@@ -116,6 +118,7 @@ export function trackHavaleOrderPurchase(order: {
   pushEcommerceEvent("purchase", {
     transaction_id: transactionId,
     value: order.total_amount_minor / 100,
+    // Havale/EFT yalnız TRY'dir (Türk banka hesabı) — sabit doğrudur.
     currency: "TRY",
     payment_type: "havale",
     items,

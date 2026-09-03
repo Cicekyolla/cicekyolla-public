@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { PendingDelivery } from "@/lib/pendingDelivery";
 import { pushEcommerceEvent } from "@/lib/analytics";
 import { metaTrack } from "@/lib/metaPixel";
+import { useCurrency } from "@/lib/currency";
 
 export type CartItem = {
   key: string;
@@ -45,6 +46,11 @@ function itemKey(item: Pick<CartItem, "productId" | "variantId" | "delivery">) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  // 086 — huni boyunca TEK para birimi: müşteri $ görüyorsa add_to_cart da $
+  // gider. Sepet İÇERİĞİ değişmez; unitPriceMinor DAİMA TRY kuruş taban kalır
+  // (sunucu fiyatı yine TRY tabanından doğrular). Yalnız ÖLÇÜM birimi seçiliyi
+  // izler. CurrencyProvider bu sağlayıcının DIŞINDA olduğu için erişim güvenli.
+  const { currency, toMinor } = useCurrency();
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -75,15 +81,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
 
       pushEcommerceEvent("add_to_cart", {
-        currency: "TRY",
-        value: (item.unitPriceMinor * safeQuantity) / 100,
+        currency,
+        value: toMinor(item.unitPriceMinor * safeQuantity) / 100,
         items: [
           {
             item_id: String(item.productId),
             item_name: item.name,
             item_brand: "ÇiçekYolla",
             item_variant: item.variantTitle || undefined,
-            price: item.unitPriceMinor / 100,
+            price: toMinor(item.unitPriceMinor) / 100,
             quantity: safeQuantity,
           },
         ],
@@ -92,8 +98,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       metaTrack("AddToCart", {
         content_ids: [String(item.productId)],
         content_type: "product",
-        value: (item.unitPriceMinor * safeQuantity) / 100,
-        currency: "TRY",
+        value: toMinor(item.unitPriceMinor * safeQuantity) / 100,
+        currency,
         num_items: safeQuantity,
       });
 
@@ -123,7 +129,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         })
       );
     },
-  }), [hydrated, items]);
+  }), [hydrated, items, currency, toMinor]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

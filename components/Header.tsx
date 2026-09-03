@@ -11,6 +11,8 @@ import { BrandWordmark } from "./BrandWordmark";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSelector } from "./LanguageSelector";
+import { CurrencySelector } from "./CurrencySelector";
+import { useCurrency } from "@/lib/currency";
 import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 const fallbackGroup = (label: string, href: string): MegaGroup => ({
@@ -65,6 +67,7 @@ export function Header({ menu, nav, search, brand }: {
       : navItems.map((k) => ({ label: k, href: menuData[k].href ?? menuData[k].categories[0]?.href ?? "/" }));
 
   const { itemCount: cartCount } = useCart();
+  const { money } = useCurrency();
   const router = useRouter();
   const { t } = useI18n();
   // Faz 2: onaylı kategori çevirisi varsa menü etiketi değişir (href/slug AYNI kalır).
@@ -251,6 +254,9 @@ export function Header({ menu, nav, search, brand }: {
             <div className="flex items-center gap-1 flex-shrink-0">
               {/* Dil seçici — Figma 117 (desktop pill / mobile bottom sheet) */}
               <LanguageSelector />
+              {/* Para birimi seçici — dil seçicinin yanında, AYNI tasarım ailesi.
+                  Kur yoksa kendini gizler; header bugünkü gibi kalır. */}
+              <CurrencySelector />
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
                 className="w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
@@ -422,7 +428,7 @@ export function Header({ menu, nav, search, brand }: {
                         <div className="px-4 py-4 text-sm text-[#9CA3AF]">{t("header.searching")}</div>
                       )}
                       {productResults.map((product) => {
-                        const price = Math.round(Number(product.price_minor) / 100).toLocaleString("tr-TR");
+                        const price = money(product.price_minor);
                         return (
                           <Link
                             key={product.slug}

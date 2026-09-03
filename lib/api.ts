@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
+import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
 
 // Backend origin (Render). Env ile override edilebilir.
@@ -384,12 +385,12 @@ export async function fetchProductSeoById(id: string | number): Promise<PublicPr
   }
 }
 
-/** minor (kuruş) → "₺1.240" biçimi (TR). */
+/** minor (kuruş) → "₺1.240" biçimi (TR).
+ *  Tek biçimlendiriciye devreder; ÇIKTI BİREBİR AYNIDIR (TRY regresyonu yok).
+ *  Para birimine DUYARSIZDIR — sunucuda / TRY bağlamında kullanılır. Seçili para
+ *  biriminde göstermek için `<Price minor={...} />` ya da `useCurrency().money`. */
 export function formatMinorTRY(v: string | number | null | undefined): string {
-  if (v == null) return "";
-  const n = Number(v) / 100;
-  if (!Number.isFinite(n)) return "";
-  return `₺${n.toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
+  return formatMoney(v, "TRY", "tr-TR");
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +485,10 @@ export interface CardProduct {
   productType?: string; sameDay?: boolean; scope?: string;
   hasSale?: boolean; isBestseller?: boolean; isNew?: boolean; categoryId?: number | null;
   derivatives?: MediaDerivatives | null; blurhash?: string | null;
+  /** TRY kuruş taban fiyat — para birimi çevriminin kaynağı. `price` yuvarlanmış
+   *  lira olduğu için çevrimde KULLANILMAZ (kart ile PDP 1 cent ayrışırdı). */
+  priceMinor: number;
+  originalPriceMinor?: number;
 }
 export function toCardProduct(p: PublicProductListItem): CardProduct {
   const hasSale = p.sale_price_minor != null && Number(p.sale_price_minor) > 0 && Number(p.sale_price_minor) < Number(p.price_minor);
@@ -493,6 +498,8 @@ export function toCardProduct(p: PublicProductListItem): CardProduct {
     slug: p.slug,
     price: Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100),
     originalPrice: hasSale ? Math.round(Number(p.price_minor) / 100) : undefined,
+    priceMinor: Math.round(hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)),
+    originalPriceMinor: hasSale ? Math.round(Number(p.price_minor)) : undefined,
     image: p.cover_image_url ?? "",
     badge: hasSale ? "İndirim" : p.is_new ? "Yeni" : p.is_bestseller ? "Çok Satan" : undefined,
     productType: p.product_type,

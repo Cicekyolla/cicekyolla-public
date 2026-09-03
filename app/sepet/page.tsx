@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCurrency } from "@/lib/currency";
 import { AlertTriangle, ArrowLeft, Minus, Plus, ShieldCheck, ShoppingBag, Tag, Truck, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
@@ -10,9 +11,9 @@ import { useState } from "react";
 import { useI18n, Num } from "@/lib/i18n";
 import { ProductDisplayName } from "@/lib/i18n/content";
 
-function money(minor: number) {
-  return `₺${(minor / 100).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
-}
+// NOT: yerel `money` KALDIRILDI. Sepet artık seçili para birimini kullanır
+// (useCurrency().money) — kalem, ara toplam, indirim ve GENEL TOPLAM aynı
+// para biriminde; karışık para birimi imkânsız (§18).
 
 /** Sepet satırında teslimatı okunur göster: "15 Ağustos Cuma · 12:00–15:00".
  *  Teslimat sepet satırının bir alanıdır; müşteri sepette ne zaman ulaşacağını görmeli. */
@@ -28,6 +29,7 @@ function deliveryLine(d: { date?: string; slotLabel?: string; mode?: "sameday" |
 
 export default function CartPage() {
   const { items, subtotalMinor, setQuantity, removeItem } = useCart();
+  const { money } = useCurrency();
   const { t, intl } = useI18n();
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);

@@ -18,6 +18,7 @@ import { BreadcrumbSchemaTracker } from "@/components/analytics/BreadcrumbSchema
 import { CategoryImageEnhancer } from "@/components/CategoryImageEnhancer";
 import { CartProvider } from "@/lib/cart";
 import { I18nProvider } from "@/lib/i18n";
+import { CurrencyProvider } from "@/lib/currency";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
@@ -170,6 +171,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <I18nProvider>
+        {/* Para birimi (TRY/USD/EUR) — dil sağlayıcısının İÇİNDE: varsayılan
+            para birimi locale'den türer. Sunucu daima TRY render eder. */}
+        <CurrencyProvider>
         <noscript>
           <iframe
             src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
@@ -196,6 +200,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <ConsentManager />
         <NewMemberPopup />
         <DeliveryAddressPopup />
+        </CurrencyProvider>
         </I18nProvider>
         <CategoryImageEnhancer />
       </body>

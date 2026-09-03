@@ -13,6 +13,7 @@ import { Heart, Zap, Clock3 } from "lucide-react";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useT, Num } from "@/lib/i18n";
+import { useCurrency } from "@/lib/currency";
 import { useProductName } from "@/lib/i18n/content";
 
 export type Product = {
@@ -21,6 +22,9 @@ export type Product = {
   subtitle?: string;
   price: number;
   originalPrice?: number;
+  /** TRY kuruş taban — para birimi çevriminin kaynağı (yuvarlanmış `price` değil). */
+  priceMinor?: number;
+  originalPriceMinor?: number;
   image: string;
   rating?: number;
   reviews?: number;
@@ -91,6 +95,7 @@ const TAG_TONE: Record<CardTag["tone"], string> = {
 
 export function ProductCard({ product, idx, contextTag, deliveryPromise, polish = false, href }: { product: Product; idx: number; contextTag?: CardContextTag; deliveryPromise?: ProductDeliveryPromise; polish?: boolean; href?: string }) {
   const tr = useT();
+  const { money } = useCurrency();
   // Faz 2: onaylı çeviri varsa GÖRÜNEN ad; id/slug/fiyat/href değişmez.
   const shownName = useProductName(product.id, product.name);
   const [wish, setWish] = useState(false);
@@ -295,10 +300,10 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
           ) : null}
           <div className="mt-auto pt-3 flex items-baseline gap-2">
             <span style={{ fontFamily: "var(--font-display)", fontSize: "19px" }} className="font-semibold text-[#111827]">
-              <Num>₺{product.price}</Num>
+              <Num>{money(product.priceMinor ?? product.price * 100)}</Num>
             </span>
             {product.originalPrice ? (
-              <Num className="text-sm text-[#C4B5FD] line-through font-medium">₺{product.originalPrice}</Num>
+              <Num className="text-sm text-[#C4B5FD] line-through font-medium">{money(product.originalPriceMinor ?? product.originalPrice * 100)}</Num>
             ) : null}
           </div>
         </div>
