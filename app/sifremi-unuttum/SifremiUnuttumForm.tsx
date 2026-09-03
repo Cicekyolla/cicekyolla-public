@@ -3,37 +3,48 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { MessageCircle, ShieldCheck } from "lucide-react";
+import { FormAlert } from "@/components/auth/FormAlert";
+import { validateResetRequest, viewForResponse, viewForThrown } from "@/lib/authErrors";
+import { SUPPORT_WHATSAPP } from "@/lib/payment";
 
 export default function SifremiUnuttumForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const identifier = String(new FormData(event.currentTarget).get("identifier") ?? "").trim();
-    if (!identifier) {
-      setMessage("E-posta veya telefon numaranızı girin.");
+
+    const preflight = validateResetRequest(identifier);
+    if (preflight) {
+      setError(preflight.message);
       return;
     }
+
     setLoading(true);
-    setMessage(null);
+    setError(null);
+    let response: Response;
     try {
-      const response = await fetch("/api/auth/sifre-sifirla/talep", {
+      response = await fetch("/api/auth/sifre-sifirla/talep", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ identifier }),
       });
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "İşlem tamamlanamadı.");
-      // Sunucu, hesabın var olup olmadığını bilerek ayırt etmez; ekran da etmez.
-      setSent(true);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "İşlem tamamlanamadı.");
-    } finally {
+    } catch (thrown) {
       setLoading(false);
+      setError(viewForThrown(thrown).message);
+      return;
     }
+    setLoading(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      // Teknik metin gösterilmez; sunucu hesap var/yok bilgisini zaten sızdırmaz.
+      setError(viewForResponse(response.status, body).message);
+      return;
+    }
+    setSent(true);
   }
 
   return (
@@ -49,14 +60,26 @@ export default function SifremiUnuttumForm() {
           {sent ? (
             <div className="mt-6 grid gap-5">
               <p className="leading-7 text-muted-foreground">
-                Kayıtlı bir hesap bulunduysa, şifre belirleme bağlantısı WhatsApp ile telefonunuza
-                gönderildi. Bağlantı <strong className="text-foreground">30 dakika</strong> geçerlidir.
+                Kayıtlı bir hesap bulunduysa, şifre belirleme bağlantısı hesabınızdaki telefon
+                numarasına <strong className="text-foreground">WhatsApp</strong> ile gönderildi.
+                Bağlantı <strong className="text-foreground">30 dakika</strong> geçerlidir.
               </p>
               <div className="flex items-start gap-3 rounded-[var(--radius)] bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-                Mesaj gelmediyse numaranızın hesabınızda kayıtlı olduğundan emin olun. Bağlantıyı
-                yalnız siz kullanabilirsiniz; kimseyle paylaşmayın.
+                Bağlantı yalnız WhatsApp ile gider; e-posta gönderilmez. Hesabınızda geçerli bir cep
+                telefonu kayıtlı değilse mesaj ulaşmaz — bu durumda aşağıdaki destek hattından
+                yardım alabilirsiniz. Bağlantıyı kimseyle paylaşmayın.
               </div>
+              {/* E-postayla kayıtlı ama telefonu olmayan üye için ÇIKIŞ YOLU:
+                  eskiden bu durumda ekran "gönderildi" deyip sessizce bitiyordu. */}
+              <a
+                href={SUPPORT_WHATSAPP}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#25D366] px-8 py-4 text-center text-base font-bold text-[#128C7E] transition-colors hover:bg-[#F0FFF4]"
+              >
+                <MessageCircle className="h-4 w-4" /> Mesaj gelmediyse WhatsApp destek
+              </a>
               <Link
                 href="/giris"
                 className="rounded-full bg-primary px-8 py-4 text-center text-lg font-bold text-primary-foreground shadow-[0_18px_45px_rgba(139,92,246,.28)] transition-colors duration-200 hover:bg-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -68,8 +91,9 @@ export default function SifremiUnuttumForm() {
             <form noValidate onSubmit={handleSubmit} className="mt-6 grid gap-5">
               <p className="leading-7 text-muted-foreground">
                 Hesabınızda kayıtlı e-posta adresinizi veya telefon numaranızı girin. Şifre belirleme
-                bağlantısını WhatsApp ile göndereceğiz.
+                bağlantısını, hesabınızdaki telefon numarasına WhatsApp ile göndereceğiz.
               </p>
+              {error && <FormAlert id="sifirla-hata" tone="error" message={error} />}
               <label className="grid gap-2 text-sm font-semibold">
                 E-posta veya telefon
                 <input
@@ -77,8 +101,10 @@ export default function SifremiUnuttumForm() {
                   required
                   type="text"
                   autoComplete="username"
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? "sifirla-hata" : undefined}
                   placeholder="ornek@email.com veya 05XX XXX XX XX"
-                  className="h-14 rounded-[var(--radius)] border border-border bg-input-background px-4 outline-none transition-colors duration-200 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className={`h-14 rounded-[var(--radius)] border bg-input-background px-4 outline-none transition-colors duration-200 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${error ? "border-[#FCA5A5]" : "border-border"}`}
                 />
               </label>
               <button
@@ -88,11 +114,6 @@ export default function SifremiUnuttumForm() {
               >
                 {loading ? "Gönderiliyor…" : "Bağlantı Gönder"}
               </button>
-              {message && (
-                <p role="alert" className="text-sm text-destructive">
-                  {message}
-                </p>
-              )}
               <Link href="/giris" className="text-center text-sm font-semibold text-primary">
                 Giriş sayfasına dön
               </Link>

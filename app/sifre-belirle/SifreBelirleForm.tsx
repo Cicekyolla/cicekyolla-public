@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { KeyRound, ShieldCheck } from "lucide-react";
+import { FormAlert } from "@/components/auth/FormAlert";
+import { validateNewPassword, viewForResponse, viewForThrown } from "@/lib/authErrors";
 
 type TokenState = "kontrol" | "gecerli" | "gecersiz";
 
@@ -13,6 +15,7 @@ export default function SifreBelirleForm() {
   const [tokenState, setTokenState] = useState<TokenState>("kontrol");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [tone, setTone] = useState<"error" | "success">("error");
 
   // Token URL'den okunur; sunucuya sorulup hâlâ geçerli mi doğrulanır ki
   // kullanıcı süresi dolmuş bir bağlantıda boşuna form doldurmasın.
@@ -44,36 +47,47 @@ export default function SifreBelirleForm() {
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password") ?? "");
     const passwordAgain = String(form.get("password_again") ?? "");
-    if (password.length < 8) {
-      setMessage("Şifre en az 8 karakter olmalıdır.");
-      return;
-    }
-    if (password !== passwordAgain) {
-      setMessage("Şifreler eşleşmiyor.");
-      return;
-    }
+
+    // Ön denetim sunucu kuralıyla (8-200) AYNI; hata artık kırmızı ve alan işaretli.
+    const preflight = validateNewPassword(password, passwordAgain);
+    if (preflight) { setTone("error"); setMessage(preflight.message); return; }
     if (form.get("kvkk_onay") !== "on") {
-      setMessage("KVKK onayı zorunludur.");
+      setTone("error");
+      setMessage("Devam etmek için KVKK aydınlatma metnini onaylayın.");
       return;
     }
+
     setLoading(true);
     setMessage(null);
+    let response: Response;
     try {
-      const response = await fetch("/api/auth/sifre-sifirla/tamamla", {
+      response = await fetch("/api/auth/sifre-sifirla/tamamla", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ token, password, kvkk_onay: true }),
       });
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Şifre belirlenemedi.");
-      setMessage("Şifreniz belirlendi, hesabınıza yönlendiriliyorsunuz…");
-      router.push("/hesabim");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Şifre belirlenemedi.");
-    } finally {
+    } catch (thrown) {
       setLoading(false);
+      setTone("error");
+      setMessage(viewForThrown(thrown).message);
+      return;
     }
+    setLoading(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const view = viewForResponse(response.status, body);
+      setTone("error");
+      setMessage(view.message);
+      // Bağlantı tüketilmiş/süresi dolmuşsa formu kapat, yeni bağlantı iste.
+      if (response.status === 400 && /Bağlantı/i.test(String((body as { error?: string } | null)?.error ?? ""))) {
+        setTokenState("gecersiz");
+      }
+      return;
+    }
+    setTone("success");
+    setMessage("Şifreniz belirlendi, hesabınıza yönlendiriliyorsunuz…");
+    router.push("/hesabim");
   }
 
   return (
@@ -118,7 +132,9 @@ export default function SifreBelirleForm() {
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="En az 8 karakter"
-                  className="h-14 rounded-[var(--radius)] border border-border bg-input-background px-4 outline-none transition-colors duration-200 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  aria-invalid={tone === "error" && message ? true : undefined}
+                  aria-describedby={message ? "sifre-belirle-hata" : undefined}
+                  className={`h-14 rounded-[var(--radius)] border bg-input-background px-4 outline-none transition-colors duration-200 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${tone === "error" && message ? "border-[#FCA5A5]" : "border-border"}`}
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold">
@@ -148,11 +164,7 @@ export default function SifreBelirleForm() {
               >
                 {loading ? "Kaydediliyor…" : "Şifremi Kaydet"}
               </button>
-              {message && (
-                <p role="alert" className="text-sm text-muted-foreground">
-                  {message}
-                </p>
-              )}
+              {message && <FormAlert id="sifre-belirle-hata" tone={tone} message={message} />}
               <div className="flex items-start gap-3 rounded-[var(--radius)] bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
                 Şifreniz şifrelenerek saklanır ve hiçbir çalışanımız tarafından görülemez.
