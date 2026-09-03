@@ -10,6 +10,7 @@ import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
+import { DeliveryLocationBadge } from "@/components/delivery/DeliveryLocationBadge";
 import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
@@ -186,6 +187,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <EcommerceCheckoutTracker />
           <EcommercePaymentInfoTracker />
           <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
+          {/* Hatırlanan teslimat yeri şeridi — adres seçilmemişse HİÇ çizilmez
+              (ilk ziyaretçide görsel değişiklik yok). Kaynak: pendingDelivery. */}
+          <DeliveryLocationBadge />
           {children}
         </CartProvider>
         <MemberNewsletterBand />

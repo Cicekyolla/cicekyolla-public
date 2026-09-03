@@ -392,6 +392,18 @@ const ru: Dict = {
   "pdp.size.tier.standard": "Стандарт",
   "pdp.size.tier.premium": "Премиум",
   "pdp.size.tier.deluxe": "Делюкс",
+  "loc.badge.prefix": "Место доставки",
+  "loc.badge.change": "Изменить",
+  "cart.expiredRemoved": "{count} товар удалён из корзины: дата доставки уже прошла.",
+  "cart.expiredHint": "Вы можете добавить его снова, выбрав новую дату доставки.",
+  "header.searchOpen": "Поиск",
+  "header.searchClose": "Закрыть поиск",
+  "common.copy": "Копировать",
+  "common.copied": "Скопировано",
+  "common.copyFailed": "Не удалось скопировать",
+  "co.copyIban": "Скопировать IBAN",
+  "co.copyHolder": "Скопировать имя владельца счёта",
+
 };
 
 export default ru;

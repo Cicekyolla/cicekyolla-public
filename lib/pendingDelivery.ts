@@ -50,6 +50,79 @@ const KEY = "cy_pending_delivery";
 export const PENDING_ADDRESS_EVENT = "cy:pending-address";
 const VERSION = 2;
 
+// ── KALICI ADRES HAFIZASI (ADDITIVE) ────────────────────────────────────────
+// Sorun: seçim sessionStorage'da ve 2 saatte bayatlıyor → müşteri "Çiçeğinizi
+// nereye gönderelim?" sorusunu tekrar tekrar görüyordu.
+// Karar: İKİNCİ BİR ADRES SİSTEMİ KURULMAZ. Aynı kaydın YALNIZ ADRES alanları
+// localStorage'a aynalanır; slot/tarih/ürün ASLA aynalanmaz — böylece hatırlanan
+// şey sadece "nereye" olur, "ne zaman" her seferinde Delivery Engine'den gelir.
+const REMEMBER_KEY = "cy_delivery_address_v1";
+const REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 gün
+
+/** Yalnız adres alanları — hatırlanan kayıt bundan ibarettir. */
+type RememberedAddress = Pick<
+  PendingDelivery,
+  "address" | "placeName" | "neighborhood" | "district" | "city" | "placeId" | "lat" | "lng"
+> & { ts: number; version: number };
+
+function pickAddress(p: PendingDelivery): Omit<RememberedAddress, "ts" | "version"> {
+  return {
+    address: p.address,
+    placeName: p.placeName ?? null,
+    neighborhood: p.neighborhood ?? null,
+    district: p.district,
+    city: p.city,
+    placeId: p.placeId ?? null,
+    lat: p.lat ?? null,
+    lng: p.lng ?? null,
+  };
+}
+
+function rememberAddress(p: PendingDelivery): void {
+  if (typeof window === "undefined") return;
+  if (!hasPendingAddress(p) || !p.address) return;
+  try {
+    const row: RememberedAddress = { ...pickAddress(p), ts: Date.now(), version: VERSION };
+    window.localStorage.setItem(REMEMBER_KEY, JSON.stringify(row));
+  } catch {
+    /* localStorage kapalı/dolu → hatırlama sessizce devre dışı kalır */
+  }
+}
+
+/**
+ * Hatırlanan adres (varsa). Bayat (30 gün+) veya koordinatı geçersiz kayıt
+ * GÜVENLİ FALLBACK olarak temizlenir ve null döner — teslimat uygunluğu her
+ * hâlükârda Delivery Engine tarafından yeniden karara bağlanır.
+ */
+export function readRememberedAddress(): PendingDelivery | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REMEMBER_KEY);
+    if (!raw) return null;
+    const row = JSON.parse(raw) as RememberedAddress;
+    const fresh = typeof row?.ts === "number" && Date.now() - row.ts <= REMEMBER_TTL_MS;
+    const candidate: PendingDelivery = {
+      address: row?.address, placeName: row?.placeName ?? null, neighborhood: row?.neighborhood ?? null,
+      district: row?.district, city: row?.city, placeId: row?.placeId ?? null,
+      lat: row?.lat ?? null, lng: row?.lng ?? null, ts: row?.ts,
+    };
+    if (!fresh || !hasPendingAddress(candidate) || !candidate.address) {
+      window.localStorage.removeItem(REMEMBER_KEY);
+      return null;
+    }
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
+/** Hatırlanan adresi unut (yalnız kullanıcı açıkça isterse çağrılır). */
+export function forgetRememberedAddress(): void {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.removeItem(REMEMBER_KEY); } catch { /* geç */ }
+  try { window.dispatchEvent(new CustomEvent(PENDING_ADDRESS_EVENT)); } catch { /* geç */ }
+}
+
 export function savePendingDelivery(p: PendingDelivery): void {
   if (typeof window === "undefined") return;
   try {
@@ -57,19 +130,22 @@ export function savePendingDelivery(p: PendingDelivery): void {
   } catch {
     /* sessionStorage kapalı/dolu → sessizce geç */
   }
+  // Adres tarafı kalıcı aynaya da yazılır (slot/tarih/ürün ASLA).
+  rememberAddress(p);
 }
 
 export function readPendingDelivery(): PendingDelivery | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(KEY);
-    if (!raw) return null;
+    if (!raw) return readRememberedAddress();
     const p = JSON.parse(raw) as PendingDelivery;
     // 2 saatten eski seçimi bayat say (yanlış ürün/oturum sızmasın).
-    if (p.ts && Date.now() - p.ts > 2 * 60 * 60 * 1000) return null;
+    // Seçim düşer ama HATIRLANAN ADRES ayakta kalır — müşteri adresi yeniden yazmaz.
+    if (p.ts && Date.now() - p.ts > 2 * 60 * 60 * 1000) return readRememberedAddress();
     return p;
   } catch {
-    return null;
+    return readRememberedAddress();
   }
 }
 
@@ -112,6 +188,14 @@ export function clearPendingSelection(): void {
     address: p.address, placeName: p.placeName ?? null, neighborhood: p.neighborhood ?? null,
     district: p.district, city: p.city, placeId: p.placeId ?? null, lat: p.lat, lng: p.lng,
   });
+}
+
+/** "Değiştir" düğmesi: mevcut adres popup'ını elle açtırır (ikinci seçici YOK). */
+export const OPEN_ADDRESS_POPUP_EVENT = "cy:open-address-popup";
+
+export function openDeliveryAddressPopup(): void {
+  if (typeof window === "undefined") return;
+  try { window.dispatchEvent(new CustomEvent(OPEN_ADDRESS_POPUP_EVENT)); } catch { /* geç */ }
 }
 
 export function markDeliveryPopupDismissed(): void {

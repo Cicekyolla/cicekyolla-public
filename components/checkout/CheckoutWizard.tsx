@@ -27,7 +27,8 @@ import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/Del
 import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
-import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
+import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
+import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
@@ -416,11 +417,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           ) : (
             <div className="space-y-2.5">
               {bankAccounts.map((b) => (
-                <div key={b.public_id} className="rounded-xl bg-white border border-[#EDE9FE] px-3.5 py-2.5">
-                  <div className="text-[12.5px] font-bold text-[#1F2937]">{b.bank_name}{b.branch_name ? ` · ${b.branch_name}` : ""}</div>
-                  <div className="text-[13px] font-mono text-[#4B5563] tracking-wide mt-0.5">{ibanPretty(b.iban)}</div>
-                  <div className="text-[11.5px] text-[#9CA3AF] mt-0.5">{b.account_holder}</div>
-                </div>
+                <BankAccountCard key={b.public_id} account={b} />
               ))}
             </div>
           )}
@@ -1140,11 +1137,7 @@ function StepOdeme(p: {
                 <div className="text-[12px] font-semibold text-[#6D28D9] mb-2">{t("co.bankInstr")}</div>
                 <div className="space-y-2.5">
                   {p.bankAccounts.map((b) => (
-                    <div key={b.public_id} className="rounded-xl bg-white border border-[#EDE9FE] px-3.5 py-2.5">
-                      <div className="text-[12.5px] font-bold text-[#1F2937]">{b.bank_name}{b.branch_name ? ` · ${b.branch_name}` : ""}</div>
-                      <div className="text-[13px] font-mono text-[#4B5563] tracking-wide mt-0.5">{ibanPretty(b.iban)}</div>
-                      <div className="text-[11.5px] text-[#9CA3AF] mt-0.5">{b.account_holder}{b.note ? ` · ${b.note}` : ""}</div>
-                    </div>
+                    <BankAccountCard key={b.public_id} account={b} showNote />
                   ))}
                 </div>
                 <div className="text-[11.5px] text-[#9CA3AF] mt-2.5">{t("co.bankPendingNote")}</div>

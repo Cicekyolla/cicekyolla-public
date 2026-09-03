@@ -393,6 +393,18 @@ const ar: Dict = {
   "pdp.size.tier.standard": "قياسي",
   "pdp.size.tier.premium": "بريميوم",
   "pdp.size.tier.deluxe": "ديلوكس",
+  "loc.badge.prefix": "مكان التسليم",
+  "loc.badge.change": "تغيير",
+  "cart.expiredRemoved": "تمت إزالة {count} من السلة لأن تاريخ التسليم قد مضى.",
+  "cart.expiredHint": "يمكنك إضافته مجددًا بتاريخ تسليم جديد.",
+  "header.searchOpen": "بحث",
+  "header.searchClose": "إغلاق البحث",
+  "common.copy": "نسخ",
+  "common.copied": "تم النسخ",
+  "common.copyFailed": "تعذّر النسخ",
+  "co.copyIban": "نسخ رقم الآيبان",
+  "co.copyHolder": "نسخ اسم صاحب الحساب",
+
 };
 
 export default ar;

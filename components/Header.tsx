@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ShoppingCart, Search, X, ArrowRight, ChevronDown, UserRound, PackageCheck } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import { balanceMegaColumns, type MegaGroup } from "@/lib/headerNav";
@@ -88,6 +88,54 @@ export function Header({ menu, nav, search, brand }: {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── ARAMA PANELİ: doğal kapanma davranışı ─────────────────────────────────
+  // Sorun: panel açıldıktan sonra sayfanın başka yerine tıklamak paneli
+  // KAPATMIYORDU; müşteri sonuçlardan birini seçmek zorunda kalıyordu.
+  // Çözüm: dışarı tıklama + ESC + görünür X + gezinme sonrası temizlik.
+  // Yeni arama sistemi kurulmadı; mevcut state ve /api/search aynen kullanılır.
+  const pathname = usePathname();
+  const searchPanelRef = useRef<HTMLDivElement | null>(null);
+  const searchToggleRef = useRef<HTMLButtonElement | null>(null);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setQuery("");
+    setProductResults([]);
+  }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      // Girdinin veya sonuç panelinin İÇİNE tıklamak kapatmaz.
+      if (searchPanelRef.current?.contains(target)) return;
+      // Aç/kapa düğmesi kendi işini yapar; burada iki kez tetiklenmesin.
+      if (searchToggleRef.current?.contains(target)) return;
+      closeSearch();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      closeSearch();
+      searchToggleRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [searchOpen, closeSearch]);
+
+  // Gezinme sonrası bayat panel/overlay kalmasın (sonuç dışı bir bağlantıyla
+  // sayfa değişirse de arama kapanır).
+  useEffect(() => {
+    setSearchOpen(false);
+    setQuery("");
+    setProductResults([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -252,7 +300,12 @@ export function Header({ menu, nav, search, brand }: {
               {/* Dil seçici — Figma 117 (desktop pill / mobile bottom sheet) */}
               <LanguageSelector />
               <button
-                onClick={() => setSearchOpen(!searchOpen)}
+                ref={searchToggleRef}
+                type="button"
+                aria-expanded={searchOpen}
+                aria-controls="cy-header-search"
+                aria-label={searchOpen ? t("header.searchClose") : t("header.searchOpen")}
+                onClick={() => { if (searchOpen) closeSearch(); else setSearchOpen(true); }}
                 className="w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
               >
                 {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
@@ -394,7 +447,7 @@ export function Header({ menu, nav, search, brand }: {
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                 className="overflow-visible pb-4"
               >
-                <div className="relative max-w-xl mx-auto">
+                <div id="cy-header-search" ref={searchPanelRef} role="search" className="relative max-w-xl mx-auto">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
                   <input
                     autoFocus
@@ -406,15 +459,22 @@ export function Header({ menu, nav, search, brand }: {
                       if (e.key === "Enter" && query.trim().length >= 2) {
                         e.preventDefault();
                         const term = query.trim();
-                        setSearchOpen(false);
-                        setQuery("");
-                        setProductResults([]);
+                        closeSearch();
                         router.push(`/arama?q=${encodeURIComponent(term)}`);
                       }
                     }}
                     placeholder={t("header.searchPlaceholder")}
-                    className="w-full pl-11 pr-5 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all"
+                    className="w-full pl-11 pr-12 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all [&::-webkit-search-cancel-button]:appearance-none"
                   />
+                  {/* Görünür kapatma — dokunma alanı 36px, simge kompakt/premium. */}
+                  <button
+                    type="button"
+                    onClick={() => { closeSearch(); searchToggleRef.current?.focus(); }}
+                    aria-label={t("header.searchClose")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#8B5CF6] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                   {/* Yazarken canlı ürün + kategori önerileri */}
                   {query.trim().length >= 2 && (searching || productResults.length > 0 || categoryResults.length > 0) && (
                     <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.10)] overflow-hidden z-[70] max-h-[440px] overflow-y-auto">
@@ -427,7 +487,7 @@ export function Header({ menu, nav, search, brand }: {
                           <Link
                             key={product.slug}
                             href={`/urun/${product.slug}`}
-                            onClick={() => { setSearchOpen(false); setQuery(""); setProductResults([]); }}
+                            onClick={closeSearch}
                             className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F3FF] transition-colors border-b border-black/[0.04]"
                           >
                             {product.cover_image_url ? (
@@ -447,7 +507,7 @@ export function Header({ menu, nav, search, brand }: {
                         <Link
                           key={category.href}
                           href={category.href}
-                          onClick={() => { setSearchOpen(false); setQuery(""); setProductResults([]); }}
+                          onClick={closeSearch}
                           className="flex items-center justify-between px-4 py-3 text-sm text-[#374151] hover:bg-[#F5F3FF] hover:text-[#8B5CF6] transition-colors border-b border-black/[0.04] last:border-0"
                         >
                           <span><span className="text-[10px] uppercase tracking-wider text-[#9CA3AF] mr-2">{t("header.category")}</span>{category.name}</span>

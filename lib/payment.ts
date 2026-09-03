@@ -60,6 +60,41 @@ export async function paytrStatus(oid: string): Promise<PaytrStatus> {
   return (await r.json()).data;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * IBAN — GÖSTERİM KATMANI (banka kaydı DEĞİŞTİRİLMEZ)
+ *
+ * Canlı kayıtta ülke ön eki düşmüş olabiliyor: Havale/EFT ekranında müşteriye
+ * "8300 0620 0020 5000 0629 1174" gösteriliyordu; hiçbir banka uygulaması bunu
+ * kabul etmez (TR IBAN 26 karakterdir ve "TR" ile başlar).
+ *
+ * KURAL — TAHMİN YOK: ön ek YALNIZCA değer tam 24 rakamsa VE "TR" eklenmiş hâli
+ * ISO 13616 mod-97 sağlamasını GEÇİYORSA eklenir. Sağlama geçmezse değer olduğu
+ * gibi kalır. Böylece yanlış bir hesaba para gitmesi matematiksel olarak imkânsız.
+ * (Veritabanındaki kaydın da düzeltilmesi gerekir; bu katman yalnız kurtarmadır.)
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function mod97(digits: string): number {
+  let rem = 0;
+  for (const ch of digits) rem = (rem * 10 + Number(ch)) % 97;
+  return rem;
+}
+
+/** ISO 13616 sağlaması. Harfler A=10 … Z=35'e çevrilir. */
+export function isValidIban(value: string): boolean {
+  const s = String(value ?? "").replace(/\s+/g, "").toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)) return false;
+  const rearranged = s.slice(4) + s.slice(0, 4);
+  const numeric = rearranged.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+  return mod97(numeric) === 1;
+}
+
+/** Boşluksuz, büyük harfli ve (sağlama geçiyorsa) TR ön ekli IBAN. */
+export function normalizeIban(iban: string): string {
+  const s = String(iban ?? "").replace(/\s+/g, "").toUpperCase();
+  if (/^\d{24}$/.test(s) && isValidIban(`TR${s}`)) return `TR${s}`;
+  return s;
+}
+
 export function ibanPretty(iban: string): string {
-  return iban.replace(/\s+/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
+  return normalizeIban(iban).replace(/(.{4})/g, "$1 ").trim();
 }

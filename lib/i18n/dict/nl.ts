@@ -392,6 +392,18 @@ const nl: Dict = {
   "pdp.size.tier.standard": "Standaard",
   "pdp.size.tier.premium": "Premium",
   "pdp.size.tier.deluxe": "Deluxe",
+  "loc.badge.prefix": "Bezorglocatie",
+  "loc.badge.change": "Wijzigen",
+  "cart.expiredRemoved": "{count} product is uit uw winkelmand verwijderd omdat de bezorgdatum is verstreken.",
+  "cart.expiredHint": "U kunt het opnieuw toevoegen met een nieuwe bezorgdatum.",
+  "header.searchOpen": "Zoeken",
+  "header.searchClose": "Zoeken sluiten",
+  "common.copy": "Kopiëren",
+  "common.copied": "Gekopieerd",
+  "common.copyFailed": "Kopiëren mislukt",
+  "co.copyIban": "IBAN kopiëren",
+  "co.copyHolder": "Naam rekeninghouder kopiëren",
+
 };
 
 export default nl;

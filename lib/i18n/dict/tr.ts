@@ -403,6 +403,19 @@ const tr = {
   "pdp.size.tier.standard": "Standart",
   "pdp.size.tier.premium": "Premium",
   "pdp.size.tier.deluxe": "Deluxe",
+  // ---- teslimat yeri şeridi · sepet süre aşımı · kopyala (public UX paketi)
+  "loc.badge.prefix": "Teslimat yeri",
+  "loc.badge.change": "Değiştir",
+  "cart.expiredRemoved": "Teslimat tarihi geçtiği için {count} ürün sepetten kaldırıldı.",
+  "cart.expiredHint": "Yeni bir teslimat tarihi seçerek tekrar ekleyebilirsiniz.",
+  "header.searchOpen": "Arama",
+  "header.searchClose": "Aramayı kapat",
+  "common.copy": "Kopyala",
+  "common.copied": "Kopyalandı",
+  "common.copyFailed": "Kopyalanamadı",
+  "co.copyIban": "IBAN'ı kopyala",
+  "co.copyHolder": "Hesap sahibinin adını kopyala",
+
 };
 
 export type Dict = typeof tr;

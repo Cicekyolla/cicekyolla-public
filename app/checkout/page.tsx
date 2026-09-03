@@ -7,6 +7,7 @@ import CheckoutFlow, { type CheckoutAddon } from "@/components/checkout/Checkout
 import { useCart, type CartItem } from "@/lib/cart";
 import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useI18n } from "@/lib/i18n";
+import { ExpiredDeliveryNotice } from "@/components/checkout/ExpiredDeliveryNotice";
 
 function deliveryFingerprint(delivery?: PendingDelivery) {
   if (!delivery) return null;
@@ -19,7 +20,7 @@ function deliveryFingerprint(delivery?: PendingDelivery) {
 }
 
 export default function CartCheckoutPage() {
-  const { items, hydrated, subtotalMinor, clearCart, updateAllDelivery } = useCart();
+  const { items, hydrated, subtotalMinor, clearCart, updateAllDelivery, pruneExpiredDelivery } = useCart();
   const { t } = useI18n();
   const first = items[0];
   const firstDelivery = first?.delivery;
@@ -30,6 +31,13 @@ export default function CartCheckoutPage() {
   useEffect(() => {
     if (first && firstDelivery) savePendingDelivery({ ...firstDelivery, productSlug: first.productSlug, productName: first.name });
   }, [first, firstDelivery]);
+
+  // ÖDEME ÖNCESİ SON KONTROL: teslimat tarihi geçmiş satır bu kapıdan geçmez.
+  // (Sepet açılışında ve sekmeye dönüşte de çalışır — bkz. lib/cart.tsx.)
+  useEffect(() => {
+    pruneExpiredDelivery();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   // ---------------------------------------------------------------------------
   // P0 — HAVALE BAŞARI EKRANI
@@ -76,7 +84,8 @@ export default function CartCheckoutPage() {
   if (!hydrated) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center text-muted-foreground">{t("co.preparing")}</main>;
   // view yoksa sepet gerçekten boştur. Sipariş tamamlandıysa view dolu kalır ve
   // başarı ekranı (sipariş numarası) ekranda durmaya devam eder.
-  if (!view) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center"><ShoppingBag className="mx-auto h-12 w-12 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">{t("co.emptyTitle")}</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> {t("co.emptyBack")}</Link></main>;
+  // Tek satır süresi geçtiği için sepet boşaldıysa müşteri NEDENİNİ görmeli.
+  if (!view) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center"><div className="mx-auto mb-6 max-w-xl text-left"><ExpiredDeliveryNotice /></div><ShoppingBag className="mx-auto h-12 w-12 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">{t("co.emptyTitle")}</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> {t("co.emptyBack")}</Link></main>;
 
   // Teslimat doğrulaması yalnız sipariş ÖNCESİ anlamlıdır; sipariş verildikten
   // sonra sepet boşaldığı için bu kontrol tetiklenip başarı ekranını gizlemesin.
@@ -85,5 +94,5 @@ export default function CartCheckoutPage() {
   // Tüm alanlar view'dan okunur: sepet temizlendikten sonra da başarı ekranının
   // ihtiyaç duyduğu ana ürün verisi (ad, görsel, fiyat, adet) elde kalır.
   const v = view;
-  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} /></div></main>;
+  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><ExpiredDeliveryNotice className="mb-5" /><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} /></div></main>;
 }
