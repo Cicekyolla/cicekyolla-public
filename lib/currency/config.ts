@@ -30,6 +30,44 @@ export const BASE_CURRENCY: Currency = "TRY";
 export const CURRENCY_COOKIE = "cy_currency";
 export const CURRENCY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 yıl
 
+/**
+ * YAYIN BAYRAĞI — deploy ≠ müşteriye açılma (mevcut NEXT_PUBLIC_PAYTR_ENABLED deseni).
+ *
+ * `false` (varsayılan) iken:
+ *   • para birimi seçici hiç render edilmez
+ *   • kur ucu hiç çağrılmaz
+ *   • her şey TRY'dir → vitrin bugünküyle BİREBİR aynı
+ * Böylece kod production'a çıkabilir ama müşteri hiçbir değişiklik görmez.
+ *
+ * Vercel'de `NEXT_PUBLIC_CURRENCY_ENABLED=true` yapılınca herkese açılır.
+ */
+export const CURRENCY_ENABLED = process.env.NEXT_PUBLIC_CURRENCY_ENABLED === "true";
+
+/**
+ * KANARYA — bayrak kapalıyken TEK BİR TARAYICI için açar.
+ *
+ * `?cy_currency_preview=1` ile girilir, `cy_currency_preview` cookie'sine yazılır.
+ * Amacı tek şey: kod canlıdayken **operatörün gerçek bir USD siparişi verip**
+ * PayTR → callback → Admin → GA4 zincirini doğrulaması; müşterilerin hiçbiri
+ * bu sırada döviz görmez.
+ *
+ * Güvenlik notu: bu yalnız bir GÖRÜNÜRLÜK anahtarıdır, yetki değildir. Fiyat,
+ * kur ve tahsil edilecek tutar her hâlükârda sunucuda hesaplanır; bu cookie'yi
+ * elle koyan biri de yalnız kendi ekranında döviz görür, hiçbir fiyat avantajı
+ * elde edemez.
+ */
+export const CURRENCY_PREVIEW_COOKIE = "cy_currency_preview";
+export const CURRENCY_PREVIEW_PARAM = "cy_currency_preview";
+
+/**
+ * Kanarya cookie'si ayarlı mı? Tam olarak `=1` olmalı — `cy_currency_preview=10`
+ * ya da `=1x` KABUL EDİLMEZ (para birimi cookie'siyle aynı sınır kuralı).
+ */
+export function hasPreviewCookie(cookieHeader: string | null | undefined): boolean {
+  if (!cookieHeader) return false;
+  return new RegExp(`(?:^|;\\s*)${CURRENCY_PREVIEW_COOKIE}=1(?=\\s*(?:;|$))`).test(cookieHeader);
+}
+
 export function isCurrency(v: unknown): v is Currency {
   return typeof v === "string" && CURRENCIES.some((c) => c.code === v);
 }

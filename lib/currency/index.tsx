@@ -30,6 +30,10 @@ import {
   CURRENCIES,
   CURRENCY_COOKIE,
   CURRENCY_COOKIE_MAX_AGE,
+  CURRENCY_ENABLED,
+  CURRENCY_PREVIEW_COOKIE,
+  CURRENCY_PREVIEW_PARAM,
+  hasPreviewCookie,
   defaultCurrencyForLocale,
   isCurrency,
   parseCurrencyCookie,
@@ -76,6 +80,31 @@ interface Ctx {
 
 const CurrencyContext = createContext<Ctx | null>(null);
 
+/**
+ * Para birimi bu tarayıcıda görünür olmalı mı?
+ *  • Bayrak açıksa → herkese açık.
+ *  • Bayrak kapalıyken `?cy_currency_preview=1` ile gelen tarayıcı kanaryadır;
+ *    tercih cookie'ye yazılır ki gezinme boyunca sürsün. `=0` kapatır.
+ * Yalnız istemcide çalışır (document/location gerektirir).
+ */
+function isCurrencyVisible(): boolean {
+  if (CURRENCY_ENABLED) return true;
+  try {
+    const param = new URLSearchParams(window.location.search).get(CURRENCY_PREVIEW_PARAM);
+    if (param === "1") {
+      document.cookie = `${CURRENCY_PREVIEW_COOKIE}=1; path=/; max-age=${60 * 60 * 24}; samesite=lax`;
+      return true;
+    }
+    if (param === "0") {
+      document.cookie = `${CURRENCY_PREVIEW_COOKIE}=; path=/; max-age=0`;
+      return false;
+    }
+    return hasPreviewCookie(document.cookie);
+  } catch {
+    return false;
+  }
+}
+
 function writeCookie(c: Currency) {
   try {
     document.cookie = `${CURRENCY_COOKIE}=${c}; path=/; max-age=${CURRENCY_COOKIE_MAX_AGE}; samesite=lax`;
@@ -96,6 +125,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+
+    // ── YAYIN KAPISI ────────────────────────────────────────────────────────
+    // Bayrak kapalı ve kanarya yoksa: kur ucu HİÇ çağrılmaz, seçici çıkmaz,
+    // her şey TRY kalır. Kod canlıda olsa bile müşteri hiçbir fark görmez.
+    if (!isCurrencyVisible()) { setReady(true); return; }
+
     const cookieChoice = parseCurrencyCookie(document.cookie);
     if (cookieChoice) setUserPicked(true);
 

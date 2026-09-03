@@ -14,6 +14,8 @@ import {
   defaultCurrencyForLocale,
   isCurrency,
   parseCurrencyCookie,
+  hasPreviewCookie,
+  CURRENCY_ENABLED,
 } from "./currency/config.ts";
 
 // 03.09.2026 TCMB bülteni — backend testiyle AYNI kurlar.
@@ -201,4 +203,24 @@ test("yalnız TRY/USD/EUR geçerli para birimidir", () => {
   for (const kotu of ["GBP", "RUB", "try", "", null, undefined, 1, {}, []]) {
     assert.equal(isCurrency(kotu), false, `reddedilmeli: ${String(kotu)}`);
   }
+});
+
+// ── Yayın bayrağı + kanarya (deploy ≠ müşteriye açılma) ───────────────────
+
+test("kanarya cookie'si TAM olarak =1 olmalı (sınır kuralı)", () => {
+  assert.equal(hasPreviewCookie("cy_currency_preview=1"), true);
+  assert.equal(hasPreviewCookie("cy_lang=en; cy_currency_preview=1; x=2"), true);
+  // Sınır olmadan "=10" ve "=1x" sızardı — para birimi cookie'siyle aynı hata sınıfı.
+  assert.equal(hasPreviewCookie("cy_currency_preview=10"), false);
+  assert.equal(hasPreviewCookie("cy_currency_preview=1x"), false);
+  assert.equal(hasPreviewCookie("cy_currency_preview=0"), false);
+  assert.equal(hasPreviewCookie("xcy_currency_preview=1"), false);
+  assert.equal(hasPreviewCookie(""), false);
+  assert.equal(hasPreviewCookie(null), false);
+});
+
+test("bayrak varsayılanı KAPALI — kod canlıya çıksa da müşteri döviz görmez", () => {
+  // NEXT_PUBLIC_CURRENCY_ENABLED ayarlanmadığında false olmalı.
+  assert.equal(CURRENCY_ENABLED, process.env.NEXT_PUBLIC_CURRENCY_ENABLED === "true");
+  assert.equal(CURRENCY_ENABLED, false, "test ortamında bayrak kapalı olmalı");
 });
