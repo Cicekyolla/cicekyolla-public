@@ -11,6 +11,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { DIR, SEGMENTS, type GlobalLocale } from "./config";
 import { STORY, FEEL_IMAGES } from "./story";
+import { CARGO } from "./cargoCopy";
+import { cityDisplayName } from "./locationLabels";
 import type { LocaleCatalog } from "./api";
 
 const WA = "https://wa.me/905458813450";
@@ -40,6 +42,27 @@ export function TrustStrip({ locale }: { locale: GlobalLocale }) {
   return (
     <Wrap className="mt-8">
       <div className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-5 md:grid-cols-4 md:px-7">
+        {items.map(([head, sub], i) => (
+          <div key={i}>
+            <p className="text-[13px] font-bold text-[#1A1830]">{head}</p>
+            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-[#6B6478]">{sub}</p>
+          </div>
+        ))}
+      </div>
+    </Wrap>
+  );
+}
+
+/**
+ * KARGO DESTİNASYONU güven şeridi (Antalya/Muğla/İzmir) — aynı görsel dil,
+ * farklı sözler: kurye ile 1–3 iş günü, Türkiye'de hazırlanır, uluslararası
+ * kart, mesaj kartı. Aynı gün / saat / atölye ziyareti vaadi YOK (cargoCopy).
+ */
+export function CargoTrustStrip({ locale, city }: { locale: GlobalLocale; city: string }) {
+  const items = CARGO[locale].trust(cityDisplayName(locale, city));
+  return (
+    <Wrap className="mt-8">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-5 md:grid-cols-4 md:px-7" data-cargo-trust>
         {items.map(([head, sub], i) => (
           <div key={i}>
             <p className="text-[13px] font-bold text-[#1A1830]">{head}</p>

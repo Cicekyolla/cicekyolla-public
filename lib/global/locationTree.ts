@@ -16,20 +16,8 @@ import { DESTINATION_ROOT, type GlobalLocale } from "./config";
 
 export type LocationNode = { slug: string; name: string };
 
-export type ParsedLocation =
-  | { kind: "city"; city: string }
-  | { kind: "district"; city: string; district: string }
-  | { kind: "neighborhood"; city: string; district: string; neighborhood: string };
-
-/** global_pages page_key → lokasyon hiyerarşisi (lokasyon değilse null). */
-export function parseLocationKey(key: string): ParsedLocation | null {
-  const p = key.split("/").filter(Boolean);
-  if (p[0] !== DESTINATION_ROOT) return null;
-  if (p.length === 1) return { kind: "city", city: p[0] };
-  if (p.length === 2) return { kind: "district", city: p[0], district: p[1] };
-  if (p.length === 3) return { kind: "neighborhood", city: p[0], district: p[1], neighborhood: p[2] };
-  return null;
-}
+// Anahtar çözümü saf modüle taşındı (locationKey.ts, testli); burada yeniden dışa açılır.
+export { parseLocationKey, type ParsedLocation } from "./locationKey";
 
 /** "Caferağa Mah" → "Caferağa" (TR NeighborhoodCards ile aynı kural). */
 function kisaAd(name: string): string {
@@ -53,8 +41,9 @@ async function yayindakiler(locale: GlobalLocale): Promise<Set<string> | null> {
 }
 
 /**
- * İstanbul'un o dilde YAYINDA olan ilçeleri. Adlar TR location core'dan gelir
- * (coğrafi adlar 13 dilde korunur — kanun §8).
+ * Şehrin (varsayılan İstanbul; Antalya/Muğla/İzmir de aynı zincir) o dilde
+ * YAYINDA olan ilçeleri. Adlar TR location core'dan gelir (coğrafi adlar 13
+ * dilde korunur — kanun §8).
  */
 export async function fetchLocaleDistricts(
   locale: GlobalLocale,

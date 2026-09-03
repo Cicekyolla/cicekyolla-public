@@ -19,7 +19,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl } from "@/lib/site-config";
-import { fetchProductBySlug, fetchProducts, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
+import { fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
 import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
 import { ProductImage } from "@/components/product/ProductImage";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
@@ -27,16 +27,18 @@ import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 import {
   parseLocationKey, fetchLocaleDistricts, fetchLocaleNeighborhoods, fetchLocationNames,
 } from "./locationTree";
-import { LocationBreadcrumb, LocationGrid, ilceBasligi, mahalleBasligi } from "./locationNav";
+import { LocationBreadcrumb, LocationGrid, ilceBasligi, mahalleBasligi, cityDisplayName } from "./locationNav";
+import { CARGO, CARGO_COLLECTION_PATH } from "./cargoCopy";
 import {
   TrustStrip, EmotionSection, DistanceSection, AtelierSection,
-  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta,
+  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip,
 } from "./sections";
 import {
   type GlobalLocale,
   parseLocalePath,
   localeProductPath,
   isGlobalLocale,
+  isSameDayDestination,
   SEGMENTS,
   DIR,
 } from "./config";
@@ -362,6 +364,60 @@ async function CatalogSections({ locale, catalog }: { locale: GlobalLocale; cata
   );
 }
 
+/**
+ * KARGO ŞEHRİ VİTRİNİ — yalnız Delivery Motor'un bu destinasyona GÖNDEREBİLDİĞİ
+ * ürünler (teslimat profili cargo_capable; TR il sayfasıyla aynı tek otorite),
+ * o dilde canlı çeviri ile kesişimi. Fresh-only ürün burada ASLA görünmez →
+ * müşteri checkout'ta "adrese gidemez" duvarına çarpmaz. Kapanışta TR mağaza
+ * ailesindeki kargolanabilir koleksiyona bilinçli köprü (mevcut PDP CTA'sıyla
+ * aynı commerce handoff kararı).
+ */
+async function CargoCatalogSection({ locale, city, catalog }: { locale: GlobalLocale; city: string; catalog: LocaleCatalog }) {
+  const copy = CARGO[locale];
+  const seg = SEGMENTS[locale];
+  const cityName = cityDisplayName(locale, city);
+
+  // Kargolanabilir ürün kümesi (tüm sayfalar; ≤ 300 kayıt — profil listesi küçüktür).
+  const deliverable = new Set<string>();
+  for (let page = 1; page <= 3; page++) {
+    const p = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page });
+    for (const it of p.items) deliverable.add(it.slug);
+    if (page >= p.pagination.total_pages) break;
+  }
+  const uygun = catalog.products.filter((p) => deliverable.has(p.tr_slug)).slice(0, 8);
+  const detaylar = await Promise.all(
+    uygun.map(async (p) => {
+      const d = await fetchProductBySlug(p.tr_slug);
+      return d ? { card: detailToCard(locale, d, p.name), href: `/${locale}/${seg.product}/${p.slug}` } : null;
+    })
+  );
+  const kartlar = detaylar.filter(Boolean) as { card: CardProductUi; href: string }[];
+
+  return (
+    <section className="mt-12" data-cargo-catalog>
+      <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{copy.catalogTitle(cityName)}</h2>
+      <p className="mb-4 text-[12.5px] text-[#6B7280]">{copy.catalogNote}</p>
+      {kartlar.length > 0 ? (
+        <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
+          {kartlar.map(({ card: c, href }, idx) => (
+            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-[14px] text-[#4B5563]">{copy.empty(cityName)}</p>
+      )}
+      <div className="mt-6">
+        <Link
+          href={CARGO_COLLECTION_PATH}
+          className="inline-flex items-center rounded-full bg-[#8B5CF6] px-6 py-3 text-[14px] font-bold text-white shadow-[0_14px_36px_rgba(139,92,246,.28)] transition hover:-translate-y-0.5"
+        >
+          {copy.cta}
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a: string }[] | null }) {
   if (!faq?.length) return null;
   return (
@@ -389,7 +445,7 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
       const ad = await fetchLocationNames(loc.city);
       kirinti = null; // kök: kendisi zaten hub
       izgara = (
-        <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}`} items={ilceler} title={ilceBasligi(locale)} />
+        <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}`} items={ilceler} title={ilceBasligi(locale, loc.city)} />
       );
       void ad;
     } else if (loc.kind === "district") {
@@ -410,6 +466,11 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
       // Mahalle sayfası: kardeş mahalleler ilçe sayfasında; burada kırıntı yeterli.
     }
   }
+  // KARGO DESTİNASYONU (Antalya/Muğla/İzmir): İstanbul'a özgü hikâye bölümleri
+  // (atölye, aynı gün teslimat kanıtı, "Istanbul florists") BASILMAZ — yanlış
+  // şehir ve yanlış teslimat vaadi olur. Yerine kargo güven şeridi + yalnız bu
+  // şehre GERÇEKTEN gidebilen ürünler (Delivery Motor teslimat profili).
+  const cargo = loc ? !isSameDayDestination(loc.city) : false;
   return (
     // Vitrin ürün fotoğraflarına yer açsın diye geniş kap; metin blokları okunur
     // genişlikte kalır (premium/butik his, marketplace kalabalığı değil).
@@ -421,23 +482,34 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
       {row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
       {/* Lokasyon keşfi: İstanbul→ilçe, ilçe→mahalle (gerçek <a href>) */}
       {izgara}
-      <TrustStrip locale={locale} />
-      {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
-      <EmotionSection locale={locale} catalog={catalog} />
-      <CatalogSections locale={locale} catalog={catalog} />
-      {/* Uzaklık → insan kanıtı → kişisel yardım → teslimat kanıtı → mesaj */}
-      <DistanceSection locale={locale} />
-      <AtelierSection locale={locale} />
-      <ConciergeSection locale={locale} />
-      <DeliveryProofSection locale={locale} />
-      <MessageSection locale={locale} />
+      {cargo && loc ? (
+        <>
+          <CargoTrustStrip locale={locale} city={loc.city} />
+          <CargoCatalogSection locale={locale} city={loc.city} catalog={catalog} />
+          <MessageSection locale={locale} />
+        </>
+      ) : (
+        <>
+          <TrustStrip locale={locale} />
+          {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
+          <EmotionSection locale={locale} catalog={catalog} />
+          <CatalogSections locale={locale} catalog={catalog} />
+          {/* Uzaklık → insan kanıtı → kişisel yardım → teslimat kanıtı → mesaj */}
+          <DistanceSection locale={locale} />
+          <AtelierSection locale={locale} />
+          <ConciergeSection locale={locale} />
+          <DeliveryProofSection locale={locale} />
+          <MessageSection locale={locale} />
+        </>
+      )}
       {row.content_html ? (
         <section style={{ marginTop: 40, maxWidth: 720 }}>
           <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: row.content_html }} />
         </section>
       ) : null}
       <div style={{ maxWidth: 720 }}><FaqSection locale={locale} faq={row.faq} /></div>
-      <FinalCta locale={locale} catalog={catalog} />
+      {/* Kapanış CTA'sı İstanbul hikâyesi taşır ("deliver in Istanbul") — kargo şehrinde basılmaz. */}
+      {cargo ? null : <FinalCta locale={locale} catalog={catalog} />}
     </main>
   );
 }

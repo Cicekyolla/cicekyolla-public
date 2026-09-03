@@ -59,8 +59,30 @@ export type ParsedLocalePath =
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** Faz 2 destinasyon kapısı: yalnız İstanbul (kanun §4). Yeni şehir = kurul kararı. */
-export const DESTINATION_ROOT = "istanbul";
+/**
+ * Destinasyon kökleri (kanun §4, 3 Eyl 2026 genişlemesi): İstanbul + Antalya +
+ * Muğla + İzmir. API `GLOBAL_DESTINATIONS` ile birebir aynı küme; yeni şehir =
+ * iki listeye de satır + Global Merkezi'nden onaylı içerik (route tek başına
+ * vitrin açmaz: approved global_pages kaydı yoksa 404).
+ *
+ * TESLİMAT GERÇEĞİ: yalnız İstanbul aynı gün kurye (Delivery Motor bantları);
+ * diğer üç şehir Türkiye geneli kargo (teslimat profili cargo_capable, 1–3 iş
+ * günü). Sunum bu ayrımı `isSameDayDestination` ile yapar — vaat kopyalanmaz.
+ */
+export const DESTINATION_ROOTS = ["istanbul", "antalya", "mugla", "izmir"] as const;
+export type DestinationRoot = (typeof DESTINATION_ROOTS)[number];
+
+export function isDestinationRoot(v: unknown): v is DestinationRoot {
+  return typeof v === "string" && (DESTINATION_ROOTS as readonly string[]).includes(v);
+}
+
+/** Geriye uyumluluk: aynı gün teslimat şehri (İstanbul). */
+export const DESTINATION_ROOT: DestinationRoot = "istanbul";
+
+/** Yalnız İstanbul aynı gün; Antalya/Muğla/İzmir kargo destinasyonudur. */
+export function isSameDayDestination(city: string): boolean {
+  return city === DESTINATION_ROOT;
+}
 
 /** [[...path]] segmentleri → sayfa türü. Bilinmeyen her şey "unknown" (=404). */
 export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLocalePath {
@@ -70,9 +92,10 @@ export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLoc
     if (segs[0] === seg.product) return { kind: "product", slug: segs[1] };
     if (segs[0] === seg.category) return { kind: "category", slug: segs[1] };
   }
-  // Lokasyon yüzeyleri: /xx/istanbul, /xx/istanbul/kadikoy, /xx/istanbul/kadikoy/moda
-  // (coğrafi adlar korunur — kanun §8; render yalnız approved global_pages kaydıyla).
-  if (segs[0] === DESTINATION_ROOT && segs.length <= 3 && segs.every((s) => SLUG_RE.test(s))) {
+  // Lokasyon yüzeyleri: /xx/<şehir>, /xx/<şehir>/<ilçe>, /xx/<şehir>/<ilçe>/<mahalle>
+  // — şehir DESTINATION_ROOTS'tan biri (coğrafi adlar korunur — kanun §8;
+  // render yalnız approved global_pages kaydıyla; bilinmeyen şehir = 404).
+  if (isDestinationRoot(segs[0]) && segs.length <= 3 && segs.every((s) => SLUG_RE.test(s))) {
     return { kind: "page", key: segs.join("/") };
   }
   return { kind: "unknown" };
