@@ -27,7 +27,8 @@ import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/Del
 import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
-import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, type BankAccountPublic } from "@/lib/payment";
+import { fetchBankAccounts, createHavaleOrder, initPaytr, ibanPretty, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, type BankAccountPublic } from "@/lib/payment";
+import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
@@ -98,6 +99,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
 
   const [stepIdx, setStepIdx] = useState(2);
   const [done, setDone] = useState<{ order_number: string } | null>(null);
+  /** PayTR'nin resmi ödeme adresi — site İÇİNDE gösterilecekse doludur.
+   *  Bayrak kapalıyken hep null kalır ve eski yönlendirme akışı çalışır. */
+  const [paytrUrl, setPaytrUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
@@ -361,6 +365,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Kart: PayTR güvenli sayfasına yönlendir. Ödeme TAMAMLANMADAN sepet/taslak
         // TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
         const r = await initPaytr(orderBody);
+        // Aynı resmi PayTR adresi: bayrak açıksa site içinde <iframe>, kapalıysa
+        // bugünkü gibi tam sayfa yönlendirme. Token/hash/callback DEĞİŞMEDİ.
+        if (PAYTR_EMBED_ENABLED) {
+          setPaytrUrl(r.iframe_url);
+          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
         window.location.href = r.iframe_url;
         return;
       }
@@ -375,6 +386,19 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       setLoading(false);
     }
   };
+
+  // PayTR ödeme formu site içinde: sihirbaz yerine güvenli çerçeve çizilir.
+  // Sepet/taslak TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri döner.
+  if (paytrUrl) {
+    return (
+      <PaytrFrame
+        url={paytrUrl}
+        amountLabel={`₺${(total / 100).toLocaleString("tr-TR")}`}
+        productName={shownName}
+        onCancel={() => setPaytrUrl(null)}
+      />
+    );
+  }
 
   if (done) {
     return (
