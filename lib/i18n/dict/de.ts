@@ -392,6 +392,18 @@ const de: Dict = {
   "pdp.size.tier.standard": "Standard",
   "pdp.size.tier.premium": "Premium",
   "pdp.size.tier.deluxe": "Deluxe",
+  "loc.badge.prefix": "Lieferort",
+  "loc.badge.change": "Ändern",
+  "cart.expiredRemoved": "{count} Artikel wurde aus dem Warenkorb entfernt, da das Lieferdatum abgelaufen ist.",
+  "cart.expiredHint": "Sie können ihn mit einem neuen Lieferdatum erneut hinzufügen.",
+  "header.searchOpen": "Suche",
+  "header.searchClose": "Suche schließen",
+  "common.copy": "Kopieren",
+  "common.copied": "Kopiert",
+  "common.copyFailed": "Kopieren fehlgeschlagen",
+  "co.copyIban": "IBAN kopieren",
+  "co.copyHolder": "Kontoinhaber kopieren",
+
 };
 
 export default de;

@@ -392,6 +392,18 @@ const ko: Dict = {
   "pdp.size.tier.standard": "스탠다드",
   "pdp.size.tier.premium": "프리미엄",
   "pdp.size.tier.deluxe": "디럭스",
+  "loc.badge.prefix": "배송지",
+  "loc.badge.change": "변경",
+  "cart.expiredRemoved": "배송일이 지나 {count}개 상품이 장바구니에서 삭제되었습니다.",
+  "cart.expiredHint": "새 배송일을 선택해 다시 담을 수 있습니다.",
+  "header.searchOpen": "검색",
+  "header.searchClose": "검색 닫기",
+  "common.copy": "복사",
+  "common.copied": "복사됨",
+  "common.copyFailed": "복사하지 못했습니다",
+  "co.copyIban": "IBAN 복사",
+  "co.copyHolder": "예금주 이름 복사",
+
 };
 
 export default ko;

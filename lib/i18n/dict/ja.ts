@@ -392,6 +392,18 @@ const ja: Dict = {
   "pdp.size.tier.standard": "スタンダード",
   "pdp.size.tier.premium": "プレミアム",
   "pdp.size.tier.deluxe": "デラックス",
+  "loc.badge.prefix": "お届け先",
+  "loc.badge.change": "変更",
+  "cart.expiredRemoved": "お届け日が過ぎたため、{count} 点の商品をカートから削除しました。",
+  "cart.expiredHint": "新しいお届け日を選んで、もう一度追加できます。",
+  "header.searchOpen": "検索",
+  "header.searchClose": "検索を閉じる",
+  "common.copy": "コピー",
+  "common.copied": "コピーしました",
+  "common.copyFailed": "コピーできません",
+  "co.copyIban": "IBAN をコピー",
+  "co.copyHolder": "口座名義をコピー",
+
 };
 
 export default ja;

@@ -278,7 +278,12 @@ export function ProductDetail({
               <h2 id="auto-size-title" className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
                 {t("pdp.sizeTitle")}
               </h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {/* MOBİL (< sm): görsel SOLDA, bilgiler SAĞDA — kompakt satır kartı.
+                  Eskiden mobilde tek sütun + aspect-[4/3] tam genişlik görsel vardı;
+                  her seçenek ekranın neredeyse tamamını kaplıyor, müşteri
+                  Küçük/Orta/Büyük'ü karşılaştıramıyordu. Artık aynı ekranda 2–3
+                  seçenek görünür. MASAÜSTÜ (sm:) DÜZENİ BİREBİR AYNI KALDI. */}
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
                 {sizeProducts.slice(0, 3).map((item, index) => {
                   const labels = [
                     [t("pdp.size.small"), t("pdp.size.tier.standard")],
@@ -291,21 +296,21 @@ export function ProductDetail({
                       key={item.id}
                       href={item.href ?? `/urun/${item.slug}`}
                       aria-label={`${label}: ${item.name}, ₺${item.price}`}
-                      className={`group overflow-hidden rounded-[18px] border bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] ${
+                      className={`group flex items-center gap-3 overflow-hidden rounded-[18px] border bg-white p-2.5 transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] sm:block sm:p-0 ${
                         index === 1 ? "border-[#8B5CF6] bg-[#F8F5FF] shadow-[0_7px_20px_rgba(124,58,237,0.10)]" : "border-[#EDE9FE]"
                       }`}
                     >
-                      <div className="relative aspect-[4/3] overflow-hidden bg-white">
+                      <div className="relative h-[100px] w-[100px] shrink-0 overflow-hidden rounded-[12px] bg-white sm:h-auto sm:w-auto sm:rounded-none sm:aspect-[4/3]">
                         <ProductImage
                           src={item.image}
                           alt={item.name}
                           padding="8px"
                           derivatives={item.derivatives}
                           blurhash={item.blurhash}
-                          sizes="(max-width:640px) 100vw, 180px"
+                          sizes="(max-width:640px) 100px, 180px"
                         />
                       </div>
-                      <div className="border-t border-[#F1EEFA] px-3.5 py-3">
+                      <div className="min-w-0 flex-1 sm:border-t sm:border-[#F1EEFA] sm:px-3.5 sm:py-3">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="text-[14px] font-bold text-[#111827]">{label}</p>

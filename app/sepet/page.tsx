@@ -6,6 +6,7 @@ import { useCart } from "@/lib/cart";
 import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { ProductImage } from "@/components/product/ProductImage";
+import { ExpiredDeliveryNotice } from "@/components/checkout/ExpiredDeliveryNotice";
 import { useState } from "react";
 import { useI18n, Num } from "@/lib/i18n";
 import { ProductDisplayName } from "@/lib/i18n/content";
@@ -88,6 +89,8 @@ export default function CartPage() {
       </section>
       <section className="px-6 py-14 lg:px-14 lg:py-20">
         <div className="mx-auto max-w-[1320px]">
+          {/* Teslimat tarihi geçtiği için düşen satırlar sessizce kaybolmaz. */}
+          <ExpiredDeliveryNotice className="mt-6" />
           <h1 className="mt-5 font-serif text-5xl font-semibold text-[#111827] md:text-6xl">{t("cart.title")} <span className="font-sans text-2xl text-[#a1a7b3]">(<Num>{t("cart.count", { n: items.reduce((sum, item) => sum + item.quantity, 0) })}</Num>)</span></h1>
           {items.length === 0 ? (
             <div className="mt-12 rounded-[28px] border border-[#ede9fe] bg-white p-12 text-center shadow-[0_24px_70px_rgba(45,22,72,.07)]">

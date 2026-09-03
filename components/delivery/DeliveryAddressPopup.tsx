@@ -18,7 +18,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { MapPin, Clock, Package, X, Loader2, Check } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
-import { readPendingDelivery, hasPendingAddress, savePendingAddress, markDeliveryPopupDismissed } from "@/lib/pendingDelivery";
+import { readPendingDelivery, hasPendingAddress, savePendingAddress, markDeliveryPopupDismissed, OPEN_ADDRESS_POPUP_EVENT } from "@/lib/pendingDelivery";
 import { acquireOverlay, releaseOverlay, onOverlayFree, isMarketingBlockedPath } from "@/components/consent/ConsentManager";
 import { cookieDecided } from "@/components/consent/NewMemberPopup";
 import { useT } from "@/lib/i18n";
@@ -50,6 +50,9 @@ export function DeliveryAddressPopup() {
   const [err, setErr] = useState<string | null>(null);
   const triggered = useRef(false);
   const seq = useRef(0);
+  /** Overlay kilidini GERÇEKTEN biz mi aldık? Elle açılışta kilit başkasındaysa
+   *  yine de açılırız ama onun kilidini serbest bırakmayız. */
+  const heldOverlay = useRef(false);
 
   // --- Ne zaman gösterilir ---------------------------------------------------
   useEffect(() => {
@@ -74,13 +77,23 @@ export function DeliveryAddressPopup() {
         if (!unsub) unsub = onOverlayFree(() => tryShow());
         return;
       }
+      heldOverlay.current = true;
       triggered.current = true;
       setOpen(true);
     };
 
-    if (!eligible()) return;
-    timer = setTimeout(tryShow, SHOW_DELAY_MS);
+    // "Değiştir" (DeliveryLocationBadge) → aynı popup elle açılır. Uygunluk
+    // kuralları atlanır: kullanıcı zaten açıkça istedi. Yeni seçici KURULMAZ.
+    const openOnDemand = () => {
+      triggered.current = true;
+      if (acquireOverlay(OVERLAY_ID)) heldOverlay.current = true;
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_ADDRESS_POPUP_EVENT, openOnDemand);
+
+    if (eligible()) timer = setTimeout(tryShow, SHOW_DELAY_MS);
     return () => {
+      window.removeEventListener(OPEN_ADDRESS_POPUP_EVENT, openOnDemand);
       if (timer) clearTimeout(timer);
       if (retry) clearTimeout(retry);
       if (unsub) unsub();
@@ -90,7 +103,10 @@ export function DeliveryAddressPopup() {
   const close = useCallback((dismissed: boolean) => {
     setOpen(false);
     if (dismissed) markDeliveryPopupDismissed();
-    releaseOverlay(OVERLAY_ID);
+    if (heldOverlay.current) {
+      heldOverlay.current = false;
+      releaseOverlay(OVERLAY_ID);
+    }
   }, []);
 
   // --- Adres seçimi → ortak kayda yaz + coğrafya kontrolü (mevcut motor) -----
@@ -142,37 +158,45 @@ export function DeliveryAddressPopup() {
       <Dialog.Portal>
         {/* Hafif overlay: site arkada hissedilir, simsiyah değil; çok hafif blur */}
         <Dialog.Overlay className="fixed inset-0 z-[90] bg-[#1A1226]/30 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+        {/* MOBİL: içerik kadar yükseklik. Eskiden `min-h-[78dvh]` vardı — az
+            içerikte bile ekranın dörtte üçünü kaplayıp altında dev boş beyaz
+            alan bırakıyordu. Artık yalnız TAVAN var (max-h). Masaüstü (sm:)
+            ölçüleri DEĞİŞMEDİ: sm:max-h-[92dvh] + sm:p-8 aynen korundu. */}
         <Dialog.Content
           aria-describedby="cy-addr-desc"
-          className="fixed z-[91] left-1/2 -translate-x-1/2 bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 w-full sm:w-[min(92vw,560px)] min-h-[78dvh] sm:min-h-0 max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-t-[24px] sm:rounded-[24px] bg-white/95 backdrop-blur-md border border-[#EDE9FE] shadow-[0_24px_80px_rgba(26,18,38,0.16)] p-5 sm:p-8 outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+          className="fixed z-[91] left-1/2 -translate-x-1/2 bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 w-full sm:w-[min(92vw,560px)] max-h-[88dvh] sm:max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-t-[24px] sm:rounded-[24px] bg-white/95 backdrop-blur-md border border-[#EDE9FE] shadow-[0_24px_80px_rgba(26,18,38,0.16)] px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] sm:p-8 outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
         >
+          {/* Mobilde tutamaç: alt sayfa (bottom-sheet) olduğu anlaşılsın. */}
+          <div aria-hidden="true" className="sm:hidden mx-auto mb-3 h-1 w-10 rounded-full bg-[#E5DFF3]" />
+          {/* Dokunma alanı 40×40 korunur; SİMGE küçültüldü → görsel olarak daha
+              küçük ve premium, erişilebilirlik kaybı yok. */}
           <Dialog.Close
             aria-label={t("common.close")}
-            className="absolute right-3 top-3 sm:right-4 sm:top-4 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#8A7FA0] hover:bg-[#F6F2FC] hover:text-[#7C3AED] transition-colors"
+            className="absolute right-2.5 top-2.5 sm:right-4 sm:top-4 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#9C93B0] hover:bg-[#F6F2FC] hover:text-[#7C3AED] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </Dialog.Close>
 
           <div className="flex items-center gap-2.5 pr-10">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F6F2FC]">
-              <MapPin className="w-5 h-5 text-[#7C3AED]" />
+            <span className="inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-[#F6F2FC]">
+              <MapPin className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-[#7C3AED]" />
             </span>
-            <Dialog.Title className="text-[21px] sm:text-[24px] font-extrabold tracking-tight text-[#1A1226] leading-tight">
+            <Dialog.Title className="text-[18px] sm:text-[24px] font-extrabold tracking-tight text-[#1A1226] leading-tight">
               {t("popup.title")}
             </Dialog.Title>
           </div>
-          <Dialog.Description id="cy-addr-desc" className="mt-2.5 text-[14px] sm:text-[15px] leading-relaxed text-[#6B6480]">
+          <Dialog.Description id="cy-addr-desc" className="mt-2 sm:mt-2.5 text-[13px] sm:text-[15px] leading-[1.5] sm:leading-relaxed text-[#6B6480]">
             {t("popup.subtitle")}
           </Dialog.Description>
 
-          <div className="mt-5">
-            <label className="block text-[12.5px] font-bold tracking-wide text-[#4B5563] mb-2">{t("popup.searchLabel")}</label>
+          <div className="mt-3.5 sm:mt-5">
+            <label className="block text-[12.5px] font-bold tracking-wide text-[#4B5563] mb-1.5 sm:mb-2">{t("popup.searchLabel")}</label>
             <AddressAutocomplete placeholder={t("popup.searchPlaceholder")} onSelect={onSelect} hideSelected />
           </div>
 
           {/* Seçim sonrası: doğrulanmış il/ilçe + teslimat türü (gün/saat YOK) */}
           {addr && (
-            <div className="mt-4 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFE] p-4">
+            <div className="mt-3 sm:mt-4 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFE] p-3.5 sm:p-4">
               <div className="flex items-start gap-2.5">
                 <Check className="w-4 h-4 mt-[2px] text-[#059669] shrink-0" />
                 <div className="min-w-0">
@@ -195,12 +219,12 @@ export function DeliveryAddressPopup() {
           )}
           {!addr && err && <p className="mt-3 text-[12.5px] text-[#B45309]">{err}</p>}
 
-          <div className="mt-5 flex flex-col gap-2.5">
+          <div className="mt-4 sm:mt-5 flex flex-col gap-2 sm:gap-2.5">
             {addr && geo === "cargo" && (
               <Link
                 href={cargoHref}
                 onClick={() => close(false)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-5 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.28)] hover:bg-[#6D28D9] transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#7C3AED] px-5 py-3 sm:py-3.5 text-[14.5px] sm:text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.28)] hover:bg-[#6D28D9] transition-colors"
               >
                 <Package className="w-4 h-4" /> {cityName ? t("popup.seeCity", { city: cityName }) : t("popup.seeCargo")}
               </Link>
@@ -208,7 +232,7 @@ export function DeliveryAddressPopup() {
             <button
               type="button"
               onClick={() => close(!addr)}
-              className={`inline-flex items-center justify-center rounded-2xl px-5 py-3.5 text-[15px] font-bold transition-colors ${
+              className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 sm:py-3.5 text-[14.5px] sm:text-[15px] font-bold transition-colors ${
                 addr && geo !== "cargo"
                   ? "bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(124,58,237,0.28)] hover:bg-[#6D28D9]"
                   : "border border-[#E9E4F0] bg-white text-[#4B5563] hover:border-[#C4B5FD] hover:text-[#7C3AED]"
@@ -217,7 +241,7 @@ export function DeliveryAddressPopup() {
               {addr ? t("popup.continue") : t("popup.notNow")}
             </button>
           </div>
-          <p className="mt-3 text-center text-[11.5px] text-[#9CA3AF]">{t("popup.hint")}</p>
+          <p className="mt-2.5 sm:mt-3 text-center text-[11px] sm:text-[11.5px] text-[#9CA3AF]">{t("popup.hint")}</p>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
