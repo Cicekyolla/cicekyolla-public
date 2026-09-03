@@ -19,6 +19,19 @@ function Sonuc() {
   const [state, setState] = useState<"checking" | "paid" | "failed">("checking");
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
+  /* ÇERÇEVEDEN ÇIKIŞ — PayTR site içinde <iframe> ile gösterildiğinde
+     merchant_ok_url / merchant_fail_url ÇERÇEVENİN İÇİNE yüklenir. O hâlde
+     sipariş sonucu minik bir kutunun içinde kalır, üstelik sepet/analytics
+     bağlamı da çerçevede sıkışır. Aynı origin olduğumuz için üst pencereyi
+     bu adrese taşıyabiliyoruz. Yönlendirme akışında (çerçeve yokken) bu blok
+     hiçbir şey yapmaz — davranış birebir aynı kalır. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.top && window.top !== window.self) {
+      try { window.top.location.replace(window.location.href); } catch { /* farklı origin → yok say */ }
+    }
+  }, []);
+
   useEffect(() => {
     if (!oid) { setState("failed"); return; }
     let alive = true;

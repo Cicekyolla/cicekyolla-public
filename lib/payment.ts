@@ -98,3 +98,16 @@ export function normalizeIban(iban: string): string {
 export function ibanPretty(iban: string): string {
   return normalizeIban(iban).replace(/(.{4})/g, "$1 ").trim();
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * PAYTR SİTE-İÇİ ÇERÇEVE BAYRAĞI
+ *
+ * Backend zaten PayTR iFrame API'sini kullanıyor; vitrin ise dönen adrese TAM
+ * SAYFA YÖNLENDİRME yapıyordu. Bu bayrak açıkken aynı adres ÇiçekYolla
+ * checkout'unun İÇİNDE bir <iframe> olarak gösterilir.
+ *
+ * VARSAYILAN KAPALI. Ödeme gerçek paradır: davranış ancak operatör Vercel'de
+ * NEXT_PUBLIC_PAYTR_EMBED=true yapıp sandbox'ta uçtan uca doğruladıktan sonra
+ * değişir. Bayrak kapalıyken bugünkü yönlendirme akışı BİREBİR aynı çalışır.
+ * ──────────────────────────────────────────────────────────────────────── */
+export const PAYTR_EMBED_ENABLED = process.env.NEXT_PUBLIC_PAYTR_EMBED === "true";
