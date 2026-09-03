@@ -79,7 +79,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     itemsRef.current = kept;
     setItems(kept);
     if (fresh.length > 0) {
-      setExpiredNotice({ count: fresh.length, names: fresh.map((row) => row.name) });
+      // BİRİKİMLİ: temizlik iki turda çalışır (önce tarayıcı saati + emniyet payı,
+      // sonra sunucu saatine demirlenmiş kesin tur). Bildirimi EZERSEK müşteri
+      // 3 satır kaybedip "1 ürün kaldırıldı" okur. Canlı read-back'te görüldü.
+      setExpiredNotice((prev) => (prev
+        ? { count: prev.count + fresh.length, names: [...prev.names, ...fresh.map((row) => row.name)] }
+        : { count: fresh.length, names: fresh.map((row) => row.name) }));
     }
   }, []);
 
