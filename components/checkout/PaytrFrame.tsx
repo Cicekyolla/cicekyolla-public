@@ -52,7 +52,22 @@ export function PaytrFrame({
 }) {
   const [resizerReady, setResizerReady] = useState(false);
   const [resizerFailed, setResizerFailed] = useState(false);
+  /** Çerçevenin `load` olayı geldi mi? Gelmezse sayfa hiç açılmamış demektir. */
+  const [frameLoaded, setFrameLoaded] = useState(false);
+  /** Çerçeve açılmadı → müşteriyi mevcut ÇALIŞAN yönlendirme akışına taşı. */
+  const [fellBack, setFellBack] = useState(false);
   const attached = useRef(false);
+  const bailedOut = useRef(false);
+
+  /* GÜVENLİ GERİ DÜŞÜŞ — kırmızı çizgi: hiçbir koşulda bugünkü çalışan akıştan
+     KÖTÜ olmayacağız. Çerçeve açılmazsa (ağ, engelleme, PayTR tarafı) müşteri
+     ödemesiz kalmaz; aynı resmi adrese TAM SAYFA yönlendirilir. */
+  const goToRedirectFlow = useCallback(() => {
+    if (bailedOut.current || typeof window === "undefined") return;
+    bailedOut.current = true;
+    setFellBack(true);
+    window.location.href = url;
+  }, [url]);
 
   const attach = useCallback(() => {
     if (attached.current || typeof window === "undefined") return;
@@ -79,6 +94,17 @@ export function PaytrFrame({
     }, 6000);
     return () => { window.clearInterval(timer); window.clearTimeout(giveUp); };
   }, [attach]);
+
+  /* Yükleme nöbetçisi: 10 sn içinde `load` gelmediyse çerçeve AÇILMAMIŞTIR
+     (ağ hatası, engelleme, bozuk yanıt). Bu noktada müşteri henüz hiçbir şey
+     yazmamıştır — otomatik geri düşüş güvenlidir ve akışı kesmez. */
+  useEffect(() => {
+    if (frameLoaded) return;
+    const watchdog = window.setTimeout(() => {
+      if (!frameLoaded) goToRedirectFlow();
+    }, 10_000);
+    return () => window.clearTimeout(watchdog);
+  }, [frameLoaded, goToRedirectFlow]);
 
   return (
     <div className="mx-auto max-w-[680px]">
@@ -113,6 +139,8 @@ export function PaytrFrame({
         id={FRAME_ID}
         src={url}
         title="PayTR güvenli ödeme formu"
+        onLoad={() => setFrameLoaded(true)}
+        onError={goToRedirectFlow}
         // Resizer devredeyse yükseklik içerikten gelir; devrede değilse çerçeve
         // kendi içinde kaydırılır → içerik hiçbir durumda kırpılmaz.
         scrolling={resizerReady ? "no" : "auto"}
@@ -138,11 +166,22 @@ export function PaytrFrame({
             <MessageCircle className="h-4 w-4" /> Yardım gerekirse WhatsApp
           </a>
         </div>
-        {resizerFailed && (
-          <p className="mt-3 text-center text-[11.5px] text-[#9CA3AF]">
-            Ödeme formu kendi penceresinde kaydırılabilir.
-          </p>
-        )}
+        {/* HER ZAMAN görünür kaçış yolu: çerçeve boş kalır ya da banka 3D
+            Secure sayfası çerçeveyi reddederse müşteri kilitlenmez; aynı resmi
+            PayTR adresine tam sayfa gider (bugünkü çalışan akış). */}
+        <div className="mt-3 text-center">
+          <button
+            type="button"
+            onClick={goToRedirectFlow}
+            disabled={fellBack}
+            className="text-[11.5px] font-semibold text-[#9CA3AF] underline decoration-dotted underline-offset-4 transition-colors hover:text-[#7C3AED] disabled:opacity-60"
+          >
+            {fellBack ? "Güvenli ödeme sayfasına yönlendiriliyorsunuz…" : "Ödeme formu açılmadıysa güvenli sayfada devam edin"}
+          </button>
+          {resizerFailed && !fellBack && (
+            <p className="mt-1.5 text-[11px] text-[#C4B5FD]">Ödeme formu kendi penceresinde kaydırılabilir.</p>
+          )}
+        </div>
       </div>
     </div>
   );

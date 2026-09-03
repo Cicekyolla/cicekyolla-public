@@ -65,6 +65,26 @@ test("içerik HİÇBİR durumda kırpılmaz: 'hazır' bayrağı GERÇEK boyutlan
   assert.equal(readyCalls, 1, "yalnız onResized içinde olmalı");
 });
 
+test("GÜVENLİ GERİ DÜŞÜŞ: çerçeve açılmazsa mevcut yönlendirme akışına geçilir", () => {
+  // Otomatik: `load` olayı 10 sn içinde gelmezse aynı resmi adrese tam sayfa git.
+  assert.match(FRAME, /const goToRedirectFlow = useCallback\(/);
+  assert.match(FRAME, /window\.location\.href = url;/);
+  assert.match(FRAME, /if \(!frameLoaded\) goToRedirectFlow\(\);/);
+  assert.match(FRAME, /onLoad=\{\(\) => setFrameLoaded\(true\)\}/);
+  assert.match(FRAME, /onError=\{goToRedirectFlow\}/);
+  // Elle: her zaman görünür kaçış yolu (banka 3DS sayfası çerçeveyi reddederse).
+  assert.match(FRAME, /onClick=\{goToRedirectFlow\}/);
+  // Tek yönlü kapı: iki kez yönlendirme yok.
+  assert.match(FRAME, /if \(bailedOut\.current \|\| typeof window === "undefined"\) return;/);
+});
+
+test("geri düşüş HEDEFİ, bugünkü akışın gittiği ADRESİN AYNISI", () => {
+  // Vitrin başka bir adres uydurmaz; yönlendirme de çerçeve de `url` prop'una gider.
+  const fn = FRAME.slice(FRAME.indexOf("const goToRedirectFlow"), FRAME.indexOf("}, [url]);"));
+  assert.match(fn, /window\.location\.href = url;/);
+  assert.ok(!/paytr\.com/.test(fn), "geri düşüşte adres elle kurulmuyor");
+});
+
 test("dönüş sayfası çerçeveden üst pencereye çıkar (sonuç kutuda sıkışmaz)", () => {
   assert.match(RESULT, /window\.top !== window\.self/);
   assert.match(RESULT, /window\.top\.location\.replace/);
