@@ -280,7 +280,7 @@ const en: Dict = {
   "co.trust.fresh": "Fresh Flower Guarantee",
   "co.trust.freshDesc": "Stays fresh for 7–10 days.",
   "co.trust.sameDay": "Same-Day Delivery",
-  "co.trust.sameDayDesc": "Until 14:00 in eligible areas.",
+  "co.trust.sameDayDesc": "Same-day in eligible areas.",
   "co.trust.secure": "Secure Order",
   "co.trust.secureDesc": "SSL-protected order connection.",
   "co.trust.pack": "Special Packaging",

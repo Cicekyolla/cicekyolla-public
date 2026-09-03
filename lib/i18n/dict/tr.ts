@@ -290,7 +290,7 @@ const tr = {
   "co.trust.fresh": "Taze Çiçek Garantisi",
   "co.trust.freshDesc": "7–10 gün taze kalma garantisi.",
   "co.trust.sameDay": "Aynı Gün Teslimat",
-  "co.trust.sameDayDesc": "Uygun bölgelerde 14:00'a kadar.",
+  "co.trust.sameDayDesc": "Uygun bölgelerde bugün teslim.",
   "co.trust.secure": "Güvenli Sipariş",
   "co.trust.secureDesc": "SSL ile korunan sipariş bağlantısı.",
   "co.trust.pack": "Özel Paketleme",

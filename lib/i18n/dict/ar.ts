@@ -281,7 +281,7 @@ const ar: Dict = {
   "co.trust.fresh": "ضمان الزهور الطازجة",
   "co.trust.freshDesc": "تبقى طازجة 7–10 أيام.",
   "co.trust.sameDay": "توصيل في نفس اليوم",
-  "co.trust.sameDayDesc": "حتى الساعة 14:00 في المناطق المشمولة.",
+  "co.trust.sameDayDesc": "في نفس اليوم في المناطق المشمولة.",
   "co.trust.secure": "طلب آمن",
   "co.trust.secureDesc": "اتصال طلب محمي بـ SSL.",
   "co.trust.pack": "تغليف خاص",

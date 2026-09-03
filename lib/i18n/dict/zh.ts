@@ -280,7 +280,7 @@ const zh: Dict = {
   "co.trust.fresh": "鲜花保鲜保证",
   "co.trust.freshDesc": "保持新鲜 7–10 天。",
   "co.trust.sameDay": "当日配送",
-  "co.trust.sameDayDesc": "适用区域 14:00 前。",
+  "co.trust.sameDayDesc": "适用区域当日送达。",
   "co.trust.secure": "安全下单",
   "co.trust.secureDesc": "SSL 加密保护。",
   "co.trust.pack": "精美包装",

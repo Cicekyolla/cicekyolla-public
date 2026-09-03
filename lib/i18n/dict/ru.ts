@@ -280,7 +280,7 @@ const ru: Dict = {
   "co.trust.fresh": "Гарантия свежести",
   "co.trust.freshDesc": "Свежесть 7–10 дней.",
   "co.trust.sameDay": "Доставка в день заказа",
-  "co.trust.sameDayDesc": "До 14:00 в доступных районах.",
+  "co.trust.sameDayDesc": "В тот же день в доступных районах.",
   "co.trust.secure": "Безопасный заказ",
   "co.trust.secureDesc": "Соединение защищено SSL.",
   "co.trust.pack": "Особая упаковка",

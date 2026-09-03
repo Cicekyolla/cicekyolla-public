@@ -17,6 +17,7 @@ import { TrustBar } from "./TrustBar";
 import { Manifesto } from "./Manifesto";
 import { FeaturedCollections } from "./FeaturedCollections";
 import { UrgencyStrip } from "./UrgencyStrip";
+import { NightOrderStrip } from "./NightOrderStrip";
 import { FeatureSplit } from "./FeatureSplit";
 import { SameDayDelivery } from "./SameDayDelivery";
 import { OccasionShopping } from "./OccasionShopping";
@@ -96,7 +97,9 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
     case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} config={s.config} />;
-    case "urgency_strip":       return <UrgencyStrip title={s.title} subtitle={s.subtitle} config={s.config} />;
+    // Gece şeridi UrgencyStrip'in premium kardeşidir: her zaman onun hemen altında,
+    // CMS bölümü olarak ayrıca yönetilmez (sabit metin, saat/garanti vaadi yok).
+    case "urgency_strip":       return <Fragment><UrgencyStrip title={s.title} subtitle={s.subtitle} config={s.config} /><NightOrderStrip /></Fragment>;
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
     case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
@@ -248,7 +251,7 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
           {renderSection(s, ctx, fillAssign.get(s.id))}
           {!hasWorkshopToday && s.type === "hero" ? <WorkshopToday /> : null}
           {moodAnchor && s.type === moodAnchor ? <MoodPicker /> : null}
-          {!hasUrgencyStrip && s.type === "featured_collections" ? <UrgencyStrip /> : null}
+          {!hasUrgencyStrip && s.type === "featured_collections" ? <Fragment><UrgencyStrip /><NightOrderStrip /></Fragment> : null}
           {!hasEditorsPicks && s.type === editorFallbackAnchor ? <EditorsPicks config={{}} /> : null}
           {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
         </Fragment>
