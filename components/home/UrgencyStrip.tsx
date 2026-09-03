@@ -16,7 +16,7 @@ export function UrgencyStrip({ title, subtitle, config }:{
   config?: Record<string, unknown>;
 } = {}) {
   const cfg=(config??{}) as UrgencyStripConfig;
-  const heading=title?.trim() || "Bugün Saat 14:00'a Kadar — Aynı Gün Teslimat";
+  const heading=title?.trim() || "Aynı Gün Teslimat · Hızlı ve Acil Çiçek Teslimatı";
   const detail=subtitle?.trim() || "Ücretsiz kargo · Taptaze garantisi · Zarif ambalaj";
   const cta=typeof cfg.text==="string"&&cfg.text.trim()?cfg.text.trim():"Hemen Sipariş Ver";
   const href=typeof cfg.href==="string"&&cfg.href.trim()?cfg.href.trim():"/kategori/cicekler";

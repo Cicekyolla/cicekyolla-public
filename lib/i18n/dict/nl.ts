@@ -280,7 +280,7 @@ const nl: Dict = {
   "co.trust.fresh": "Versheidsgarantie",
   "co.trust.freshDesc": "Blijft 7–10 dagen vers.",
   "co.trust.sameDay": "Bezorging op dezelfde dag",
-  "co.trust.sameDayDesc": "Tot 14:00 in geschikte gebieden.",
+  "co.trust.sameDayDesc": "Dezelfde dag in geschikte gebieden.",
   "co.trust.secure": "Veilige bestelling",
   "co.trust.secureDesc": "SSL-beveiligde bestelverbinding.",
   "co.trust.pack": "Speciale verpakking",

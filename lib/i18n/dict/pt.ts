@@ -280,7 +280,7 @@ const pt: Dict = {
   "co.trust.fresh": "Garantia de frescura",
   "co.trust.freshDesc": "Mantém-se fresco 7–10 dias.",
   "co.trust.sameDay": "Entrega no mesmo dia",
-  "co.trust.sameDayDesc": "Até às 14:00 nas zonas elegíveis.",
+  "co.trust.sameDayDesc": "No mesmo dia nas zonas elegíveis.",
   "co.trust.secure": "Encomenda segura",
   "co.trust.secureDesc": "Ligação protegida por SSL.",
   "co.trust.pack": "Embalagem especial",

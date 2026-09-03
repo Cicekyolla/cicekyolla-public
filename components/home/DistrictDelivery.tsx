@@ -76,9 +76,8 @@ export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
               Köşesine Teslimat
             </SectionTitle>
             <p className="text-[#6B7280] text-[16px] leading-relaxed mt-6 mb-10">
-              İstanbul içi siparişlerde aynı gün teslimat; İstanbul dışındaki
-              illere 1–3 iş günü içinde özenli kargo ile teslim. 14:00&apos;a kadar
-              verilen İstanbul siparişleri bugün teslim edilir.
+              İstanbul içi siparişlerde aynı gün, hızlı ve acil çiçek teslimatı;
+              İstanbul dışındaki illere 1–3 iş günü içinde özenli kargo ile teslim.
             </p>
             <div className="grid grid-cols-1 gap-2.5">
               {rows.map((d, idx) => (

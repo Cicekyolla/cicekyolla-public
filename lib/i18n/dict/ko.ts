@@ -280,7 +280,7 @@ const ko: Dict = {
   "co.trust.fresh": "신선도 보장",
   "co.trust.freshDesc": "7~10일 신선도 보장.",
   "co.trust.sameDay": "당일 배송",
-  "co.trust.sameDayDesc": "가능 지역에서 14:00까지.",
+  "co.trust.sameDayDesc": "가능 지역에서 당일 배송.",
   "co.trust.secure": "안전한 주문",
   "co.trust.secureDesc": "SSL로 보호되는 연결.",
   "co.trust.pack": "특별 포장",

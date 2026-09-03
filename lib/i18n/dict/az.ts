@@ -280,7 +280,7 @@ const az: Dict = {
   "co.trust.fresh": "Təzə çiçək zəmanəti",
   "co.trust.freshDesc": "7–10 gün təzə qalma zəmanəti.",
   "co.trust.sameDay": "Eyni gün çatdırılma",
-  "co.trust.sameDayDesc": "Uyğun bölgələrdə 14:00-a qədər.",
+  "co.trust.sameDayDesc": "Uyğun bölgələrdə eyni gün.",
   "co.trust.secure": "Təhlükəsiz sifariş",
   "co.trust.secureDesc": "SSL ilə qorunan sifariş bağlantısı.",
   "co.trust.pack": "Xüsusi qablaşdırma",

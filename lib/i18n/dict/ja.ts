@@ -280,7 +280,7 @@ const ja: Dict = {
   "co.trust.fresh": "鮮度保証",
   "co.trust.freshDesc": "7〜10日間の鮮度保証。",
   "co.trust.sameDay": "当日配達",
-  "co.trust.sameDayDesc": "対象エリアで14:00まで。",
+  "co.trust.sameDayDesc": "対象エリアで当日配達。",
   "co.trust.secure": "安全な注文",
   "co.trust.secureDesc": "SSL で保護された接続。",
   "co.trust.pack": "特別な包装",
