@@ -16,6 +16,7 @@ import {
   hasPreviewCookie,
   isCurrency,
   parseCurrencyCookie,
+  isForeignLocaleContext,
 } from "./currency/config.ts";
 import { bulletinAgeMs, displayRate, isUsable, parseTcmbXml, MAX_STALE_MS } from "./currency/rates.ts";
 
@@ -386,4 +387,46 @@ test("yaprak modüllerdeki BASE_CURRENCY sabiti config ile AYNI", () => {
   assert.equal(BASE_CURRENCY, "TRY");
   assert.equal(formatMoney(100, BASE_CURRENCY, "tr-TR"), "₺1");
   assert.equal(rateFor(null, BASE_CURRENCY), 1, "yaprak modül tabanı config ile aynı olmalı");
+});
+
+// ═══ TR ANA SİTE: para birimi seçimi YOK (operatör kararı, 4 Eyl) ══════════
+
+test("TR ana sitede para birimi bağlamı KAPALI — seçici çıkmaz, TRY sabit", () => {
+  // Önek yok + cookie yok → TR
+  assert.equal(isForeignLocaleContext("/", null), false);
+  assert.equal(isForeignLocaleContext("/urun/mor-orkide", null), false);
+  assert.equal(isForeignLocaleContext("/sepet", "cy_lang=tr"), false);
+  assert.equal(isForeignLocaleContext("/checkout", "_ga=1; cy_lang=tr"), false);
+});
+
+test("13 Global dilin TAMAMINDA para birimi bağlamı AÇIK (URL öneki)", () => {
+  const globals = ["de","en","fr","nl","it","es","pt","az","ru","ar","zh","ja","ko"];
+  assert.equal(globals.length, 13);
+  for (const l of globals) {
+    assert.equal(isForeignLocaleContext(`/${l}`, null), true, `/${l}`);
+    assert.equal(isForeignLocaleContext(`/${l}/istanbul`, null), true, `/${l}/istanbul`);
+  }
+});
+
+test("önek yokken cy_lang cookie'si karar verir (sepet/checkout gibi öneksiz sayfalar)", () => {
+  assert.equal(isForeignLocaleContext("/sepet", "cy_lang=de"), true);
+  assert.equal(isForeignLocaleContext("/checkout", "cy_lang=ar"), true);
+  assert.equal(isForeignLocaleContext("/sepet", "cy_lang=tr"), false);
+});
+
+test("URL öneki cookie'yi EZER; önek yoksa dil cookie'si belirler", () => {
+  // Türkçe cookie'si olan biri /de sayfasındaysa orada para birimi seçebilir.
+  assert.equal(isForeignLocaleContext("/de", "cy_lang=tr"), true);
+  // Önemli: öneksiz "/" sayfası cy_lang=de ile ALMANCA render edilir (i18n
+  // önek yoksa cookie'ye bakar). Sayfa Almancaysa müşteri yabancıdır ve seçici
+  // GÖRÜNMELİDİR — "TR'de gizle" kuralı dilin TR olmasına bağlıdır, yola değil.
+  assert.equal(isForeignLocaleContext("/", "cy_lang=de"), true);
+  // Aynı ziyaretçi Türkçeye dönerse seçici kaybolur ve fiyatlar ₺'ye sabitlenir.
+  assert.equal(isForeignLocaleContext("/", "cy_lang=tr"), false);
+});
+
+test("TR'ye benzeyen ama global OLMAYAN önekler bağlamı açmaz", () => {
+  for (const p of ["/tr", "/tr/istanbul", "/xx", "/abc", "/urun/de-luxe-buket"]) {
+    assert.equal(isForeignLocaleContext(p, null), false, p);
+  }
 });

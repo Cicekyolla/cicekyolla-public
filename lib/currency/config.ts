@@ -19,6 +19,8 @@
 // hreflang'i, sitemap'i etkilemez. /usd/, /en-eur/ gibi ikinci URL ailesi YOK.
 // Tek tercih kaynağı: cookie `cy_currency` — ikinci state/storage YOK.
 // ---------------------------------------------------------------------------
+// YALNIZ TİP İTHALİ — bu dosya yaprak modül kalmalı (bkz. price.ts/format.ts):
+// Next paketleyicisi ve `node --test` aynı dosyayı doğrudan yükleyebilsin.
 import type { Locale } from "@/lib/i18n/config";
 
 export const CURRENCIES = [
@@ -58,6 +60,33 @@ export const CURRENCY_ENABLED = process.env.NEXT_PUBLIC_CURRENCY_ENABLED !== "fa
  */
 export const CURRENCY_PREVIEW_COOKIE = "cy_currency_preview";
 export const CURRENCY_PREVIEW_PARAM = "cy_currency_preview";
+
+/**
+ * Para birimi seçimi YALNIZ 13 GLOBAL DİLDE geçerlidir (operatör kararı, 4 Eyl 2026).
+ *
+ * TR ana sitede Türk müşteri ₺ ile alışveriş yapar; gereksiz bir seçenek işini
+ * kolaylaştırmaz. Bu yüzden TR'de seçici GİZLENMEKLE KALMAZ, para birimi TRY'ye
+ * SABİTLENİR — aksi hâlde daha önce USD seçmiş bir ziyaretçi Türkçe sayfada
+ * USD fiyat görüp geri dönemezdi (seçici olmadığı için kilitli kalırdı).
+ *
+ * Öncelik i18n ile AYNI: URL öneki > `cy_lang` cookie'si.
+ */
+const FOREIGN_LOCALES: readonly string[] = [
+  "de", "en", "fr", "nl", "it", "es", "pt", "az", "ru", "ar", "zh", "ja", "ko",
+];
+
+export function isForeignLocaleContext(
+  pathname: string,
+  cookieHeader: string | null | undefined,
+): boolean {
+  const m = /^\/([a-z]{2})(?:\/|$)/.exec(pathname ?? "");
+  if (m) return FOREIGN_LOCALES.includes(m[1]);
+  // `cy_lang` okuması i18n'in `parseLangCookie`'siyle aynı desendir; buraya
+  // KOPYALANDI çünkü bu dosya yaprak modül kalmalı (değer ithali yok).
+  // Cookie yoksa TR kabul edilir — i18n'in varsayılanıyla birebir aynı.
+  const lang = /(?:^|;\s*)cy_lang=([a-z]{2})(?=\s*(?:;|$))/.exec(cookieHeader ?? "")?.[1];
+  return !!lang && FOREIGN_LOCALES.includes(lang);
+}
 
 export function isCurrency(v: unknown): v is Currency {
   return typeof v === "string" && CURRENCIES.some((c) => c.code === v);

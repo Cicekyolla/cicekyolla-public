@@ -32,6 +32,7 @@ import {
   CURRENCY_PREVIEW_PARAM,
   defaultCurrencyForLocale,
   hasPreviewCookie,
+  isForeignLocaleContext,
   isCurrency,
   parseCurrencyCookie,
   type Currency,
@@ -107,6 +108,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     // YAYIN KAPISI — bayrak kapalı ve kanarya yoksa kur ucu HİÇ çağrılmaz.
     if (!isCurrencyVisible()) { setReady(true); return; }
 
+    // TR ANA SİTE: para birimi seçimi geçerli değil → kur ucu HİÇ çağrılmaz.
+    // (İkinci kat koruma aşağıdaki useMemo'da: locale 'tr' ise TRY'ye sabitlenir.)
+    if (!isForeignLocaleContext(window.location.pathname, document.cookie)) { setReady(true); return; }
+
     const cookieChoice = parseCurrencyCookie(document.cookie);
     if (cookieChoice) setUserPicked(true);
 
@@ -147,7 +152,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(() => {
-    const available = fx?.available?.length ? fx.available : [BASE_CURRENCY];
+    // TR'de para birimi TRY'ye SABİTLENİR: available tek elemanlı kalır →
+    // CurrencySelector zaten `options.length < 2` iken kendini gizler, ve eski
+    // bir `cy_currency=USD` cookie'si olan ziyaretçi Türkçe sayfada USD'de
+    // KİLİTLİ KALMAZ. Yabancı dile geçtiğinde seçimi yine korunur (cookie durur).
+    const trContext = locale === "tr";
+    const available = !trContext && fx?.available?.length ? fx.available : [BASE_CURRENCY];
     const active: Currency = available.includes(currency) ? currency : BASE_CURRENCY;
     const rate = active === BASE_CURRENCY ? 1 : (rateFor(fx?.rates ?? null, active) ?? 1);
 
@@ -170,7 +180,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       moneyTRY: (m) => formatMoney(m, BASE_CURRENCY, "tr-TR"),
       price: (lines, d = 0, f = 0) => priceInCurrency(lines, d, f, rate),
     };
-  }, [currency, fx, ready, intl, setCurrency]);
+    // `locale` AÇIKÇA bağımlılıkta: TR ↔ yabancı dil geçişinde para birimi
+    // sabitlemesi anında yeniden hesaplanmalı. (`intl` de locale ile değişiyor
+    // ama ona dolaylı güvenmek kırılgan olurdu.)
+  }, [currency, fx, ready, intl, locale, setCurrency]);
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }
