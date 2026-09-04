@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,6 +10,7 @@ import { MetaViewContentTracker } from "@/components/analytics/MetaViewContentTr
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductImage } from "@/components/product/ProductImage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
+import { toPlainText } from "@/lib/richText";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -193,30 +195,31 @@ export default async function ProductPage({ params }: PageProps) {
     .map(toCardProduct)
     .sort((a, b) => a.price - b.price);
 
-  // Product JSON-LD (schema) — gerçek üründen.
-  const ratingCount = Number((product as { rating_count?: number }).rating_count ?? 0);
-  const ratingAvg = Number((product as { rating_avg?: number }).rating_avg ?? 0);
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
+  // Product JSON-LD — TEK KAYNAK: lib/productSchema.ts (saf + test edilir).
+  // Fiyat/stok/puan burada İKİNCİ KEZ yazılmaz; sayfadaki değerlerin aynısı geçer.
+  // Puan yalnız ONAYLI müşteri yorumu varsa üretilir (yorumsuz üründe hiç çıkmaz).
+  const rating = product as { rating_avg?: number | string | null; rating_count?: number | string | null };
+  const jsonLd = buildProductJsonLd({
     name: product.name,
-    description: product.short_description || product.long_description || product.name,
-    image: cover ? [cover] : undefined,
-    sku: product.sku || undefined,
-    productID: String(product.id),
-    ...(ratingCount > 0 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: ratingAvg.toFixed(1), reviewCount: ratingCount } } : {}),
-    offers: {
-      "@type": "Offer",
-      price: (Number(price) / 100).toFixed(2),
-      priceCurrency: product.currency || "TRY",
-      availability: product.stock_quantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    },
-  };
+    slug: params.slug,
+    productId: product.id,
+    priceMinor: Number(price),
+    currency: product.currency,
+    stockQuantity: product.stock_quantity,
+    images,
+    shortDescription: product.short_description,
+    longDescription: product.long_description,
+    sku: product.sku,
+    ratingAvg: rating.rating_avg,
+    ratingCount: rating.rating_count,
+  }, { absolute: absoluteUrl, plainText: toPlainText });
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      {/* `<` kaçırılır: ürün açıklaması HTML içerir, içindeki bir `</script>`
+          dizisi etiketi erken kapatıp sayfayı bozardı. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }} />
       <MetaViewContentTracker productId={product.id} priceTRY={Number(price) / 100} />
       <ProductDetail data={data} sizeProducts={sizeProducts} />
       {(() => {
