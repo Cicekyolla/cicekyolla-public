@@ -19,9 +19,11 @@
 //     Gerçek, ikisinin arasındadır. Birini sabitlemek her fiyatta sessiz ve
 //     tek yönlü bir yanlılık üretir.
 //
-//  3) MID NÖTR REFERANSTIR ve gösterim için fiili standarttır (XE/Google/Wise
-//     "kur" derken bunu gösterir). Ayrıca SİMETRİKTİR: TRY→USD ve USD→TRY aynı
+//  3) MID NÖTR REFERANSTIR — bu sistem yalnız GÖSTERİM yaptığı için taraf
+//     tutmayan tek değer odur. Ayrıca SİMETRİKTİR: TRY→USD ve USD→TRY aynı
 //     kurla birbirinin tam tersidir, gidiş-dönüş kayma üretmez.
+//     (Gerekçe bununla sınırlıdır; "sektör standardı" gibi doğrulanmamış bir
+//      iddiaya dayanmaz — nötrlük ve simetri kendi başına yeterlidir.)
 //
 //  4) HATA BANDI ÖLÇÜLDÜ VE EN KÜÇÜĞÜ BUDUR. Forex spread'i %0,18; $62'lik bir
 //     üründe alış↔satış farkı 0,11 USD. MID her iki tarafa da spread'in YARISI
