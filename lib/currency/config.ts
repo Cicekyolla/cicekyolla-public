@@ -37,11 +37,19 @@ export const CURRENCY_COOKIE = "cy_currency";
 export const CURRENCY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 yıl
 
 /**
- * YAYIN BAYRAĞI — deploy ≠ müşteriye açılma (mevcut NEXT_PUBLIC_PAYTR_ENABLED deseni).
- * `false` (varsayılan): seçici render edilmez, kur ucu hiç çağrılmaz, her şey TRY
- * → vitrin bugünküyle BİREBİR aynı.
+ * YAYIN BAYRAĞI — 4 Eyl 2026'da operatör onayıyla AÇILDI.
+ *
+ * Artık VARSAYILAN AÇIK: 13 Global dilde müşteri ₺ TL / $ USD / € EUR seçebilir.
+ * Açılış öncesi production'da gizli kanarya (`?cy_currency_preview=1`) ile
+ * uçtan uca doğrulandı; TRY ziyaretçisinin görünümü değişmedi.
+ *
+ * KILL SWITCH KORUNDU: `NEXT_PUBLIC_CURRENCY_ENABLED=false` + yeniden deploy
+ * → seçici render edilmez, kur ucu hiç çağrılmaz, her şey TRY'ye döner.
+ * (`NEXT_PUBLIC_*` derleme anında gömülür; her iki yön de redeploy ister.)
+ *
+ * Bayrak AÇIK olsa bile değişmeyen şey: gerçek fiyat ve tahsilat DAİMA TRY.
  */
-export const CURRENCY_ENABLED = process.env.NEXT_PUBLIC_CURRENCY_ENABLED === "true";
+export const CURRENCY_ENABLED = process.env.NEXT_PUBLIC_CURRENCY_ENABLED !== "false";
 
 /**
  * KANARYA — bayrak kapalıyken tek bir tarayıcı için açar (`?cy_currency_preview=1`,
