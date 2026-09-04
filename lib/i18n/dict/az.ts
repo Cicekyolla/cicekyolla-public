@@ -4,6 +4,12 @@ const az: Dict = {
   "lang.title": "Dil seçin",
   "lang.subtitle": "Alış-veriş təcrübənizi istədiyiniz dildə görün.",
   "lang.aria": "Dil seçin",
+  "currency.title": "Valyuta",
+  "currency.subtitle": "Qiymətləri üstünlük verdiyiniz valyutada görün.",
+  "currency.aria": "Valyuta seçin",
+  "currency.rateNote": "Məzənnələr {source} gündəlik orta məzənnəsidir və təxminidir. Ödəniş ₺ (TRY) ilə alınır.",
+  "currency.chargedNotice": "Sizdən {amount} tutulacaq; bankınız öz məzənnəsini tətbiq edə bilər.",
+  "currency.unavailable": "Valyuta məzənnələri hazırda əlçatan deyil; qiymətlər ₺ (TRY) ilə göstərilir.",
 
   "header.band": "İSTANBULDA EYNİ GÜN SÜRƏTLİ ÇATDIRILMA  ·  BÜTÜN TÜRKİYƏYƏ 1–3 İŞ GÜNÜNDƏ KARQO",
   "header.bandLink": "Bütün Türkiyəyə karqo səhifəsinə keç",

@@ -4,6 +4,12 @@ const nl: Dict = {
   "lang.title": "Kies uw taal",
   "lang.subtitle": "Bekijk uw winkelervaring in de taal van uw voorkeur.",
   "lang.aria": "Taal selecteren",
+  "currency.title": "Valuta",
+  "currency.subtitle": "Bekijk prijzen in de valuta van uw voorkeur.",
+  "currency.aria": "Valuta kiezen",
+  "currency.rateNote": "De koersen zijn de dagelijkse {source}-middenkoers en bij benadering. De betaling vindt plaats in ₺ (TRY).",
+  "currency.chargedNotice": "U wordt {amount} in rekening gebracht; uw bank kan een eigen wisselkoers toepassen.",
+  "currency.unavailable": "Wisselkoersen zijn nu niet beschikbaar; prijzen worden in ₺ (TRY) getoond.",
 
   "header.band": "EXPRESSLEVERING OP DEZELFDE DAG IN ISTANBUL  ·  VERZENDING DOOR HEEL TURKIJE IN 1–3 WERKDAGEN",
   "header.bandLink": "Naar de pagina voor landelijke verzending",

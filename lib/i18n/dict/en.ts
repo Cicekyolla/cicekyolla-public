@@ -4,6 +4,12 @@ const en: Dict = {
   "lang.title": "Choose Language",
   "lang.subtitle": "View your shopping experience in your preferred language.",
   "lang.aria": "Select language",
+  "currency.title": "Currency",
+  "currency.subtitle": "See prices in your preferred currency.",
+  "currency.aria": "Select currency",
+  "currency.rateNote": "Rates are the daily {source} mid-market rate and are approximate. Payment is taken in ₺ (TRY).",
+  "currency.chargedNotice": "You will be charged {amount}; your bank may apply its own exchange rate.",
+  "currency.unavailable": "Exchange rates are unavailable right now; prices are shown in ₺ (TRY).",
 
   "header.band": "SAME-DAY EXPRESS DELIVERY IN ISTANBUL  ·  NATIONWIDE CARGO IN 1–3 BUSINESS DAYS",
   "header.bandLink": "Go to nationwide cargo page",

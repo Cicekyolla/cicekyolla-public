@@ -10,10 +10,11 @@ import { ExpiredDeliveryNotice } from "@/components/checkout/ExpiredDeliveryNoti
 import { useState } from "react";
 import { useI18n, Num } from "@/lib/i18n";
 import { ProductDisplayName } from "@/lib/i18n/content";
+import { useCurrency } from "@/lib/currency";
 
-function money(minor: number) {
-  return `₺${(minor / 100).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
-}
+// NOT: yerel `money` KALDIRILDI. Sepet artık seçili para birimini kullanır
+// (useCurrency().approx) — kalem, ara toplam, indirim ve GENEL TOPLAM aynı para
+// biriminde. Döviz seçiliyken hepsi "≈" ile yazılır: gerçek tahsilat TRY'dir.
 
 /** Sepet satırında teslimatı okunur göster: "15 Ağustos Cuma · 12:00–15:00".
  *  Teslimat sepet satırının bir alanıdır; müşteri sepette ne zaman ulaşacağını görmeli. */
@@ -29,6 +30,7 @@ function deliveryLine(d: { date?: string; slotLabel?: string; mode?: "sameday" |
 
 export default function CartPage() {
   const { items, subtotalMinor, setQuantity, removeItem } = useCart();
+  const { approx: money, isForeign, moneyTRY } = useCurrency();
   const { t, intl } = useI18n();
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -181,6 +183,13 @@ export default function CartPage() {
                     <span className="text-[13px] text-white/45">{t("common.total")}</span>
                     <span className="font-semibold text-white" style={{ fontFamily: "var(--font-display)", fontSize: "34px", letterSpacing: "-0.02em" }}><Num>{money(totalMinor)}</Num></span>
                   </div>
+                  {/* Döviz seçiliyken gerçek tahsilatın TRY olduğu AÇIKÇA yazılır.
+                      13 dilin tamamı mevcut sözlükten gelir; hardcode metin yok. */}
+                  {isForeign && (
+                    <p className="mt-3 text-[12px] leading-[1.55] text-white/45">
+                      {t("currency.chargedNotice", { amount: moneyTRY(totalMinor) })}
+                    </p>
+                  )}
                   {/* Teslimatsız satır varsa checkout kapısı zaten reddeder; müşteriyi
                       duvara göndermek yerine burada durdurup ne yapacağını söylüyoruz. */}
                   {allHaveDelivery ? (
