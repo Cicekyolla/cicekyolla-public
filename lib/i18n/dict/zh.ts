@@ -4,6 +4,12 @@ const zh: Dict = {
   "lang.title": "选择语言",
   "lang.subtitle": "以您偏好的语言浏览购物体验。",
   "lang.aria": "选择语言",
+  "currency.title": "货币",
+  "currency.subtitle": "以您偏好的货币查看价格。",
+  "currency.aria": "选择货币",
+  "currency.rateNote": "汇率为 {source} 每日中间价，仅供参考。付款以 ₺ (TRY) 结算。",
+  "currency.chargedNotice": "将向您收取 {amount}；您的银行可能采用其自身汇率。",
+  "currency.unavailable": "目前无法获取汇率，价格以 ₺ (TRY) 显示。",
 
   "header.band": "伊斯坦布尔当日极速送达  ·  土耳其全境 1–3 个工作日快递",
   "header.bandLink": "前往全国快递页面",

@@ -5,6 +5,7 @@ import { readMetaAttribution } from "@/lib/metaPixel";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import Link from "next/link";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { useCurrency } from "@/lib/currency";
 
 // tr tarih (gün adı dahil)
 function fmtDate(d?: string): string | null {
@@ -64,7 +65,7 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
     setF((p) => ({ ...p, [k]: e.target.value }));
 
   const total = priceMinor * qty;
-  const money = (m: number) => `₺${(m / 100).toLocaleString("tr-TR")}`;
+  const { approx: money } = useCurrency();
 
   const submit = async () => {
     setError(null);

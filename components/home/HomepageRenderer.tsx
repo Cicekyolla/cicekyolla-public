@@ -62,7 +62,10 @@ function buildWorkshopSlots(s: HpSection): WorkshopSlot[] {
     slots.push({
       title: p.name,
       tag: p.is_new ? "Yeni" : "Bugün atölyeden",
+      // priceMinor kart içinde seçili para biriminde yazılır (tek hesap noktası).
+      // `text` yalnız güvenlik ağı: priceMinor okunamazsa eski TRY metni görünür.
       text: `₺${Math.round(Number(minor) / 100)}`,
+      priceMinor: Math.round(Number(minor)),
       image: p.cover_image_url,
       href: `/urun/${p.slug}`,
     });

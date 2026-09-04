@@ -5,6 +5,13 @@ const tr = {
   "lang.title": "Dil Seçin",
   "lang.subtitle": "Alışveriş deneyiminizi tercih ettiğiniz dilde görüntüleyin.",
   "lang.aria": "Dil seç",
+  // ---- para birimi seçici (TRY/USD/EUR) — YALNIZ GÖSTERİM, tahsilat TRY
+  "currency.title": "Para Birimi",
+  "currency.subtitle": "Fiyatları tercih ettiğiniz para biriminde görün.",
+  "currency.aria": "Para birimi seç",
+  "currency.rateNote": "Kurlar {source} günlük ortalama kurudur ve yaklaşıktır. Tahsilat ₺ (TRY) olarak yapılır.",
+  "currency.chargedNotice": "Ödeme {amount} olarak alınacaktır; bankanız kendi kurunu uygulayabilir.",
+  "currency.unavailable": "Döviz kuru şu an alınamıyor; fiyatlar ₺ (TRY) gösteriliyor.",
 
   // ---- header
   "header.band": "İSTANBUL'DA AYNI GÜN HIZLI TESLİMAT  ·  TÜRKİYE GENELİ 1–3 İŞ GÜNÜ KARGO",

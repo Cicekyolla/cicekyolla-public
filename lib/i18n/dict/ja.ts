@@ -4,6 +4,12 @@ const ja: Dict = {
   "lang.title": "言語を選択",
   "lang.subtitle": "お好みの言語でお買い物をお楽しみください。",
   "lang.aria": "言語を選択",
+  "currency.title": "通貨",
+  "currency.subtitle": "ご希望の通貨で価格を表示します。",
+  "currency.aria": "通貨を選択",
+  "currency.rateNote": "レートは{source}の日次仲値で、概算です。お支払いは ₺ (TRY) で行われます。",
+  "currency.chargedNotice": "{amount} が請求されます。ご利用の銀行が独自の為替レートを適用する場合があります。",
+  "currency.unavailable": "現在為替レートを取得できません。価格は ₺ (TRY) で表示しています。",
 
   "header.band": "イスタンブール市内 当日スピード配達  ·  トルコ全土 1〜3営業日で宅配",
   "header.bandLink": "全国宅配ページへ",

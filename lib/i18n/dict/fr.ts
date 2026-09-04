@@ -4,6 +4,12 @@ const fr: Dict = {
   "lang.title": "Choisir la langue",
   "lang.subtitle": "Affichez votre expérience d'achat dans la langue de votre choix.",
   "lang.aria": "Sélectionner la langue",
+  "currency.title": "Devise",
+  "currency.subtitle": "Consultez les prix dans la devise de votre choix.",
+  "currency.aria": "Choisir la devise",
+  "currency.rateNote": "Les taux correspondent au cours moyen quotidien {source} et sont approximatifs. Le paiement est effectué en ₺ (TRY).",
+  "currency.chargedNotice": "Vous serez débité de {amount} ; votre banque peut appliquer son propre taux de change.",
+  "currency.unavailable": "Les taux de change sont indisponibles ; les prix sont affichés en ₺ (TRY).",
 
   "header.band": "LIVRAISON EXPRESS LE JOUR MÊME À ISTANBUL  ·  EXPÉDITION DANS TOUTE LA TURQUIE EN 1–3 JOURS OUVRÉS",
   "header.bandLink": "Aller à la page d'expédition nationale",

@@ -4,6 +4,12 @@ const de: Dict = {
   "lang.title": "Sprache wählen",
   "lang.subtitle": "Zeigen Sie Ihr Einkaufserlebnis in Ihrer bevorzugten Sprache an.",
   "lang.aria": "Sprache auswählen",
+  "currency.title": "Währung",
+  "currency.subtitle": "Preise in Ihrer bevorzugten Währung anzeigen.",
+  "currency.aria": "Währung wählen",
+  "currency.rateNote": "Die Kurse sind der tägliche {source}-Mittelkurs und ungefähr. Die Zahlung erfolgt in ₺ (TRY).",
+  "currency.chargedNotice": "Ihnen werden {amount} berechnet; Ihre Bank kann ihren eigenen Wechselkurs anwenden.",
+  "currency.unavailable": "Wechselkurse sind derzeit nicht verfügbar; Preise werden in ₺ (TRY) angezeigt.",
 
   "header.band": "TAGGLEICHE EXPRESSLIEFERUNG IN ISTANBUL  ·  TÜRKEIWEITER VERSAND IN 1–3 WERKTAGEN",
   "header.bandLink": "Zur Seite für türkeiweiten Versand",

@@ -35,12 +35,14 @@ import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { useProductName } from "@/lib/i18n/content";
-import { formatMinorTRY } from "@/lib/api";
+import { useCurrency } from "@/lib/currency";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
-// Tek para formatı (PDP/sepet ile aynı): formatMinorTRY — kuruş gösterilmez (hesap değişmez, yalnız görüntü).
-const money = (m: number) => formatMinorTRY(m);
+// Tek para formatı — PDP/sepet ile AYNI fonksiyon (useCurrency).
+// CHECKOUT'TA TÜM TUTARLAR YAKLAŞIKTIR → "≈" ile yazılır, çünkü GERÇEK TAHSİLAT
+// DAİMA ₺ (TRY)'dir. Bu dosyadaki hiçbir döviz değeri sipariş gövdesine veya
+// PayTR isteğine GİRMEZ; oraya yalnız TRY kuruş gider (backend'de hesaplanır).
 // Kart (PayTR) yalnız açık anahtar varken gösterilir. PayTR production anahtarı
 // gelince public Vercel'de NEXT_PUBLIC_PAYTR_ENABLED=true → kart görünür. Şimdilik
 // (sandbox) kapalı → müşteriye yalnız Havale/EFT gösterilir.
@@ -82,6 +84,8 @@ type Props = { productName: string; productId: number | null; variantId?: number
   initialEditDelivery?: boolean };
 
 export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false }: Props) {
+  // approx → "≈ $73"  ·  moneyTRY → gerçek tahsilat "₺2.999"
+  const { approx: money, isForeign, moneyTRY } = useCurrency();
   const { t, intl } = useI18n();
   // Faz 2: müşteriye GÖRÜNEN ürün adı (onaylı çeviri); sipariş payload/operasyon TR productName kullanır.
   const shownName = useProductName(productId, productName);
@@ -434,7 +438,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         <div className="mt-6 text-left rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-5">
           <div className="text-[13px] font-bold text-[#6D28D9] mb-1">{t("co.bankTitle")}</div>
           <div className="text-[12.5px] text-[#6B7280] mb-3">
-            {t("co.bankInstrAmount", { amount: money(total), no: done.order_number })}
+            {t("co.bankInstrAmount", { amount: moneyTRY(total), no: done.order_number })}
           </div>
           {bankAccounts.length === 0 ? (
             <div className="text-[12px] text-[#9CA3AF]">{t("co.bankContact")}</div>
@@ -475,6 +479,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           {qty > 1 && <p className="text-[10px]" style={{ color: "#8B5CF6" }}>×{qty}</p>}
         </div>
         <span className="shrink-0 font-semibold text-[#111827]" style={{ fontFamily: "var(--font-display)", fontSize: "17px" }}>{money(total)}</span>
+        {isForeign && <span className="shrink-0 text-[11px] font-medium text-[#9CA3AF]">{moneyTRY(total)}</span>}
       </div>
 
       {/* Tek anlatı. İçerideki adım makinesi (steps/stepIdx) DEĞİŞMEDİ — yalnız
@@ -1011,6 +1016,7 @@ function StepGonderen(p: {
 /* ---------------------------- Adım: Ek Ürünler -------------------------- */
 function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, number>; setAddon: (id: number, q: number) => void }) {
   const { t } = useI18n();
+  const { approx: money } = useCurrency();
   const count = p.addons.reduce((s, a) => s + (p.addonQty[a.id] || 0), 0);
   const cats = useMemo(() => {
     const set: string[] = [];
@@ -1117,6 +1123,7 @@ function StepOdeme(p: {
   paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[]; cardEnabled: boolean;
 }) {
   const { t } = useI18n();
+  const { approx: money, isForeign, moneyTRY } = useCurrency();
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const methods = ([
     { key: "card" as const, icon: CreditCard, title: t("co.pay.card"), sub: "Visa, Mastercard · 3D Secure" },
@@ -1229,6 +1236,14 @@ function StepOdeme(p: {
           <span className="text-[14px] font-semibold text-[#6B7280]">{t("common.total")}</span>
           <Num className="text-[22px] font-bold text-[#111827]">{money(p.total)}</Num>
         </div>
+        {/* ZORUNLU DÜRÜSTLÜK BİLDİRİMİ — ödemeden hemen önce.
+            Müşteri "≈ $73" görüyor ama kartından ₺2.999 çekilecek. Bunu 13 dilin
+            tamamında mevcut sözlükten söylüyoruz; hardcode metin YOK. */}
+        {isForeign && (
+          <p className="mt-3 rounded-xl border border-[#F1F0F5] bg-[#F9FAFB] px-3.5 py-2.5 text-[12px] leading-[1.55] text-[#6B7280]">
+            {t("currency.chargedNotice", { amount: moneyTRY(p.total) })}
+          </p>
+        )}
       </div>
       <p className="text-[12px] text-[#9CA3AF] mt-4 flex items-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
@@ -1240,6 +1255,7 @@ function StepOdeme(p: {
   );
 }
 function LineItem({ name, qty, price, addon }: { name: string; qty: number; price: number; addon?: boolean }) {
+  const { approx: money } = useCurrency();
   return (
     <div className="flex items-center justify-between">
       <span className="text-[13.5px] text-[#374151] flex items-center gap-2 min-w-0">
@@ -1276,6 +1292,7 @@ function LivingReceipt(p: {
   onEditStep?: (key: "alici" | "kart" | "gonderen" | "ekurun") => void;
 }) {
   const { t } = useI18n();
+  const { approx: money, isForeign, moneyTRY } = useCurrency();
   const selected = p.addons.filter((a) => (p.addonQty[a.id] || 0) > 0);
   const senderLine = p.visibility === "show" ? (p.senderName || null) : p.visibility === "anonymous" ? t("co.anonymous") : t("co.fullyHidden");
   return (
@@ -1359,6 +1376,11 @@ function LivingReceipt(p: {
             <span className="text-[12px] text-white/40">Toplam</span>
             <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(p.total)}</span>
           </div>
+          {isForeign && (
+            <p className="mt-2.5 text-[11.5px] leading-[1.5] text-white/40">
+              {t("currency.chargedNotice", { amount: moneyTRY(p.total) })}
+            </p>
+          )}
         </div>
       </div>
 

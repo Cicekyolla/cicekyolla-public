@@ -4,6 +4,12 @@ const ko: Dict = {
   "lang.title": "언어 선택",
   "lang.subtitle": "원하는 언어로 쇼핑을 즐기세요.",
   "lang.aria": "언어 선택",
+  "currency.title": "통화",
+  "currency.subtitle": "원하시는 통화로 가격을 확인하세요.",
+  "currency.aria": "통화 선택",
+  "currency.rateNote": "환율은 {source} 일일 중간 환율이며 근사치입니다. 결제는 ₺ (TRY)로 이루어집니다.",
+  "currency.chargedNotice": "{amount}이(가) 청구됩니다. 거래 은행이 자체 환율을 적용할 수 있습니다.",
+  "currency.unavailable": "현재 환율을 가져올 수 없어 가격을 ₺ (TRY)로 표시합니다.",
 
   "header.band": "이스탄불 당일 빠른 배송  ·  튀르키예 전역 1~3 영업일 택배",
   "header.bandLink": "전국 택배 페이지로 이동",

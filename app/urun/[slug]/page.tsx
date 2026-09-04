@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct, formatMinorTRY } from "@/lib/api";
+import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct } from "@/lib/api";
+import { Price } from "@/components/Price";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { MetaViewContentTracker } from "@/components/analytics/MetaViewContentTracker";
 import { ProductReviews } from "@/components/product/ProductReviews";
@@ -290,7 +291,7 @@ export default async function ProductPage({ params }: PageProps) {
                     </h3>
                     <div className="mt-auto flex items-end justify-between gap-3 pt-4">
                       <span className="text-lg font-bold text-[#D8B4FE]" style={{ fontFamily: "var(--font-display)" }}>
-                        ₺{p.price}
+                        <Price minor={p.priceMinor} />
                       </span>
                       <span
                         aria-hidden="true"
@@ -365,7 +366,7 @@ export default async function ProductPage({ params }: PageProps) {
         </div>
       </section>
       {/* Fiyat özeti (SSR erişilebilirlik / no-JS fallback) */}
-      <span className="sr-only">{formatMinorTRY(price)}</span>
+      <span className="sr-only"><Price minor={price} isolate={false} /></span>
     </>
   );
 }
