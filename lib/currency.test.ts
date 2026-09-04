@@ -274,8 +274,16 @@ test("kanarya cookie'si TAM olarak =1 olmalı", () => {
   }
 });
 
-test("yayın bayrağı varsayılanı KAPALI — kod canlıda, müşteri döviz görmez", () => {
-  assert.equal(CURRENCY_ENABLED, false);
+test("yayın bayrağı AÇIK (4 Eyl operatör onayı) ve kill switch çalışıyor", () => {
+  // Varsayılan AÇIK: 13 Global dilde müşteri para birimi seçebilir.
+  assert.equal(CURRENCY_ENABLED, true);
+  // Kill switch sözleşmesi: SADECE "false" kapatır. Yanlışlıkla boş/anlamsız bir
+  // değer ("", "0", "off") özelliği KAPATMAZ — kapatma bilinçli olmalıdır.
+  const kapatir = (v: string | undefined) => v !== "false";
+  assert.equal(kapatir("false"), false, '"false" kapatmalı');
+  for (const v of [undefined, "", "true", "0", "off", "FALSE"]) {
+    assert.equal(kapatir(v), true, `"${String(v)}" kapatmamalı`);
+  }
 });
 
 // ═══ ÖDEME ZİNCİRİ DOKUNULMADI (kod düzeyinde sabitleme) ═══════════════════
