@@ -50,3 +50,39 @@ export const DESC_PROSE =
   "[&_b]:text-[#111827] [&_b]:font-semibold [&_em]:italic [&_a]:text-[#8B5CF6] [&_a]:font-medium hover:[&_a]:underline " +
   "[&_blockquote]:border-l-2 [&_blockquote]:border-[#DDD6FE] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[#6B7280] [&_blockquote]:my-4 " +
   "[&_hr]:my-5 [&_hr]:border-[#F3F4F6] [&_img]:hidden";
+
+/**
+ * Zengin metni DÜZ METNE indirger — schema.org `description` içindir.
+ *
+ * NEDEN: JSON-LD `description` düz metin bekler. Ürün açıklamaları DB'de HTML
+ * olarak duruyor ve canlıda schema'ya HAM HTML gidiyordu
+ * (`"<p>Doğanın en özel dokularını..."`). Arama motorları etiketi ayıklamak
+ * zorunda kalıyor, çıktı kirli görünüyor.
+ *
+ * Metni ÜRETMEZ, yalnız mevcut açıklamayı sadeleştirir — uydurma yok.
+ */
+export function toPlainText(html: string | null | undefined, maxLen = 5000): string {
+  if (!html) return "";
+  let s = String(html);
+  // İçeriğiyle birlikte atılacak bloklar
+  s = s.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  // Blok sonları boşluğa dönsün ki kelimeler birleşmesin ("...tasarımAnlayışı")
+  s = s.replace(/<\/(p|div|li|h[1-6]|tr|blockquote)\s*>/gi, " ");
+  s = s.replace(/<br\s*\/?>/gi, " ");
+  // Kalan tüm etiketler
+  s = s.replace(/<[^>]*>/g, " ");
+  // Yaygın HTML varlıkları (sayısal olanlar dahil)
+  s = s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)));
+  // Tüm boşlukları (satır sonu dahil) tek boşluğa indir
+  s = s.replace(/\s+/g, " ").trim();
+  if (s.length <= maxLen) return s;
+  // Kelime ortasından kesme
+  return s.slice(0, maxLen).replace(/\s+\S*$/, "").trim();
+}
