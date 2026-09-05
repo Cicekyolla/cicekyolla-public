@@ -683,6 +683,8 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         <ProductDetail
           data={data}
           sizeProducts={sizeProducts}
+          /* WhatsApp hazır mesajı locale PDP adresini taşısın (TR'ye düşmesin). */
+          canonicalPath={`/${locale}/${seg.product}/${parsed.slug}`}
           presentation={{
             name: surface.name,
             short_description: surface.short_description,
