@@ -1,39 +1,27 @@
 "use client";
 
 /**
- * Ana sayfa Google değerlendirmeleri.
+ * Ana sayfa Google değerlendirmeleri — YALNIZ GERÇEK 5★ yorumlar.
  * Veri yalnız /api/reviews üzerinden Google Place Details (New) kaynağından gelir.
+ * Seçim tek yerde: lib/googleReviews (GLOBAL vitrin de aynı modülü kullanır).
+ * Yorum metni/yazarı/puanı değiştirilmez; 4★ ve altı bu bölümde gösterilmez.
+ * Gösterilen Google puanı ve değerlendirme sayısı Google'ın İŞLETME toplamıdır,
+ * seçilen kartlardan hesaplanmaz.
  * Sahte isim, yorum, tarih, puan veya fallback içerik yoktur.
- * Google hata verirse bölüm güvenli biçimde gizlenir.
+ * Google hata verirse veya hiç 5★ yoksa bölüm güvenli biçimde gizlenir.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { ExternalLink, Quote, Star } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
+import { selectTrustReviews } from "@/lib/googleReviews";
+import type { GoogleReviewItem, GoogleReviewsPlace } from "@/lib/googleReviews";
 
-interface GoogleReview {
-  author: string;
-  authorUri: string | null;
-  rating: number | null;
-  body: string;
-  relativeTime: string | null;
-  publishTime: string | null;
-}
-
-interface GooglePlace {
-  id: string;
-  name: string;
-  address: string | null;
-  rating: number;
-  userRatingCount: number;
-  googleMapsUri: string;
-}
-
-interface GoogleReviewsPayload {
-  source: "google";
-  place: GooglePlace;
-  reviews: GoogleReview[];
+/** Bölümde gösterilecek GERÇEK 5★ seçimi (boşsa bölüm hiç render edilmez). */
+interface TrustSelection {
+  place: GoogleReviewsPlace;
+  reviews: GoogleReviewItem[];
 }
 
 function initials(name: string): string {
@@ -95,7 +83,7 @@ function RatingStars({
 }
 
 export function Testimonials() {
-  const [data, setData] = useState<GoogleReviewsPayload | null>(null);
+  const [data, setData] = useState<TrustSelection | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
@@ -131,20 +119,20 @@ export function Testimonials() {
         const res = await fetch("/api/reviews", {
           headers: { Accept: "application/json" },
         });
-        const json = (await res.json().catch(() => null)) as
-          | GoogleReviewsPayload
-          | null;
+        const json = await res.json().catch(() => null);
 
-        const valid =
-          res.ok &&
-          json?.source === "google" &&
-          typeof json.place?.rating === "number" &&
-          typeof json.place?.userRatingCount === "number" &&
-          typeof json.place?.googleMapsUri === "string" &&
-          Array.isArray(json.reviews) &&
-          json.reviews.some((review) => review.body.trim().length > 0);
+        // Geçerlilik + 5★ seçimi TEK kaynakta: lib/googleReviews.
+        const secim = res.ok
+          ? selectTrustReviews(json)
+          : ({ visible: false } as const);
 
-        if (alive) setData(valid ? json : null);
+        if (alive) {
+          setData(
+            secim.visible
+              ? { place: secim.place, reviews: secim.reviews }
+              : null,
+          );
+        }
       } catch {
         if (alive) setData(null);
       } finally {
@@ -164,12 +152,6 @@ export function Testimonials() {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
-
-  // Gerçek yorumlar puana göre azalır: 5 → 4 → 3 → 2 → 1.
-  // Eşit puanlı yorumlar Google'ın verdiği kendi sırasını korur.
-  const orderedReviews = [...reviews].sort(
-    (a, b) => (b.rating ?? -1) - (a.rating ?? -1)
-  );
 
   return (
     <section
@@ -245,7 +227,7 @@ export function Testimonials() {
             style={{ cursor: "grab" }}
           >
             <div className="flex gap-5 lg:gap-6">
-              {orderedReviews.map((review, index) => (
+              {reviews.map((review, index) => (
                 <article
                   key={`${review.author}-${review.publishTime ?? index}`}
                   className="flex h-[370px] min-w-0 select-none flex-[0_0_86%] flex-col rounded-[24px] border border-[#EAE5EF] bg-white/95 p-6 shadow-[0_14px_42px_rgba(49,37,72,0.07)] sm:flex-[0_0_calc((100%-1.25rem)/2)] sm:p-7 lg:flex-[0_0_calc((100%-3rem)/3)] xl:flex-[0_0_calc((100%-4.5rem)/4)] 2xl:flex-[0_0_calc((100%-6rem)/5)]"
