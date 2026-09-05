@@ -127,3 +127,73 @@ test("SAHTE İSİM YOK: modül hiçbir yorum/isim sabiti taşımaz", async () =>
     assert.ok(!kaynak.includes(yasak), `modülde uydurma trust öğesi olmamalı: ${yasak}`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// KAYNAK KORUMA TESTLERİ — kürasyon sözleşmesini CI'da kilitler.
+// Biri bölüme toplu puan özeti veya "5,0 / 5 yıldızlı işletme" iddiası
+// eklemeye kalkarsa bu testler kırılır.
+// ---------------------------------------------------------------------------
+const BILESENLER = [
+  ["components/home/Testimonials.tsx", "canlı ana sayfa"],
+  ["components/global/GlobalGoogleTrust.tsx", "GLOBAL trust"],
+] as const;
+
+async function bilesenKaynagi(yol: string): Promise<string> {
+  const { readFileSync } = await import("node:fs");
+  return readFileSync(new URL("../" + yol, import.meta.url), "utf8");
+}
+
+test("TOPLU PUAN GÖSTERİLMEZ: hiçbir bölüm place.rating/userRatingCount basmaz", async () => {
+  for (const [yol, ad] of BILESENLER) {
+    const src = await bilesenKaynagi(yol);
+    assert.ok(
+      !/\{\s*place\.rating/.test(src) && !/\{\s*puan\s*\}/.test(src),
+      ad + ": işletme puanı özeti render edilmemeli (" + yol + ")",
+    );
+    assert.ok(
+      !/place\.userRatingCount\.toLocaleString/.test(src),
+      ad + ": değerlendirme sayısı özeti render edilmemeli (" + yol + ")",
+    );
+  }
+});
+
+test("TOPLU İDDİA YOK: '5,0 puan' / '5 yıldızlı işletme' gibi ifade geçmez", async () => {
+  const yasakli = [
+    "5,0 puan",
+    "5.0 puan",
+    "5 yıldızlı işletme",
+    "müşterilerimiz 5 yıldız verdi",
+    "5 üzerinden 5",
+  ];
+  for (const [yol, ad] of BILESENLER) {
+    const src = (await bilesenKaynagi(yol)).toLocaleLowerCase("tr-TR");
+    for (const ifade of yasakli) {
+      assert.ok(
+        !src.includes(ifade.toLocaleLowerCase("tr-TR")),
+        ad + ': "' + ifade + '" iddiası kullanılamaz',
+      );
+    }
+  }
+});
+
+test("ATTRIBUTION KORUNUR: yazar linki + Google işareti + kaynak linki durur", async () => {
+  for (const [yol, ad] of BILESENLER) {
+    const src = await bilesenKaynagi(yol);
+    assert.ok(src.includes("review.authorUri"), ad + ": yazarın Google yorumuna link kalmalı");
+    assert.ok(src.includes("place.googleMapsUri"), ad + ": Google işletme sayfası linki kalmalı");
+    assert.ok(src.includes("GoogleMark"), ad + ": Google marka işareti kalmalı");
+    assert.ok(src.includes("Google değerlendirmesi"), ad + ": kart kimliği açık olmalı");
+    assert.ok(src.includes("{review.body}"), ad + ": yorum metni aynen basılmalı");
+  }
+});
+
+test("TEK KAYNAK: iki bölüm de selectTrustReviews kullanır, kendi filtresini yazmaz", async () => {
+  for (const [yol, ad] of BILESENLER) {
+    const src = await bilesenKaynagi(yol);
+    assert.ok(src.includes("selectTrustReviews"), ad + ": ortak seçim modülünü kullanmalı");
+    assert.ok(
+      !/reviews\.(filter|sort)\(/.test(src),
+      ad + ": yerel filtre/sıralama yazılmamalı (seçim tek yerde)",
+    );
+  }
+});

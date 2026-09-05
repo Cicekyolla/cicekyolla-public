@@ -5,8 +5,10 @@
  * Veri yalnız /api/reviews üzerinden Google Place Details (New) kaynağından gelir.
  * Seçim tek yerde: lib/googleReviews (GLOBAL vitrin de aynı modülü kullanır).
  * Yorum metni/yazarı/puanı değiştirilmez; 4★ ve altı bu bölümde gösterilmez.
- * Gösterilen Google puanı ve değerlendirme sayısı Google'ın İŞLETME toplamıdır,
- * seçilen kartlardan hesaplanmaz.
+ * Toplu puan/değerlendirme sayısı bu bölümde GÖSTERİLMEZ: bölüm bir işletme
+ * puanı özeti değil, seçilmiş gerçek 5★ yorumların kürasyonudur. Google'ın
+ * işletme ortalaması hiçbir yerde yeniden hesaplanmaz ve asla 5,0 sunulmaz;
+ * tam tablo için Google işletme sayfasına link verilir.
  * Sahte isim, yorum, tarih, puan veya fallback içerik yoktur.
  * Google hata verirse veya hiç 5★ yoksa bölüm güvenli biçimde gizlenir.
  */
@@ -148,10 +150,6 @@ export function Testimonials() {
   if (!loaded || !data) return null;
 
   const { place, reviews } = data;
-  const displayRating = place.rating.toLocaleString("tr-TR", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
 
   return (
     <section
@@ -167,7 +165,7 @@ export function Testimonials() {
       <div className="relative mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-11">
         <div className="mb-12 flex flex-col items-start justify-between gap-8 md:flex-row md:items-end lg:mb-14">
           <div>
-            <SectionLabel>Google Değerlendirmeleri</SectionLabel>
+            <SectionLabel>Seçilmiş Google Değerlendirmeleri</SectionLabel>
             <SectionTitle>
               <span id="google-reviews-title">
                 Müşterilerimiz
@@ -176,47 +174,27 @@ export function Testimonials() {
               </span>
             </SectionTitle>
             <p className="mt-5 max-w-xl text-sm leading-7 text-[#7C7387]">
-              Gerçek deneyimler, özenli hizmet anlayışımızın en değerli
-              yansıması.
+              Google&apos;da 5 yıldız veren müşterilerimizin kendi sözleri.
+              Değerlendirmelerin tamamını Google işletme sayfamızda
+              görebilirsiniz.
             </p>
           </div>
 
+          {/* Toplu puan/sayı ÖZETİ YOK: bölüm bir işletme puanı iddiası değil,
+              seçilmiş gerçek yorumların kürasyonudur. Tam tablo Google'da. */}
           <a
             href={place.googleMapsUri}
             target="_blank"
             rel="noopener noreferrer"
-            className="group w-full rounded-[22px] border border-[#E8E2ED] bg-white/90 px-6 py-5 shadow-[0_18px_55px_rgba(44,32,68,0.09)] backdrop-blur-xl transition-transform hover:-translate-y-0.5 sm:w-auto sm:px-7"
-            aria-label={`Çiçek Yolla Google değerlendirmelerini aç: ${displayRating} puan, ${place.userRatingCount} değerlendirme`}
+            className="group inline-flex w-full items-center justify-center gap-2.5 rounded-[18px] border border-[#E8E2ED] bg-white/90 px-6 py-4 text-sm font-medium text-[#4A4256] shadow-[0_10px_30px_rgba(44,32,68,0.07)] backdrop-blur-xl transition-transform hover:-translate-y-0.5 sm:w-auto"
+            aria-label="Google işletme sayfamızdaki tüm değerlendirmeleri yeni sekmede aç"
           >
-            <div className="flex items-center justify-center gap-5 sm:gap-6">
-              <div>
-                <p
-                  className="font-semibold leading-none text-[#15111E]"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "3rem",
-                  }}
-                >
-                  {displayRating}
-                </p>
-                <div className="mt-2">
-                  <RatingStars rating={place.rating} size="large" />
-                </div>
-              </div>
-
-              <div className="h-16 w-px bg-[#E8E2EE]" />
-
-              <div>
-                <p className="font-semibold text-[#211B2D]">Google puanı</p>
-                <p className="mt-1 text-sm text-[#958C9F]">
-                  {place.userRatingCount.toLocaleString("tr-TR")} değerlendirme
-                </p>
-                <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-[#8A8194]">
-                  <GoogleMark />
-                  Google Reviews
-                </span>
-              </div>
-            </div>
+            <GoogleMark size={16} />
+            Tüm değerlendirmeleri Google&apos;da görün
+            <ExternalLink
+              className="h-3.5 w-3.5 text-[#A79FB2]"
+              aria-hidden="true"
+            />
           </a>
         </div>
 
@@ -290,7 +268,7 @@ export function Testimonials() {
                       dateTime={review.publishTime ?? undefined}
                       className="text-xs font-medium text-[#A890D0]"
                     >
-                      {review.relativeTime ?? "Google değerlendirmesi"}
+                      {review.relativeTime}
                     </time>
                     <a
                       href={review.authorUri ?? place.googleMapsUri}
@@ -300,7 +278,7 @@ export function Testimonials() {
                       aria-label={`${review.author} tarafından yazılan Google yorumunu aç`}
                     >
                       <GoogleMark size={14} />
-                      Google
+                      Google değerlendirmesi
                     </a>
                   </footer>
                 </article>

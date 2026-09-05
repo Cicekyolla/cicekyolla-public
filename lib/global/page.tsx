@@ -495,7 +495,7 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
           {/* GLOBAL TRUST: gerçek Google 5★ yorumları — canlı ana sayfayla
               AYNI kaynak ve AYNI seçim modülü (lib/googleReviews).
               Yorum yoksa/API hata verirse bölüm hiç render edilmez. */}
-          <GlobalGoogleTrust locale={locale} />
+          <GlobalGoogleTrust />
           {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
           <EmotionSection locale={locale} catalog={catalog} />
           <CatalogSections locale={locale} catalog={catalog} />

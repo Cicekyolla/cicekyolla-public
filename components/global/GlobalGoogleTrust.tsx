@@ -10,8 +10,9 @@
 //  • Uydurma testimonial, demo kişi, doğrulanmamış rozet/sayı YOKTUR.
 //  • Yorum metni ve yazar adı Google'dan geldiği gibi basılır; çevrilmez,
 //    kısaltılmaz, "premiumlaştırılmaz".
-//  • Gösterilen puan/sayı Google'ın İŞLETME toplamıdır (5★ seçiminden
-//    hesaplanmaz).
+//  • Toplu puan/değerlendirme sayısı GÖSTERİLMEZ: bu blok bir işletme puanı
+//    özeti değil, seçilmiş gerçek 5★ yorumların kürasyonudur. Google'ın
+//    ortalaması yeniden hesaplanmaz ve asla 5,0 olarak sunulmaz.
 //  • Google API hata verirse ya da hiç 5★ yorum yoksa bölüm render EDİLMEZ —
 //    sayfa kırılmaz, sahte içerik konmaz.
 //  • Bu blok MARKA sosyal kanıtıdır; ürün puanı (Product.aggregateRating)
@@ -21,7 +22,6 @@
 import { useEffect, useState } from "react";
 import { selectTrustReviews } from "@/lib/googleReviews";
 import type { GoogleReviewItem, GoogleReviewsPlace } from "@/lib/googleReviews";
-import type { GlobalLocale } from "@/lib/global/config";
 
 interface Secim {
   place: GoogleReviewsPlace;
@@ -57,7 +57,7 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export function GlobalGoogleTrust({ locale }: { locale: GlobalLocale }) {
+export function GlobalGoogleTrust() {
   const [data, setData] = useState<Secim | null>(null);
 
   useEffect(() => {
@@ -81,10 +81,6 @@ export function GlobalGoogleTrust({ locale }: { locale: GlobalLocale }) {
   if (!data) return null;
 
   const { place, reviews } = data;
-  const puan = place.rating.toLocaleString(locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
 
   return (
     <section className="mx-auto mt-8 w-full max-w-6xl px-4">
@@ -93,6 +89,7 @@ export function GlobalGoogleTrust({ locale }: { locale: GlobalLocale }) {
           <p className="text-[10.5px] font-bold uppercase tracking-[0.28em] text-[#C4974A]">
             Google Reviews
           </p>
+          {/* Toplu puan/sayı YOK — yalnız kaynağa giden dürüst link. */}
           <a
             href={place.googleMapsUri}
             target="_blank"
@@ -100,11 +97,7 @@ export function GlobalGoogleTrust({ locale }: { locale: GlobalLocale }) {
             className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#1A1830] hover:underline"
           >
             <GoogleMark />
-            {/* Google'ın İŞLETME toplamı — seçilen kartlardan hesaplanmaz. */}
-            <span>{puan}</span>
-            <span className="font-normal text-[#6B6478]">
-              ({place.userRatingCount.toLocaleString(locale)})
-            </span>
+            <span>Google</span>
           </a>
         </div>
 
@@ -120,6 +113,9 @@ export function GlobalGoogleTrust({ locale }: { locale: GlobalLocale }) {
                 {review.body}
               </blockquote>
               <figcaption className="mt-auto pt-3 text-[11.5px] text-[#6B6478]">
+                <span className="mb-1 block text-[10.5px] text-[#8A8194]">
+                  Google değerlendirmesi
+                </span>
                 {review.authorUri ? (
                   <a
                     href={review.authorUri}
