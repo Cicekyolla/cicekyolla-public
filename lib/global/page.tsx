@@ -33,6 +33,7 @@ import {
   TrustStrip, EmotionSection, DistanceSection, AtelierSection,
   ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip,
 } from "./sections";
+import { GlobalGoogleTrust } from "@/components/global/GlobalGoogleTrust";
 import {
   type GlobalLocale,
   parseLocalePath,
@@ -491,6 +492,10 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
       ) : (
         <>
           <TrustStrip locale={locale} />
+          {/* GLOBAL TRUST: gerçek Google 5★ yorumları — canlı ana sayfayla
+              AYNI kaynak ve AYNI seçim modülü (lib/googleReviews).
+              Yorum yoksa/API hata verirse bölüm hiç render edilmez. */}
+          <GlobalGoogleTrust />
           {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
           <EmotionSection locale={locale} catalog={catalog} />
           <CatalogSections locale={locale} catalog={catalog} />
