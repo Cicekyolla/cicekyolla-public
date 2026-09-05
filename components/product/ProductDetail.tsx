@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCheck, ChevronRight, Ruler, Package, Leaf, Gift, Info, MapPin, Clock, Camera, Check, ZoomIn, Minus, Plus, type LucideIcon } from "lucide-react";
 import { type PublicProductDetail, type PublicProductImage } from "@/lib/api";
+import { absoluteUrl } from "@/lib/site-config";
 import { useCurrency } from "@/lib/currency";
 import galleryMapJson from "@/lib/gallery-map.json";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
@@ -97,12 +98,17 @@ export function ProductDetail({
   data,
   sizeProducts = [],
   presentation,
+  canonicalPath,
 }: {
   data: PublicProductDetail;
   sizeProducts?: AutoSizeProduct[];
   /** Locale vitrini onaylı çeviriyi SUNUCUDA verir → ilk HTML doğru dilde çıkar
    *  (client fetch'i beklemez). TR çağrısı vermez; sepet/sipariş adı TR kalır. */
   presentation?: { name?: string | null; short_description?: string | null; long_description?: string | null };
+  /** Bu ürünün KANONİK yolu. TR'de verilmezse /urun/<slug> kullanılır;
+      locale vitrinleri kendi PDP yollarını geçer. WhatsApp hazır mesajındaki
+      bağlantı bundan üretilir (bkz. waText). */
+  canonicalPath?: string;
 }) {
   // Fiyat yazımı seçili para biriminde. Taban DAİMA TRY kuruş; gerçek tahsilat TRY.
   const { money } = useCurrency();
@@ -146,8 +152,19 @@ export function ProductDetail({
   const shown = hasSale ? salePrice : basePrice;
   const discountPct = hasSale ? Math.round((1 - Number(salePrice) / Number(basePrice)) * 100) : 0;
 
+  // WhatsApp hazır mesajındaki ürün bağlantısı.
+  //
+  // ÖNCEDEN `window.location.href` kullanılıyordu ve bu CANLIDA KIRILDI:
+  // sunucu render'ında `window` yoktur, dolayısıyla URL kısmı BOŞ kalıyordu.
+  // Müşteri sayfa hidrasyondan önce dokunduğunda mesaj LİNKSİZ gidiyordu
+  // (5 Eyl 2026, gerçek sohbette iki mesajla doğrulandı) — operatör hangi
+  // ürün olduğunu açamıyordu.
+  //
+  // Artık ürünün KANONİK adresi kullanılır: sunucuda da istemcide de AYNI
+  // ve DAİMA dolu. Tarayıcının o anki adresine bağımlılık kalktı.
+  const waProductUrl = absoluteUrl(canonicalPath ?? `/urun/${product.slug}`);
   const waText = encodeURIComponent(
-    `Merhaba, "${product.name}" ürününü sipariş vermek istiyorum. ${typeof window !== "undefined" ? window.location.href : ""}`,
+    `Merhaba, "${product.name}" ürününü sipariş vermek istiyorum. ${waProductUrl}`,
   );
 
   const cover = gallery[active];
