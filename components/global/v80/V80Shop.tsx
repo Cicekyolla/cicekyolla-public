@@ -65,7 +65,7 @@ export function V80Shop({ view }: { view: V80View }) {
             ))}
             {view.shop.promo && visible.length >= Math.min(8, limit) ? (
               <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", borderRadius: "var(--v80-radius-sm)", overflow: "hidden", border: "1px solid var(--v80-border)", marginTop: 8, marginBottom: 8 }} className="v80-promo">
-                <div style={{ background: "var(--v80-warm)", aspectRatio: "3/1", overflow: "hidden", position: "relative", minHeight: 160 }}>
+                <div style={{ background: "var(--v80-warm)", aspectRatio: "3/1", overflow: "hidden", position: "relative", width: "100%", minWidth: 0 }}>
                   {view.shop.promo.image ? <Image src={view.shop.promo.image} alt="" fill sizes="(max-width:768px) 100vw, 50vw" className="v80-img" style={{ objectFit: "cover" }} unoptimized={!view.shop.promo.image.startsWith("/")} /> : null}
                 </div>
                 <div style={{ background: "var(--v80-warm)", display: "flex", flexDirection: "column", justifyContent: "center", padding: "32px 40px" }}>
@@ -73,7 +73,7 @@ export function V80Shop({ view }: { view: V80View }) {
                   <p style={{ fontSize: "0.8125rem", color: "var(--v80-ink-muted)", lineHeight: 1.65, marginBottom: 20 }}>{t["shop.promoBody"]}</p>
                   {view.shop.promo.href ? <a href={view.shop.promo.href} style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--v80-primary-strong)", textDecoration: "none", letterSpacing: "0.02em" }}>{t["shop.promoCta"]}</a> : null}
                 </div>
-                <style>{`@media (max-width:768px){.v80 .v80-promo{grid-template-columns:1fr!important}.v80 .v80-promo>div:last-child{padding:22px 20px!important}}`}</style>
+                <style>{`.v80 .v80-promo>div{min-width:0}@media (max-width:768px){.v80 .v80-promo{grid-template-columns:1fr!important}.v80 .v80-promo>div:first-child{aspect-ratio:2/1!important}.v80 .v80-promo>div:last-child{padding:22px 20px!important}}`}</style>
               </div>
             ) : null}
           </div>
