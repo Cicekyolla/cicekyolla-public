@@ -21,6 +21,7 @@ export function V80Shop({ view }: { view: V80View }) {
   const intentLabel = f.intent ?? f.categoryLabel ?? f.destinationLabel;
   const activeTab = view.shop.tabs.find((tb) => tb.slug === f.category) ?? null;
   const labels = [f.intent, f.categoryLabel && f.categoryLabel !== f.intent ? f.categoryLabel : null, f.destinationLabel].filter(Boolean) as string[];
+  const emptyCategory = f.category ? view.categories.find((c) => c.slug === f.category) ?? null : null;
 
   return (
     <section id="shop" className="v80-section" style={{ background: "var(--v80-bg)", scrollMarginTop: 96 }}>
@@ -55,7 +56,11 @@ export function V80Shop({ view }: { view: V80View }) {
         </div>
 
         {visible.length === 0 ? (
-          <p style={{ fontSize: "0.875rem", color: "var(--v80-ink-subtle)", padding: "24px 0" }}>{t["shop.empty"]}</p>
+          <div style={{ padding: "24px 0", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <p style={{ fontSize: "0.875rem", color: "var(--v80-ink-subtle)" }}>{t["shop.empty"]}</p>
+            {/* Vitrin havuzunda eşleşme yoksa GERÇEK kategori sayfası (tüm canlı ürünler) — çıkmaz sokak yok. */}
+            {emptyCategory ? <Link href={emptyCategory.href} className="v80-btn-ghost" style={{ height: 44 }}>{emptyCategory.name} →</Link> : null}
+          </div>
         ) : (
           <div className="v80-product-grid">
             {visible.map((p, i) => (
