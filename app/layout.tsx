@@ -11,6 +11,7 @@ import { ConsentManager } from "@/components/consent/ConsentManager";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
 import { DeliveryLocationBadge } from "@/components/delivery/DeliveryLocationBadge";
+import { ChromeGate } from "@/components/global/ChromeGate";
 import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
@@ -191,15 +192,19 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <EcommerceCartViewTracker />
           <EcommerceCheckoutTracker />
           <EcommercePaymentInfoTracker />
-          <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
-          {/* Hatırlanan teslimat yeri şeridi — adres seçilmemişse HİÇ çizilmez
-              (ilk ziyaretçide görsel değişiklik yok). Kaynak: pendingDelivery. */}
-          <DeliveryLocationBadge />
+          {/* GLOBAL VERSION 80: /de, /en … locale rotalarında TR kabuğu çizilmez;
+              o sayfaların kabuğu lib/global/page.tsx → V80Shell'dir. TR'de AYNEN. */}
+          <ChromeGate>
+            <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
+            {/* Hatırlanan teslimat yeri şeridi — adres seçilmemişse HİÇ çizilmez
+                (ilk ziyaretçide görsel değişiklik yok). Kaynak: pendingDelivery. */}
+            <DeliveryLocationBadge />
+          </ChromeGate>
           {children}
         </CartProvider>
-        <MemberNewsletterBand />
+        <ChromeGate><MemberNewsletterBand /></ChromeGate>
         <Footer categories={footerOrUndef} brand={footerBrandLight} />
-        <WhatsAppButton />
+        <ChromeGate><WhatsAppButton /></ChromeGate>
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />

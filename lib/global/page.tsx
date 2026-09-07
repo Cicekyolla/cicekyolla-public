@@ -52,6 +52,10 @@ import {
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
+// GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
+import { loadV80, v80HeaderFromCatalog } from "./v80/data";
+import { V80Shell } from "@/components/global/v80/V80Shell";
+import { V80Page } from "@/components/global/v80/V80Page";
 
 // ---- TR mağaza ailesine köprü ---------------------------------------------
 // Kart rozetleri müşteri-dilinde (core badge TR üretir; burada locale karşılığı).
@@ -525,22 +529,31 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
   const parsed = parseLocalePath(locale, path);
 
   if (parsed.kind === "home") {
-    const [row, catalog] = await Promise.all([fetchGlobalPage(locale, "home"), fetchLocaleCatalog(locale)]);
-    if (row) return <GlobalPageBody locale={locale} row={row} catalog={catalog} />;
-    const copy = HOME_FALLBACK[locale];
+    // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;
+    // approved 'home' yoksa da vitrin varsayılan kopyayla çizilir (metadata NOINDEX kalır).
+    const view = await loadV80(locale);
+    const header = {
+      locale,
+      nav: view.nav,
+      t: view.texts,
+      whatsapp: view.whatsapp,
+      localeSlugByTr: Object.fromEntries(view.shop.products.map((p) => [p.trSlug, p.slug])),
+    };
     return (
-      <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
-        <h1 style={S.h1}>{copy.h1}</h1>
-        <p style={S.p}>{copy.p}</p>
-        <CatalogSections locale={locale} catalog={catalog} />
-      </main>
+      <V80Shell locale={locale} header={header}>
+        <V80Page view={view} />
+      </V80Shell>
     );
   }
 
   if (parsed.kind === "page") {
     const [row, catalog] = await Promise.all([fetchGlobalPage(locale, parsed.key), fetchLocaleCatalog(locale)]);
     if (!row) notFound();
-    return <GlobalPageBody locale={locale} row={row} catalog={catalog} />;
+    return (
+      <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)}>
+        <GlobalPageBody locale={locale} row={row} catalog={catalog} />
+      </V80Shell>
+    );
   }
 
   if (parsed.kind === "category") {
@@ -567,6 +580,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     const ui = UI[locale];
     const shop = SHOP[locale];
     return (
+      <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)}>
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-10">
         <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 10 }}>{surface.name}</h1>
 
@@ -621,6 +635,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         <TrustStrip locale={locale} />
         <ConciergeSection locale={locale} />
       </main>
+      </V80Shell>
     );
   }
 
@@ -679,6 +694,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     const related = (await Promise.all(relatedCards)).filter((x): x is { card: CardProductUi; href: string } => !!x);
 
     return (
+      <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)}>
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-8">
         <ProductDetail
           data={data}
@@ -701,6 +717,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
           </section>
         )}
       </main>
+      </V80Shell>
     );
   }
 
