@@ -190,7 +190,11 @@ export function resolveV80(input: V80Input): V80View {
   const t = (k: string, vars?: Record<string, string | number>) => interp(texts[k] ?? "", vars);
   const seg = SEGMENTS[locale];
 
-  const categories = input.categories.filter((c) => c.live_products > 0).map((c) => toV80Category(locale, c));
+  // Otomatik modda büyük raf önce: canlı ürün sayısına göre azalan (eşitlikte ad); admin elle seçince kendi sırası.
+  const categories = input.categories
+    .filter((c) => c.live_products > 0)
+    .map((c) => toV80Category(locale, c))
+    .sort((a, b) => b.live - a.live || a.name.localeCompare(b.name));
   const catBySlug = new Map(categories.map((c) => [c.slug, c]));
   const products = input.products.map((p) => toV80Product(locale, p));
   const liveSlugs = new Set(categories.map((c) => c.slug));
