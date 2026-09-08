@@ -96,6 +96,12 @@ export function fetchGlobalPage(locale: GlobalLocale, key: string): Promise<Glob
   );
 }
 
+/** GLOBAL VERSION 80 footer: 4 destinasyon — ilçe sayısı + o dilde şehir kökü yayımlı mı (uç yoksa null → bağlantı basılmaz). */
+export interface LiveDestination { slug: string; districts: number; live: boolean }
+export function fetchLiveDestinations(locale: GlobalLocale): Promise<LiveDestination[] | null> {
+  return getJson<LiveDestination[]>(`/api/public/global/destinations?locale=${locale}`);
+}
+
 export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string }[] | null> {
   return getJson<{ page_key: string; updated_at: string }[]>(
     `/api/public/global/pages-inventory?locale=${locale}`

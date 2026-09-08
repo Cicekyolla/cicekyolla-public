@@ -123,6 +123,8 @@ export interface V80View {
   mood: { key: string; word: string; line: string; sub: string; cta: string; image: string | null; href: string | null; filter: V80Filter | null }[];
   card: { occasions: { key: string; label: string; lines: string[] }[]; href: string | null };
   destinations: { city: V80Destination; name: string; sub: string; image: string | null; href: string | null; sameDay: boolean; districts: number | null }[];
+  /** O dilde APPROVED şehir kökleri (footer teslimat sütunu; bölüm yapılandırmasından bağımsız). */
+  liveDestinations: V80Destination[];
   journey: { href: string | null };
   ctaHref: string | null;
   trust: { key: string; icon: string; title: string; desc: string }[];
@@ -339,6 +341,7 @@ export function resolveV80(input: V80Input): V80View {
     mood,
     card,
     destinations,
+    liveDestinations: (V80_DESTINATIONS as readonly V80Destination[]).filter((c) => input.livePages.has(c)),
     journey: { href: href(s.journey.ctaTarget) ?? firstCatHref },
     ctaHref: href(s.cta.target) ?? firstCatHref,
     trust: s.trust.items.filter((x) => x.enabled).map((x) => ({ key: x.key, icon: x.icon, title: texts[`trust.${x.key}.title`] ?? "", desc: texts[`trust.${x.key}.desc`] ?? "" })).filter((x) => x.title),

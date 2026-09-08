@@ -55,4 +55,10 @@ export interface V80Copy {
   cta: { eyebrow: string; title1: string; titleEm: string; body: string; button: string; bullets: [string, string] };
   trust: { pay: { title: string; desc: string }; sameday: { title: string; desc: string }; whatsapp: { title: string; desc: string }; fresh: { title: string; desc: string } };
   content: { faq: string; more: string };
+  /** Alt bilgi (Figma Version 80 footer). rights `{year}` taşır. */
+  footer: {
+    journey: string; tagline1: string; tagline2: string; since: string;
+    shop: string; all: string; help: string; how: string; areas: string; whatsapp: string; faq: string;
+    deliver: string; follow: string; contact: string; country: string; cta: string; rights: string; cookies: string;
+  };
 }

@@ -222,3 +222,31 @@
   .v80 .v80-mood-stage { height: 56vh !important; }
   .v80 .v80-mood-text { padding-inline-end: var(--v80-gutter) !important; }
 }
+
+/* Alt bilgi — Figma Version 80 footer (koyu zemin, yolculuk satırı, marka + 5 sütun, alt şerit) */
+.v80 .v80-footer { background: var(--v80-dark); color: var(--v80-on-dark); }
+.v80 .v80-footer-journey { border-bottom: 1px solid rgba(250, 248, 245, 0.08); padding: 14px var(--v80-gutter); font-size: 0.625rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--v80-on-dark-muted); text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.v80 .v80-footer-grid { display: grid; grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr)) 1.25fr; gap: 40px; padding: 56px 0 40px; }
+.v80 .v80-footer-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--v80-bg); }
+.v80 .v80-footer-tagline { font-family: var(--v80-font-serif); font-weight: 200; font-size: 1.375rem; line-height: 1.25; letter-spacing: -0.02em; color: var(--v80-bg); margin: 18px 0 10px; }
+.v80 .v80-footer-since { font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--v80-on-dark-muted); }
+.v80 .v80-footer-h { font-size: 0.625rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--v80-on-dark-muted); margin-bottom: 14px; font-weight: 600; }
+.v80 .v80-footer-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.v80 .v80-footer-col a, .v80 .v80-footer-address { color: var(--v80-on-dark); text-decoration: none; font-size: 0.8125rem; line-height: 1.5; overflow-wrap: anywhere; transition: color var(--v80-motion-base) ease; }
+.v80 .v80-footer-col a:hover { color: var(--v80-bg); text-decoration: underline; text-underline-offset: 3px; }
+.v80 .v80-footer-bottom { border-top: 1px solid rgba(250, 248, 245, 0.08); padding: 20px 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 0.75rem; color: var(--v80-on-dark-muted); }
+.v80 .v80-footer-bottom p { margin: 0; }
+.v80 .v80-footer-bottom > div { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.v80 .v80-footer-cookie { background: none; border: none; color: var(--v80-on-dark-muted); font: inherit; cursor: pointer; padding: 0; }
+.v80 .v80-footer-cookie:hover { color: var(--v80-bg); text-decoration: underline; text-underline-offset: 3px; }
+.v80 .v80-footer-cta { font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--v80-bg); text-decoration: none; border: 1px solid rgba(250, 248, 245, 0.25); border-radius: 999px; padding: 8px 16px; white-space: nowrap; transition: border-color var(--v80-motion-base) ease; }
+.v80 .v80-footer-cta:hover { border-color: var(--v80-primary); }
+@media (max-width: 1024px) {
+  .v80 .v80-footer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+  .v80 .v80-footer-brand { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
+  .v80 .v80-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 28px; padding: 40px 0 28px; }
+  .v80 .v80-footer-brand, .v80 .v80-footer-contact { grid-column: 1 / -1; }
+  .v80 .v80-footer-journey { white-space: normal; line-height: 1.7; }
+}

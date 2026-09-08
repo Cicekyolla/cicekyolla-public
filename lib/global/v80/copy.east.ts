@@ -81,6 +81,11 @@ export const ru: V80Copy = {
     fresh: { title: "Гарантия свежести", desc: "Собирается вручную после заказа" },
   },
   content: { faq: "Частые вопросы", more: "Читать далее" },
+  footer: {
+    journey: "Мир → ÇiçekYolla → Турция → Местная мастерская → Цветы → Люди → Память", tagline1: "С 1986 года.", tagline2: "Каждый цветок — в местных руках.", since: "с 1986 года",
+    shop: "Магазин", all: "Все товары", help: "Помощь", how: "Как это работает", areas: "Города доставки", whatsapp: "Поддержка в WhatsApp", faq: "Вопросы и ответы",
+    deliver: "Доставка", follow: "Мы в соцсетях", contact: "Контакты", country: "Турция", cta: "Отправить цветы", rights: "© {year} ÇiçekYolla. Все права защищены.", cookies: "Настройки cookie",
+  },
 };
 
 export const ar: V80Copy = {
@@ -163,6 +168,11 @@ export const ar: V80Copy = {
     fresh: { title: "ضمان النضارة", desc: "تُربط يدويًا بعد طلبك" },
   },
   content: { faq: "الأسئلة الشائعة", more: "اقرأ المزيد" },
+  footer: {
+    journey: "العالم → ÇiçekYolla → تركيا → ورشة محلية → زهور → أشخاص → ذكرى", tagline1: "منذ 1986.", tagline2: "كل زهرة بأيدٍ محلية.", since: "منذ 1986",
+    shop: "المتجر", all: "كل المنتجات", help: "المساعدة", how: "كيف يعمل", areas: "وجهات التوصيل", whatsapp: "دعم واتساب", faq: "الأسئلة الشائعة",
+    deliver: "التوصيل", follow: "تابعنا", contact: "اتصل بنا", country: "تركيا", cta: "أرسل الزهور", rights: "© {year} ÇiçekYolla. جميع الحقوق محفوظة.", cookies: "تفضيلات ملفات تعريف الارتباط",
+  },
 };
 
 export const zh: V80Copy = {
@@ -245,6 +255,11 @@ export const zh: V80Copy = {
     fresh: { title: "新鲜保证", desc: "下单后手工扎制" },
   },
   content: { faq: "常见问题", more: "阅读更多" },
+  footer: {
+    journey: "世界 → ÇiçekYolla → 土耳其 → 本地工坊 → 鲜花 → 人 → 回忆", tagline1: "自 1986 年。", tagline2: "每一束花，都出自本地之手。", since: "自 1986 年",
+    shop: "商店", all: "全部商品", help: "帮助", how: "如何运作", areas: "配送城市", whatsapp: "WhatsApp 客服", faq: "常见问题",
+    deliver: "配送", follow: "关注我们", contact: "联系方式", country: "土耳其", cta: "送花", rights: "© {year} ÇiçekYolla。保留所有权利。", cookies: "Cookie 设置",
+  },
 };
 
 export const ja: V80Copy = {
@@ -327,6 +342,11 @@ export const ja: V80Copy = {
     fresh: { title: "鮮度保証", desc: "ご注文後に手作業で仕上げ" },
   },
   content: { faq: "よくある質問", more: "続きを読む" },
+  footer: {
+    journey: "世界 → ÇiçekYolla → トルコ → 地元のアトリエ → 花 → 人 → 思い出", tagline1: "1986年から。", tagline2: "すべての花を、地元の手で。", since: "1986年創業",
+    shop: "ショップ", all: "すべての商品", help: "ヘルプ", how: "ご利用の流れ", areas: "お届け先の都市", whatsapp: "WhatsAppサポート", faq: "よくある質問",
+    deliver: "配達", follow: "フォロー", contact: "お問い合わせ", country: "トルコ", cta: "花を贈る", rights: "© {year} ÇiçekYolla. All rights reserved.", cookies: "Cookie設定",
+  },
 };
 
 export const ko: V80Copy = {
@@ -409,4 +429,9 @@ export const ko: V80Copy = {
     fresh: { title: "신선도 보장", desc: "주문 후 손으로 제작" },
   },
   content: { faq: "자주 묻는 질문", more: "더 읽기" },
+  footer: {
+    journey: "세계 → ÇiçekYolla → 튀르키예 → 현지 아틀리에 → 꽃 → 사람 → 추억", tagline1: "1986년부터.", tagline2: "모든 꽃은 현지의 손으로.", since: "1986년부터",
+    shop: "쇼핑", all: "전체 상품", help: "도움말", how: "이용 방법", areas: "배송 도시", whatsapp: "WhatsApp 상담", faq: "자주 묻는 질문",
+    deliver: "배송", follow: "팔로우", contact: "연락처", country: "튀르키예", cta: "꽃 보내기", rights: "© {year} ÇiçekYolla. All rights reserved.", cookies: "쿠키 설정",
+  },
 };

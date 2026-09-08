@@ -81,6 +81,11 @@ export const it: V80Copy = {
     fresh: { title: "Garanzia di freschezza", desc: "Legato a mano dopo il tuo ordine" },
   },
   content: { faq: "Domande frequenti", more: "Leggi di più" },
+  footer: {
+    journey: "Mondo → ÇiçekYolla → Turchia → Atelier locale → Fiori → Persone → Ricordo", tagline1: "Dal 1986.", tagline2: "Ogni fiore, in mani locali.", since: "dal 1986",
+    shop: "Negozio", all: "Tutti i prodotti", help: "Aiuto", how: "Come funziona", areas: "Destinazioni di consegna", whatsapp: "Assistenza WhatsApp", faq: "FAQ",
+    deliver: "Consegna", follow: "Seguici", contact: "Contatti", country: "Turchia", cta: "Invia fiori", rights: "© {year} ÇiçekYolla. Tutti i diritti riservati.", cookies: "Preferenze cookie",
+  },
 };
 
 export const es: V80Copy = {
@@ -163,6 +168,11 @@ export const es: V80Copy = {
     fresh: { title: "Garantía de frescura", desc: "Atado a mano tras tu pedido" },
   },
   content: { faq: "Preguntas frecuentes", more: "Leer más" },
+  footer: {
+    journey: "Mundo → ÇiçekYolla → Turquía → Taller local → Flores → Personas → Recuerdo", tagline1: "Desde 1986.", tagline2: "Cada flor, en manos locales.", since: "desde 1986",
+    shop: "Tienda", all: "Todos los productos", help: "Ayuda", how: "Cómo funciona", areas: "Destinos de entrega", whatsapp: "Soporte por WhatsApp", faq: "Preguntas frecuentes",
+    deliver: "Entrega", follow: "Síguenos", contact: "Contacto", country: "Turquía", cta: "Enviar flores", rights: "© {year} ÇiçekYolla. Todos los derechos reservados.", cookies: "Preferencias de cookies",
+  },
 };
 
 export const pt: V80Copy = {
@@ -245,6 +255,11 @@ export const pt: V80Copy = {
     fresh: { title: "Garantia de frescura", desc: "Atado à mão após a sua encomenda" },
   },
   content: { faq: "Perguntas frequentes", more: "Ler mais" },
+  footer: {
+    journey: "Mundo → ÇiçekYolla → Turquia → Atelier local → Flores → Pessoas → Memória", tagline1: "Desde 1986.", tagline2: "Cada flor, em mãos locais.", since: "desde 1986",
+    shop: "Loja", all: "Todos os produtos", help: "Ajuda", how: "Como funciona", areas: "Destinos de entrega", whatsapp: "Suporte por WhatsApp", faq: "Perguntas frequentes",
+    deliver: "Entrega", follow: "Siga-nos", contact: "Contacto", country: "Turquia", cta: "Enviar flores", rights: "© {year} ÇiçekYolla. Todos os direitos reservados.", cookies: "Preferências de cookies",
+  },
 };
 
 export const az: V80Copy = {
@@ -327,4 +342,9 @@ export const az: V80Copy = {
     fresh: { title: "Təzəlik zəmanəti", desc: "Sifarişdən sonra əl ilə bağlanır" },
   },
   content: { faq: "Tez-tez verilən suallar", more: "Daha çox oxu" },
+  footer: {
+    journey: "Dünya → ÇiçekYolla → Türkiyə → Yerli emalatxana → Güllər → İnsanlar → Xatirə", tagline1: "1986-cı ildən.", tagline2: "Hər gül yerli əllərdə.", since: "1986-cı ildən",
+    shop: "Mağaza", all: "Bütün məhsullar", help: "Kömək", how: "Necə işləyir", areas: "Çatdırılma istiqamətləri", whatsapp: "WhatsApp dəstəyi", faq: "Suallar",
+    deliver: "Çatdırılma", follow: "İzləyin", contact: "Əlaqə", country: "Türkiyə", cta: "Gül göndər", rights: "© {year} ÇiçekYolla. Bütün hüquqlar qorunur.", cookies: "Kuki tənzimləmələri",
+  },
 };

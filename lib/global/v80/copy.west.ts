@@ -83,6 +83,11 @@ export const en: V80Copy = {
     fresh: { title: "Freshness guarantee", desc: "Hand-tied after your order" },
   },
   content: { faq: "Frequently asked questions", more: "Read more" },
+  footer: {
+    journey: "World → ÇiçekYolla → Turkey → Local atelier → Flowers → People → Memory", tagline1: "Since 1986.", tagline2: "Every flower, in local hands.", since: "since 1986",
+    shop: "Shop", all: "All products", help: "Help", how: "How it works", areas: "Delivery destinations", whatsapp: "WhatsApp support", faq: "FAQ",
+    deliver: "Delivery", follow: "Follow", contact: "Contact", country: "Turkey", cta: "Send flowers", rights: "© {year} ÇiçekYolla. All rights reserved.", cookies: "Cookie preferences",
+  },
 };
 
 export const de: V80Copy = {
@@ -165,6 +170,11 @@ export const de: V80Copy = {
     fresh: { title: "Frischegarantie", desc: "Nach deiner Bestellung handgebunden" },
   },
   content: { faq: "Häufige Fragen", more: "Mehr lesen" },
+  footer: {
+    journey: "Welt → ÇiçekYolla → Türkei → Lokales Atelier → Blumen → Menschen → Erinnerung", tagline1: "Seit 1986.", tagline2: "Jede Blume in lokalen Händen.", since: "seit 1986",
+    shop: "Shop", all: "Alle Produkte", help: "Hilfe", how: "So funktioniert es", areas: "Lieferziele", whatsapp: "WhatsApp-Support", faq: "FAQ",
+    deliver: "Lieferung", follow: "Folgen", contact: "Kontakt", country: "Türkei", cta: "Blumen senden", rights: "© {year} ÇiçekYolla. Alle Rechte vorbehalten.", cookies: "Cookie-Einstellungen",
+  },
 };
 
 export const fr: V80Copy = {
@@ -247,6 +257,11 @@ export const fr: V80Copy = {
     fresh: { title: "Garantie fraîcheur", desc: "Composé à la main après votre commande" },
   },
   content: { faq: "Questions fréquentes", more: "Lire la suite" },
+  footer: {
+    journey: "Monde → ÇiçekYolla → Turquie → Atelier local → Fleurs → Personnes → Souvenir", tagline1: "Depuis 1986.", tagline2: "Chaque fleur, entre des mains locales.", since: "depuis 1986",
+    shop: "Boutique", all: "Tous les produits", help: "Aide", how: "Comment ça marche", areas: "Destinations de livraison", whatsapp: "Assistance WhatsApp", faq: "FAQ",
+    deliver: "Livraison", follow: "Suivez-nous", contact: "Contact", country: "Turquie", cta: "Envoyer des fleurs", rights: "© {year} ÇiçekYolla. Tous droits réservés.", cookies: "Préférences de cookies",
+  },
 };
 
 export const nl: V80Copy = {
@@ -329,4 +344,9 @@ export const nl: V80Copy = {
     fresh: { title: "Versheidsgarantie", desc: "Handgebonden na je bestelling" },
   },
   content: { faq: "Veelgestelde vragen", more: "Lees meer" },
+  footer: {
+    journey: "Wereld → ÇiçekYolla → Turkije → Lokaal atelier → Bloemen → Mensen → Herinnering", tagline1: "Sinds 1986.", tagline2: "Elke bloem in lokale handen.", since: "sinds 1986",
+    shop: "Winkel", all: "Alle producten", help: "Hulp", how: "Hoe het werkt", areas: "Bezorgbestemmingen", whatsapp: "WhatsApp-support", faq: "FAQ",
+    deliver: "Bezorging", follow: "Volg ons", contact: "Contact", country: "Turkije", cta: "Bloemen sturen", rights: "© {year} ÇiçekYolla. Alle rechten voorbehouden.", cookies: "Cookievoorkeuren",
+  },
 };

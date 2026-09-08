@@ -203,7 +203,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </CartProvider>
         <ChromeGate><MemberNewsletterBand /></ChromeGate>
-        <Footer categories={footerOrUndef} brand={footerBrandLight} />
+        {/* GLOBAL VERSION 80: TR footer locale rotalarında çizilmez — orada footer
+            V80Shell'in locale-aware alt bilgisidir. TR yollarında AYNEN (ChromeGate geçirir). */}
+        <ChromeGate><Footer categories={footerOrUndef} brand={footerBrandLight} /></ChromeGate>
         <ChromeGate><WhatsAppButton /></ChromeGate>
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />

@@ -12,8 +12,10 @@
 // ============================================================================
 import type { GlobalLocale } from "../config";
 import { V80_DESTINATIONS, type V80Destination } from "./schema";
-import { fetchGlobalPage, fetchLocaleCatalog, fetchGlobalPagesInventory, type LocaleCatalog } from "../api";
+import { fetchGlobalPage, fetchLocaleCatalog, fetchGlobalPagesInventory, fetchLiveDestinations, type LocaleCatalog } from "../api";
 import { fetchProductBySlug, type PublicProductDetail } from "@/lib/api";
+import { getPublishedHomepage } from "@/lib/homepage";
+import { buildV80Footer, type V80FooterModel } from "./footer";
 import { mediaUrlOrNull, mediaDerivatives } from "@/lib/media";
 import { parseStorefrontConfig, referencedProductIds, type V80Config } from "./schema";
 import { resolveV80, WHATSAPP_URL, type V80SourceCategory, type V80SourceProduct, type V80View } from "./view";
@@ -166,6 +168,64 @@ export async function loadV80(locale: GlobalLocale): Promise<V80View> {
   }
 
   return resolveV80({ locale, config, home, products, categories, livePages, districtCounts });
+}
+
+// ── GLOBAL VERSION 80 alt bilgi (locale-aware footer) ───────────────────────
+const DEFAULT_PHONE = "0507 441 34 74";
+const DEFAULT_EMAIL = "info@cicekyolla.com.tr";
+const strOr = (v: unknown, d: string) => (typeof v === "string" && v.trim() ? v.trim() : d);
+
+/** TR footer ile AYNI iletişim kaynağı: yayımlı ana sayfa hero yapılandırması
+    (contact_phone/contact_email; aynı varsayılanlar). getPublishedHomepage Next
+    data cache'lidir (60 sn) → layout'un çağrısıyla aynı istek, ek yük yok. */
+export async function v80Contact(): Promise<{ phone: string; email: string }> {
+  try {
+    const hp = await getPublishedHomepage();
+    const c = hp?.sections.find((s) => s.type === "hero")?.config;
+    return { phone: strOr(c?.contact_phone, DEFAULT_PHONE), email: strOr(c?.contact_email, DEFAULT_EMAIL) };
+  } catch {
+    return { phone: DEFAULT_PHONE, email: DEFAULT_EMAIL };
+  }
+}
+
+/** Ana sayfa: görünüm modelinden (o dilde canlı kategoriler, yayımlı şehirler, metin geçersiz kılmaları). */
+export function v80FooterFromView(view: V80View, contact: { phone: string; email: string }): V80FooterModel {
+  return buildV80Footer({
+    locale: view.locale,
+    texts: view.texts,
+    categories: view.categories.map((c) => ({ name: c.name, href: c.href })),
+    allHref: view.shop.allHref,
+    liveDestinations: view.liveDestinations,
+    contact,
+    whatsapp: WHATSAPP_URL,
+    isHome: true,
+    hasFaq: view.content.faq.length > 0,
+  });
+}
+
+/** Diğer locale sayfaları: katalog (o dilde canlı kategoriler) + yayımlı şehirler (tek küçük
+    istek; uç henüz yoksa yalnız bilinen şehir basılır — sahte bağlantı yok). */
+export async function v80FooterFromCatalog(
+  locale: GlobalLocale, catalog: LocaleCatalog, contact: { phone: string; email: string }, knownLive: readonly string[] = []
+): Promise<V80FooterModel> {
+  const seg = SEGMENTS[locale];
+  const live = await fetchLiveDestinations(locale);
+  const liveDestinations = new Set<string>(knownLive);
+  for (const d of live ?? []) if (d.live) liveDestinations.add(d.slug);
+  const cats = catalog.categories
+    .filter((c) => (c.live_products ?? 0) > 0)
+    .sort((a, b) => (b.live_products ?? 0) - (a.live_products ?? 0) || a.name.localeCompare(b.name))
+    .map((c) => ({ name: c.name, href: `/${locale}/${seg.category}/${c.slug}` }));
+  return buildV80Footer({
+    locale,
+    texts: mergedTexts(locale, null),
+    categories: cats,
+    allHref: cats[0]?.href ?? null,
+    liveDestinations: [...liveDestinations],
+    contact,
+    whatsapp: WHATSAPP_URL,
+    isHome: false,
+  });
 }
 
 /** Ana sayfa dışındaki locale sayfaları için Version 80 başlığı (o dilde canlı kategoriler + varsayılan metinler). */
