@@ -11,6 +11,7 @@ import { ConsentManager } from "@/components/consent/ConsentManager";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
 import { DeliveryLocationBadge } from "@/components/delivery/DeliveryLocationBadge";
+import { ChromeGate } from "@/components/global/ChromeGate";
 import { EcommerceViewItemTracker } from "@/components/analytics/EcommerceViewItemTracker";
 import { EcommerceCartViewTracker } from "@/components/analytics/EcommerceCartViewTracker";
 import { EcommerceCheckoutTracker } from "@/components/analytics/EcommerceCheckoutTracker";
@@ -129,8 +130,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Kullanıcı seçim yaptığında ConsentManager 'consent update' gönderir.
           GTM container (GTM-54FJNMT2) ve mevcut dataLayer event'leri DEĞİŞMEDİ.
         */}
+        {/* NOT: Şablon dizesinde "\/" kaçışı yutulur ("/^/(de|…" → SyntaxError: Unexpected
+            token '?'); regex kaçışları "\\/" olarak yazılır, tarayıcıya "\/" ulaşır. */}
         <Script id="cy-lang-dir" strategy="beforeInteractive">
-          {`(function(){try{var pm=/^\/(de|en|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?:\/|$)/.exec(location.pathname);var m=/(?:^|;[ ]*)cy_lang=([a-z]{2})/.exec(document.cookie);var l=pm?pm[1]:(m&&m[1]);if(l&&/^(tr|en|ar|zh|nl|de|it|ja|pt|ko|ru|es|az|fr)$/.test(l)){document.documentElement.lang=l;document.documentElement.dir=l==="ar"?"rtl":"ltr";}}catch(e){}})();`}
+          {`(function(){try{var pm=/^\\/(de|en|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?:\\/|$)/.exec(location.pathname);var m=/(?:^|;[ ]*)cy_lang=([a-z]{2})/.exec(document.cookie);var l=pm?pm[1]:(m&&m[1]);if(l&&/^(tr|en|ar|zh|nl|de|it|ja|pt|ko|ru|es|az|fr)$/.test(l)){document.documentElement.lang=l;document.documentElement.dir=l==="ar"?"rtl":"ltr";}}catch(e){}})();`}
         </Script>
         <Script id="consent-mode-default" strategy="beforeInteractive">
           {`
@@ -191,15 +194,21 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <EcommerceCartViewTracker />
           <EcommerceCheckoutTracker />
           <EcommercePaymentInfoTracker />
-          <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
-          {/* Hatırlanan teslimat yeri şeridi — adres seçilmemişse HİÇ çizilmez
-              (ilk ziyaretçide görsel değişiklik yok). Kaynak: pendingDelivery. */}
-          <DeliveryLocationBadge />
+          {/* GLOBAL VERSION 80: /de, /en … locale rotalarında TR kabuğu çizilmez;
+              o sayfaların kabuğu lib/global/page.tsx → V80Shell'dir. TR'de AYNEN. */}
+          <ChromeGate>
+            <Header menu={menu} nav={navOrUndef} search={search.length > 0 ? search : undefined} brand={footerBrand} />
+            {/* Hatırlanan teslimat yeri şeridi — adres seçilmemişse HİÇ çizilmez
+                (ilk ziyaretçide görsel değişiklik yok). Kaynak: pendingDelivery. */}
+            <DeliveryLocationBadge />
+          </ChromeGate>
           {children}
         </CartProvider>
-        <MemberNewsletterBand />
-        <Footer categories={footerOrUndef} brand={footerBrandLight} />
-        <WhatsAppButton />
+        <ChromeGate><MemberNewsletterBand /></ChromeGate>
+        {/* GLOBAL VERSION 80: TR footer locale rotalarında çizilmez — orada footer
+            V80Shell'in locale-aware alt bilgisidir. TR yollarında AYNEN (ChromeGate geçirir). */}
+        <ChromeGate><Footer categories={footerOrUndef} brand={footerBrandLight} /></ChromeGate>
+        <ChromeGate><WhatsAppButton /></ChromeGate>
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />
