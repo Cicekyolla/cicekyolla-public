@@ -78,7 +78,9 @@ export function V80Shop({ view }: { view: V80View }) {
                   <p style={{ fontSize: "0.8125rem", color: "var(--v80-ink-muted)", lineHeight: 1.65, marginBottom: 20 }}>{t["shop.promoBody"]}</p>
                   {view.shop.promo.href ? <a href={view.shop.promo.href} style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--v80-primary-strong)", textDecoration: "none", letterSpacing: "0.02em" }}>{t["shop.promoCta"]}</a> : null}
                 </div>
-                <style>{`.v80 .v80-promo>div{min-width:0}@media (max-width:768px){.v80 .v80-promo{grid-template-columns:1fr!important}.v80 .v80-promo>div:first-child{aspect-ratio:2/1!important}.v80 .v80-promo>div:last-child{padding:22px 20px!important}}`}</style>
+                {/* Tanıtım kutusu kuralları v80.css'te (.v80-promo). Satır içi <style> KULLANILMAZ:
+                    React sunucuda ">" karakterini "&gt;" yapar, tarayıcı <style> içinde çözmez →
+                    hydration metin uyuşmazlığı (#425 → #418 → #423, istemci yeniden çizer). */}
               </div>
             ) : null}
           </div>

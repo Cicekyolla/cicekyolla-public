@@ -67,6 +67,10 @@
 .v80 .v80-link-caps { font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--v80-ink-subtle); text-decoration: none; transition: color var(--v80-motion-base) var(--v80-ease); }
 .v80 .v80-link-caps:hover { color: var(--v80-primary); }
 
+/* Tanıtım kutusu (vitrin içi) — inline <style> yerine burada: ">" içeren CSS satır içi <style>'da
+   sunucuda "&gt;" olarak kaçar ve hydration metin uyuşmazlığı üretir. */
+.v80 .v80-promo > div { min-width: 0; }
+
 /* Kart hover koreografisi */
 .v80 .v80-card { transition: box-shadow var(--v80-motion-slow) var(--v80-ease); text-decoration: none; color: inherit; }
 .v80 .v80-card:hover { box-shadow: 0 12px 32px #2a21301a; }
@@ -193,6 +197,9 @@
   .v80 .v80-paths-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .v80 .v80-paths-grid > div { border-bottom: 1px solid #e0dbd480; border-inline-end: none !important; padding: 14px 16px 18px !important; }
   .v80 .v80-product-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 14px; }
+  .v80 .v80-promo { grid-template-columns: 1fr !important; }
+  .v80 .v80-promo > div:first-child { aspect-ratio: 2 / 1 !important; }
+  .v80 .v80-promo > div:last-child { padding: 22px 20px !important; }
   .v80 .v80-cat-grid > a { flex: 0 0 calc(50% - 10px) !important; }
   .v80 .v80-delivery-grid { grid-template-columns: 1fr !important; }
   .v80 .v80-delivery-grid > div { border-bottom: 1px solid var(--v80-border); border-inline-end: none !important; padding: 20px 0; }
