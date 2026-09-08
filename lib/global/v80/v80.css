@@ -225,7 +225,8 @@
 
 /* Alt bilgi — Figma Version 80 footer (koyu zemin, yolculuk satırı, marka + 5 sütun, alt şerit) */
 .v80 .v80-footer { background: var(--v80-dark); color: var(--v80-on-dark); }
-.v80 .v80-footer-journey { border-bottom: 1px solid rgba(250, 248, 245, 0.08); padding: 14px var(--v80-gutter); font-size: 0.625rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--v80-on-dark-muted); text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* Yolculuk satırı büyük harfe ÇEVRİLMEZ: CSS uppercase marka adını dilin kurallarıyla bozar (ÇiçekYolla → ÇIÇEKYOLLA). */
+.v80 .v80-footer-journey { border-bottom: 1px solid rgba(250, 248, 245, 0.08); padding: 14px var(--v80-gutter); font-size: 0.6875rem; letter-spacing: 0.1em; color: var(--v80-on-dark-muted); text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .v80 .v80-footer-grid { display: grid; grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr)) 1.25fr; gap: 40px; padding: 56px 0 40px; }
 .v80 .v80-footer-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--v80-bg); }
 .v80 .v80-footer-tagline { font-family: var(--v80-font-serif); font-weight: 200; font-size: 1.375rem; line-height: 1.25; letter-spacing: -0.02em; color: var(--v80-bg); margin: 18px 0 10px; }
