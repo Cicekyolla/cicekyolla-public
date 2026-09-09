@@ -93,6 +93,10 @@ function toCard(p: HpProduct): Product {
     hasSale,
     image: p.cover_image_url ?? "",
     badge: p.is_new ? "Yeni" : undefined,
+    // PERF (Adım 3): türev varsa ProductImage <picture> AVIF/WebP srcset üretir;
+    // yoksa bugünkü gibi orijinal.
+    derivatives: p.cover_derivatives ?? null,
+    blurhash: p.cover_blurhash ?? null,
   };
 }
 

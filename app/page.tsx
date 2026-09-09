@@ -26,6 +26,8 @@ import { getPublishedHomepage } from "@/lib/homepage";
 import { getHomepageBlogPosts } from "@/lib/blog";
 import { HomepageRenderer } from "../components/home/HomepageRenderer";
 import { buildShowcaseFills, getShowcaseSlots } from "@/lib/homepageShowcase";
+import { derivativeIndexFromLists, enrichHomepageProducts } from "@/lib/homepageDerivatives";
+import { fetchProductBySlug } from "@/lib/api";
 import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
@@ -240,19 +242,29 @@ export default async function HomePage() {
       ? getShowcaseSlots()
       : [];
 
-  if (publishedHomepage && publishedHomepage.sections.length > 0) {
+  // PERF (9 Eyl 2026, Adım 3): CMS'ten gelen ürün bölümlerine kapak türevleri
+  // (400/800/1500 WebP + AVIF + blurhash) eklenir → ProductCard <picture> srcset
+  // üretir, orijinal 150–280 KB dosya yerine ~20–40 KB iner. Önce dolgu
+  // listelerindeki dizin, sonra ürün detayı (Data Cache 120 sn, süreç içi memo,
+  // tavanlı, hata yutar). Ürün/sıra/başlık aynen; bkz. lib/homepageDerivatives.ts.
+  const enrichedHomepage =
+    publishedHomepage && publishedHomepage.sections.length > 0
+      ? await enrichHomepageProducts(publishedHomepage, derivativeIndexFromLists(showcaseFills), fetchProductBySlug)
+      : publishedHomepage;
+
+  if (enrichedHomepage && enrichedHomepage.sections.length > 0) {
     // Google yorumları + Instagram, kullanıcı kararına göre ana akışın sonunda
     // daima bu sırada yaşar. CMS kaydı varsa config/enabled korunur; iki bölüm
     // renderer'dan çıkarıldığı için duplicate oluşmaz.
-    const testimonialsSection = publishedHomepage.sections.find(
+    const testimonialsSection = enrichedHomepage.sections.find(
       (section) => section.type === "testimonials"
     );
-    const instagramSection = publishedHomepage.sections.find(
+    const instagramSection = enrichedHomepage.sections.find(
       (section) => section.type === "instagram_gallery"
     );
     const contentHomepage = {
-      ...publishedHomepage,
-      sections: publishedHomepage.sections.filter(
+      ...enrichedHomepage,
+      sections: enrichedHomepage.sections.filter(
         (section) =>
           section.type !== "testimonials" &&
           section.type !== "instagram_gallery"

@@ -4,6 +4,8 @@
 // (temizlenmiş) anasayfaya düşer. Draft ASLA public endpoint'ten gelmez.
 // lib/api.ts ile aynı API_ORIGIN standardı.
 // ============================================================================
+import type { MediaDerivatives } from "./api";
+
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
 
@@ -18,6 +20,14 @@ export type HpSectionType =
 export interface HpProduct {
   id: number; name: string; slug: string; price_minor: number;
   sale_price_minor: number | null; is_new: boolean; cover_image_url: string | null; pinned: boolean;
+  // ── EK (PERF, 9 Eyl 2026, Adım 3) — OPSİYONEL, additive ─────────────────
+  // Backend medya pipeline'ı her ürün kapağı için 400/800/1500 px WebP + AVIF
+  // türevi ve blurhash üretir; /api/products listesi bunları döndürür. Bu DTO
+  // taşımadığı için ana sayfa kartları (ProductImage <picture>) hep orijinal
+  // dosyayı (150–280 KB) indiriyordu. API DTO'su bu alanları vermezse undefined
+  // kalır ve davranış bugünkü gibidir; lib/homepageDerivatives.ts doldurur.
+  cover_derivatives?: MediaDerivatives | null;
+  cover_blurhash?: string | null;
 }
 export interface HpSection {
   id: number; type: HpSectionType; title: string | null; subtitle: string | null;

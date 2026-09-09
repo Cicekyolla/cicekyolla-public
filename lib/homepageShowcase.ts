@@ -100,6 +100,9 @@ function toHpProduct(p: PublicProductListItem): HpProduct {
     is_new: p.is_new,
     cover_image_url: p.cover_image_url,
     pinned: false,
+    // PERF (Adım 3): liste ucu türevleri zaten döndürüyor — kartlara geçir.
+    cover_derivatives: p.cover_derivatives ?? null,
+    cover_blurhash: p.cover_blurhash ?? null,
   };
 }
 
