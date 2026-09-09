@@ -22,13 +22,19 @@ const FOLD_ALTI = [
   "components/home/CorporateReferences.tsx",
 ];
 
+/** Yorumlardaki "<img>" metni (JSDoc, // satırları, {/* */}) etiket sayılmaz. */
+function yorumsuz(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
 function imgTags(src: string): string[] {
   const out: string[] = [];
+  const kaynak = yorumsuz(src);
   const re = /<(?:motion\.)?img\b/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) {
-    const end = src.indexOf(">", m.index);
-    out.push(src.slice(m.index, end < 0 ? src.length : end + 1));
+  while ((m = re.exec(kaynak))) {
+    const end = kaynak.indexOf(">", m.index);
+    out.push(kaynak.slice(m.index, end < 0 ? kaynak.length : end + 1));
   }
   return out;
 }
@@ -42,8 +48,7 @@ test("fold altı ana sayfa bileşenlerinde her <img> loading=\"lazy\" taşır", 
 });
 
 test("hero (LCP) lazy değil, yüksek öncelikli", () => {
-  const hero = oku("components/home/HomeHero.tsx");
-  const tags = imgTags(hero);
+  const tags = imgTags(oku("components/home/HomeHero.tsx"));
   assert.ok(tags.length >= 1);
   for (const t of tags) {
     assert.doesNotMatch(t, /loading="lazy"/, "hero lazy olamaz");
