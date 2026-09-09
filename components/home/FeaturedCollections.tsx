@@ -1,4 +1,10 @@
 "use client";
+// PERF (9 Eyl 2026, Adım 1): fold altı görseller loading="lazy" + decoding="async".
+// Neden: Next 14.2'nin gömdüğü React canary, lazy OLMAYAN ve <picture> dışındaki her
+// <img> için SSR'da <head>'e <link rel="preload" as="image"> yazıyor; ana sayfada
+// 33 preload (≈5 MB) LCP hero görseliyle bant genişliği için yarışıyordu
+// (Lighthouse mobil: skor 31, LCP 11,8 sn). Görsel/tasarım/URL değişmedi; yalnız
+// yükleme zamanlaması tarayıcıya bırakıldı (görünür alandakiler yine hemen iner).
 
 /**
  * §4 FEATURED COLLECTIONS — ZIP Homepage.tsx birebir port.
@@ -138,6 +144,8 @@ export function FeaturedCollections({ items: _items, config }: { items?: FCItem[
                 src={col.image}
                 alt={col.name}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
                 whileHover={{ scale: 1.04 }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               />
@@ -177,6 +185,8 @@ export function FeaturedCollections({ items: _items, config }: { items?: FCItem[
                     src={col.image}
                     alt={col.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                   />
@@ -208,6 +218,8 @@ export function FeaturedCollections({ items: _items, config }: { items?: FCItem[
               src={personalized.image}
               alt={personalized.name}
               className="absolute inset-0 h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
               whileHover={{ scale: 1.04 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             />

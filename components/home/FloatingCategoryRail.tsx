@@ -1,4 +1,10 @@
 "use client";
+// PERF (9 Eyl 2026, Adım 1): fold altı görseller loading="lazy" + decoding="async".
+// Neden: Next 14.2'nin gömdüğü React canary, lazy OLMAYAN ve <picture> dışındaki her
+// <img> için SSR'da <head>'e <link rel="preload" as="image"> yazıyor; ana sayfada
+// 33 preload (≈5 MB) LCP hero görseliyle bant genişliği için yarışıyordu
+// (Lighthouse mobil: skor 31, LCP 11,8 sn). Görsel/tasarım/URL değişmedi; yalnız
+// yükleme zamanlaması tarayıcıya bırakıldı (görünür alandakiler yine hemen iner).
 
 /**
  * Floating glassmorphism category rail — ZIP Homepage.tsx / FloatingCategoryRail birebir port.
@@ -174,6 +180,8 @@ export function FloatingCategoryRail({
                         src={cat.image}
                         alt={cat.name}
                         className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
+                        loading="lazy"
+                        decoding="async"
                         draggable={false}
                         onError={() => {
                           setFailedImages((current) => {

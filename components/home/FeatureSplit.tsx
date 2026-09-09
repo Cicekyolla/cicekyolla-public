@@ -1,4 +1,10 @@
 "use client";
+// PERF (9 Eyl 2026, Adım 1): fold altı görseller loading="lazy" + decoding="async".
+// Neden: Next 14.2'nin gömdüğü React canary, lazy OLMAYAN ve <picture> dışındaki her
+// <img> için SSR'da <head>'e <link rel="preload" as="image"> yazıyor; ana sayfada
+// 33 preload (≈5 MB) LCP hero görseliyle bant genişliği için yarışıyordu
+// (Lighthouse mobil: skor 31, LCP 11,8 sn). Görsel/tasarım/URL değişmedi; yalnız
+// yükleme zamanlaması tarayıcıya bırakıldı (görünür alandakiler yine hemen iner).
 
 /**
  * §5b NATIONWIDE SHIPPING + DEKORASYON SPLIT — ZIP Homepage.tsx birebir.
@@ -46,6 +52,8 @@ export function FeatureSplit() {
                 src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1200&h=675&fit=crop&auto=format&q=88"
                 alt="Türkiye Geneli Kargo"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                loading="lazy"
+                decoding="async"
               />
               <div
                 className="absolute inset-0"
@@ -81,6 +89,8 @@ export function FeatureSplit() {
                 src="/decor/artificial-decoration-hero.webp"
                 alt="Yapay Çiçek Dekorasyon"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                loading="lazy"
+                decoding="async"
               />
               <div
                 className="absolute inset-0"
