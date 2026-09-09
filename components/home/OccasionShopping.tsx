@@ -1,4 +1,10 @@
 "use client";
+// PERF (9 Eyl 2026, Adım 1): fold altı görseller loading="lazy" + decoding="async".
+// Neden: Next 14.2'nin gömdüğü React canary, lazy OLMAYAN ve <picture> dışındaki her
+// <img> için SSR'da <head>'e <link rel="preload" as="image"> yazıyor; ana sayfada
+// 33 preload (≈5 MB) LCP hero görseliyle bant genişliği için yarışıyordu
+// (Lighthouse mobil: skor 31, LCP 11,8 sn). Görsel/tasarım/URL değişmedi; yalnız
+// yükleme zamanlaması tarayıcıya bırakıldı (görünür alandakiler yine hemen iner).
 
 /**
  * §6 OCCASION SHOPPING — ZIP Homepage.tsx birebir port.
@@ -57,6 +63,8 @@ export function OccasionShopping({ items, config, title, subtitle }: { items?: O
                     src={occ.image}
                     alt={occ.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                     whileHover={{ scale: 1.07 }}
                     transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
                   />

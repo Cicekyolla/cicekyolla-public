@@ -1,4 +1,10 @@
 "use client";
+// PERF (9 Eyl 2026, Adım 1): fold altı görseller loading="lazy" + decoding="async".
+// Neden: Next 14.2'nin gömdüğü React canary, lazy OLMAYAN ve <picture> dışındaki her
+// <img> için SSR'da <head>'e <link rel="preload" as="image"> yazıyor; ana sayfada
+// 33 preload (≈5 MB) LCP hero görseliyle bant genişliği için yarışıyordu
+// (Lighthouse mobil: skor 31, LCP 11,8 sn). Görsel/tasarım/URL değişmedi; yalnız
+// yükleme zamanlaması tarayıcıya bırakıldı (görünür alandakiler yine hemen iner).
 
 /**
  * §9 BRAND STORY — ZIP Homepage.tsx birebir port.
@@ -40,6 +46,8 @@ export function BrandStory() {
                 src="https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1200&h=1500&fit=crop&auto=format&q=92"
                 alt="Çiçekyolla atölyesi"
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             {/* Floating stat card */}
