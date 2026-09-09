@@ -69,18 +69,34 @@ export function ProductReviews({ productId, productName }: { productId: number; 
      aşağıda), müşteri tepeye düşüp formu bulamıyordu. Çıpa varsa bölüme kaydır
      ve formu doğrudan aç. */
   useEffect(() => {
+    let zamanlayicilar: number[] = [];
+    let birak = () => {};
     try {
       const url = new URL(window.location.href);
       const y = url.searchParams.get("y");
       if (y) setOrderToken(y);
       if (url.hash === "#yorum-yaz") {
         setOpen(true);
-        // Sayfa henüz yerleşirken kaydırma kaçabiliyor → bir kare bekle.
-        requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+        /* TEK SEFERLİK KAYDIRMA YETMİYOR (canlıda ölçüldü: scrollY 0 kalıyordu).
+           Bölüm hidrasyondan sonra oluşuyor ve üstteki görseller yüklendikçe
+           sayfa büyüyor; erken yapılan kaydırma ya hedefi ıskalıyor ya da
+           router sayfayı tepeye geri alıyor. Konum oturana kadar birkaç kez
+           denenir. "auto" bilinçli: tekrarlanan smooth kaydırma titriyor. */
+        const git = () => sectionRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+        zamanlayicilar = [0, 250, 700, 1400].map((ms) => window.setTimeout(git, ms));
+        // Müşteri kendi kaydırmaya başlarsa ONU EZME: kalan denemeleri iptal et.
+        const iptal = () => { zamanlayicilar.forEach(clearTimeout); zamanlayicilar = []; birak(); };
+        window.addEventListener("wheel", iptal, { passive: true, once: true });
+        window.addEventListener("touchstart", iptal, { passive: true, once: true });
+        birak = () => {
+          window.removeEventListener("wheel", iptal);
+          window.removeEventListener("touchstart", iptal);
+        };
       }
     } catch {
       // Bozuk URL sayfayı ASLA kırmaz; yorum akışı jetonsuz sürer.
     }
+    return () => { zamanlayicilar.forEach(clearTimeout); birak(); };
   }, []);
 
   const load = useCallback(async () => {

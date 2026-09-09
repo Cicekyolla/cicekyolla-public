@@ -43,10 +43,35 @@ test("#yorum-yaz: bölüme kaydırır ve formu açar", () => {
   assert.match(SRC, /scroll-mt-\d+/);
 });
 
+test("kaydırma TEK SEFERLİK DEĞİL — sayfa büyürken hedef kaçmasın", () => {
+  // Canlıda tek seferlik rAF ile scrollY 0 kalıyordu: bölüm hidrasyondan sonra
+  // oluşuyor ve üstteki görseller yüklendikçe konum kayıyor.
+  assert.match(SRC, /\[0, 250, 700, 1400\]\.map\(\(ms\) => window\.setTimeout\(git, ms\)\)/);
+  assert.equal(/requestAnimationFrame/.test(SRC), false, "tek kare yetmiyor");
+});
+
+test("müşteri kendi kaydırırsa denemeler DURUR (kullanıcıyı ezme)", () => {
+  assert.match(SRC, /addEventListener\("wheel", iptal/);
+  assert.match(SRC, /addEventListener\("touchstart", iptal/);
+  assert.match(SRC, /zamanlayicilar\.forEach\(clearTimeout\)/);
+});
+
+test("effect temizlik döndürür — zamanlayıcı ve dinleyici sızmaz", () => {
+  assert.match(SRC, /return \(\) => \{ zamanlayicilar\.forEach\(clearTimeout\); birak\(\); \};/);
+  assert.match(SRC, /removeEventListener\("wheel", iptal\)/);
+  assert.match(SRC, /removeEventListener\("touchstart", iptal\)/);
+});
+
 test("bozuk URL yorum akışını kırmaz (try/catch)", () => {
-  const blok = SRC.slice(SRC.indexOf("const url = new URL"), SRC.indexOf("}, []);"));
-  assert.ok(blok.length > 0);
-  assert.match(SRC, /try \{[\s\S]{0,400}new URL\(window\.location\.href\)[\s\S]{0,600}\} catch \{/);
+  // Uzunluk penceresine dayanan regex kırılgandı; konum karşılaştırması yapıyoruz:
+  // try { … new URL(…) … } catch { sırası korunmalı.
+  const tryIdx = SRC.indexOf("try {");
+  const urlIdx = SRC.indexOf("new URL(window.location.href)");
+  const catchIdx = SRC.indexOf("} catch {", urlIdx);
+  assert.ok(tryIdx > -1 && urlIdx > tryIdx, "URL ayrıştırma try içinde olmalı");
+  assert.ok(catchIdx > urlIdx, "ardından catch gelmeli");
+  // catch sessizce yutar: sayfa kırılmaz, yorum akışı jetonsuz sürer.
+  assert.match(SRC.slice(catchIdx, catchIdx + 200), /Bozuk URL sayfayı ASLA kırmaz/);
 });
 
 test("jeton yoksa akış bugünküyle aynı: order_token null gider", () => {
