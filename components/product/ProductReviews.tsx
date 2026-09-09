@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Star, ShieldCheck, Check, MessageSquare } from "lucide-react";
 
 interface Review {
@@ -59,6 +59,29 @@ export function ProductReviews({ productId, productName }: { productId: number; 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ author_name: "", rating: 5, rating_product: 5, rating_preparation: 5, rating_delivery: 5, title: "", body: "" });
+  /* WhatsApp teslimat/yorum davetinden gelen imzalı jeton (?y=…). Yorumu
+     siparişe bağlar → "Doğrulanmış alışveriş" rozeti. Yoksa yorum yine
+     gönderilir, yalnız rozet çıkmaz. Değeri asla ekranda göstermeyiz. */
+  const [orderToken, setOrderToken] = useState<string | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+
+  /* Davet linki #yorum-yaz ile gelir: ürün sayfası çok uzun (form ~4.200 px
+     aşağıda), müşteri tepeye düşüp formu bulamıyordu. Çıpa varsa bölüme kaydır
+     ve formu doğrudan aç. */
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const y = url.searchParams.get("y");
+      if (y) setOrderToken(y);
+      if (url.hash === "#yorum-yaz") {
+        setOpen(true);
+        // Sayfa henüz yerleşirken kaydırma kaçabiliyor → bir kare bekle.
+        requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      }
+    } catch {
+      // Bozuk URL sayfayı ASLA kırmaz; yorum akışı jetonsuz sürer.
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +110,9 @@ export function ProductReviews({ productId, productName }: { productId: number; 
           product_id: productId, author_name: form.author_name.trim(), rating: form.rating,
           rating_product: form.rating_product, rating_preparation: form.rating_preparation, rating_delivery: form.rating_delivery,
           title: form.title.trim() || null, body: form.body.trim() || null,
+          // Jeton varsa siparişe bağlanır; sunucu imzayı doğrular (ham sipariş
+          // kimliği ASLA gönderilmez — sahte "doğrulanmış alışveriş" olamaz).
+          order_token: orderToken,
         }),
       });
       if (!res.ok) {
@@ -100,7 +126,7 @@ export function ProductReviews({ productId, productName }: { productId: number; 
   };
 
   return (
-    <section aria-label="Ürün yorumları" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-20">
+    <section id="yorum-yaz" ref={sectionRef} aria-label="Ürün yorumları" className="max-w-[1440px] mx-auto px-5 md:px-8 pb-20 scroll-mt-24">
       <div className="border-t border-black/[0.06] pt-14">
         <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-3">Değerlendirmeler</p>
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
