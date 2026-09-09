@@ -28,6 +28,14 @@ import { indexRobots, SITE_URL } from "@/lib/site-config";
 
 const GTM_ID = "GTM-54FJNMT2";
 
+// EK (PERF, 9 Eyl 2026): app/globals.css ilk satırındaki Google Fonts @import
+// URL'sinin BİREBİR kopyası (lib/fontPreload.test.ts eşitliği korur). Aşağıda
+// <head> içinde preconnect + preload olarak verilir; @import çözümlendiğinde
+// tarayıcı önceden inen aynı yanıtı kullanır → çift istek YOK, font token'ları
+// ve globals.css DEĞİŞMEDİ.
+const GOOGLE_FONTS_CSS_URL =
+  "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600&family=Manrope:wght@300;400;500;600;700&family=DM+Sans:wght@600;700;800&display=swap";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: "ÇiçekYolla",
@@ -122,6 +130,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       "--promo-bar-color": headerColors.promoBar,
     } as React.CSSProperties : undefined}>
       <head>
+        {/* EK (PERF, 9 Eyl 2026): ölçüm — Google Fonts CSS'i yalnız ana CSS
+            (~24 KB br) indikten sonra @import ile keşfediliyordu; FCP bu seri
+            zinciri (CSS → fonts.googleapis.com → fonts.gstatic.com) bekliyordu.
+            preconnect bağlantıları HTML ayrıştırılırken açar, preload aynı URL'yi
+            hemen ister. Tüm rotalarda geçerli; görsel çıktı birebir aynı. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preload" as="style" href={GOOGLE_FONTS_CSS_URL} />
         {/*
           Google Consent Mode v2 — GTM'DEN ÖNCE çalışmak ZORUNDA.
           Ziyaretçinin kaydı yoksa privacy-safe: analytics + reklam sinyalleri "denied".

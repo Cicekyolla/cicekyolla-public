@@ -237,8 +237,45 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   let injectedIntroHtml = page.intro_html;
   let injectedBodyBlocks: typeof page.body_blocks | null = null;
 
+  // ── EK (PERF, 9 Eyl 2026) — bağımsız okumalar AYNI ANDA başlatılır ───────
+  // Önceki akış seriydi: sözlük → (ürünler ‖ mahalleler) → ilçe envanteri →
+  // vitrin ürünleri; ISR MISS üretiminde bekleme süreleri toplanıyordu (yerel
+  // ölçüm: ilçe 3,9 sn, mahalle 2,5 sn). Sözler burada başlar; aşağıdaki
+  // mevcut bloklar yalnız kendi sözünü bekler. Dallanma/fallback kuralları,
+  // parametreler ve çıktı BİREBİR aynı; yalnız bekleme sırası değişti.
+  // Bağlayıcı iş kuralı: yalnız İstanbul aynı gün; diğer tüm il/ilçe/mahalleler kargo.
+  const cargoMode = parts[0] !== "istanbul";
+  const isDistrictScope = !cargoMode && parts.length >= 2;
+  // HATA 4: ilçe sayfasında gösterilen ürün sayısı 12 → 30 (rakip 27 ürün
+  // gösteriyordu). "Daha Fazla Göster" istemci mekanizması değişmedi.
+  const LOCATION_PAGE_SIZE = 30;
+  const linkDataPromise = getLinkData();
+  const locationDataPromise = isDistrictScope
+    ? fetchLocationProducts(parts[0], parts[1], { neighborhood: parts[2], page_size: LOCATION_PAGE_SIZE })
+    : Promise.resolve<LocationProductsPage | null>(null);
+  const dbHoodPromise = isDistrictScope
+    ? fetchDistrictNeighborhoods(parts[0], parts[1])
+    : Promise.resolve<DistrictNeighborhoods | null>(null);
+  const cityDistrictsPromise = parts.length === 1 || parts.length === 2
+    ? fetchCityDistricts(parts[0])
+    : Promise.resolve<CityDistrictSummary[]>([]);
+  const productsQuery = {
+    // Şehir dışı vitrin: TEK yetki kaynağı Admin Kargo Merkezi (teslimat profili).
+    // Legacy delivery_scope kargo yetkisi VEREMEZ (önceden bu sayfa onu kullanıyordu).
+    ...(cargoMode
+      ? { delivery_model: "cargo_capable" as const }
+      : { product_type: "flower", same_day_available: true }),
+    page_size: cargoMode ? 100 : 8,
+  } satisfies Parameters<typeof fetchProducts>[0];
+  // Vitrin ürünleri yalnız ilçe kapsamı DIŞINDA kesin gerekli → hemen başlar;
+  // ilçe kapsamındaki nadir fallback (coverage boş) aşağıda seri kalır.
+  const productsPromise = isDistrictScope ? null : fetchProducts(productsQuery);
+  // Erken başlayan bir söz, beklenmeden önce reddedilirse "unhandledRejection"
+  // olmasın: işaretle (await noktasında hata yine aynı şekilde fırlar).
+  for (const p of [linkDataPromise, locationDataPromise, dbHoodPromise, cityDistrictsPromise, productsPromise]) p?.catch(() => {});
+
   try {
-    const linkData = await getLinkData();
+    const linkData = await linkDataPromise;
     if (linkData.length > 0) {
       if (page.intro_html) {
         injectedIntroHtml = injectLinksIntoHtml(
@@ -263,8 +300,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);
     // Hata durumunda orijinal HTML/blocks kullan
   }
-  // Bağlayıcı iş kuralı: yalnız İstanbul aynı gün; diğer tüm il/ilçe/mahalleler kargo.
-  const cargoMode = parts[0] !== "istanbul";
+  // (cargoMode yukarıda, PERF bloğunda tanımlanır — iş kuralı aynı.)
   const deliveryTime = cargoMode ? "1–3 iş günü" : district?.time || "Aynı gün";
   // Saat vaadi statik veriden yazılmaz: kesin saat yalnız Delivery Engine'den
   // (HeroDeliveryBar / DeliveryPlanner) gelir. DELIVERY_DATA.cutoff render edilmez.
@@ -274,18 +310,12 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   // ── ADDITIVE (Faz 1): İlçe/mahalle sayfaları Admin/DB tek kaynağından beslenir.
   // Coverage ürünleri + gerçek mahalleler paralel çekilir; API erişilemezse
   // mevcut canlı davranış (aşağıdaki fetchProducts fallback'i) aynen sürer.
-  const isDistrictScope = !cargoMode && parts.length >= 2;
-  // HATA 4: ilçe sayfasında gösterilen ürün sayısı 12 → 30 (rakip 27 ürün
-  // gösteriyordu). "Daha Fazla Göster" istemci mekanizması değişmedi.
-  const LOCATION_PAGE_SIZE = 30;
+  // (isDistrictScope ve LOCATION_PAGE_SIZE yukarıda, PERF bloğunda tanımlanır.)
   let locationData: LocationProductsPage | null = null;
   let dbHood: DistrictNeighborhoods | null = null;
   let effectiveNeighborhood: string | undefined = parts[2];
   if (isDistrictScope) {
-    [locationData, dbHood] = await Promise.all([
-      fetchLocationProducts(parts[0], parts[1], { neighborhood: parts[2], page_size: LOCATION_PAGE_SIZE }),
-      fetchDistrictNeighborhoods(parts[0], parts[1]),
-    ]);
+    [locationData, dbHood] = await Promise.all([locationDataPromise, dbHoodPromise]);
     // Mahalle slug'ı DB ile eşleşmezse ilçe kapsamına düş (miras — sayfa boş kalmaz).
     if (!locationData && parts[2]) {
       locationData = await fetchLocationProducts(parts[0], parts[1], { page_size: LOCATION_PAGE_SIZE });
@@ -304,9 +334,9 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   let cityDistricts: CityDistrictSummary[] | null = null;
   let relatedDistricts: CityDistrictSummary[] = [];
   if (parts.length === 1) {
-    cityDistricts = await fetchCityDistricts(parts[0]);
+    cityDistricts = await cityDistrictsPromise;
   } else if (parts.length === 2) {
-    const allCityDistricts = await fetchCityDistricts(parts[0]);
+    const allCityDistricts = await cityDistrictsPromise;
     if (parts[0] === "istanbul") {
       const neighborSlugs = new Set(KOMSU_ILCELER[parts[1]] ?? []);
       relatedDistricts = allCityDistricts.filter((d) => neighborSlugs.has(d.slug));
@@ -317,14 +347,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
   const productItems = useLocationGrid
     ? []
-    : await fetchProducts({
-        // Şehir dışı vitrin: TEK yetki kaynağı Admin Kargo Merkezi (teslimat profili).
-        // Legacy delivery_scope kargo yetkisi VEREMEZ (önceden bu sayfa onu kullanıyordu).
-        ...(cargoMode
-          ? { delivery_model: "cargo_capable" as const }
-          : { product_type: "flower", same_day_available: true }),
-        page_size: cargoMode ? 100 : 8,
-      });
+    : await (productsPromise ?? fetchProducts(productsQuery));
   const products = productItems
     .filter((product) => !cargoMode || product.delivery_model_code === "cargo" || product.delivery_model_code === "same_day_and_cargo")
     .map(toCardProduct)

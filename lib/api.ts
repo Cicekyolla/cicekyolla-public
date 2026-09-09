@@ -10,6 +10,7 @@
 import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
+import { fetchWithDeadline } from "./fetchWithDeadline";
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
@@ -29,6 +30,8 @@ function apiHeaders(): Record<string, string> {
   return h;
 }
 
+// DAYANIKLILIK (9 Eyl 2026): süre sınırı + tek tekrar sarmalayıcısı — bkz.
+// lib/fetchWithDeadline.ts (bağımsız modül; Node birim testi orada).
 // Body bloğu — şu an yalnız "paragraph" tipi geliyor; ileride additive genişler.
 export interface BodyBlock {
   type: string;
@@ -74,11 +77,12 @@ export async function fetchSeoPage(
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    // DAYANIKLILIK: 6 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
+    res = await fetchWithDeadline(url, {
       headers: apiHeaders(),
       // ISR: sayfayı belirli aralıkla yeniden üret (public site tazeliği).
       next: { revalidate: 300 },
-    });
+    }, 6_000);
   } catch {
     return null;
   }
@@ -137,10 +141,41 @@ function placeNameFromTitle(title: string | null, fallbackSlug: string): string 
   return cleaned || fallbackSlug;
 }
 
+// ── EK (PERF, 9 Eyl 2026) — süreç içi envanter anlık görüntüsü, ADDITIVE ────
+// /api/public/seo/inventory ~11,3 MB (74.074 kayıt). Vercel Data Cache 2 MB
+// üstünü SAKLAMAZ; Next'in istek içi fetch tekilleştirmesi de bu boyutu
+// tutmuyor → her ilçe sayfası üretiminde envanter Render'dan İKİ kez (statik
+// üretimin iki render geçişi) çekilip parse ediliyordu (ölçüm: 2 × ~1,35 sn).
+// Burada tam liste 5 dk süreyle süreç içinde tutulur; eşzamanlı istekler tek
+// çağrıyı paylaşır. Boş sonuç (API hatası) yalnız 30 sn saklanır ki geçici bir
+// kesinti çapraz bağlantıları 5 dk boyunca silmesin. fetchSeoInventory() ve
+// türetme mantığı DEĞİŞMEDİ; sitemap kendi yolunu kullanmaya devam eder.
+const INVENTORY_SNAPSHOT_TTL_MS = 5 * 60_000;
+const INVENTORY_EMPTY_TTL_MS = 30_000;
+let inventorySnapshot: { items: SeoInventoryItem[]; expiresAt: number } | null = null;
+let inventoryInflight: Promise<SeoInventoryItem[]> | null = null;
+
+async function inventoryForCrossLinks(): Promise<SeoInventoryItem[]> {
+  if (inventorySnapshot && inventorySnapshot.expiresAt > Date.now()) return inventorySnapshot.items;
+  if (!inventoryInflight) {
+    inventoryInflight = fetchSeoInventory()
+      .then((items) => {
+        inventorySnapshot = {
+          items,
+          expiresAt: Date.now() + (items.length > 0 ? INVENTORY_SNAPSHOT_TTL_MS : INVENTORY_EMPTY_TTL_MS),
+        };
+        return items;
+      })
+      .finally(() => { inventoryInflight = null; });
+  }
+  return inventoryInflight;
+}
+
 /** Bir ilin (citySlug) TÜM ilçelerini gerçek SEO envanterinden döner —
  * hardcoded liste YOK, veri büyüdükçe/değiştikçe otomatik güncel kalır. */
 export async function fetchCityDistricts(citySlug: string): Promise<CityDistrictSummary[]> {
-  const inventory = await fetchSeoInventory();
+  // PERF: tam envanter yerine süreç içi anlık görüntü (yukarı bkz.). Türetme aynı.
+  const inventory = await inventoryForCrossLinks();
   const prefix = `/${citySlug}/`;
   const seen = new Set<string>();
   const out: CityDistrictSummary[] = [];
@@ -188,7 +223,8 @@ export async function fetchNeighborhoodUrlPage(
 export async function fetchSeoInventory(): Promise<SeoInventoryItem[]> {
   const url = `${API_ORIGIN}/api/public/seo/inventory`;
   try {
-    const res = await fetch(url, { next: { revalidate: 300 } });
+    // DAYANIKLILIK: ~11 MB yanıt normalde 1,3–1,7 sn; 12 sn sınır + tek tekrar.
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 12_000);
     if (!res.ok) return [];
     const json = await res.json() as { data?: SeoInventoryItem[] };
     return Array.isArray(json?.data) ? json.data : [];
@@ -218,7 +254,8 @@ export async function fetchDeliveryZones(): Promise<DeliveryZoneCity[]> {
   const url = `${API_ORIGIN}/api/public/delivery/zones`;
   let res: Response;
   try {
-    res = await fetch(url, { next: { revalidate: 300 } });
+    // DAYANIKLILIK: 6 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
+    res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 6_000);
   } catch {
     return [];
   }
@@ -533,7 +570,8 @@ export async function fetchDistrictNeighborhoods(
 ): Promise<DistrictNeighborhoods | null> {
   const url = `${API_ORIGIN}/api/public/delivery/zones/${encodeURIComponent(citySlug)}/${encodeURIComponent(districtSlug)}/neighborhoods`;
   try {
-    const res = await fetch(url, { next: { revalidate: 300 } });
+    // DAYANIKLILIK: 6 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 6_000);
     if (!res.ok) return null;
     const json = (await res.json()) as { data?: DistrictNeighborhoods };
     if (!json?.data || !Array.isArray(json.data.neighborhoods)) return null;
@@ -572,7 +610,8 @@ export async function fetchLocationProducts(
   const qs = p.toString();
   const url = `${API_ORIGIN}/api/public/delivery/zones/${encodeURIComponent(citySlug)}/${encodeURIComponent(districtSlug)}/products${qs ? `?${qs}` : ""}`;
   try {
-    const res = await fetch(url, { next: { revalidate: 120 } });
+    // DAYANIKLILIK: 8 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
+    const res = await fetchWithDeadline(url, { next: { revalidate: 120 } }, 8_000);
     if (!res.ok) return null;
     const json = (await res.json()) as { data?: LocationProductsPage };
     if (!json?.data || !Array.isArray(json.data.items)) return null;
