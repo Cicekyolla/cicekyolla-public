@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveProductImage, isStudioImage, type ImageSourceLike } from "@/lib/productImage";
 import { mediaDerivatives } from "@/lib/media";
 import { blurhashToDataURL } from "@/lib/blurhash";
+import { pictureSources } from "@/lib/avifPolicy";
 
 export interface MediaDerivativesLike {
   webp?: string;
@@ -40,6 +41,15 @@ type ProductImageProps = {
   protect?: boolean;
   className?: string;
   imgClassName?: string;
+  /**
+   * EK (9 Eyl 2026, Adım 3b) — AVIF kaynağının seçim koşulu (bkz. lib/avifPolicy.ts).
+   *   undefined → bugünkü davranış: tek boy AVIF her zaman önce (tarayıcı hep onu seçer)
+   *   false     → AVIF basılmaz; responsive WebP (400/800/1500) seçilir
+   *   string    → AVIF yalnız bu media eşleşince (CSS genişliği × DPR > 800 olan ekranlar)
+   * Çağıranlar değeri avifMediaFromSizes(sizes) ile üretir; ölçüm: kartlarda
+   * 800w WebP 29 KB vs AVIF 41 KB, PDP mobilde 1500w WebP 57 KB vs AVIF 41 KB.
+   */
+  avifMedia?: string | false;
 };
 
 function pickFromSource(source: ProductImageProps["source"]): { derivatives?: MediaDerivativesLike | null; blurhash?: string | null } {
@@ -89,6 +99,7 @@ export function ProductImage({
   protect = true,
   className = "",
   imgClassName = "",
+  avifMedia,
 }: ProductImageProps) {
   const resolved = useMemo(() => (src != null ? resolveProductImage(src) : resolveProductImage(source ?? null)), [src, source]);
 
@@ -141,8 +152,10 @@ export function ProductImage({
 
   const imgEl = showImg ? (
     <picture>
-      {avifSrc ? <source type="image/avif" srcSet={avifSrc} sizes={sizes} /> : null}
-      {webpType && webpSrcSet ? <source type={webpType} srcSet={webpSrcSet} sizes={sizes} /> : null}
+      {/* Adım 3b: kaynak listesi saf yardımcıdan (AVIF önce; avifMedia ile koşullu/kapalı). */}
+      {pictureSources({ avifSrc, webpSrcSet, webpType, sizes, avifMedia }).map((s) => (
+        <source key={s.type} type={s.type} srcSet={s.srcSet} sizes={s.sizes} media={s.media} />
+      ))}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imgRef}

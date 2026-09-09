@@ -6,6 +6,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy"; // Adım 3b: sizes'tan AVIF koşulu
 import { interp } from "@/lib/global/v80/text";
 import type { V80View, V80Category } from "@/lib/global/v80/view";
 import type { V80Icon } from "@/lib/global/v80/schema";
@@ -27,7 +28,7 @@ function Head({ eyebrow, title, right, reveal = true }: { eyebrow: string; title
 }
 
 function CategoryImage({ c, sizes }: { c: V80Category; sizes: string }) {
-  return <ProductImage src={c.image} alt={c.name} padding="0px" derivatives={c.meta.derivatives} blurhash={c.meta.blurhash} sizes={sizes} />;
+  return <ProductImage src={c.image} alt={c.name} padding="0px" derivatives={c.meta.derivatives} blurhash={c.meta.blurhash} sizes={sizes} avifMedia={avifMediaFromSizes(sizes)} />;
 }
 
 // ---- Kategoriler: "Türe göre keşfet" ----------------------------------------

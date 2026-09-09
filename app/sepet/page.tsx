@@ -110,7 +110,7 @@ export default function CartPage() {
                       {/* V85: ürün fotoğrafı güçlü ve gerçek renkleriyle. Merkezi
                           ProductImage (blurhash + türevler) — checkout ile aynı dil. */}
                       <div className="relative h-40 w-40 flex-shrink-0 overflow-hidden rounded-[20px] bg-white ring-1 ring-[#EDE9FE]">
-                        <ProductImage src={item.image || undefined} alt={item.name} padding="8px" protect={false} sizes="160px" />
+                        <ProductImage src={item.image || undefined} alt={item.name} padding="8px" protect={false} sizes="160px" avifMedia={false} />
                       </div>
                       <div className="flex flex-1 flex-col justify-between gap-6">
                         <div className="flex items-start justify-between gap-4">

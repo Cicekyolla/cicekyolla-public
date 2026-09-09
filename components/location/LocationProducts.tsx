@@ -14,6 +14,11 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { toCardProduct, type CardProduct, type PublicProductListItem } from "@/lib/api";
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy";
+
+// Adım 3b: mobilde tek sütun (100vw) → yüksek DPR'de AVIF; masaüstünde WebP.
+const LOCATION_SIZES = "(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw";
+const LOCATION_AVIF_MEDIA = avifMediaFromSizes(LOCATION_SIZES);
 
 const PAGE_SIZE = 12;
 const MAX_ITEMS = 48;
@@ -161,7 +166,8 @@ export function LocationProducts({
                   derivatives={p.derivatives}
                   blurhash={p.blurhash}
                   hoverZoom
-                  sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+                  sizes={LOCATION_SIZES}
+                  avifMedia={LOCATION_AVIF_MEDIA}
                 />
                 {p.badge ? (
                   <span className="absolute left-3 top-3 z-[2] rounded-full bg-[#8b5cf6]/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">

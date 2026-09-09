@@ -24,6 +24,15 @@ import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
  *  galerinin sonuna eklenir (additive, geri alınabilir). */
 const LIFESTYLE_GALLERY: Record<string, string[]> = galleryMapJson as Record<string, string[]>;
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy";
+
+// Adım 3b: PDP ana görseli mobilde 100vw / masaüstünde 50vw → yüksek DPR'de tek boy
+// AVIF (41 KB) 1500w WebP'den (57 KB) küçük; DPR1 masaüstünde 800w WebP (29 KB) seçilir.
+const PDP_MAIN_SIZES = "(max-width:1024px) 100vw, 50vw";
+const PDP_MAIN_AVIF_MEDIA = avifMediaFromSizes(PDP_MAIN_SIZES);
+// Seçenek kartları 100–180 px: 400w WebP (11 KB) her zaman küçük → AVIF basılmaz.
+const PDP_ITEM_SIZES = "(max-width:640px) 100px, 180px";
+const PDP_ITEM_AVIF_MEDIA = avifMediaFromSizes(PDP_ITEM_SIZES);
 import Lightbox, { type LightboxItem } from "@/components/product/Lightbox";
 import DeliveryPlanner from "@/components/product/DeliveryPlanner";
 import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
@@ -211,7 +220,7 @@ export function ProductDetail({
                   className="w-full h-full object-contain p-4"
                 />
               ) : (
-                <ProductImage src={cover.url} alt={cover.alt ?? product.name} priority padding="16px" derivatives={cover.derivatives} blurhash={cover.blurhash} sizes="(max-width:1024px) 100vw, 50vw" />
+                <ProductImage src={cover.url} alt={cover.alt ?? product.name} priority padding="16px" derivatives={cover.derivatives} blurhash={cover.blurhash} sizes={PDP_MAIN_SIZES} avifMedia={PDP_MAIN_AVIF_MEDIA} />
               )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#C4B5FD]">
@@ -327,7 +336,8 @@ export function ProductDetail({
                           padding="8px"
                           derivatives={item.derivatives}
                           blurhash={item.blurhash}
-                          sizes="(max-width:640px) 100px, 180px"
+                          sizes={PDP_ITEM_SIZES}
+                          avifMedia={PDP_ITEM_AVIF_MEDIA}
                         />
                       </div>
                       <div className="min-w-0 flex-1 sm:border-t sm:border-[#F1EEFA] sm:px-3.5 sm:py-3">
