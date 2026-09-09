@@ -22,7 +22,7 @@ const FOLD_ALTI = [
   "components/home/CorporateReferences.tsx",
 ];
 
-/** Yorumlardaki "<img>" metni (JSDoc, // satırları, {/* */}) etiket sayılmaz. */
+/** Yorumlardaki "<img>" metni (JSDoc blokları, satır yorumları, JSX yorumları) etiket sayılmaz. */
 function yorumsuz(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 }
