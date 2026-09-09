@@ -5,6 +5,11 @@
 // mevcut commerce kuralı (ProductDetail → DeliveryPlanner → addItem → /sepet).
 import Link from "next/link";
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy";
+
+// Adım 3b: Global vitrin kartı — yaygın ekranlarda responsive WebP (bkz. lib/avifPolicy.ts).
+const V80_CARD_SIZES = "(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw";
+const V80_CARD_AVIF_MEDIA = avifMediaFromSizes(V80_CARD_SIZES);
 import type { V80Product } from "@/lib/global/v80/view";
 import { V80Money } from "./V80Money";
 
@@ -14,7 +19,7 @@ export function V80ProductCard({ p, t, eager = false }: { p: V80Product; t: Reco
   return (
     <Link href={p.href} className="v80-card" style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }} data-product-id={p.id}>
       <div className="v80-frame" style={{ aspectRatio: "4/5", marginBottom: 14, background: "#fff", borderRadius: "var(--v80-radius-sm)" }}>
-        <ProductImage src={p.image} alt={p.name} priority={eager} padding="0px" derivatives={p.meta.derivatives} blurhash={p.meta.blurhash} sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw" />
+        <ProductImage src={p.image} alt={p.name} priority={eager} padding="0px" derivatives={p.meta.derivatives} blurhash={p.meta.blurhash} sizes={V80_CARD_SIZES} avifMedia={V80_CARD_AVIF_MEDIA} />
         {badge ? (
           <div style={{ position: "absolute", top: 12, insetInlineStart: 12, zIndex: 3, background: "rgba(250,248,245,0.92)", borderRadius: 999, padding: "4px 10px", display: "flex", alignItems: "center", gap: 4, backdropFilter: "blur(4px)" }}>
             <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--v80-primary)", flexShrink: 0 }} />

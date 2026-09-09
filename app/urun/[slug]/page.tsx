@@ -9,6 +9,11 @@ import { ProductDetail, type AutoSizeProduct } from "@/components/product/Produc
 import { MetaViewContentTracker } from "@/components/analytics/MetaViewContentTracker";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy";
+
+// Adım 3b: ilgili ürün kartları — yaygın ekranlarda responsive WebP.
+const RELATED_SIZES = "(max-width:640px) 50vw, 25vw";
+const RELATED_AVIF_MEDIA = avifMediaFromSizes(RELATED_SIZES);
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { toPlainText } from "@/lib/richText";
 
@@ -277,7 +282,8 @@ export default async function ProductPage({ params }: PageProps) {
                       padding="0px"
                       derivatives={p.derivatives}
                       blurhash={p.blurhash}
-                      sizes="(max-width:640px) 50vw, 25vw"
+                      sizes={RELATED_SIZES}
+                      avifMedia={RELATED_AVIF_MEDIA}
                     />
                     {p.badge ? (
                       <span className="absolute left-3 top-3 rounded-full bg-[#8B5CF6] px-2.5 py-1 text-[9px] font-bold text-white">

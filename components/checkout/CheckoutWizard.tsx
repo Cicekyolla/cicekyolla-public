@@ -420,7 +420,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 60%, #120328 100%)" }}
         >
           <div className="relative mx-auto w-[132px] overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
-            <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="8px" protect={false} sizes="132px" />
+            <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="8px" protect={false} sizes="132px" avifMedia={false} />
           </div>
           <p className="mt-5 text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{t("co.done")}</p>
           <h1 className="mt-2 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>
@@ -472,7 +472,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(139,92,246,0.10)" }}
       >
         <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-[#EDE9FE]">
-          <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="2px" protect={false} />
+          <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="2px" protect={false} avifMedia={false} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-semibold text-[#111827] truncate">{shownName}</p>
@@ -1060,7 +1060,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
           return (
             <article key={a.id} className={`group overflow-hidden rounded-[20px] border transition-all ${on ? "border-[#A855F7] bg-[#29104C] shadow-[0_18px_35px_-22px_rgba(168,85,247,0.95)]" : "border-white/10 bg-[#1C0A38] hover:-translate-y-0.5 hover:border-[#7C3AED]/70"}`}>
               <div className="relative aspect-[4/3] overflow-hidden bg-white/95">
-                <ProductImage src={a.image ?? undefined} alt={a.name} padding="8px" protect={false} />
+                <ProductImage src={a.image ?? undefined} alt={a.name} padding="8px" protect={false} avifMedia={false} />
                 {badge && <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold text-white ${index === 0 ? "bg-[#F59E0B]" : "bg-[#8B5CF6]"}`}>{badge}</span>}
               </div>
               <div className="p-3.5">
@@ -1315,7 +1315,7 @@ function LivingReceipt(p: {
 
         {/* Ürün — yolculuğun görsel çapası */}
         <div className="relative w-full overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
-          <ProductImage src={p.coverUrl ?? undefined} alt={p.productName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" />
+          <ProductImage src={p.coverUrl ?? undefined} alt={p.productName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" avifMedia={false} />
         </div>
         <p className="mt-3.5 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "19px", letterSpacing: "-0.01em" }}>{p.productName}</p>
         <div className="mt-1 flex items-baseline gap-2">

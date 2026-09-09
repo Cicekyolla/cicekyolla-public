@@ -5,6 +5,11 @@ import Link from "next/link";
 import { Truck, Sparkles, ChevronLeft, PackageCheck } from "lucide-react";
 import { fetchProducts, fetchProductsPaged, type PublicProductListItem } from "@/lib/api";
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy";
+
+// Adım 3b: kargo şehri kartları — yaygın ekranlarda responsive WebP.
+const CITY_CARD_SIZES = "(max-width:768px) 50vw, (max-width:1024px) 33vw, 25vw";
+const CITY_CARD_AVIF_MEDIA = avifMediaFromSizes(CITY_CARD_SIZES);
 
 /**
  * /teslimat/[city] — Cargo Engine koleksiyon sayfası (Conversion Recovery).
@@ -138,7 +143,7 @@ export default async function DeliveryCityPage({
               return (
                 <Link key={p.id} href={`/urun/${p.slug}`} className="group">
                   <div className="relative w-full aspect-[4/5] rounded-[20px] overflow-hidden bg-white ring-1 ring-[#F1F0F5]">
-                    <ProductImage source={p} alt={p.name} hoverZoom padding="0px" sizes="(max-width:768px) 50vw, (max-width:1024px) 33vw, 25vw" />
+                    <ProductImage source={p} alt={p.name} hoverZoom padding="0px" sizes={CITY_CARD_SIZES} avifMedia={CITY_CARD_AVIF_MEDIA} />
                     <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D1FAE5] text-[#047857]">
                       <Truck className="w-3 h-3" /> {badge}
                     </span>

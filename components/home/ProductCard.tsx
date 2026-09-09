@@ -12,6 +12,13 @@ import { motion } from "motion/react";
 import { Heart, Zap, Clock3 } from "lucide-react";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { ProductImage } from "@/components/product/ProductImage";
+import { avifMediaFromSizes } from "@/lib/avifPolicy";
+
+// Adım 3b: kart görselinin sizes'ı ve ondan türeyen AVIF koşulu (bkz. lib/avifPolicy.ts).
+// Yaygın ekranlarda responsive WebP (11–29 KB) seçilir; AVIF (41 KB) yalnız
+// 534 px+ genişlikte DPR≥3 gibi büyük yüksek-DPR ekranlarda.
+const CARD_SIZES = "(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw";
+const CARD_AVIF_MEDIA = avifMediaFromSizes(CARD_SIZES);
 import { useT, Num } from "@/lib/i18n";
 import { useCurrency } from "@/lib/currency";
 import { useProductName } from "@/lib/i18n/content";
@@ -144,7 +151,8 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
             padding="0px"
             derivatives={product.derivatives}
             blurhash={product.blurhash}
-            sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
+            sizes={CARD_SIZES}
+            avifMedia={CARD_AVIF_MEDIA}
             className={`transition-opacity duration-500 ${hovered && hoverImageLoaded ? "opacity-0" : "opacity-100"}`}
           />
           {hoverImage ? (

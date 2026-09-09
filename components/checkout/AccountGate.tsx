@@ -96,7 +96,7 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
       </div>
 
       <div className="relative w-full overflow-hidden rounded-[16px] bg-white" style={{ aspectRatio: "4/5" }}>
-        <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" />
+        <ProductImage src={coverUrl ?? undefined} alt={shownName} padding="10px" protect={false} sizes="(max-width:1024px) 100vw, 360px" avifMedia={false} />
       </div>
       <p className="mt-3.5 text-white font-semibold leading-snug" style={{ fontFamily: "var(--font-display)", fontSize: "19px", letterSpacing: "-0.01em" }}>{shownName}</p>
       <div className="mt-1 flex items-baseline gap-2">
