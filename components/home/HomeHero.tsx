@@ -19,6 +19,7 @@ import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Truck, ArrowRight, MessageCircle, Clock3, Package, Headset, Gem } from "lucide-react";
 import { mediaUrl } from "@/lib/media";
+import { heroPreloadLinks } from "@/lib/heroPreload";
 
 type HeroConfig = {
   headline?: string;
@@ -63,6 +64,11 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
   const focal = config.media?.focal_point;
   const objectPosition = focal ? `${focal.x * 100}% ${focal.y * 100}%` : "center";
   const heroAlt = config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu";
+  // PERF (9 Eyl 2026, Adım 2): LCP hero görseli için media koşullu preload.
+  // React SSR <picture> içindeki <img>'i otomatik preload etmez; bu bağlantılar
+  // <head>'e taşınır (React hoisting) ve tarayıcı yalnız eşleşen kırılımı,
+  // HTML'in geri kalanını beklemeden, yüksek öncelikle ister. Kural lib/heroPreload.ts.
+  const heroPreloads = heroPreloadLinks({ desktop: desktopImage, tablet: tabletImage, mobile: mobileImage });
   const heroPicture = (
     <picture className="block w-full h-full">
       {mobileImage ? <source media="(max-width: 639px)" srcSet={mobileImage} /> : null}
@@ -80,6 +86,10 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
           objectPosition,
           transform: "scale(1.12)",
           animation: "kenburns 18s ease-in-out infinite alternate",
+          // PERF (Adım 2): kenburns (transform) compositor katmanında çalışsın;
+          // 2560px görselin her karede yeniden boyanması ana iş parçacığını
+          // (Lighthouse: style&layout 6,5 sn) meşgul ediyordu.
+          willChange: "transform",
         }}
       />
     </picture>
@@ -98,6 +108,9 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
       ref={heroRef}
       className="relative bg-[#0A0118] overflow-hidden"
     >
+      {heroPreloads.map((p) => (
+        <link key={`${p.media ?? "all"}|${p.href}`} rel="preload" as="image" href={p.href} media={p.media} fetchPriority="high" />
+      ))}
       {/* Parallax image — clipped inside its own container */}
       <motion.div style={{ y: heroImgY }} className="absolute inset-0 overflow-hidden">
         {mediaFailed ? (
