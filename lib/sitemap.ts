@@ -1,6 +1,7 @@
 import { fetchNeighborhoodUrlPage, fetchProductsPaged, fetchSeoInventory, type SeoInventoryItem } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getIndexableBlogPosts } from "@/lib/blog";
+import { missingProductPaths } from "@/lib/sitemapProductCoverage";
 
 // ---------------------------------------------------------------------------
 // ADDITIVE — pages.xml için indexlenebilir statik kurumsal rotalar.
@@ -255,6 +256,47 @@ async function blogNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
   return nodes;
 }
 
+// EK (10 Eyl 2026) — products.xml KAPSAMA (ADDITIVE): envanter (seo_page) dışında
+// kalan AKTİF ürünler. Ürün seo_page kayıtları 27 Tem toplu envanterle oluştu;
+// sonra eklenen ürünlerin kaydı yok → 1.496 canlı üründen 205'i products.xml'de
+// değildi. Envanter düğümleri AYNI sırada, AYNI biçimde önce basılır; eksikler
+// sona eklenir (yardımcı: lib/sitemapProductCoverage.ts, saf + test edilir).
+// Katalog kaynağı yeni değil: images.xml'in zaten kullandığı fetchProductsPaged.
+// API erişilemezse bugünkü çıktı (yalnız envanter) aynen döner.
+async function productNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
+  const invItems = inventory.filter((item) => matchesType(item, "products"));
+  const nodes = invItems.map(urlNode);
+  if (!SITE_INDEXABLE) return nodes;
+  const catalog: { slug: string; updated_at?: string | null }[] = [];
+  try {
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const result = await fetchProductsPaged({ page, page_size: 100 });
+      totalPages = Math.max(1, result.pagination.total_pages);
+      for (const product of result.items) {
+        catalog.push({ slug: product.slug, updated_at: (product as { updated_at?: string | null }).updated_at ?? null });
+      }
+      page += 1;
+    } while (page <= totalPages && page <= 500);
+  } catch {
+    return nodes;
+  }
+  const invPaths = new Set(invItems.map((item) => item.url_path));
+  for (const missing of missingProductPaths(invPaths, catalog)) {
+    const lastmod = missing.updated_at ? validDate(missing.updated_at) : null;
+    nodes.push(
+      [
+        "<url>",
+        `<loc>${escapeXml(absoluteUrl(missing.path))}</loc>`,
+        lastmod ? `<lastmod>${lastmod}</lastmod>` : "",
+        "</url>",
+      ].join(""),
+    );
+  }
+  return nodes;
+}
+
 // ADDITIVE: neighborhoods.xml — İstanbul mahalleleri (getIndexableNeighborhoods).
 async function neighborhoodNodes(): Promise<string[]> {
   const neighborhoods = await getIndexableNeighborhoods();
@@ -314,7 +356,9 @@ export async function renderSitemap(type: SitemapType): Promise<string> {
           ? await neighborhoodNodes()
           : type === "blog"
             ? await blogNodes(inventory)
-            : inventory.filter((item) => matchesType(item, type)).map(urlNode);
+            : type === "products"
+              ? await productNodes(inventory)
+              : inventory.filter((item) => matchesType(item, type)).map(urlNode);
   const imageNamespace =
     type === "images" ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : "";
   return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imageNamespace}>${nodes.join("")}</urlset>`;
