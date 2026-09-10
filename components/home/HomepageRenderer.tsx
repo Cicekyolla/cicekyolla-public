@@ -12,7 +12,7 @@ import type { DeliveryZoneCity } from "@/lib/api";
 
 import { FloatingCategoryRail } from "./FloatingCategoryRail";
 import HeroDeliveryBar from "./HeroDeliveryBar";
-import { HomeHero } from "./HomeHero";
+import { HomeHero, type HeroBanner } from "./HomeHero";
 import { TrustBar } from "./TrustBar";
 import { Manifesto } from "./Manifesto";
 import { FeaturedCollections } from "./FeaturedCollections";
@@ -43,6 +43,9 @@ export interface RenderCtx {
   /** V65: product_showcase bölümlerinin sıralı tema ailesi ve boş vitrin dolguları.
       DTO'da ürün VARSA DTO kazanır — admin üstünlüğü korunur. */
   showcaseFills?: ShowcaseFill[];
+  /** Kampanya banner'ı (090): aktifse hero görselinin üzerine biner (additive, opsiyonel).
+      Yayın sürümünden bağımsız; null iken hero bugünkü gibi CMS görselini gösterir. */
+  heroBanner?: HeroBanner | null;
 }
 
 /**
@@ -96,7 +99,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "collection_rail":
       return <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0"><FloatingCategoryRail items={ctx.collections} variant="light" allHref="/kategori/koleksiyonlar" /></section>;
     case "hero_delivery_bar":   return <HeroDeliveryBar />;
-    case "hero":               return <HomeHero config={s.config} />;
+    case "hero":               return <HomeHero config={s.config} banner={ctx.heroBanner ?? null} />;
     case "trust_bar":           return <TrustBar />;
     case "manifesto":           return <Manifesto />;
     case "featured_collections":return <FeaturedCollections items={ctx.imagedCollections} config={s.config} />;
