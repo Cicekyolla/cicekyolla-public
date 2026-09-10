@@ -37,9 +37,22 @@ type HeroConfig = {
   cta2?: { label?: string; href?: string };
 };
 
-const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92";
+/** Kampanya banner'ı (090): Admin → Homepage Admin → Banner Yönetimi. Aktif +
+ *  pencere içindeyse hero GÖRSELİNİN üzerine biner; başlık/CTA/rozet/kart ve
+ *  LOCKED ölçüler aynen kalır. Yoksa/hatada null → CMS hero görseli (config.media)
+ *  → kod içi varsayılan. Tek 16:9 görsel: aktifken CMS tablet/mobil kırılımları da
+ *  kapatılır, aksi halde mobilde eski CMS görseli çıkardı. */
+export type HeroBanner = {
+  image_url: string;
+  title?: string | null;
+  alt_text?: string | null;
+  link_href?: string | null;
+};
 
-export function HomeHero({ config = {} }: { config?: HeroConfig }) {
+const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1490750967868-88df5691cc8e?w=2800&h=1800&fit=crop&auto=format&q=92";
+const DEFAULT_HERO_ALT = "ÇiçekYolla premium çiçek koleksiyonu";
+
+export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; banner?: HeroBanner | null }) {
   const heroRef = useRef<HTMLDivElement>(null);
   const [mediaFailed, setMediaFailed] = useState(false);
   const hasCustomHeadline = Boolean(config.headline?.trim());
@@ -56,14 +69,23 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
     label: config.cta2?.label?.trim() || "WhatsApp Sipariş",
     href: config.cta2?.href?.trim() || "https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum",
   };
-  const desktopImage = mediaUrl(config.media?.desktop?.trim()) || DEFAULT_HERO_IMAGE;
-  const tabletImage = mediaUrl(config.media?.tablet?.trim());
-  const mobileImage = mediaUrl(config.media?.mobile?.trim());
-  const bannerHref = config.media?.href?.trim();
-  const hasCmsMedia = Boolean(config.media?.desktop?.trim() || tabletImage || mobileImage);
-  const focal = config.media?.focal_point;
+  // Öncelik zinciri: aktif kampanya banner'ı > CMS hero görseli > kod içi varsayılan.
+  // banner=null iken aşağıdaki her değer bugünkü davranışla BİREBİR aynıdır.
+  const cmsDesktop = mediaUrl(config.media?.desktop?.trim());
+  const bannerImage = mediaUrl(banner?.image_url?.trim());
+  const hasBanner = Boolean(bannerImage);
+  const desktopImage = bannerImage || cmsDesktop || DEFAULT_HERO_IMAGE;
+  const tabletImage = hasBanner ? "" : mediaUrl(config.media?.tablet?.trim());
+  const mobileImage = hasBanner ? "" : mediaUrl(config.media?.mobile?.trim());
+  const bannerHref = hasBanner ? banner?.link_href?.trim() : config.media?.href?.trim();
+  const hasCmsMedia = hasBanner || Boolean(config.media?.desktop?.trim() || tabletImage || mobileImage);
+  const focal = hasBanner ? undefined : config.media?.focal_point;
   const objectPosition = focal ? `${focal.x * 100}% ${focal.y * 100}%` : "center";
-  const heroAlt = config.media?.alt?.trim() || "ÇiçekYolla premium çiçek koleksiyonu";
+  const heroAlt = hasBanner
+    ? (banner?.alt_text?.trim() || banner?.title?.trim() || DEFAULT_HERO_ALT)
+    : (config.media?.alt?.trim() || DEFAULT_HERO_ALT);
+  // Banner görseli yüklenemezse Unsplash'a değil, CMS görseline düş (varsa).
+  const failedFallbackImage = hasBanner && cmsDesktop ? cmsDesktop : DEFAULT_HERO_IMAGE;
   // PERF (9 Eyl 2026, Adım 2): LCP hero görseli için media koşullu preload.
   // React SSR <picture> içindeki <img>'i otomatik preload etmez; bu bağlantılar
   // <head>'e taşınır (React hoisting) ve tarayıcı yalnız eşleşen kırılımı,
@@ -115,8 +137,8 @@ export function HomeHero({ config = {} }: { config?: HeroConfig }) {
       <motion.div style={{ y: heroImgY }} className="absolute inset-0 overflow-hidden">
         {mediaFailed ? (
           <img
-            src={DEFAULT_HERO_IMAGE}
-            alt="ÇiçekYolla premium çiçek koleksiyonu"
+            src={failedFallbackImage}
+            alt={DEFAULT_HERO_ALT}
             width={2800}
             height={1800}
             loading="eager"

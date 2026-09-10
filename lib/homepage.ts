@@ -61,3 +61,26 @@ export async function getPreviewHomepage(grant: string): Promise<HomepageDTO | n
   const u = `${API_ORIGIN}/api/public/homepage/preview?grant=${encodeURIComponent(grant)}`;
   return safeGet(u, { cache: 'no-store' });
 }
+
+// ---- Kampanya banner'ı (090) ------------------------------------------------
+// Admin → Homepage Admin → Banner Yönetimi. Yayın sürümünden BAĞIMSIZ: hero'nun
+// kalıcı görseli yine CMS hero bölümünde; banner aktif + pencere içindeyse onun
+// üzerine biner. Yoksa/hatada null → HomeHero CMS görseline düşer; kullanıcı
+// asla boş/kırık hero görmez. Tarih/aktör alanı public'e gelmez.
+export interface HomepageBannerDTO {
+  id: number; image_url: string; title: string | null; alt_text: string | null; link_href: string | null;
+}
+
+export async function getActiveHomepageBanner(): Promise<HomepageBannerDTO | null> {
+  try {
+    const res = await fetch(`${API_ORIGIN}/api/public/homepage/banner`, {
+      headers: { Accept: 'application/json' }, next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { data?: HomepageBannerDTO | null };
+    const d = j?.data;
+    return d && typeof d.image_url === 'string' && d.image_url.trim() ? d : null;
+  } catch {
+    return null; // API erişilemezse: güvenli fallback (CMS görseli)
+  }
+}

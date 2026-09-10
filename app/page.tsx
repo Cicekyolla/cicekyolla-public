@@ -22,7 +22,7 @@ import { CorporateReferences, type CorporateClients } from "../components/home/C
 import { DistrictDelivery } from "../components/home/DistrictDelivery";
 import { WhatsAppCTA } from "../components/home/WhatsAppCTA";
 import { Newsletter } from "../components/home/Newsletter";
-import { getPublishedHomepage } from "@/lib/homepage";
+import { getActiveHomepageBanner, getPublishedHomepage } from "@/lib/homepage";
 import { getHomepageBlogPosts } from "@/lib/blog";
 import { HomepageRenderer } from "../components/home/HomepageRenderer";
 import { buildShowcaseFills, getShowcaseSlots } from "@/lib/homepageShowcase";
@@ -219,7 +219,10 @@ export default async function HomePage() {
   // API tarafında uygulanır; ürün bölümleri DTO ürünleriyle ProductCard olarak
   // gelir). Yayın yoksa VEYA API hatasında aşağıdaki mevcut (temizlenmiş)
   // tasarım güvenli biçimde çalışmaya devam eder. Draft ASLA public'e çıkmaz.
-  const publishedHomepage = await getPublishedHomepage();
+  // Kampanya banner'ı (090): Admin → Homepage Admin → Banner Yönetimi. Yayın
+  // sürümünden bağımsız; aktifse hero görselinin üzerine biner, yoksa/hatada
+  // null → hero CMS görselini aynen gösterir. Yayınla paralel okunur (seri gecikme yok).
+  const [publishedHomepage, heroBanner] = await Promise.all([getPublishedHomepage(), getActiveHomepageBanner()]);
 
   // V65: Organization schema logosu — CMS hero'daki gerçek logo (admin yüklemesi);
   // yayın/DTO yoksa repo'daki marka SVG'sine düşer. Kırık /logo.png bağı kalktı.
@@ -276,7 +279,7 @@ export default async function HomePage() {
     return (
       <>
         <HomeJsonLd logoUrl={schemaLogoUrl} />
-        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills }} />
+        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills, heroBanner }} />
         {showTestimonials && <Testimonials />}
         {showInstagram && <InstagramGallery config={instagramSection?.config} />}
         <CorporateReferences clients={corporateClients} />
@@ -300,7 +303,7 @@ export default async function HomePage() {
       </section>
 
       <HeroDeliveryBar />
-      <HomeHero />
+      <HomeHero banner={heroBanner} />
       {/* V65: Atölyeden Bugün — hero'nun hemen ardından (CMS'siz fallback'te de) */}
       <WorkshopToday />
       <TrustBar />
