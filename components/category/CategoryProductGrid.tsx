@@ -33,10 +33,6 @@ export interface CategoryProductGridProps {
     isNew?: boolean;
   };
   contextTag?: CardContextTag;
-  /** EK (10 Eyl 2026): SSR'ın bastığı sayfa numarası. `?page=N` ile gelen
-   *  ziyaretçide sonsuz kaydırma N+1'den devam eder (N'i yeniden yüklemez).
-   *  Verilmezse 1 → bugünkü davranış birebir. */
-  startPage?: number;
 }
 
 function CardSkeleton() {
@@ -61,10 +57,9 @@ export function CategoryProductGrid({
   pageSize = 50,
   filters,
   contextTag,
-  startPage = 1,
 }: CategoryProductGridProps) {
   const [items, setItems] = useState<CardProduct[]>(initialItems);
-  const [page, setPage] = useState(Math.max(1, Math.trunc(startPage) || 1));
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [maxPages, setMaxPages] = useState(totalPages);

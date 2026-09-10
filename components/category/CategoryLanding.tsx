@@ -15,7 +15,6 @@ import { CargoCategoryExperience } from "@/components/category/CargoCategoryExpe
 import { absoluteUrl } from "@/lib/site-config";
 import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
-import { buildCategoryPagination } from "@/lib/categoryPagination";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -198,9 +197,6 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
   const totalProducts = productPage?.pagination.total ?? 0;
-  // EK (10 Eyl 2026): tarayıcı için gerçek sayfa bağlantıları (lib/categoryPagination.ts).
-  // Sonsuz kaydırma aynen; yalnız SSR'a "Önceki / Sonraki sayfa" <a href="?page=N"> eklenir.
-  const pagination = buildCategoryPagination(path, searchParams, pageNum, totalPages);
 
   // Türkiye Geneli Kargo vitrini: yalnız canlı katalog. Kategoriye bağlı kuru
   // çiçekler + kargoya uygun plant/artificial/gift tipleri birleştirilir.
@@ -324,22 +320,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               pageSize={50}
               filters={{ type: filterType || undefined, sameDay, bestseller, isNew }}
               contextTag={contextTag}
-              startPage={pagination.current}
             />
-            {/* EK (10 Eyl 2026): crawlable sayfalama — Googlebot sonsuz kaydırmayı
-                tetiklemez; derin ürünlerin tek tarama yolu bu bağlantılar. Tek sayfalık
-                kategoride hiç basılmaz (bugünkü çıktı birebir). */}
-            {pagination.prev || pagination.next ? (
-              <nav aria-label="Ürün sayfaları" className="mt-8 flex items-center justify-center gap-5 text-[13px] font-semibold text-[#7C3AED]">
-                {pagination.prev ? (
-                  <Link href={pagination.prev.href} rel="prev" className="hover:underline">← Önceki sayfa</Link>
-                ) : null}
-                <span className="font-normal text-[#9CA3AF]">Sayfa {pagination.current} / {pagination.total}</span>
-                {pagination.next ? (
-                  <Link href={pagination.next.href} rel="next" className="hover:underline">Sonraki sayfa →</Link>
-                ) : null}
-              </nav>
-            ) : null}
           </section>
         ) : null}
 
