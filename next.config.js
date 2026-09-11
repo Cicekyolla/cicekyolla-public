@@ -57,6 +57,13 @@ const nextConfig = {
       // ".html" adresleri middleware'e hiç ulaşmaz.
       { source: '/:id(\\d+)-:slug(.+)\\.html', destination: '/urun/:slug', permanent: true },
 
+      // EK (10 Eyl 2026): /urunler hiç var olmayan bir rota — ana sayfa CTA'sı ve
+      // Google'da indeksli eski URL 404'e düşüyordu (GSC 90g: 116 gösterim / 6 tık).
+      // Hedef: kodun güvenli katalog hedefi CATEGORY_FALLBACK ile aynı sayfa.
+      // Statik kural burada güvenli: /urunler için yönetilen (DB) 301 kaydı yok,
+      // dolayısıyla operatör onaylı bir yönlendirmeyi gölgelemez.
+      { source: '/urunler', destination: '/kategori/cicekler', permanent: true },
+
       // ÖZEL GÜN "-cicekleri" kuralları buradan KALDIRILDI → middleware.ts.
       // Sebep: next.config redirect'leri middleware'den ÖNCE çalışır ve statiktir;
       // canlı yönetilen yönlendirme haritasına bakamadıkları için operatör onaylı

@@ -44,7 +44,11 @@ const SPECS: ShowcaseSpec[] = [
     title: "Sizin İçin Seçtiklerimiz",
     subtitle: "Her ana yakışan, özenle seçilmiş premium tasarımlar.",
     ctaLabel: "Tüm Ürünleri Keşfet",
-    ctaHref: "/urunler",
+    // FIX (10 Eyl 2026): /urunler rotası hiç var olmadı → ana sayfanın ilk vitrin
+    // CTA'sı 404'e gidiyordu. Hedef, kodun kendi güvenli katalog hedefi
+    // (lib/legacy-recovery.ts CATEGORY_FALLBACK) ve operatörün Redirect Merkezi'nde
+    // kullandığı aynı sayfa: /kategori/cicekler (canlı, index, 1.000+ ürün).
+    ctaHref: "/kategori/cicekler",
     theme: "orchid",
     categorySlugs: [],
   },
