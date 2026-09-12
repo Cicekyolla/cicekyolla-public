@@ -87,10 +87,28 @@ test("parseStorefrontConfig: hedefler güvenli — javascript:/protocol-relative
   assert.equal(c.structure.hero.ctaTarget.kind, "none");
   assert.equal(c.structure.hero.cta2Target.kind, "none");
   assert.deepEqual(c.structure.shop.products, [{ id: 5, tr_slug: "gul" }]);
-  assert.equal(c.structure.shop.limit, 48);
+  assert.equal(c.structure.shop.limit, 80, "limit tavanı 80'e kırpılır (12 Eyl 2026: 48 → 80)");
   assert.deepEqual(c.structure.shop.tabs[0].category?.slugs, { de: "rosen", en: "roses" });
   assert.deepEqual(c.texts, { "hero.title1": "Hi" });
   assert.deepEqual(referencedProductIds(c.structure), [5]);
+});
+
+test("parseStorefrontConfig: vitrin 'ilk görünen' tavanı 80 (12 Eyl 2026: 48 → 80); alt sınır 4 aynı", () => {
+  const limitOf = (limit: number) =>
+    parseStorefrontConfig(JSON.stringify({ structure: { shop: { mode: "manual", products: [], limit } } }))!.structure.shop.limit;
+  assert.equal(limitOf(48), 48, "eski tavan hâlâ geçerli bir değer");
+  assert.equal(limitOf(49), 49, "48 üstü artık kırpılmıyor");
+  assert.equal(limitOf(80), 80, "yeni tavan aynen korunur");
+  assert.equal(limitOf(81), 80, "tavan aşılırsa 80'e kırpılır (mevcut davranış)");
+  assert.equal(limitOf(3), 4, "alt sınır değişmedi");
+  // 80 ürünlük seçim parse turunda AYNEN korunur (ürün dizisinde tavan yok, sıra bozulmaz).
+  const p80 = Array.from({ length: 80 }, (_, i) => ({ id: i + 1, tr_slug: `urun-${i + 1}` }));
+  const c80 = parseStorefrontConfig(JSON.stringify({ structure: { shop: { mode: "manual", products: p80, limit: 80 } } }))!;
+  assert.equal(c80.structure.shop.products.length, 80);
+  assert.deepEqual(c80.structure.shop.products[0], { id: 1, tr_slug: "urun-1" });
+  assert.deepEqual(c80.structure.shop.products[79], { id: 80, tr_slug: "urun-80" });
+  assert.deepEqual(referencedProductIds(c80.structure).slice(0, 3), [1, 2, 3]);
+  assert.equal(referencedProductIds(c80.structure).length, 80);
 });
 
 test("targetHref: kategori yalnız o dilde CANLI ise, sayfa yalnız yayımlıysa, whatsapp/anchor her zaman", () => {

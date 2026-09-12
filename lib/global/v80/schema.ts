@@ -304,7 +304,8 @@ export function parseStructure(v: unknown): V80Structure {
     s.shop = {
       mode: sh.mode === "manual" ? "manual" : "auto",
       products: Array.isArray(sh.products) ? (sh.products.map(parseProductRef).filter(Boolean) as V80ProductRef[]) : [],
-      limit: isNum(sh.limit) ? Math.min(48, Math.max(4, Math.round(sh.limit))) : d.shop.limit,
+      // Üst sınır 12 Eyl 2026'da 48 → 80 (admin şemasıyla AYNI değer olmalı).
+      limit: isNum(sh.limit) ? Math.min(80, Math.max(4, Math.round(sh.limit))) : d.shop.limit,
       tabs: keyed(sh.tabs, [], (r) => ({ key: r.key as string, category: parseCategoryRef(r.category), enabled: bool(r.enabled, true) })),
       allTarget: sh.allTarget === undefined ? d.shop.allTarget : parseTarget(sh.allTarget),
       promo: {
