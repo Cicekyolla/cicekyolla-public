@@ -1,6 +1,7 @@
 import { pushEcommerceEvent } from "@/lib/analytics";
 import { metaTrack } from "@/lib/metaPixel";
 import type { PaytrStatus } from "@/lib/payment";
+import { takeCardPurchaseUserData, type HashedUserData } from "@/lib/enhancedConversionUserData";
 
 const memorySent = new Set<string>();
 const STORAGE_PREFIX = "cicekyolla:ga4-purchase:";
@@ -37,6 +38,9 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
 
   const transactionId = status.order_number;
   if (wasSent(transactionId)) return false;
+  // Gelişmiş dönüşüm (Google Ads): kart akışında hash'ler checkout'ta saklandı;
+  // burada TEK KEZ okunup silinir. Yoksa null → yalnız otomatik algılama kalır.
+  const userData = takeCardPurchaseUserData(transactionId);
 
   const items = status.items.map((item) => {
     const itemId = validItemId(item.product_id);
@@ -53,7 +57,7 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
     value: status.total_amount_minor / 100,
     currency: status.currency || "TRY",
     items,
-  });
+  }, { purchase_user_data: userData });
 
   /* Meta Pixel Purchase — GERÇEK ödeme onayı (status.paid) sonrası, PayTR'da
      olduğu gibi. eventID = order_number: backend CAPI'nin AYNI order_number'ı
@@ -95,6 +99,8 @@ export function trackHavaleOrderPurchase(order: {
   order_number: string;
   total_amount_minor: number;
   items: Array<{ product_id?: number | null; product_name: string; unit_price_minor: number; quantity: number }>;
+  /** Gelişmiş dönüşüm için hash'li e-posta/telefon (varsa). Ham değer ASLA. */
+  userData?: HashedUserData | null;
 }): boolean {
   if (!order.order_number) return false;
   if (typeof order.total_amount_minor !== "number" || !Number.isFinite(order.total_amount_minor)) return false;
@@ -119,7 +125,7 @@ export function trackHavaleOrderPurchase(order: {
     currency: "TRY",
     payment_type: "havale",
     items,
-  });
+  }, { purchase_user_data: order.userData ?? null });
 
   markSent(transactionId);
   return true;
