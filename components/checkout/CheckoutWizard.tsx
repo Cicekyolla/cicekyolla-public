@@ -31,6 +31,7 @@ import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYT
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
+import { buildHashedUserData, stashCardPurchaseUserData } from "@/lib/enhancedConversionUserData";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
@@ -357,10 +358,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Hata olsaydı createHavaleOrder throw ederdi ve buraya hiç gelinmezdi.
         // Tutar backend'in yetkili toplamı (kupon/fiyat sunucuda yeniden hesaplanır).
         // Mükerrer koruması purchaseAnalytics içinde (memory + localStorage).
+        // Gelişmiş dönüşüm: yalnız hash'li e-posta/telefon (≤300 ms, asla fırlatmaz).
+        const userData = await buildHashedUserData(senderEmail, senderPhone);
         trackHavaleOrderPurchase({
           order_number: r.order_number,
           total_amount_minor: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total,
           items,
+          userData,
         });
         setDone({ order_number: r.order_number });
         clearPendingDelivery();
@@ -370,6 +374,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Kart: PayTR güvenli sayfasına yönlendir. Ödeme TAMAMLANMADAN sepet/taslak
         // TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
         const r = await initPaytr(orderBody);
+        // Gelişmiş dönüşüm: sonuç sayfasındaki purchase için YALNIZ hash'ler
+        // sessionStorage'a (≤300 ms, asla fırlatmaz; ödeme akışı etkilenmez).
+        await stashCardPurchaseUserData(r.merchant_oid, senderEmail, senderPhone);
         // Aynı resmi PayTR adresi: bayrak açıksa site içinde <iframe>, kapalıysa
         // bugünkü gibi tam sayfa yönlendirme. Token/hash/callback DEĞİŞMEDİ.
         if (PAYTR_EMBED_ENABLED) {
