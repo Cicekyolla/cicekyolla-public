@@ -4,7 +4,7 @@
 // API erişilemezse null/boş döner — locale sayfası 404'e düşer, TR etkilenmez.
 // ============================================================================
 import type { GlobalLocale } from "./config";
-import type { StorefrontPoolResponse } from "./storefrontPool";
+import type { GlobalCatalogResponse } from "./globalCatalog";
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
@@ -81,13 +81,21 @@ export interface CategorySurface {
   meta_description: string | null;
   indexable: boolean;
   updated_at: string;
-  products: { slug: string; name: string; tr_slug: string; price_minor?: string | null; sale_price_minor?: string | null; image_url?: string | null }[];
+  /** Additive (16 Eyl 2026): Category Center görseli. */
+  image?: string | null;
+  /** Ürünler: katalog ∩ gerçek kategori bağı, Global Merkezi sırası. Kart alanları yeni API'de satırda. */
+  products: CategorySurfaceProduct[];
   locales: { locale: string; slug: string; indexable: boolean }[];
+}
+export interface CategorySurfaceProduct {
+  slug: string; name: string; tr_slug: string; price_minor?: string | null; sale_price_minor?: string | null; image_url?: string | null;
+  id?: number; image?: string | null; blurhash?: string | null; derivatives?: { webp?: string; avif?: string; responsive?: Record<string, string> } | null;
+  product_type?: string | null; delivery_scope?: string | null; same_day_available?: boolean; is_new?: boolean; is_bestseller?: boolean; delivery_model_code?: string | null;
 }
 
 export interface LocaleCatalog {
-  // live_products / product_slugs: API additive alanları (Global Merkezi ile aynı formül).
-  categories: { slug: string; name: string; live_products?: number; product_slugs?: string[] }[];
+  // live_products / product_slugs: katalog ∩ gerçek kategori bağı (Global Merkezi ile aynı sorgu).
+  categories: { id?: number; slug: string; name: string; image?: string | null; live_products?: number; product_slugs?: string[] }[];
   products: { slug: string; name: string; tr_slug: string }[];
 }
 
@@ -104,21 +112,21 @@ export function fetchLiveDestinations(locale: GlobalLocale): Promise<LiveDestina
 }
 
 /**
- * VİTRİN SEÇİM HAVUZU (kategori/lokasyon yüzeyleri): APPROVED elle seçim ∩ dilde canlı ∩ aktif
- * [∩ lokasyon teslimat uygunluğu]. Sayfa başına TEK istek (ürün başına çağrı yok).
- * Hata/uç yok → null; karar lib/global/storefrontPool.ts poolDecision'da (null = bugünkü davranış).
+ * GLOBAL KATALOG (lokasyon yüzeyleri): o dilde canlı tüm ürünler, gerçek kategori bağı + ortak sıra,
+ * öne çıkanlar; lokasyon verilirse teslimat uygunluğuyla süzülmüş. Sayfa başına TEK istek.
+ * Hata/uç yok → null; karar lib/global/globalCatalog.ts catalogDecision'da (null = bugünkü davranış).
  */
-export function fetchStorefrontPool(
+export function fetchGlobalCatalog(
   locale: GlobalLocale,
   location?: { city: string; district?: string; neighborhood?: string } | null
-): Promise<StorefrontPoolResponse | null> {
+): Promise<GlobalCatalogResponse | null> {
   const q = new URLSearchParams({ locale });
   if (location) {
     q.set("city", location.city);
     if (location.district) q.set("district", location.district);
     if (location.district && location.neighborhood) q.set("neighborhood", location.neighborhood);
   }
-  return getJson<StorefrontPoolResponse>(`/api/public/global/storefront/products?${q.toString()}`);
+  return getJson<GlobalCatalogResponse>(`/api/public/global/catalog?${q.toString()}`);
 }
 
 export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string }[] | null> {

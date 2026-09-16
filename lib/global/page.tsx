@@ -49,11 +49,11 @@ import {
   fetchGlobalPage,
   fetchCategorySurface,
   fetchLocaleCatalog,
-  fetchStorefrontPool,
+  fetchGlobalCatalog,
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
-import { poolDecision, poolForCategory, poolCategoryStats, planLocationSections, type PoolProduct, type PoolDecision } from "./storefrontPool";
+import { catalogDecision, planLocationPage, flattenPlan, hasCardFields, type CatalogDecision } from "./globalCatalog";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
 import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
@@ -103,9 +103,14 @@ function detailToCard(locale: GlobalLocale, d: PublicProductDetail, localizedNam
   };
 }
 
-/** Vitrin havuzu satırı → aynı ProductCard modeli (detailToCard ile birebir alanlar; ürün başına
-    detay isteği YOK — satır API'de kapak/fiyat/rozet alanlarıyla tek sorguda gelir). */
-function poolToCard(locale: GlobalLocale, p: PoolProduct): CardProductUi {
+/** Katalog / kategori yüzeyi satırı → aynı ProductCard modeli (detailToCard ile birebir alanlar; ürün
+    başına detay isteği YOK — satır API'de kapak/fiyat/rozet alanlarıyla tek sorguda gelir). */
+type CardRow = {
+  id?: number; tr_slug: string; name: string; price_minor?: number | string | null; sale_price_minor?: number | string | null;
+  image?: string | null; blurhash?: string | null; derivatives?: { webp?: string; avif?: string; responsive?: Record<string, string> } | null;
+  is_new?: boolean; is_bestseller?: boolean; same_day_available?: boolean; product_type?: string | null; delivery_scope?: string | null;
+};
+function rowToCard(locale: GlobalLocale, p: CardRow): CardProductUi {
   const price = Number(p.price_minor);
   const sale = p.sale_price_minor == null ? null : Number(p.sale_price_minor);
   const hasSale = sale != null && sale > 0 && sale < price;
@@ -119,7 +124,7 @@ function poolToCard(locale: GlobalLocale, p: PoolProduct): CardProductUi {
     image: mediaUrl(p.image),
     badge: rawBadge ? (BADGE_L10N[locale][rawBadge] ?? rawBadge) : undefined,
     productType: p.product_type ?? undefined,
-    sameDay: p.same_day_available,
+    sameDay: !!p.same_day_available,
     scope: p.delivery_scope ?? undefined,
     hasSale,
     categoryId: null,
@@ -290,15 +295,14 @@ const S = {
  * Global lokasyon vitrini — TR mağaza ailesiyle AYNI ProductCard'ı kullanır.
  *
  * İKİ KAYNAK, TEK DÜZEN:
- *  • pool (APPROVED vitrinde elle seçim var): kartlar = vitrin seçim havuzu ∩ bu lokasyona
- *    teslim edilebilir (API: Delivery Engine modeli + Coverage kuralları) — TAMAMI, seçim
- *    sırasıyla; kategori kartları ürünün GERÇEK Product Center kategori bağıyla sayılır.
- *    Ürün başına istek yok; aynı kartları tekrarlayan raflar bu modda basılmaz.
- *  • aksi hâlde (seçim yok / uç hatası): bugünkü davranış AYNEN — localeCatalog
- *    (üyelik ∧ locale approved+slug ∧ product active) + core detay.
+ *  • catalog (API /api/public/global/catalog): bu lokasyona teslim edilebilir GLOBAL KATALOGUN
+ *    TAMAMI — önce vitrin öne çıkanları (vitrin sırası), sonra her ürün tam bir kez gerçek kategori
+ *    rafında (Global Merkezi sırası). Kategori kartları bu lokasyondaki gerçek bağ sayıları ve
+ *    Category Center görseliyle. Ürün başına istek yok.
+ *  • aksi hâlde (uç yok / hata): bugünkü davranış AYNEN — localeCatalog + core detay.
  * 0 ürünlü kategori vitrine çıkmaz (müşteriye boş raf gösterilmez).
  */
-async function CatalogSections({ locale, catalog, pool }: { locale: GlobalLocale; catalog: LocaleCatalog; pool?: PoolDecision }) {
+async function CatalogSections({ locale, catalog, source }: { locale: GlobalLocale; catalog: LocaleCatalog; source?: CatalogDecision }) {
   const seg = SEGMENTS[locale];
   const ui = UI[locale];
   const shop = SHOP[locale];
@@ -306,13 +310,16 @@ async function CatalogSections({ locale, catalog, pool }: { locale: GlobalLocale
   let tiles: { slug: string; name: string; count: number; img?: string }[];
   let oneKartlar: { card: CardProductUi; href: string }[];
   let rafKartlar: { slug: string; name: string; kartlar: { card: CardProductUi; href: string }[] }[];
+  // Katalog modunda her ürün tek rafta olduğundan tek ürünlü raf da basılır (ürün kaybolmaz).
+  let minRaf = 2;
 
-  if (pool?.mode === "pool") {
-    const plan = planLocationSections(catalog.categories, pool.products);
-    const poolKart = (p: PoolProduct) => ({ card: poolToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` });
-    tiles = plan.tiles.map((t) => ({ slug: t.slug, name: t.name, count: t.count, img: mediaUrl(t.cover.image) || undefined }));
-    oneKartlar = plan.products.map(poolKart);
-    rafKartlar = [];
+  if (source?.mode === "catalog") {
+    const plan = planLocationPage(source.catalog);
+    const kart = (p: (typeof source.catalog.products)[number]) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` });
+    tiles = plan.tiles.map((t) => ({ slug: t.slug, name: t.name, count: t.count, img: mediaUrl(t.image) || undefined }));
+    oneKartlar = plan.featured.map(kart);
+    rafKartlar = plan.shelves.map((r) => ({ slug: r.slug, name: r.name, kartlar: r.products.map(kart) }));
+    minRaf = 1;
   } else {
     // Locale adı: locale slug → çevrilmiş ad (kart adı TR'ye düşmesin)
     const adBySlug = new Map(catalog.products.map((p) => [p.slug, p.name]));
@@ -397,9 +404,9 @@ async function CatalogSections({ locale, catalog, pool }: { locale: GlobalLocale
         </section>
       )}
 
-      {/* Kategori rafları — yalnız o dilde yeterli ürünü olan kategoriler */}
+      {/* Kategori rafları — yalnız o dilde yeterli ürünü olan kategoriler (katalog modunda her ürün bir rafta) */}
       {rafKartlar.map((r) => {
-        if (r.kartlar.length < 2) return null;
+        if (r.kartlar.length < minRaf) return null;
         return (
           <section key={r.slug} className="mt-12">
             <div className="mb-4 flex items-baseline justify-between gap-3">
@@ -428,15 +435,16 @@ async function CatalogSections({ locale, catalog, pool }: { locale: GlobalLocale
  * ailesindeki kargolanabilir koleksiyona bilinçli köprü (mevcut PDP CTA'sıyla
  * aynı commerce handoff kararı).
  */
-async function CargoCatalogSection({ locale, city, catalog, pool }: { locale: GlobalLocale; city: string; catalog: LocaleCatalog; pool?: PoolDecision }) {
+async function CargoCatalogSection({ locale, city, catalog, source }: { locale: GlobalLocale; city: string; catalog: LocaleCatalog; source?: CatalogDecision }) {
   const copy = CARGO[locale];
   const seg = SEGMENTS[locale];
   const cityName = cityDisplayName(locale, city);
 
   let kartlar: { card: CardProductUi; href: string }[];
-  if (pool?.mode === "pool") {
-    // Vitrin seçim havuzu: API bu şehre teslim edilebilirliği (kargolanabilir profil + Coverage) zaten uyguladı.
-    kartlar = pool.products.map((p) => ({ card: poolToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
+  if (source?.mode === "catalog") {
+    // Global katalog: API bu şehre teslim edilebilirliği (kargolanabilir profil + Coverage) zaten uyguladı;
+    // tamamı basılır — öne çıkanlar, sonra gerçek kategori sırasıyla.
+    kartlar = flattenPlan(planLocationPage(source.catalog)).map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
   } else {
     // Kargolanabilir ürün kümesi (tüm sayfalar; ≤ 300 kayıt — profil listesi küçüktür).
     const deliverable = new Set<string>();
@@ -495,7 +503,7 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
   );
 }
 
-async function GlobalPageBody({ locale, row, catalog, pool }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog; pool?: PoolDecision }) {
+async function GlobalPageBody({ locale, row, catalog, source }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog; source?: CatalogDecision }) {
   // Lokasyon yüzeyi ise: üst hiyerarşi (crawlable kırıntı) + bir alt seviyenin
   // GERÇEK listesi. Veri TR location core ∩ o dilde yayında olan yüzeyler.
   const loc = parseLocationKey(row.page_key);
@@ -547,7 +555,7 @@ async function GlobalPageBody({ locale, row, catalog, pool }: { locale: GlobalLo
       {cargo && loc ? (
         <>
           <CargoTrustStrip locale={locale} city={loc.city} />
-          <CargoCatalogSection locale={locale} city={loc.city} catalog={catalog} pool={pool} />
+          <CargoCatalogSection locale={locale} city={loc.city} catalog={catalog} source={source} />
           <MessageSection locale={locale} />
         </>
       ) : (
@@ -559,7 +567,7 @@ async function GlobalPageBody({ locale, row, catalog, pool }: { locale: GlobalLo
           <GlobalGoogleTrust />
           {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
           <EmotionSection locale={locale} catalog={catalog} />
-          <CatalogSections locale={locale} catalog={catalog} pool={pool} />
+          <CatalogSections locale={locale} catalog={catalog} source={source} />
           {/* Uzaklık → insan kanıtı → kişisel yardım → teslimat kanıtı → mesaj */}
           <DistanceSection locale={locale} />
           <AtelierSection locale={locale} />
@@ -604,14 +612,14 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
   }
 
   if (parsed.kind === "page") {
-    // Lokasyon yüzeyi ise vitrin seçim havuzu bu lokasyonun teslimat uygunluğuyla TEK istekte (paralel).
+    // Lokasyon yüzeyi ise Global katalog bu lokasyonun teslimat uygunluğuyla TEK istekte (paralel).
     const locKey = parseLocationKey(parsed.key);
-    const [row, catalog, contact, poolResp] = await Promise.all([
+    const [row, catalog, contact, catalogResp] = await Promise.all([
       fetchGlobalPage(locale, parsed.key),
       fetchLocaleCatalog(locale),
       v80Contact(),
       locKey
-        ? fetchStorefrontPool(locale, {
+        ? fetchGlobalCatalog(locale, {
             city: locKey.city,
             district: locKey.kind === "city" ? undefined : locKey.district,
             neighborhood: locKey.kind === "neighborhood" ? locKey.neighborhood : undefined,
@@ -619,12 +627,12 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         : Promise.resolve(null),
     ]);
     if (!row) notFound();
-    const pool = locKey ? poolDecision(poolResp, true) : undefined;
+    const source = locKey ? catalogDecision(catalogResp, true) : undefined;
     // Bu sayfanın şehir kökü kesinlikle yayımlı (satır var) → uç yoksa bile footer'da basılır.
     const footer = await v80FooterFromCatalog(locale, catalog, contact, [parsed.key.split("/")[0]]);
     return (
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
-        <GlobalPageBody locale={locale} row={row} catalog={catalog} pool={pool} />
+        <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} />
       </V80Shell>
     );
   }
@@ -632,26 +640,21 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
   if (parsed.kind === "category") {
     // Katalog, sayfa altındaki "ilgili kategoriler" iç bağlantıları için; yüzeyle
     // PARALEL çekilir (ek gecikme yok).
-    // Vitrin seçim havuzu da PARALEL ve TEK istek (ürün başına çağrı yok).
-    const [surface, catalog, contact, poolResp] = await Promise.all([
+    const [surface, catalog, contact] = await Promise.all([
       fetchCategorySurface(locale, parsed.slug),
       fetchLocaleCatalog(locale),
       v80Contact(),
-      fetchStorefrontPool(locale),
     ]);
     if (!surface) notFound();
     const seg = SEGMENTS[locale];
-    // KATEGORİ ÜRÜNLERİ:
-    //  • APPROVED vitrinde elle seçim varsa → seçili ∩ bu kategoriye GERÇEK Product Center bağı ∩
-    //    dilde canlı ∩ aktif (seçim sırası). Seçili olmayan ürün bu zincirden girmez.
-    //  • seçim yok / uç hatası → bugünkü davranış AYNEN (Global üyelik yüzeyi + core detay).
-    const pool = poolDecision(poolResp, false);
+    // KATEGORİ ÜRÜNLERİ (API): GLOBAL KATALOG (o dilde canlı tüm aktif ürünler) ∩ Product Center'daki
+    // GERÇEK bağ, Global Merkezi sırası (13 dilde ortak). Vitrin seçimi şart DEĞİL.
+    //  • yeni API: kartlar satırdan, TAMAMI (ürün başına detay isteği yok)
+    //  • eski API (kart alanı yok): bugünkü davranış AYNEN — ilk 24 üye + core detay
     let cards: { card: CardProductUi; href: string }[];
     let footer: Awaited<ReturnType<typeof v80FooterFromCatalog>>;
-    if (pool.mode === "pool") {
-      cards = poolForCategory(pool.products, surface.slug)
-        .slice(0, 24)
-        .map((p) => ({ card: poolToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
+    if (surface.products.length && hasCardFields(surface.products)) {
+      cards = surface.products.map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
       footer = await v80FooterFromCatalog(locale, catalog, contact);
     } else {
       // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
@@ -667,11 +670,9 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         .filter((x): x is { m: (typeof members)[number]; d: PublicProductDetail } => !!x.d)
         .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
     }
-    // İlgili kategoriler: AYNI dilde ürünü olan diğer kategoriler (iç bağlantı) — sayı, kartlarla aynı kaynaktan.
-    const poolStats = pool.mode === "pool" ? poolCategoryStats(pool.products) : null;
+    // İlgili kategoriler: AYNI dilde canlı ürünü olan diğer kategoriler (iç bağlantı; sayı API'de aynı üye sorgusundan).
     const ilgili = (catalog.categories ?? [])
-      .map((c) => ({ slug: c.slug, name: c.name, count: poolStats ? (poolStats.get(c.slug)?.count ?? 0) : (c.live_products ?? 0) }))
-      .filter((c) => c.slug !== surface.slug && c.count > 0)
+      .filter((c) => c.slug !== surface.slug && (c.live_products ?? 0) > 0)
       .slice(0, 8);
     const ui = UI[locale];
     const shop = SHOP[locale];
@@ -701,7 +702,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
                   className="rounded-[16px] border border-[#EDE9FE] bg-white px-4 py-3.5 transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.10)]"
                 >
                   <p className="truncate text-[14px] font-bold text-[#111827]">{c.name}</p>
-                  <p className="mt-0.5 text-[11.5px] text-[#8B5CF6]">{c.count} {shop.unit}</p>
+                  <p className="mt-0.5 text-[11.5px] text-[#8B5CF6]">{c.live_products} {shop.unit}</p>
                 </Link>
               ))}
             </div>
