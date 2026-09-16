@@ -115,6 +115,19 @@ export function applyRealCategorySlugs<P extends { category_slugs: string[]; pro
   return products.map((p) => ({ ...p, category_slugs: [...(p.product_category_slugs as string[])] }));
 }
 
+/**
+ * YEDEK YOL (katalog/vitrin ucu yok ya da hata): kategori kartları API'nin locale kataloğundan.
+ * Görsel YALNIZ kategorinin kendi görseli (API: Category Center kapağı); yoksa null —
+ * kategorinin ilk ürününün fotoğrafı kapak YAPILMAZ. Ürünsüz kategori kartı yok.
+ */
+export function fallbackCategoryCards<C extends { slug: string; name: string; image?: string | null; live_products?: number }>(
+  categories: readonly C[],
+): { slug: string; name: string; count: number; image: string | null }[] {
+  return categories
+    .filter((c) => (c.live_products ?? 0) > 0)
+    .map((c) => ({ slug: c.slug, name: c.name, count: c.live_products ?? 0, image: c.image ?? null }));
+}
+
 /** Kategori yüzeyi satırında kart alanları var mı (yeni API) — yoksa sayfa eski detay yoluna düşer. */
 export function hasCardFields(rows: readonly unknown[]): boolean {
   return rows.every((r) => isObj(r) && typeof r.id === "number" && "image" in r && "delivery_model_code" in r);

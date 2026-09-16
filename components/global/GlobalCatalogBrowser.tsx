@@ -8,7 +8,8 @@
 //   • Kategori çipi: o kategorinin GERÇEK Product Center bağlı ürünleri, Global Merkezi
 //     sırasıyla (çok kategorili ürün bağlı olduğu HER çipte görünür; teslimat süzmesi
 //     sırayı bozmaz). Kartlar TR mağazasıyla aynı ProductCard.
-// Ürün başına istek yok; filtre yalnız istemcide id listesi seçer.
+// Ürün başına istek yok; filtre yalnız istemcide id listesi seçer. Giriş animasyonu gecikmesi TR
+// CategoryProductGrid standardıyla sınırlı (Math.min(idx, 7)) — 100+ kartta kart başına saniyelerce bekleme yok.
 // ============================================================================
 import { useMemo, useState } from "react";
 import { ProductCard, type Product } from "@/components/home/ProductCard";
@@ -49,7 +50,7 @@ export function GlobalCatalogBrowser({ items, allOrder, categories, allLabel }: 
       </div>
       <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4" data-catalog-grid={active ?? "all"}>
         {shown.map((it, idx) => (
-          <ProductCard key={`${active ?? "all"}-${it.id}`} product={it.card} idx={idx} href={it.href} />
+          <ProductCard key={`${active ?? "all"}-${it.id}`} product={it.card} idx={Math.min(idx, 7)} href={it.href} />
         ))}
       </div>
     </div>

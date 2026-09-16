@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLOBAL_LOCALES } from "./global/config.ts";
 import {
-  catalogDecision, planLocationPage, flattenPlan, applyRealCategorySlugs, hasCardFields,
+  catalogDecision, planLocationPage, flattenPlan, applyRealCategorySlugs, hasCardFields, fallbackCategoryCards,
   type CatalogProduct, type CatalogCategory, type GlobalCatalogResponse,
 } from "./global/globalCatalog.ts";
 import { resolveV80, type V80SourceProduct, type V80SourceCategory } from "./global/v80/view.ts";
@@ -86,6 +86,24 @@ test("sözleşme dışı satır/kategori id'si katalogdan elenir; kategori liste
   assert.deepEqual(d.catalog.categories[0].product_ids, [1]);
 });
 
+test("yedek yol: kategori kartı görseli yalnız kategorinin kendi kapağı; ürün fotoğrafı kapak olmaz; ürünsüz kategori yok", async () => {
+  const cats = [
+    { slug: "roses", name: "Roses", image: "/r2/roses-cover.jpg", live_products: 78, product_slugs: ["p-red-roses"] },
+    { slug: "boxed-roses", name: "Boxed Roses", image: null, live_products: 10, product_slugs: ["p-rose-box"] },
+    { slug: "artificial", name: "Artificial", image: "/r2/a.jpg", live_products: 0, product_slugs: [] },
+  ];
+  assert.deepEqual(fallbackCategoryCards(cats), [
+    { slug: "roses", name: "Roses", count: 78, image: "/r2/roses-cover.jpg" },
+    { slug: "boxed-roses", name: "Boxed Roses", count: 10, image: null },
+  ]);
+  // Kaynak koruması: iki yedek yol da kategori kartına ürün detay görseli koymaz
+  const { readFileSync } = await import("node:fs");
+  const page = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
+  const data = readFileSync(new URL("./global/v80/data.ts", import.meta.url), "utf8");
+  assert.ok(page.includes("tiles = fallbackCategoryCards(catalog.categories)") && !page.includes("kapakSlug"));
+  assert.ok(data.includes("fallbackCategoryCards(catalog.categories)") && !data.includes("Kategori kapakları için her canlı kategorinin ilk ürünü"));
+});
+
 test("kategori yüzeyi: yeni API kart alanları → satırdan kart; eski API → bugünkü detay yolu", () => {
   assert.equal(hasCardFields([{ id: 1, image: null, delivery_model_code: null, slug: "a" }]), true);
   assert.equal(hasCardFields([{ slug: "a", name: "A", tr_slug: "a" }]), false);
@@ -127,4 +145,12 @@ test("13 dil parametrik: tek ürün id; dil yalnız slug'ı değiştirir, sıra 
     assert.deepEqual(ids, ref, `${locale}: aynı merchandising planı`);
     assert.ok(d.catalog.products.every((p) => p.tr_slug === `tr-${p.id}` && p.slug === `${locale}-${p.id}`), locale);
   }
+});
+
+test("100+ kartlı ızgara: giriş animasyonu gecikmesi TR CategoryProductGrid standardıyla sınırlı (Math.min(idx, 7))", async () => {
+  const { readFileSync } = await import("node:fs");
+  const browser = readFileSync(new URL("../components/global/GlobalCatalogBrowser.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
+  assert.ok(browser.includes("idx={Math.min(idx, 7)}"));
+  assert.ok(!/<ProductCard[^>]*idx=\{idx\}/.test(page), "Global sayfada sınırsız idx gecikmesi yok");
 });

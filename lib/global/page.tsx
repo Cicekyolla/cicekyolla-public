@@ -54,7 +54,7 @@ import {
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
-import { catalogDecision, planLocationPage, flattenPlan, hasCardFields, type CatalogDecision, type CatalogProduct } from "./globalCatalog";
+import { catalogDecision, planLocationPage, flattenPlan, hasCardFields, fallbackCategoryCards, type CatalogDecision, type CatalogProduct } from "./globalCatalog";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
 import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
@@ -344,10 +344,7 @@ async function CatalogSections({ locale, catalog, source }: { locale: GlobalLoca
       .filter((c) => (c.live_products ?? 0) >= 3)
       .slice(0, 3)
       .map((c) => ({ cat: c, slugs: (c.product_slugs ?? []).slice(0, 4) }));
-    const kapakSlug = new Map<string, string>(); // kategori slug → kapak ürün slug
-    for (const c of dolu) { const ilk = (c.product_slugs ?? [])[0]; if (ilk) kapakSlug.set(c.slug, ilk); }
-
-    const gerekli = [...new Set([...one, ...raflar.flatMap((r) => r.slugs), ...kapakSlug.values()])];
+    const gerekli = [...new Set([...one, ...raflar.flatMap((r) => r.slugs)])];
     const detaylar = await Promise.all(
       gerekli.map(async (localeSlug) => {
         const tr = trBySlug.get(localeSlug);
@@ -363,12 +360,8 @@ async function CatalogSections({ locale, catalog, source }: { locale: GlobalLoca
       if (!d) return null;
       return { card: detailToCard(locale, d, adBySlug.get(localeSlug) ?? d.product.name), href: `/${locale}/${seg.product}/${localeSlug}` };
     };
-    tiles = dolu.map((c) => {
-      const kapak = kapakSlug.get(c.slug);
-      const d = kapak ? byLocaleSlug.get(kapak) : undefined;
-      const img = d ? (d.images.find((i) => i.role === "cover") ?? d.images[0])?.url : undefined;
-      return { slug: c.slug, name: c.name, count: c.live_products ?? 0, img };
-    });
+    // Kategori kartı görseli yalnız kategorinin kendi kapağı (ürün fotoğrafı kapak yapılmaz).
+    tiles = fallbackCategoryCards(catalog.categories).map((c) => ({ slug: c.slug, name: c.name, count: c.count, img: mediaUrl(c.image) || undefined }));
     oneKartlar = one.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[];
     rafKartlar = raflar.map((r) => ({
       slug: r.cat.slug,
@@ -413,7 +406,7 @@ async function CatalogSections({ locale, catalog, source }: { locale: GlobalLoca
           <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
           <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
             {oneKartlar.map(({ card: c, href }, idx) => (
-              <ProductCard key={c.id} product={c} idx={idx} href={href} />
+              <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
             ))}
           </div>
         </section>
@@ -432,7 +425,7 @@ async function CatalogSections({ locale, catalog, source }: { locale: GlobalLoca
             </div>
             <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
               {r.kartlar.map(({ card: c, href }, idx) => (
-                <ProductCard key={c.id} product={c} idx={idx} href={href} />
+                <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
               ))}
             </div>
           </section>
@@ -488,7 +481,7 @@ async function CargoCatalogSection({ locale, city, catalog, source }: { locale: 
       {browser ?? (kartlar.length > 0 ? (
         <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
           {kartlar.map(({ card: c, href }, idx) => (
-            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+            <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
           ))}
         </div>
       ) : (
@@ -730,7 +723,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         {/* 3) Ürün vitrini — keşiften hemen sonra satın alınabilir ürünler. */}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {cards.map(({ card: c, href }, idx) => (
-            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+            <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
           ))}
         </div>
 
@@ -827,7 +820,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
           <section className="mt-12">
             <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
               {related.map(({ card: c, href }, idx) => (
-                <ProductCard key={c.id} product={c} idx={idx} href={href} />
+                <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
               ))}
             </div>
           </section>
