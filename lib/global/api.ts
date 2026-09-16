@@ -4,6 +4,7 @@
 // API erişilemezse null/boş döner — locale sayfası 404'e düşer, TR etkilenmez.
 // ============================================================================
 import type { GlobalLocale } from "./config";
+import type { StorefrontPoolResponse } from "./storefrontPool";
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
@@ -100,6 +101,24 @@ export function fetchGlobalPage(locale: GlobalLocale, key: string): Promise<Glob
 export interface LiveDestination { slug: string; districts: number; live: boolean }
 export function fetchLiveDestinations(locale: GlobalLocale): Promise<LiveDestination[] | null> {
   return getJson<LiveDestination[]>(`/api/public/global/destinations?locale=${locale}`);
+}
+
+/**
+ * VİTRİN SEÇİM HAVUZU (kategori/lokasyon yüzeyleri): APPROVED elle seçim ∩ dilde canlı ∩ aktif
+ * [∩ lokasyon teslimat uygunluğu]. Sayfa başına TEK istek (ürün başına çağrı yok).
+ * Hata/uç yok → null; karar lib/global/storefrontPool.ts poolDecision'da (null = bugünkü davranış).
+ */
+export function fetchStorefrontPool(
+  locale: GlobalLocale,
+  location?: { city: string; district?: string; neighborhood?: string } | null
+): Promise<StorefrontPoolResponse | null> {
+  const q = new URLSearchParams({ locale });
+  if (location) {
+    q.set("city", location.city);
+    if (location.district) q.set("district", location.district);
+    if (location.district && location.neighborhood) q.set("neighborhood", location.neighborhood);
+  }
+  return getJson<StorefrontPoolResponse>(`/api/public/global/storefront/products?${q.toString()}`);
 }
 
 export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string }[] | null> {

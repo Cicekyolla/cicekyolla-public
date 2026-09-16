@@ -20,6 +20,7 @@ import { mediaUrlOrNull, mediaDerivatives } from "@/lib/media";
 import { parseStorefrontConfig, referencedProductIds, type V80Config } from "./schema";
 import { resolveV80, WHATSAPP_URL, type V80SourceCategory, type V80SourceProduct, type V80View } from "./view";
 import { mergedTexts } from "./copy";
+import { applyPoolToStorefront } from "../storefrontPool";
 import { SEGMENTS } from "../config";
 import type { V80HeaderProps } from "@/components/global/v80/V80Header";
 
@@ -143,6 +144,14 @@ export async function loadV80(locale: GlobalLocale): Promise<V80View> {
       const wanted = new Set(referencedProductIds(config.structure));
       const picked = products.filter((p) => wanted.has(p.id));
       products = picked;
+      // AYNI TİCARİ HAVUZ: seçili ürünlerin çip/sekme filtresi GERÇEK Product Center kategori
+      // bağına geçer; kategori kartı sayı/fiyat/kapağı seçili havuzdan (/xx/category/<slug> ile aynı küme).
+      // Uç alanı yoksa (API eski) null → bugünkü davranış.
+      const real = applyPoolToStorefront(picked, categories);
+      if (real) {
+        products = real.products;
+        categories = real.categories;
+      }
     } else {
       const autoIds = bundle.auto_product_ids;
       if (autoIds?.length) {
