@@ -41,7 +41,8 @@ export interface CatalogCategory {
   slug: string;
   name: string;
   image: string | null;
-  image_source: "category" | "product" | null;
+  /** YALNIZ Category Center asset'i (ürün görseli kategori kapağı yapılmaz). */
+  image_source: "category" | null;
   product_ids: number[];
 }
 export interface GlobalCatalogResponse {
@@ -76,41 +77,32 @@ export function catalogDecision(resp: unknown, wantLocation: boolean): CatalogDe
 }
 
 export interface LocationPlan<P> {
-  /** Vitrin (öne çıkan) ∩ bu lokasyon, vitrin sırasıyla + hiçbir çevrili kategoriye bağlı olmayan ürünler. */
-  featured: P[];
-  /** Kategori kartları (API sırası): bu lokasyonda en az 1 ürünü olanlar. */
+  /** Kategori kartları (API sırası): bu lokasyonda en az 1 ürünü olanlar; sayı = kategorinin tam listesi. */
   tiles: { slug: string; name: string; count: number; image: string | null }[];
-  /** Kalan her ürün TAM BİR KEZ, bir kategori rafında; raf içi sıra = kategorinin admin sırası. */
-  shelves: { slug: string; name: string; products: P[] }[];
+  /** "Tümü": teslim edilebilir katalogun tamamı, her ürün TAM BİR KEZ — önce vitrin öne çıkanları (vitrin sırası), sonra katalog sırası. */
+  allOrder: number[];
+  /** Kategori listeleri: GERÇEK bağ, Global Merkezi sırası; çok kategorili ürün bağlı olduğu HER listede. */
+  categories: { slug: string; name: string; ids: number[] }[];
+  /** id → ürün (yalnız bu lokasyonda teslim edilebilir olanlar). */
+  byId: Map<number, P>;
 }
 
-/**
- * Lokasyon sayfası planı — teslim edilebilir katalogun TAMAMI görünür, hiçbir ürün iki kez basılmaz.
- * Raf sırası: dar kategoriden geniş kategoriye (ürün sayısı artan, eşitlikte id) → çok kategorili ürün
- * en özgül rafına düşer; her rafın içinde kategorinin merchandising sırası korunur.
- */
+/** Lokasyon sayfası planı — kategori kimliği korunur (tekilleştirme yalnız "Tümü" listesinde). */
 export function planLocationPage<P extends { id: number }>(c: { featured_ids: number[]; categories: CatalogCategory[]; products: P[] }): LocationPlan<P> {
   const byId = new Map(c.products.map((p) => [p.id, p]));
-  const used = new Set<number>();
-  const featured: P[] = [];
-  for (const id of c.featured_ids) { const p = byId.get(id); if (p && !used.has(id)) { featured.push(p); used.add(id); } }
-  const tiles = c.categories.filter((x) => x.product_ids.length > 0).map((x) => ({ slug: x.slug, name: x.name, count: x.product_ids.length, image: x.image }));
-  const shelves: LocationPlan<P>["shelves"] = [];
-  const order = [...c.categories].sort((a, b) => a.product_ids.length - b.product_ids.length || a.id - b.id);
-  for (const cat of order) {
-    const products = cat.product_ids.filter((id) => !used.has(id)).map((id) => byId.get(id)).filter((p): p is P => !!p);
-    if (!products.length) continue;
-    for (const p of products) used.add(p.id);
-    shelves.push({ slug: cat.slug, name: cat.name, products });
-  }
-  // Çevrili kategorisi olmayan canlı ürün de kaybolmasın: öne çıkanların sonuna.
-  for (const p of c.products) if (!used.has(p.id)) { featured.push(p); used.add(p.id); }
-  return { featured, tiles, shelves };
+  const seen = new Set<number>();
+  const allOrder: number[] = [];
+  for (const id of [...c.featured_ids, ...c.products.map((p) => p.id)]) if (byId.has(id) && !seen.has(id)) { seen.add(id); allOrder.push(id); }
+  const categories = c.categories.map((x) => ({ slug: x.slug, name: x.name, ids: x.product_ids.filter((id) => byId.has(id)) }));
+  const tiles = c.categories
+    .map((x, i) => ({ slug: x.slug, name: x.name, count: categories[i].ids.length, image: x.image }))
+    .filter((t) => t.count > 0);
+  return { tiles, allOrder, categories, byId };
 }
 
-/** Lokasyon planını tek listeye düzler (kargo şehri ızgarası): öne çıkanlar → raflar. */
+/** "Tümü" listesinin ürünleri (kargo şehri ızgarası vb.). */
 export function flattenPlan<P>(plan: LocationPlan<P>): P[] {
-  return [...plan.featured, ...plan.shelves.flatMap((s) => s.products)];
+  return plan.allOrder.map((id) => plan.byId.get(id)).filter((p): p is P => p !== undefined);
 }
 
 /**

@@ -44,14 +44,15 @@ test("karar: lokasyon çözülemedi → boş katalog (fail closed); geçerli yan
   assert.equal(ok.mode, "catalog");
 });
 
-test("katalog ≠ vitrin: vitrinde OLMAYAN ürün (1,3,4,6) planda görünür; her ürün TAM BİR KEZ", () => {
+test("katalog ≠ vitrin: vitrinde OLMAYAN ürün (1,3,4,6) görünür; ÇOK KATEGORİLİ ürün (2) her gerçek kategorisinde; Tümü'nde tek", () => {
   const d = catalogDecision(resp(), false);
   assert.equal(d.mode, "catalog");
   if (d.mode !== "catalog") return;
   const plan = planLocationPage(d.catalog);
-  assert.deepEqual(plan.featured.map((p) => p.id), [5, 2]); // vitrin sırası
-  // Raflar: dar kategoriden geniş kategoriye (peonies 1, orchids 2, roses 3); raf içi admin sırası
-  assert.deepEqual(plan.shelves.map((s) => [s.slug, s.products.map((p) => p.id)]), [["peonies", [6]], ["orchids", [4]], ["roses", [3, 1]]]);
+  assert.deepEqual(plan.allOrder, [5, 2, 6, 4, 3, 1]); // önce vitrin sırası (5,2), sonra katalog sırası
+  // Kategori listeleri: gerçek bağ + admin sırası; #2 hem roses hem orchids listesinde (tekilleştirme YOK)
+  assert.deepEqual(plan.categories.map((c) => [c.slug, c.ids]), [["roses", [3, 1, 2]], ["orchids", [2, 4]], ["peonies", [6]]]);
+  assert.ok(!plan.categories.find((c) => c.slug === "peonies")!.ids.includes(2), "gerçek bağı olmayan kategoride yok");
   const all = flattenPlan(plan).map((p) => p.id);
   assert.deepEqual([...all].sort(), [1, 2, 3, 4, 5, 6]);
   assert.equal(new Set(all).size, all.length);
@@ -71,6 +72,7 @@ test("lokasyon: teslim edilemeyen ürün çıkar, kategori sırası bozulmaz (Mu
   if (d.mode !== "catalog") return;
   const plan = planLocationPage(d.catalog);
   assert.deepEqual(flattenPlan(plan).map((p) => p.id), [2, 3]);
+  assert.deepEqual(plan.categories.find((c) => c.slug === "roses")!.ids, [3, 2]); // admin sırası korunur
   assert.deepEqual(plan.tiles.map((t) => [t.slug, t.count]), [["roses", 2], ["orchids", 1]]); // boş şakayık kartı yok
 });
 
