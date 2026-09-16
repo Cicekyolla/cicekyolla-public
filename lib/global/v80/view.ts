@@ -40,6 +40,8 @@ export interface V80SourceProduct extends V80ImageMeta {
   is_bestseller: boolean;
   /** Ürünün (o dilde canlı) kategori slug'ları — çip filtresi için. */
   category_slugs: string[];
+  /** ADDITIVE (API): Product Center gerçek kategori bağı — elle seçimde çip filtresinin kaynağı. */
+  product_category_slugs?: string[];
 }
 /** Motorun çözdüğü kategori (canlı ürün sayısı, en düşük fiyat, kapak görseli). */
 export interface V80SourceCategory extends V80ImageMeta {

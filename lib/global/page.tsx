@@ -34,6 +34,7 @@ import {
   ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip,
 } from "./sections";
 import { GlobalGoogleTrust } from "@/components/global/GlobalGoogleTrust";
+import { GlobalCatalogBrowser, type CatalogBrowserItem } from "@/components/global/GlobalCatalogBrowser";
 import {
   type GlobalLocale,
   parseLocalePath,
@@ -49,9 +50,12 @@ import {
   fetchGlobalPage,
   fetchCategorySurface,
   fetchLocaleCatalog,
+  fetchGlobalCatalog,
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
+import { catalogDecision, planLocationPage, flattenPlan, hasCardFields, fallbackCategoryCards, type CatalogDecision, type CatalogProduct } from "./globalCatalog";
+import { mediaUrl, mediaDerivatives } from "@/lib/media";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
 import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
 import { V80Shell } from "@/components/global/v80/V80Shell";
@@ -100,6 +104,42 @@ function detailToCard(locale: GlobalLocale, d: PublicProductDetail, localizedNam
   };
 }
 
+/** Katalog / kategori yüzeyi satırı → aynı ProductCard modeli (detailToCard ile birebir alanlar; ürün
+    başına detay isteği YOK — satır API'de kapak/fiyat/rozet alanlarıyla tek sorguda gelir). */
+type CardRow = {
+  id?: number; tr_slug: string; name: string; price_minor?: number | string | null; sale_price_minor?: number | string | null;
+  image?: string | null; blurhash?: string | null; derivatives?: { webp?: string; avif?: string; responsive?: Record<string, string> } | null;
+  is_new?: boolean; is_bestseller?: boolean; same_day_available?: boolean; product_type?: string | null; delivery_scope?: string | null;
+};
+function rowToCard(locale: GlobalLocale, p: CardRow): CardProductUi {
+  const price = Number(p.price_minor);
+  const sale = p.sale_price_minor == null ? null : Number(p.sale_price_minor);
+  const hasSale = sale != null && sale > 0 && sale < price;
+  const rawBadge = hasSale ? "İndirim" : p.is_new ? "Yeni" : p.is_bestseller ? "Çok Satan" : undefined;
+  return {
+    id: Number(p.id),
+    name: p.name,
+    slug: p.tr_slug,
+    price: Math.round((hasSale ? (sale as number) : price) / 100),
+    originalPrice: hasSale ? Math.round(price / 100) : undefined,
+    image: mediaUrl(p.image),
+    badge: rawBadge ? (BADGE_L10N[locale][rawBadge] ?? rawBadge) : undefined,
+    productType: p.product_type ?? undefined,
+    sameDay: !!p.same_day_available,
+    scope: p.delivery_scope ?? undefined,
+    hasSale,
+    categoryId: null,
+    derivatives: mediaDerivatives(p.derivatives ?? null),
+    blurhash: p.blurhash ?? null,
+  };
+}
+
+/** Lokasyon planı → istemci katalog öğeleri (kart modeli sunucuda; ürün başına istek yok). */
+function catalogItems(locale: GlobalLocale, plan: ReturnType<typeof planLocationPage<CatalogProduct>>): CatalogBrowserItem[] {
+  const seg = SEGMENTS[locale];
+  return [...plan.byId.values()].map((p) => ({ id: p.id, href: `/${locale}/${seg.product}/${p.slug}`, card: rowToCard(locale, p) }));
+}
+
 // Foundation yedek metinleri — global_pages 'home' onaylanana kadar (noindex).
 // Foundation yedek metinleri — locale'in approved 'home' sayfası olana kadar
 // (bu yüzeyler NOINDEX'tir; vitrin açılışı Admin onayıyla olur).
@@ -119,20 +159,20 @@ const HOME_FALLBACK: Record<GlobalLocale, { title: string; h1: string; p: string
   ko: { title: "ÇiçekYolla — 이스탄불 꽃 배달", h1: "이스탄불로 꽃 보내기", p: "ÇiçekYolla는 이스탄불의 꽃집입니다. 이스탄불 내 당일 배송, 튀르키예 전역 1–3 영업일 배송." },
 };
 
-const SHOP: Record<GlobalLocale, { unit: string; shopAll: string; from: string }> = {
-  de: { unit: "Produkte", shopAll: "Alle ansehen →", from: "Ausgewählt für Istanbul" },
-  en: { unit: "products", shopAll: "View all →", from: "Selected for Istanbul" },
-  fr: { unit: "produits", shopAll: "Tout voir →", from: "Sélection pour Istanbul" },
-  nl: { unit: "producten", shopAll: "Alles bekijken →", from: "Geselecteerd voor Istanbul" },
-  it: { unit: "prodotti", shopAll: "Vedi tutto →", from: "Selezionati per Istanbul" },
-  es: { unit: "productos", shopAll: "Ver todo →", from: "Selección para Estambul" },
-  pt: { unit: "produtos", shopAll: "Ver tudo →", from: "Seleção para Istambul" },
-  az: { unit: "məhsul", shopAll: "Hamısına bax →", from: "İstanbul üçün seçilmiş" },
-  ru: { unit: "товаров", shopAll: "Смотреть все →", from: "Выбрано для Стамбула" },
-  ar: { unit: "منتجات", shopAll: "عرض الكل ←", from: "مختارة لإسطنبول" },
-  zh: { unit: "件商品", shopAll: "查看全部 →", from: "为伊斯坦布尔精选" },
-  ja: { unit: "点", shopAll: "すべて見る →", from: "イスタンブールへの厳選" },
-  ko: { unit: "개 상품", shopAll: "전체 보기 →", from: "이스탄불을 위한 셀렉션" },
+const SHOP: Record<GlobalLocale, { unit: string; shopAll: string; from: string; all: string }> = {
+  de: { unit: "Produkte", shopAll: "Alle ansehen →", from: "Ausgewählt für Istanbul", all: "Alle" },
+  en: { unit: "products", shopAll: "View all →", from: "Selected for Istanbul", all: "All" },
+  fr: { unit: "produits", shopAll: "Tout voir →", from: "Sélection pour Istanbul", all: "Tout" },
+  nl: { unit: "producten", shopAll: "Alles bekijken →", from: "Geselecteerd voor Istanbul", all: "Alles" },
+  it: { unit: "prodotti", shopAll: "Vedi tutto →", from: "Selezionati per Istanbul", all: "Tutti" },
+  es: { unit: "productos", shopAll: "Ver todo →", from: "Selección para Estambul", all: "Todos" },
+  pt: { unit: "produtos", shopAll: "Ver tudo →", from: "Seleção para Istambul", all: "Todos" },
+  az: { unit: "məhsul", shopAll: "Hamısına bax →", from: "İstanbul üçün seçilmiş", all: "Hamısı" },
+  ru: { unit: "товаров", shopAll: "Смотреть все →", from: "Выбрано для Стамбула", all: "Все" },
+  ar: { unit: "منتجات", shopAll: "عرض الكل ←", from: "مختارة لإسطنبول", all: "الكل" },
+  zh: { unit: "件商品", shopAll: "查看全部 →", from: "为伊斯坦布尔精选", all: "全部" },
+  ja: { unit: "点", shopAll: "すべて見る →", from: "イスタンブールへの厳選", all: "すべて" },
+  ko: { unit: "개 상품", shopAll: "전체 보기 →", from: "이스탄불을 위한 셀렉션", all: "전체" },
 };
 
 const UI: Record<GlobalLocale, { categories: string; popular: string; faq: string; orderCta: string; orderNote: string }> = {
@@ -259,78 +299,105 @@ const S = {
 };
 
 /**
- * Global ana sayfa vitrini — TR mağaza ailesiyle AYNI ProductCard'ı kullanır.
- * Kaynak tek gerçek: localeCatalog (üyelik ∧ locale approved+slug ∧ product active),
- * yani Global Merkezi'nin "N canlı" dediği sayı ile birebir aynı küme.
- * 0 canlı ürünlü kategori vitrine çıkmaz (müşteriye boş raf gösterilmez).
+ * Global lokasyon vitrini — TR mağaza ailesiyle AYNI ProductCard'ı kullanır.
+ *
+ * İKİ KAYNAK, TEK DÜZEN:
+ *  • catalog (API /api/public/global/catalog): bu lokasyona teslim edilebilir GLOBAL KATALOGUN
+ *    TAMAMI — önce vitrin öne çıkanları (vitrin sırası), sonra her ürün tam bir kez gerçek kategori
+ *    rafında (Global Merkezi sırası). Kategori kartları bu lokasyondaki gerçek bağ sayıları ve
+ *    Category Center görseliyle. Ürün başına istek yok.
+ *  • aksi hâlde (uç yok / hata): bugünkü davranış AYNEN — localeCatalog + core detay.
+ * 0 ürünlü kategori vitrine çıkmaz (müşteriye boş raf gösterilmez).
  */
-async function CatalogSections({ locale, catalog }: { locale: GlobalLocale; catalog: LocaleCatalog }) {
+async function CatalogSections({ locale, catalog, source }: { locale: GlobalLocale; catalog: LocaleCatalog; source?: CatalogDecision }) {
   const seg = SEGMENTS[locale];
   const ui = UI[locale];
   const shop = SHOP[locale];
 
-  // Locale adı: locale slug → çevrilmiş ad (kart adı TR'ye düşmesin)
-  const adBySlug = new Map(catalog.products.map((p) => [p.slug, p.name]));
-  const trBySlug = new Map(catalog.products.map((p) => [p.slug, p.tr_slug]));
+  let tiles: { slug: string; name: string; count: number; img?: string }[];
+  let oneKartlar: { card: CardProductUi; href: string }[];
+  let rafKartlar: { slug: string; name: string; kartlar: { card: CardProductUi; href: string }[] }[];
+  // Katalog modunda ürünler kategori çipleriyle süzülen TEK ızgarada (GlobalCatalogBrowser).
+  let browser: React.ReactNode = null;
 
-  // Vitrinde gösterilecek tüm ürünler TEK seferde toplanır (aynı ürün iki kez çekilmez).
-  const dolu = catalog.categories.filter((c) => (c.live_products ?? 0) > 0);
-  const one = catalog.products.slice(0, 8).map((p) => p.slug);
-  const raflar = dolu
-    .filter((c) => (c.live_products ?? 0) >= 3)
-    .slice(0, 3)
-    .map((c) => ({ cat: c, slugs: (c.product_slugs ?? []).slice(0, 4) }));
-  const kapakSlug = new Map<string, string>(); // kategori slug → kapak ürün slug
-  for (const c of dolu) { const ilk = (c.product_slugs ?? [])[0]; if (ilk) kapakSlug.set(c.slug, ilk); }
+  if (source?.mode === "catalog") {
+    const plan = planLocationPage(source.catalog);
+    tiles = plan.tiles.map((t) => ({ slug: t.slug, name: t.name, count: t.count, img: mediaUrl(t.image) || undefined }));
+    oneKartlar = [];
+    rafKartlar = [];
+    browser = (
+      <section className="mt-12" data-global-location-catalog>
+        <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
+        <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
+        <GlobalCatalogBrowser items={catalogItems(locale, plan)} allOrder={plan.allOrder} categories={plan.categories} allLabel={shop.all} />
+      </section>
+    );
+  } else {
+    // Locale adı: locale slug → çevrilmiş ad (kart adı TR'ye düşmesin)
+    const adBySlug = new Map(catalog.products.map((p) => [p.slug, p.name]));
+    const trBySlug = new Map(catalog.products.map((p) => [p.slug, p.tr_slug]));
 
-  const gerekli = [...new Set([...one, ...raflar.flatMap((r) => r.slugs), ...kapakSlug.values()])];
-  const detaylar = await Promise.all(
-    gerekli.map(async (localeSlug) => {
-      const tr = trBySlug.get(localeSlug);
-      if (!tr) return null;
-      const d = await fetchProductBySlug(tr);
-      return d ? ([localeSlug, d] as const) : null;
-    })
-  );
-  const byLocaleSlug = new Map(detaylar.filter(Boolean) as (readonly [string, PublicProductDetail])[]);
+    // Vitrinde gösterilecek tüm ürünler TEK seferde toplanır (aynı ürün iki kez çekilmez).
+    const dolu = catalog.categories.filter((c) => (c.live_products ?? 0) > 0);
+    const one = catalog.products.slice(0, 8).map((p) => p.slug);
+    const raflar = dolu
+      .filter((c) => (c.live_products ?? 0) >= 3)
+      .slice(0, 3)
+      .map((c) => ({ cat: c, slugs: (c.product_slugs ?? []).slice(0, 4) }));
+    const gerekli = [...new Set([...one, ...raflar.flatMap((r) => r.slugs)])];
+    const detaylar = await Promise.all(
+      gerekli.map(async (localeSlug) => {
+        const tr = trBySlug.get(localeSlug);
+        if (!tr) return null;
+        const d = await fetchProductBySlug(tr);
+        return d ? ([localeSlug, d] as const) : null;
+      })
+    );
+    const byLocaleSlug = new Map(detaylar.filter(Boolean) as (readonly [string, PublicProductDetail])[]);
 
-  const kart = (localeSlug: string) => {
-    const d = byLocaleSlug.get(localeSlug);
-    if (!d) return null;
-    return { card: detailToCard(locale, d, adBySlug.get(localeSlug) ?? d.product.name), href: `/${locale}/${seg.product}/${localeSlug}` };
-  };
-  const oneKartlar = one.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[];
+    const kart = (localeSlug: string) => {
+      const d = byLocaleSlug.get(localeSlug);
+      if (!d) return null;
+      return { card: detailToCard(locale, d, adBySlug.get(localeSlug) ?? d.product.name), href: `/${locale}/${seg.product}/${localeSlug}` };
+    };
+    // Kategori kartı görseli yalnız kategorinin kendi kapağı (ürün fotoğrafı kapak yapılmaz).
+    tiles = fallbackCategoryCards(catalog.categories).map((c) => ({ slug: c.slug, name: c.name, count: c.count, img: mediaUrl(c.image) || undefined }));
+    oneKartlar = one.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[];
+    rafKartlar = raflar.map((r) => ({
+      slug: r.cat.slug,
+      name: r.cat.name,
+      kartlar: r.slugs.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[],
+    }));
+  }
 
   return (
     <>
-      {/* Kategori vitrini — gerçek ürün fotoğrafı + o dildeki canlı ürün sayısı */}
-      {dolu.length > 0 && (
+      {/* Kategori vitrini — katalog modunda YALNIZ Category Center kapağı (yoksa görselsiz) + o dildeki ürün sayısı */}
+      {tiles.length > 0 && (
         <section className="mt-10">
           <h2 className="mb-4 text-[19px] font-semibold text-[#1C0838]">{ui.categories}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {dolu.map((c) => {
-              const kapak = kapakSlug.get(c.slug);
-              const d = kapak ? byLocaleSlug.get(kapak) : undefined;
-              const img = d ? (d.images.find((i) => i.role === "cover") ?? d.images[0])?.url : undefined;
-              return (
-                <Link
-                  key={c.slug}
-                  href={`/${locale}/${seg.category}/${c.slug}`}
-                  className="group overflow-hidden rounded-[18px] border border-[#EDE9FE] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.10)]"
-                >
-                  <div className="relative aspect-[4/5] overflow-hidden bg-[#FAF9FE]">
-                    {img ? <ProductImage src={img} alt={c.name} padding="10px" sizes="(max-width:640px) 50vw, 220px" /> : null}
-                  </div>
-                  <div className="px-3.5 py-3">
-                    <p className="truncate text-[14px] font-bold text-[#111827]">{c.name}</p>
-                    <p className="mt-0.5 text-[11.5px] text-[#8B5CF6]">{c.live_products} {shop.unit}</p>
-                  </div>
-                </Link>
-              );
-            })}
+            {tiles.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/${locale}/${seg.category}/${c.slug}`}
+                className="group overflow-hidden rounded-[18px] border border-[#EDE9FE] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.10)]"
+              >
+                <div className="relative aspect-[4/5] overflow-hidden bg-[#FAF9FE]">
+                  {c.img ? <ProductImage src={c.img} alt={c.name} padding="10px" sizes="(max-width:640px) 50vw, 220px" /> : null}
+                </div>
+                <div className="px-3.5 py-3">
+                  <p className="truncate text-[14px] font-bold text-[#111827]">{c.name}</p>
+                  <p className="mt-0.5 text-[11.5px] text-[#8B5CF6]">{c.count} {shop.unit}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       )}
+
+      {/* Global katalog (kategori çipli; çok kategorili ürün her gerçek kategorisinde) */}
+      {browser}
 
       {/* Öne çıkan ürünler — TR mağazasıyla aynı ProductCard */}
       {oneKartlar.length > 0 && (
@@ -339,27 +406,26 @@ async function CatalogSections({ locale, catalog }: { locale: GlobalLocale; cata
           <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
           <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
             {oneKartlar.map(({ card: c, href }, idx) => (
-              <ProductCard key={c.id} product={c} idx={idx} href={href} />
+              <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
             ))}
           </div>
         </section>
       )}
 
       {/* Kategori rafları — yalnız o dilde yeterli canlı ürünü olan kategoriler */}
-      {raflar.map((r) => {
-        const kartlar = r.slugs.map(kart).filter(Boolean) as { card: CardProductUi; href: string }[];
-        if (kartlar.length < 2) return null;
+      {rafKartlar.map((r) => {
+        if (r.kartlar.length < 2) return null;
         return (
-          <section key={r.cat.slug} className="mt-12">
+          <section key={r.slug} className="mt-12">
             <div className="mb-4 flex items-baseline justify-between gap-3">
-              <h2 className="text-[19px] font-semibold text-[#1C0838]">{r.cat.name}</h2>
-              <Link href={`/${locale}/${seg.category}/${r.cat.slug}`} className="shrink-0 text-[12.5px] font-semibold text-[#7C3AED] hover:underline">
+              <h2 className="text-[19px] font-semibold text-[#1C0838]">{r.name}</h2>
+              <Link href={`/${locale}/${seg.category}/${r.slug}`} className="shrink-0 text-[12.5px] font-semibold text-[#7C3AED] hover:underline">
                 {shop.shopAll}
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
-              {kartlar.map(({ card: c, href }, idx) => (
-                <ProductCard key={c.id} product={c} idx={idx} href={href} />
+              {r.kartlar.map(({ card: c, href }, idx) => (
+                <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
               ))}
             </div>
           </section>
@@ -377,40 +443,50 @@ async function CatalogSections({ locale, catalog }: { locale: GlobalLocale; cata
  * ailesindeki kargolanabilir koleksiyona bilinçli köprü (mevcut PDP CTA'sıyla
  * aynı commerce handoff kararı).
  */
-async function CargoCatalogSection({ locale, city, catalog }: { locale: GlobalLocale; city: string; catalog: LocaleCatalog }) {
+async function CargoCatalogSection({ locale, city, catalog, source }: { locale: GlobalLocale; city: string; catalog: LocaleCatalog; source?: CatalogDecision }) {
   const copy = CARGO[locale];
   const seg = SEGMENTS[locale];
   const cityName = cityDisplayName(locale, city);
 
-  // Kargolanabilir ürün kümesi (tüm sayfalar; ≤ 300 kayıt — profil listesi küçüktür).
-  const deliverable = new Set<string>();
-  for (let page = 1; page <= 3; page++) {
-    const p = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page });
-    for (const it of p.items) deliverable.add(it.slug);
-    if (page >= p.pagination.total_pages) break;
+  let kartlar: { card: CardProductUi; href: string }[];
+  let browser: React.ReactNode = null;
+  if (source?.mode === "catalog") {
+    // Global katalog: API bu şehre teslim edilebilirliği (kargolanabilir profil + Coverage) zaten uyguladı;
+    // tamamı basılır, kategori çipleriyle (çok kategorili ürün her gerçek kategorisinde).
+    const plan = planLocationPage(source.catalog);
+    kartlar = flattenPlan(plan).map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
+    if (kartlar.length) browser = <GlobalCatalogBrowser items={catalogItems(locale, plan)} allOrder={plan.allOrder} categories={plan.categories} allLabel={SHOP[locale].all} />;
+  } else {
+    // Kargolanabilir ürün kümesi (tüm sayfalar; ≤ 300 kayıt — profil listesi küçüktür).
+    const deliverable = new Set<string>();
+    for (let page = 1; page <= 3; page++) {
+      const p = await fetchProductsPaged({ delivery_model: "cargo_capable", page_size: 100, page });
+      for (const it of p.items) deliverable.add(it.slug);
+      if (page >= p.pagination.total_pages) break;
+    }
+    const uygun = catalog.products.filter((p) => deliverable.has(p.tr_slug)).slice(0, 8);
+    const detaylar = await Promise.all(
+      uygun.map(async (p) => {
+        const d = await fetchProductBySlug(p.tr_slug);
+        return d ? { card: detailToCard(locale, d, p.name), href: `/${locale}/${seg.product}/${p.slug}` } : null;
+      })
+    );
+    kartlar = detaylar.filter(Boolean) as { card: CardProductUi; href: string }[];
   }
-  const uygun = catalog.products.filter((p) => deliverable.has(p.tr_slug)).slice(0, 8);
-  const detaylar = await Promise.all(
-    uygun.map(async (p) => {
-      const d = await fetchProductBySlug(p.tr_slug);
-      return d ? { card: detailToCard(locale, d, p.name), href: `/${locale}/${seg.product}/${p.slug}` } : null;
-    })
-  );
-  const kartlar = detaylar.filter(Boolean) as { card: CardProductUi; href: string }[];
 
   return (
     <section className="mt-12" data-cargo-catalog>
       <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{copy.catalogTitle(cityName)}</h2>
       <p className="mb-4 text-[12.5px] text-[#6B7280]">{copy.catalogNote}</p>
-      {kartlar.length > 0 ? (
+      {browser ?? (kartlar.length > 0 ? (
         <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
           {kartlar.map(({ card: c, href }, idx) => (
-            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+            <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
           ))}
         </div>
       ) : (
         <p className="text-[14px] text-[#4B5563]">{copy.empty(cityName)}</p>
-      )}
+      ))}
       <div className="mt-6">
         <Link
           href={CARGO_COLLECTION_PATH}
@@ -438,7 +514,7 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
   );
 }
 
-async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog }) {
+async function GlobalPageBody({ locale, row, catalog, source }: { locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog; source?: CatalogDecision }) {
   // Lokasyon yüzeyi ise: üst hiyerarşi (crawlable kırıntı) + bir alt seviyenin
   // GERÇEK listesi. Veri TR location core ∩ o dilde yayında olan yüzeyler.
   const loc = parseLocationKey(row.page_key);
@@ -490,7 +566,7 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
       {cargo && loc ? (
         <>
           <CargoTrustStrip locale={locale} city={loc.city} />
-          <CargoCatalogSection locale={locale} city={loc.city} catalog={catalog} />
+          <CargoCatalogSection locale={locale} city={loc.city} catalog={catalog} source={source} />
           <MessageSection locale={locale} />
         </>
       ) : (
@@ -502,7 +578,7 @@ async function GlobalPageBody({ locale, row, catalog }: { locale: GlobalLocale; 
           <GlobalGoogleTrust />
           {/* Duygu → keşif → arzu (kategori + ürün vitrini gerçek motordan) */}
           <EmotionSection locale={locale} catalog={catalog} />
-          <CatalogSections locale={locale} catalog={catalog} />
+          <CatalogSections locale={locale} catalog={catalog} source={source} />
           {/* Uzaklık → insan kanıtı → kişisel yardım → teslimat kanıtı → mesaj */}
           <DistanceSection locale={locale} />
           <AtelierSection locale={locale} />
@@ -547,13 +623,27 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
   }
 
   if (parsed.kind === "page") {
-    const [row, catalog, contact] = await Promise.all([fetchGlobalPage(locale, parsed.key), fetchLocaleCatalog(locale), v80Contact()]);
+    // Lokasyon yüzeyi ise Global katalog bu lokasyonun teslimat uygunluğuyla TEK istekte (paralel).
+    const locKey = parseLocationKey(parsed.key);
+    const [row, catalog, contact, catalogResp] = await Promise.all([
+      fetchGlobalPage(locale, parsed.key),
+      fetchLocaleCatalog(locale),
+      v80Contact(),
+      locKey
+        ? fetchGlobalCatalog(locale, {
+            city: locKey.city,
+            district: locKey.kind === "city" ? undefined : locKey.district,
+            neighborhood: locKey.kind === "neighborhood" ? locKey.neighborhood : undefined,
+          })
+        : Promise.resolve(null),
+    ]);
     if (!row) notFound();
+    const source = locKey ? catalogDecision(catalogResp, true) : undefined;
     // Bu sayfanın şehir kökü kesinlikle yayımlı (satır var) → uç yoksa bile footer'da basılır.
     const footer = await v80FooterFromCatalog(locale, catalog, contact, [parsed.key.split("/")[0]]);
     return (
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
-        <GlobalPageBody locale={locale} row={row} catalog={catalog} />
+        <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} />
       </V80Shell>
     );
   }
@@ -568,18 +658,30 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
     ]);
     if (!surface) notFound();
     const seg = SEGMENTS[locale];
-    // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
-    // gerçek fiyat/rozet/derivatives) + localized ad + locale PDP linki.
-    const members = surface.products.slice(0, 24);
-    const [details, footer] = await Promise.all([
-      Promise.all(members.map((m) => fetchProductBySlug(m.tr_slug))),
-      v80FooterFromCatalog(locale, catalog, contact),
-    ]);
-    const cards = members
-      .map((m, i) => ({ m, d: details[i] }))
-      .filter((x): x is { m: (typeof members)[number]; d: PublicProductDetail } => !!x.d)
-      .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
-    // İlgili kategoriler: AYNI dilde canlı ürünü olan diğer kategoriler (iç bağlantı).
+    // KATEGORİ ÜRÜNLERİ (API): GLOBAL KATALOG (o dilde canlı tüm aktif ürünler) ∩ Product Center'daki
+    // GERÇEK bağ, Global Merkezi sırası (13 dilde ortak). Vitrin seçimi şart DEĞİL.
+    //  • yeni API: kartlar satırdan, TAMAMI (ürün başına detay isteği yok)
+    //  • eski API (kart alanı yok): bugünkü davranış AYNEN — ilk 24 üye + core detay
+    let cards: { card: CardProductUi; href: string }[];
+    let footer: Awaited<ReturnType<typeof v80FooterFromCatalog>>;
+    if (surface.products.length && hasCardFields(surface.products)) {
+      cards = surface.products.map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
+      footer = await v80FooterFromCatalog(locale, catalog, contact);
+    } else {
+      // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
+      // gerçek fiyat/rozet/derivatives) + localized ad + locale PDP linki.
+      const members = surface.products.slice(0, 24);
+      const [details, footerModel] = await Promise.all([
+        Promise.all(members.map((m) => fetchProductBySlug(m.tr_slug))),
+        v80FooterFromCatalog(locale, catalog, contact),
+      ]);
+      footer = footerModel;
+      cards = members
+        .map((m, i) => ({ m, d: details[i] }))
+        .filter((x): x is { m: (typeof members)[number]; d: PublicProductDetail } => !!x.d)
+        .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
+    }
+    // İlgili kategoriler: AYNI dilde canlı ürünü olan diğer kategoriler (iç bağlantı; sayı API'de aynı üye sorgusundan).
     const ilgili = (catalog.categories ?? [])
       .filter((c) => c.slug !== surface.slug && (c.live_products ?? 0) > 0)
       .slice(0, 8);
@@ -621,7 +723,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
         {/* 3) Ürün vitrini — keşiften hemen sonra satın alınabilir ürünler. */}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {cards.map(({ card: c, href }, idx) => (
-            <ProductCard key={c.id} product={c} idx={idx} href={href} />
+            <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
           ))}
         </div>
 
@@ -718,7 +820,7 @@ export async function LocalePage({ locale, path }: { locale: GlobalLocale; path:
           <section className="mt-12">
             <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
               {related.map(({ card: c, href }, idx) => (
-                <ProductCard key={c.id} product={c} idx={idx} href={href} />
+                <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
               ))}
             </div>
           </section>
