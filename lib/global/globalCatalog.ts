@@ -53,6 +53,12 @@ export interface GlobalCatalogResponse {
   location: { city: string; district: string | null; neighborhood: string | null; found: boolean; same_day: boolean } | null;
   categories: CatalogCategory[];
   products: CatalogProduct[];
+  /**
+   * Additive (Global master faz): onaylı storefront belgesindeki structure.locationSections HAM dizisi
+   * (lokasyon sayfası bölüm sırası). Eski API'de yok → public varsayılan sıraya düşer
+   * (ayrıştırma lib/global/locationSections.ts parseLocationSections).
+   */
+  location_sections?: unknown[] | null;
 }
 export type CatalogDecision = { mode: "fallback" } | { mode: "catalog"; catalog: GlobalCatalogResponse };
 

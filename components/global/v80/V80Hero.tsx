@@ -1,8 +1,9 @@
 // GLOBAL VERSION 80 — Hero (Figma: 44/56 ızgara, editorial serif H1, intent kartı).
-import Image from "next/image";
+// Görsel: masaüstü + (varsa) mobil görsel <768px; LCP için TEK öncelikli <img> (V80ArtImage).
 import type { V80View } from "@/lib/global/v80/view";
 import { V80HeroCard } from "./V80HeroCard";
 import { Flourish } from "./V80Icons";
+import { V80ArtImage } from "./V80Banners";
 
 export function V80Hero({ view }: { view: V80View }) {
   const t = view.texts;
@@ -32,9 +33,7 @@ export function V80Hero({ view }: { view: V80View }) {
       </div>
       <div className="v80-frame v80-hero-image">
         <div className="v80-hero-scale">
-          {view.heroImage ? (
-            <Image src={view.heroImage} alt="" fill priority sizes="(max-width: 768px) 100vw, 56vw" className="v80-hero-img" style={{ objectFit: "cover", objectPosition: "center top" }} unoptimized={!view.heroImage.startsWith("/")} />
-          ) : null}
+          <V80ArtImage src={view.heroImage} srcMobile={view.heroImageMobile} alt="" priority sizes="(max-width: 768px) 100vw, 56vw" className="v80-hero-img" style={{ objectFit: "cover", objectPosition: "center top" }} />
         </div>
         <div aria-hidden="true" style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: "28%", background: "linear-gradient(to right, var(--v80-bg) 0%, var(--v80-on-dark-muted) 60%, rgba(250,248,245,0) 100%)", zIndex: 2, pointerEvents: "none" }} />
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(237,232,245,0.22) 0%, rgba(237,232,245,0.08) 35%, transparent 65%)", zIndex: 2, pointerEvents: "none" }} />

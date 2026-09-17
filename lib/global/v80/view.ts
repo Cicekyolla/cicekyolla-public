@@ -13,8 +13,8 @@ import { CITY_NAMES } from "../locationLabels.ts";
 import type { GlobalPage } from "../api";
 import { mergedTexts, interp } from "./copy.ts";
 import {
-  defaultConfig, targetHref, type V80Config, type V80Structure, type V80Target, type V80SectionId,
-  type V80Destination, type V80CategoryRef, V80_DESTINATIONS,
+  defaultConfig, targetHref, activeProductRefs, bannerTextKey, type V80Config, type V80Structure, type V80Target, type V80SectionId,
+  type V80Destination, type V80CategoryRef, V80_DESTINATIONS, V80_SECTION_IDS,
 } from "./schema.ts";
 
 export const WHATSAPP_URL = "https://wa.me/905458813450";
@@ -101,6 +101,17 @@ export interface V80ChipView {
   href: string | null;
 }
 export interface V80DiscoveryView { key: string; title: string; chips: V80ChipView[] }
+/** Basılacak banner: aktif ve görseli olan; hedef/metinler o dilde çözülmüş. */
+export interface V80BannerView {
+  key: string;
+  image: string;
+  imageMobile: string | null;
+  href: string | null;
+  title: string;
+  body: string;
+  cta: string;
+  alt: string;
+}
 
 export interface V80View {
   locale: GlobalLocale;
@@ -113,6 +124,8 @@ export interface V80View {
   ticker: string[];
   trustMini: { key: string; icon: string; text: string }[];
   discovery: V80DiscoveryView[];
+  /** Banner şeridi (structure.banners; aktif + görselli, dizi sırasıyla). */
+  banners: V80BannerView[];
   shop: {
     products: V80Product[];
     limit: number;
@@ -186,6 +199,16 @@ function liveCategory(ref: V80CategoryRef | null, locale: GlobalLocale, bySlug: 
   return slug ? bySlug.get(slug) ?? null : null;
 }
 
+/**
+ * DESIGN 1.6: yapıda operatörün kaydettiği Global kategori sırası (structure.categoryOrder) var mı.
+ * Ölçüt API'deki storefrontCategoryOrder ile aynı: en az bir pozitif tam sayı id. Sıralamayı API
+ * uygular (/storefront ve /catalog kategori listeleri); public burada yalnız o sırayı KORUR.
+ */
+export function hasCategoryOrder(structure: { categoryOrder?: unknown } | null | undefined): boolean {
+  const list = structure?.categoryOrder;
+  return Array.isArray(list) && list.some((v) => typeof v === "number" && Number.isInteger(v) && v > 0);
+}
+
 export function resolveV80(input: V80Input): V80View {
   const { locale } = input;
   const cfg = input.config ?? defaultConfig();
@@ -195,15 +218,27 @@ export function resolveV80(input: V80Input): V80View {
   const seg = SEGMENTS[locale];
 
   // Otomatik modda büyük raf önce: canlı ürün sayısına göre azalan (eşitlikte ad); admin elle seçince kendi sırası.
-  const categories = input.categories
+  // Vitrin › Kategori sırası kaydedilmişse (categoryOrder dolu) API'nin gönderdiği sıra AYNEN korunur:
+  // "Ne" keşif çipleri, otomatik menü/sekme, kategori kartları ve koleksiyonlar operatör sırasıyla gelir.
+  const liveCategories = input.categories
     .filter((c) => c.live_products > 0)
-    .map((c) => toV80Category(locale, c))
-    .sort((a, b) => b.live - a.live || a.name.localeCompare(b.name));
+    .map((c) => toV80Category(locale, c));
+  const categories = hasCategoryOrder(s)
+    ? liveCategories
+    : liveCategories.sort((a, b) => b.live - a.live || a.name.localeCompare(b.name));
   const catBySlug = new Map(categories.map((c) => [c.slug, c]));
   const products = input.products.map((p) => toV80Product(locale, p));
   const liveSlugs = new Set(categories.map((c) => c.slug));
   const hrefCtx = { locale, categorySegment: seg.category, whatsapp: WHATSAPP_URL, liveCategorySlugs: liveSlugs, livePages: input.livePages };
-  const href = (target: V80Target) => targetHref(target, hrefCtx);
+  const sections = s.sections.filter((x) => x.enabled).map((x) => x.id);
+  const enabledSections = new Set<string>(sections);
+  // Gizli (pasif) bölüme işaret eden çapa hedefi basılmaz → null; çağıranın mevcut yedeği
+  // (ör. ilk canlı kategori) devreye girer. Bölüm olmayan çapalar bugünkü gibi çözülür.
+  const href = (target: V80Target) =>
+    target.kind === "anchor" && (V80_SECTION_IDS as readonly string[]).includes(target.id) && !enabledSections.has(target.id)
+      ? null
+      : targetHref(target, hrefCtx);
+  const shopOn = enabledSections.has("shop");
   const firstCatHref = categories[0]?.href ?? null;
 
   // Navigasyon: admin listesi boşsa canlı kategoriler (ilk 6).
@@ -245,10 +280,12 @@ export function resolveV80(input: V80Input): V80View {
     .filter((g) => g.chips.length > 0 && g.title);
 
   // Vitrin ürünleri: manuel seçim sırası korunur; motorda çözülemeyen (o dilde
-  // canlı olmayan) ürünler zaten input.products'ta yoktur.
+  // canlı olmayan) ürünler zaten input.products'ta yoktur. Pasif (enabled === false)
+  // satırlar gösterilmez; aktif satır kalmazsa boş seçimle aynı davranış (otomatik havuz).
   const byId = new Map(products.map((p) => [p.id, p]));
-  const shopProducts = s.shop.mode === "manual" && s.shop.products.length
-    ? (s.shop.products.map((r) => byId.get(r.id)).filter(Boolean) as V80Product[])
+  const activeRefs = activeProductRefs(s);
+  const shopProducts = s.shop.mode === "manual" && activeRefs.length
+    ? (activeRefs.map((r) => byId.get(r.id)).filter(Boolean) as V80Product[])
     : products;
   const tabs = s.shop.tabs.length
     ? s.shop.tabs.filter((tb) => tb.enabled).map((tb) => {
@@ -271,8 +308,11 @@ export function resolveV80(input: V80Input): V80View {
   const mood = s.mood.items
     .filter((m) => m.enabled)
     .map((m) => {
-      const filter = filterFromTarget(m.target);
-      const link = m.target.kind === "none" ? "#shop" : m.target.kind === "category" || m.target.kind === "destination" ? "#shop" : href(m.target);
+      // Vitrin (shop) gizliyse filtre düğmesi çıkmaz sokaktır: kategori/şehir sayfasına bağlanır,
+      // hedefsiz öğe ilk canlı kategoriye düşer.
+      const filter = shopOn ? filterFromTarget(m.target) : null;
+      const shopLink = m.target.kind === "none" || m.target.kind === "category" || m.target.kind === "destination";
+      const link = !shopLink ? href(m.target) : shopOn ? "#shop" : m.target.kind === "none" ? firstCatHref : href(m.target);
       return {
         key: m.key,
         word: texts[`mood.items.${m.key}.word`] ?? texts[`x.mood.${m.key}.word`] ?? "",
@@ -310,7 +350,20 @@ export function resolveV80(input: V80Input): V80View {
       districts: input.districtCounts?.[d.city] ?? null,
     }));
 
-  const sections = s.sections.filter((x) => x.enabled).map((x) => x.id);
+  // Bannerlar: yalnız aktif ve görseli olanlar, dizi sırasıyla; metinler dil başına (boşsa yalnız görsel + bağlantı).
+  const banners: V80BannerView[] = (s.banners ?? [])
+    .filter((b) => b.enabled && !!b.image)
+    .map((b) => ({
+      key: b.key,
+      image: b.image as string,
+      imageMobile: b.imageMobile,
+      href: href(b.target),
+      title: texts[bannerTextKey(b.key, "title")] ?? "",
+      body: texts[bannerTextKey(b.key, "body")] ?? "",
+      cta: texts[bannerTextKey(b.key, "cta")] ?? "",
+      alt: texts[bannerTextKey(b.key, "alt")] ?? "",
+    }));
+
   const ov = cfg.texts;
   const heroTitle: V80View["heroTitle"] =
     ov["hero.title1"] || ov["hero.title2"] || ov["hero.titleEm"]
@@ -331,6 +384,7 @@ export function resolveV80(input: V80Input): V80View {
     ticker: s.ticker.filter((x) => x.enabled).map((x) => texts[`ticker.${x.key}`] ?? texts[`x.ticker.${x.key}`] ?? "").filter(Boolean),
     trustMini: s.trustMini.filter((x) => x.enabled).map((x) => ({ key: x.key, icon: x.icon, text: texts[`trustMini.${x.key}`] ?? texts[`x.trustMini.${x.key}`] ?? "" })).filter((x) => x.text),
     discovery,
+    banners,
     shop: {
       products: shopProducts,
       limit: s.shop.limit,

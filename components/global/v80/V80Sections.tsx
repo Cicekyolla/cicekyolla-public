@@ -9,7 +9,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { avifMediaFromSizes } from "@/lib/avifPolicy"; // Adım 3b: sizes'tan AVIF koşulu
 import { interp } from "@/lib/global/v80/text";
 import type { V80View, V80Category } from "@/lib/global/v80/view";
-import type { V80Icon } from "@/lib/global/v80/schema";
+import { v80ImageUnoptimized, type V80Icon } from "@/lib/global/v80/schema";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 import { V80Money } from "./V80Money";
 import { V80SelectedLocation } from "./V80SelectedLocation";
@@ -116,7 +116,7 @@ export function V80Collections({ view }: { view: V80View }) {
               <Link href={col.category.href} className="v80-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                 <div className="v80-frame" style={{ aspectRatio: "4/5", marginBottom: 16, background: "#fff", borderRadius: "var(--v80-radius-sm)" }}>
                   {col.image && col.image !== col.category.image ? (
-                    <Image src={col.image} alt={col.category.name} fill sizes="(max-width:768px) 100vw, 33vw" className="v80-img" unoptimized={!col.image.startsWith("/")} />
+                    <Image src={col.image} alt={col.category.name} fill sizes="(max-width:768px) 100vw, 33vw" className="v80-img" unoptimized={v80ImageUnoptimized(col.image)} />
                   ) : (
                     <CategoryImage c={col.category} sizes="(max-width:768px) 100vw, 33vw" />
                   )}
@@ -154,7 +154,7 @@ export function V80Destinations({ view }: { view: V80View }) {
             const inner = (
               <>
                 <div className="v80-frame" style={{ aspectRatio: "3/4", marginBottom: 10, position: "relative", borderRadius: "var(--v80-radius-sm)" }}>
-                  {d.image ? <Image src={d.image} alt={d.name} fill sizes="(max-width:768px) 72vw, 25vw" className="v80-img" unoptimized={!d.image.startsWith("/")} /> : null}
+                  {d.image ? <Image src={d.image} alt={d.name} fill sizes="(max-width:768px) 72vw, 25vw" className="v80-img" unoptimized={v80ImageUnoptimized(d.image)} /> : null}
                   <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(26,18,32,0.78) 0%, rgba(26,18,32,0.35) 35%, transparent 60%)" }} />
                   <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(139,92,246,0.14)", mixBlendMode: "multiply" }} />
                   <h3 style={{ position: "absolute", bottom: 10, insetInlineStart: 12, fontSize: "1rem", fontWeight: 600, color: "var(--v80-bg)", letterSpacing: "-0.01em", margin: 0 }}>{d.name}</h3>

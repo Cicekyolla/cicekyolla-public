@@ -76,6 +76,29 @@ test("lokasyon: teslim edilemeyen ürün çıkar, kategori sırası bozulmaz (Mu
   assert.deepEqual(plan.tiles.map((t) => [t.slug, t.count]), [["roses", 2], ["orchids", 1]]); // boş şakayık kartı yok
 });
 
+test("lokasyon: kategori kartları ile çipler AYNI plan ve AYNI (API) sırada; 0 ürünlü kategori ikisinde de yok", () => {
+  const d = catalogDecision(resp({ categories: [catg(19, "peonies", [6]), catg(20, "lilies", []), catg(13, "roses", [3, 1, 2]), catg(14, "orchids", [2, 4])] }), false);
+  assert.equal(d.mode, "catalog");
+  if (d.mode !== "catalog") return;
+  const plan = planLocationPage(d.catalog);
+  const chipSlugs = plan.categories.filter((c) => c.ids.length > 0).map((c) => c.slug); // çip kuralı (locationPaging resolveLocationCatalog)
+  assert.deepEqual(plan.tiles.map((t) => t.slug), chipSlugs);
+  assert.deepEqual(chipSlugs, ["peonies", "roses", "orchids"]); // alfabetik değil, API sırası
+  assert.deepEqual(plan.tiles.map((t) => t.count), [1, 3, 2]);
+});
+
+test("katalog yanıtı: additive location_sections alanı karar sonrası korunur (fail closed dahil); yoksa undefined", () => {
+  const ham = [{ id: "commerce", enabled: true }, { id: "trust", enabled: false }];
+  const ok = catalogDecision(resp({ location_sections: ham }), false);
+  assert.equal(ok.mode, "catalog");
+  if (ok.mode === "catalog") assert.deepEqual(ok.catalog.location_sections, ham);
+  const loc = { city: "istanbul", district: "yok", neighborhood: null, found: false, same_day: true };
+  const closed = catalogDecision(resp({ location: loc, location_sections: ham }), true);
+  if (closed.mode === "catalog") assert.deepEqual(closed.catalog.location_sections, ham);
+  const eski = catalogDecision(resp(), false);
+  if (eski.mode === "catalog") assert.equal(eski.catalog.location_sections, undefined);
+});
+
 test("sözleşme dışı satır/kategori id'si katalogdan elenir; kategori listesi yalnız mevcut ürünleri taşır", () => {
   const bozuk = { ...row(9, []), product_category_slugs: undefined } as unknown as CatalogProduct;
   const d = catalogDecision(resp({ products: [row(1, ["roses"]), bozuk], featured_ids: [9, 1], categories: [catg(13, "roses", [9, 1])] }), false);
