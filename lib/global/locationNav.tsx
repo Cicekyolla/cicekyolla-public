@@ -15,6 +15,7 @@ export { CITY_NAMES, cityDisplayName, ilceBasligi, mahalleBasligi } from "./loca
 /**
  * Lokasyon kırıntısı — üst seviyeler GERÇEK link (görsel metin değil).
  * İstanbul > Kadıköy > Caferağa
+ * Şehir kökü sayfasında (district yok) şehir GEÇERLİ sayfadır: link değil, aria-current.
  */
 export function LocationBreadcrumb({
   locale,
@@ -36,9 +37,13 @@ export function LocationBreadcrumb({
   const link = "text-[#6D28D9] hover:underline";
   return (
     <nav aria-label={LABELS[locale].yol} className="mb-4 text-[13px] text-[#6B7280]">
-      <Link href={`/${locale}/${city}`} className={link}>
-        {cityName}
-      </Link>
+      {district ? (
+        <Link href={`/${locale}/${city}`} className={link}>
+          {cityName}
+        </Link>
+      ) : (
+        <span aria-current="page" className="font-semibold text-[#1F2937]">{cityName}</span>
+      )}
       {district && districtName ? (
         <>
           {ayrac}
@@ -47,14 +52,14 @@ export function LocationBreadcrumb({
               {districtName}
             </Link>
           ) : (
-            <span className="font-semibold text-[#1F2937]">{districtName}</span>
+            <span aria-current="page" className="font-semibold text-[#1F2937]">{districtName}</span>
           )}
         </>
       ) : null}
       {neighborhoodName ? (
         <>
           {ayrac}
-          <span className="font-semibold text-[#1F2937]">{neighborhoodName}</span>
+          <span aria-current="page" className="font-semibold text-[#1F2937]">{neighborhoodName}</span>
         </>
       ) : null}
     </nav>

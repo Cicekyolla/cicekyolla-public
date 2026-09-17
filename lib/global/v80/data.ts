@@ -17,7 +17,7 @@ import { fetchProductBySlug, type PublicProductDetail } from "@/lib/api";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { buildV80Footer, type V80FooterModel } from "./footer";
 import { mediaUrlOrNull, mediaDerivatives } from "@/lib/media";
-import { parseStorefrontConfig, referencedProductIds, type V80Config } from "./schema";
+import { parseStorefrontConfig, activeProductRefs, mapStructureImages, type V80Config } from "./schema";
 import { resolveV80, WHATSAPP_URL, type V80SourceCategory, type V80SourceProduct, type V80View } from "./view";
 import { mergedTexts } from "./copy";
 import { applyRealCategorySlugs, fallbackCategoryCards } from "../globalCatalog";
@@ -55,6 +55,10 @@ function normalizeProduct(p: V80SourceProduct): V80SourceProduct {
 function normalizeCategory(c: V80SourceCategory): V80SourceCategory {
   return { ...c, image: mediaUrlOrNull(c.image), derivatives: mediaDerivatives(c.derivatives ?? null) };
 }
+/** Yapılandırma görselleri (hero/mobil hero/promo/koleksiyon/duygu/şehir/banner) ürünlerle AYNI normalizasyondan geçer (r2.dev → /r2). */
+function normalizeConfig(config: V80Config | null): V80Config | null {
+  return config ? { ...config, structure: mapStructureImages(config.structure, mediaUrlOrNull) } : null;
+}
 
 /** Core detay → kaynak ürün (uç yokken; mevcut CatalogSections ile aynı yol). */
 function detailToSource(d: PublicProductDetail, localeSlug: string, localeName: string, categorySlugs: string[]): V80SourceProduct {
@@ -86,11 +90,12 @@ async function fallbackSources(locale: GlobalLocale, catalog: LocaleCatalog, con
   for (const c of catalog.categories) for (const s of c.product_slugs ?? []) catsOfLocaleSlug.set(s, [...(catsOfLocaleSlug.get(s) ?? []), c.slug]);
   const localeSlugByTr = new Map(catalog.products.map((p) => [p.tr_slug, p.slug]));
 
-  // Manuel seçim varsa onları; yoksa kataloğun ilk N ürününü çöz.
+  // Manuel seçim varsa (yalnız aktif satırlar) onları; yoksa kataloğun ilk N ürününü çöz.
   const wantedTr: string[] = [];
   const structure = config?.structure;
-  if (structure && structure.shop.mode === "manual" && structure.shop.products.length) {
-    for (const r of structure.shop.products) if (localeSlugByTr.has(r.tr_slug)) wantedTr.push(r.tr_slug);
+  const active = structure ? activeProductRefs(structure) : [];
+  if (structure && structure.shop.mode === "manual" && active.length) {
+    for (const r of active) if (localeSlugByTr.has(r.tr_slug)) wantedTr.push(r.tr_slug);
   } else {
     for (const p of catalog.products.slice(0, limit)) wantedTr.push(p.tr_slug);
   }
@@ -125,13 +130,14 @@ export async function loadV80(locale: GlobalLocale): Promise<V80View> {
   let livePages: Set<string>;
 
   if (bundle) {
-    config = parseStorefrontConfig(bundle.config);
+    config = normalizeConfig(parseStorefrontConfig(bundle.config));
     products = bundle.products.map(normalizeProduct);
     categories = bundle.categories.map(normalizeCategory);
     livePages = new Set(bundle.pages ?? []);
-    // Manuel seçim: yalnız referans verilen ürünler, sırayla (resolveV80 sırayı korur).
-    if (config && config.structure.shop.mode === "manual" && config.structure.shop.products.length) {
-      const wanted = new Set(referencedProductIds(config.structure));
+    // Manuel seçim: yalnız referans verilen AKTİF ürünler, sırayla (resolveV80 sırayı korur).
+    // Aktif satır kalmadıysa boş seçimle aynı yol (otomatik havuz sırası).
+    if (config && config.structure.shop.mode === "manual" && activeProductRefs(config.structure).length) {
+      const wanted = new Set(activeProductRefs(config.structure).map((r) => r.id));
       const picked = products.filter((p) => wanted.has(p.id));
       products = picked;
       // Öne çıkanların çip/sekme filtresi GERÇEK Product Center kategori bağına geçer (kategori
@@ -146,7 +152,7 @@ export async function loadV80(locale: GlobalLocale): Promise<V80View> {
     }
   } else {
     const [row, inventory] = await Promise.all([fetchGlobalPage(locale, "storefront"), fetchGlobalPagesInventory(locale)]);
-    config = row?.content_html ? parseStorefrontConfig(row.content_html) : null;
+    config = row?.content_html ? normalizeConfig(parseStorefrontConfig(row.content_html)) : null;
     const limit = config?.structure.shop.limit ?? 12;
     const fb = await fallbackSources(locale, catalog, config, limit);
     products = fb.products;

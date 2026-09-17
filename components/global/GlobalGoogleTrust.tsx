@@ -17,6 +17,8 @@
 //    sayfa kırılmaz, sahte içerik konmaz.
 //  • Bu blok MARKA sosyal kanıtıdır; ürün puanı (Product.aggregateRating)
 //    ile hiçbir ilişkisi yoktur.
+//  • Başlıklar (labels) o dilin V80 metinleridir (reviews.eyebrow / reviews.title /
+//    reviews.source) — 13 dilde İngilizce/Türkçe sabit etiket basılmaz.
 // ============================================================================
 
 import { useEffect, useState } from "react";
@@ -26,6 +28,13 @@ import type { GoogleReviewItem, GoogleReviewsPlace } from "@/lib/googleReviews";
 interface Secim {
   place: GoogleReviewsPlace;
   reviews: GoogleReviewItem[];
+}
+
+/** Yerelleştirilmiş başlıklar — lokasyon sayfası V80 metinlerinden (mergedTexts) geçirir. */
+export interface GlobalGoogleTrustLabels {
+  eyebrow: string;
+  title: string;
+  source: string;
 }
 
 /** Google'ın marka "G" işareti — attribution görünürlüğü için. */
@@ -57,7 +66,7 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export function GlobalGoogleTrust() {
+export function GlobalGoogleTrust({ labels }: { labels?: GlobalGoogleTrustLabels }) {
   const [data, setData] = useState<Secim | null>(null);
 
   useEffect(() => {
@@ -83,12 +92,18 @@ export function GlobalGoogleTrust() {
   const { place, reviews } = data;
 
   return (
-    <section className="mx-auto mt-8 w-full max-w-6xl px-4">
+    // Yan boşluk YOK: çağıran <main> zaten `max-w-6xl px-4` (çift iç boşluk düzeltmesi).
+    <section className="mx-auto mt-12 w-full max-w-6xl" data-global-reviews>
       <div className="rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-6 md:px-7">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.28em] text-[#C4974A]">
-            Google Reviews
-          </p>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.28em] text-[#C4974A]">
+              {labels ? labels.eyebrow : "Google Reviews"}
+            </p>
+            {labels?.title ? (
+              <h2 className="mt-1.5 font-serif text-[22px] leading-[1.2] text-[#1A1830] md:text-[26px]">{labels.title}</h2>
+            ) : null}
+          </div>
           {/* Toplu puan/sayı YOK — yalnız kaynağa giden dürüst link. */}
           <a
             href={place.googleMapsUri}
@@ -97,7 +112,7 @@ export function GlobalGoogleTrust() {
             className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#1A1830] hover:underline"
           >
             <GoogleMark />
-            <span>Google</span>
+            <span>{labels ? labels.source : "Google"}</span>
           </a>
         </div>
 
@@ -113,8 +128,16 @@ export function GlobalGoogleTrust() {
                 {review.body}
               </blockquote>
               <figcaption className="mt-auto pt-3 text-[11.5px] text-[#6B6478]">
-                <span className="mb-1 block text-[10.5px] text-[#8A8194]">
-                  Google değerlendirmesi
+                {/* Kart altı kaynak etiketi dil-bağımsız ("Google"); etiket verilmezse eski metin. */}
+                <span className="mb-1 flex items-center gap-1 text-[10.5px] text-[#8A8194]">
+                  {labels ? (
+                    <>
+                      <GoogleMark size={10} />
+                      <span>Google</span>
+                    </>
+                  ) : (
+                    "Google değerlendirmesi"
+                  )}
                 </span>
                 {review.authorUri ? (
                   <a

@@ -11,12 +11,15 @@ import { V80Shop } from "./V80Shop";
 import { V80Mood } from "./V80Mood";
 import { V80CardMessage } from "./V80CardMessage";
 import { V80Reviews } from "./V80Reviews";
+import { V80Banners } from "./V80Banners";
 import { V80Categories, V80Delivery, V80Collections, V80Destinations, V80Journey, V80Cta, V80TrustStrip, V80Content } from "./V80Sections";
 
 export function V80Page({ view }: { view: V80View }) {
   const render = (id: V80SectionId) => {
     switch (id) {
       case "hero": return <V80Hero key={id} view={view} />;
+      // Aktif + görselli banner yoksa bölüm HİÇ basılmaz (sarmalayıcı/başlık/boşluk yok; V80Banners da null döner).
+      case "banners": return view.banners?.length ? <V80Banners key={id} view={view} /> : null;
       case "ticker": return <V80Ticker key={id} items={view.ticker} />;
       case "discovery": return <V80Discovery key={id} view={view} />;
       case "shop": return <V80Shop key={id} view={view} />;

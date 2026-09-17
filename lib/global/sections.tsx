@@ -1,7 +1,8 @@
 // ============================================================================
 // GLOBAL VİTRİN — Figma final bölümleri (duygu hiyerarşisi).
-// Sıra: Hero → Güven → Duygu → Kategori → Ürün → Uzaklık → Atölye →
-//       WhatsApp Concierge → Teslimat kanıtı → Mesaj → Kapanış CTA
+// Lokasyon sayfasındaki SIRA burada değil: lib/global/locationSections.ts
+// (Admin → storefront structure.locationSections; varsayılan Hero → Güven →
+// Ürünler → Kategoriler → Duygu → Yorumlar → Hikâye → Lokasyonlar → İçerik → CTA).
 //
 // KURAL: Bu dosya YALNIZ sunum katmanıdır. Ürün/kategori/fiyat/sayı DAİMA
 // production motorundan (localeCatalog) gelir; burada hard-code ürün YOKTUR.
@@ -17,9 +18,10 @@ import type { LocaleCatalog } from "./api";
 
 const WA = "https://wa.me/905458813450";
 
-/** Bölüm kabı — editorial genişlik, bol whitespace. */
+/** Bölüm kabı — editorial genişlik, bol whitespace. Yan boşluk YOK: tüm çağıranlar zaten
+    `max-w-6xl px-4` <main> içinde (çift 16px iç boşluk ürün ızgarasıyla hizayı bozuyordu). */
 function Wrap({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`mx-auto w-full max-w-6xl px-4 ${className}`}>{children}</section>;
+  return <section className={`mx-auto w-full max-w-6xl px-0 ${className}`}>{children}</section>;
 }
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -77,17 +79,19 @@ export function CargoTrustStrip({ locale, city }: { locale: GlobalLocale; city: 
 // ---------------------------------------------------------------------------
 // 2) DUYGU İLE SEÇİM — "Ne hissetmesini istersiniz?"
 //    Her kart, o dilde CANLI ürünü olan bir kategoriye gider (veri yoksa kart yok).
+//    categorySlugs verilirse (lokasyon sayfası, katalog modu) hedefler YALNIZ o
+//    lokasyonda teslim edilebilir ürünü olan kategorilerdir; verilmezse bugünkü davranış.
 // ---------------------------------------------------------------------------
-export function EmotionSection({ locale, catalog }: { locale: GlobalLocale; catalog: LocaleCatalog }) {
+export function EmotionSection({ locale, catalog, categorySlugs }: { locale: GlobalLocale; catalog: LocaleCatalog; categorySlugs?: readonly string[] }) {
   const s = STORY[locale].emotion;
   const seg = SEGMENTS[locale];
-  const dolu = catalog.categories.filter((c) => (c.live_products ?? 0) > 0);
+  const dolu = categorySlugs ? [...categorySlugs] : catalog.categories.filter((c) => (c.live_products ?? 0) > 0).map((c) => c.slug);
   if (!dolu.length) return null;
   // Duygu → kategori: sırayla dağıtılır (yeni veri sistemi kurulmaz, mevcut kategoriler kullanılır).
   const feels = s.feels.map((f, i) => ({
     ...f,
     img: FEEL_IMAGES[i % FEEL_IMAGES.length],
-    href: `/${locale}/${seg.category}/${dolu[i % dolu.length].slug}`,
+    href: `/${locale}/${seg.category}/${dolu[i % dolu.length]}`,
   }));
   return (
     <Wrap className="mt-16 md:mt-24">
