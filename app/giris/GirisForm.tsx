@@ -6,12 +6,22 @@ import Link from "next/link";
 import { Check, Eye, EyeOff, Lock, Mail, Phone, Shield, Sparkles, UserRound } from "lucide-react";
 import { FormAlert } from "@/components/auth/FormAlert";
 import {
+  PASSWORD_MAX,
+  PASSWORD_MIN,
+  normalizeTrMobile,
   validateLogin,
+  validateRegister,
   viewForResponse,
   viewForThrown,
-  isEmailLike,
   type AuthErrorView,
 } from "@/lib/authErrors";
+import {
+  fetchMarketingConfig,
+  marketingCheckboxVisible,
+  registerConsentNotice,
+  registerMarketingField,
+  type MarketingConfig,
+} from "@/lib/consent";
 
 const benefits = [
   "Siparişlerinizi tek ekrandan takip edin",
@@ -38,12 +48,30 @@ export default function GirisForm() {
   const [loginFeedback, setLoginFeedback] = useState<Feedback>(null);
   const [registerFeedback, setRegisterFeedback] = useState<Feedback>(null);
   const [showPassword, setShowPassword] = useState(false);
+  /* Pazarlama e-posta izni kutucuğu (DESIGN §3.G.2): YALNIZ API "yakalama açık"
+     derse çizilir; metin API'den gelir. Kapalıyken kayıt gövdesi bugünküyle
+     birebir aynıdır (alan hiç eklenmez). */
+  const [marketingConfig, setMarketingConfig] = useState<MarketingConfig | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchMarketingConfig().then((config) => {
+      if (alive) setMarketingConfig(config);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const marketingShown = marketingCheckboxVisible(marketingConfig);
 
   /**
    * Tek istek yolu. Hata artık ASLA ham gösterilmez: durum koduna ve gövdeye
    * göre lib/authErrors.ts çevirir (teknik metin sızmaz, hesap sayımı yapılmaz).
    */
-  async function submitAuth(endpoint: "login" | "register", payload: Record<string, unknown>): Promise<AuthErrorView | null> {
+  async function submitAuth(
+    endpoint: "login" | "register",
+    payload: Record<string, unknown>,
+    onSuccessBody?: (body: unknown) => void,
+  ): Promise<AuthErrorView | null> {
     let response: Response;
     try {
       response = await fetch(`/api/auth/${endpoint}`, {
@@ -55,7 +83,10 @@ export default function GirisForm() {
     } catch (error) {
       return viewForThrown(error);
     }
-    if (response.ok) return null;
+    if (response.ok) {
+      if (onSuccessBody) onSuccessBody(await response.json().catch(() => null));
+      return null;
+    }
     const body = await response.json().catch(() => null);
     return viewForResponse(response.status, body);
   }
@@ -84,6 +115,19 @@ export default function GirisForm() {
     router.push(nextPath);
   }
 
+  /**
+   * Kayıt. Ön denetimin TAMAMI `lib/authErrors.validateRegister`'dan gelir:
+   * aynı kural popup'ta da çalışır, sıra ve metinler sunucunun
+   * `parseRegisterInput`'uyla eşleşir.
+   *
+   * KVKK onayı (DECISIONS D6 · DESIGN §3.A.10): kutucuğun GERÇEK durumu
+   * gönderilir. Eskiden kutu kontrol edilip gövdeye sabit `true` yazılıyordu;
+   * kutunun kaldırılması ya da ön-işaretlenmesi durumunda sistem alınmamış bir
+   * onayı kaydediyordu. Artık tek kaynak kullanıcının işareti.
+   *
+   * Telefon E.164'e NORMALLEŞTİRİLİR: sunucu `+905xxxxxxxxx` dışını 400 ile
+   * reddeder ve o 400'ün sebebi ekranda görünmezdi.
+   */
   async function handleRegister(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -92,24 +136,44 @@ export default function GirisForm() {
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const passwordAgain = String(form.get("password_again") ?? "");
+    const kvkkOnay = form.get("kvkk_onay") === "on";
+    // Pazarlama izni KVKK onayından AYRI bir karardır; zorunlu değildir.
+    const marketingTicked = marketingShown && form.get("marketing_email") === "on";
 
-    const fail = (message: string, field?: AuthErrorView["field"]) => {
-      setRegisterFeedback({ tone: "error", message, field });
-    };
-    if (!name) return fail("Ad ve soyadınızı girin.", "name");
-    if (!phone) return fail("Telefon numaranızı girin.", "phone");
-    if (!email) return fail("E-posta adresinizi girin.", "email");
-    if (!isEmailLike(email)) return fail("Geçerli bir e-posta adresi girin.", "email");
-    if (password.length < 8) return fail("Şifreniz en az 8 karakter olmalı.", "password");
-    if (password !== passwordAgain) return fail("Şifreler eşleşmiyor. İki alana da aynı şifreyi yazın.", "password");
-    if (form.get("kvkk_onay") !== "on") return fail("Devam etmek için KVKK aydınlatma metnini onaylayın.");
+    const preflight = validateRegister({ name, phone, email, password, passwordAgain, kvkkOnay });
+    if (preflight) {
+      setRegisterFeedback({ tone: "error", message: preflight.message, field: preflight.field });
+      return;
+    }
 
     setRegisterLoading(true);
     setRegisterFeedback(null);
-    const failure = await submitAuth("register", { name, phone, email, password, kvkk_onay: true });
+    let registerBody: unknown = null;
+    const failure = await submitAuth(
+      "register",
+      {
+        name,
+        phone: normalizeTrMobile(phone),
+        email,
+        password,
+        kvkk_onay: kvkkOnay,
+        ...registerMarketingField(marketingShown, marketingTicked),
+      },
+      (body) => {
+        registerBody = body;
+      },
+    );
     setRegisterLoading(false);
     if (failure) {
       setRegisterFeedback({ tone: "error", message: failure.message, field: failure.field });
+      return;
+    }
+    // Kutu işaretlendiyse izin KAYIT YANITINDA doğrulanır; kaydedilmediyse
+    // kullanıcıya söylenir (Hesabım'daki anahtar gerçek durumu gösterir).
+    const notice = registerConsentNotice(marketingShown, marketingTicked, registerBody);
+    if (notice) {
+      setRegisterFeedback({ tone: "success", message: notice });
+      window.setTimeout(() => router.push(nextPath), 4000);
       return;
     }
     setRegisterFeedback({ tone: "success", message: "Hesabınız oluşturuldu, yönlendiriliyorsunuz…" });
@@ -190,7 +254,10 @@ export default function GirisForm() {
                   </button>
                 </span>
               </label>
-              <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><label className="flex items-center gap-2 text-[#667085]"><input type="checkbox" className="h-4 w-4 accent-[#8b5cf6]" /> Beni hatırla</label><Link href="/sifremi-unuttum" className="font-semibold text-[#8b5cf6]">Şifremi unuttum</Link></div>
+              {/* "Beni hatırla" kutusu KALDIRILDI: hiçbir yere bağlı değildi —
+                  işaretlenip işaretlenmemesi oturum süresini değiştirmiyordu.
+                  Çalışmayan bir kontrol, olmayan bir kontrolden kötüdür. */}
+              <div className="flex flex-wrap items-center justify-end gap-3 text-sm"><Link href="/sifremi-unuttum" className="font-semibold text-[#8b5cf6]">Şifremi unuttum</Link></div>
               <button type="submit" disabled={loginLoading} className="mt-2 rounded-full bg-[#8b5cf6] px-8 py-4 text-lg font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)] disabled:opacity-60">{loginLoading ? "Giriş yapılıyor…" : "Giriş Yap"}</button>
             </form>
           </div>
@@ -207,9 +274,34 @@ export default function GirisForm() {
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">Ad Soyad<input name="name" required type="text" autoComplete="name" aria-invalid={registerError?.field === "name" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder="Adınız Soyadınız" className={`h-14 rounded-2xl border px-4 outline-none ${markRegister("name")}`} /></label>
               <label className="grid gap-2 text-sm font-semibold text-[#344054]">Telefon<span className={`flex items-center gap-3 rounded-2xl border px-4 ${markRegister("phone")}`}><Phone className="h-5 w-5 text-[#8b5cf6]" /><input name="phone" required type="tel" autoComplete="tel" aria-invalid={registerError?.field === "phone" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder="0507 441 34 74" className="h-14 flex-1 bg-transparent outline-none" /></span></label>
               <label className="grid gap-2 text-sm font-semibold text-[#344054] md:col-span-2">E-posta<input name="email" required type="email" autoComplete="email" aria-invalid={registerError?.field === "email" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder="ornek@email.com" className={`h-14 rounded-2xl border px-4 outline-none ${markRegister("email")}`} /></label>
-              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre<input name="password" required type="password" autoComplete="new-password" minLength={8} aria-invalid={registerError?.field === "password" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder="En az 8 karakter" className={`h-14 rounded-2xl border px-4 outline-none ${markRegister("password")}`} /></label>
-              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre Tekrar<input name="password_again" required type="password" autoComplete="new-password" minLength={8} aria-invalid={registerError?.field === "password" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder="Şifrenizi tekrar girin" className={`h-14 rounded-2xl border px-4 outline-none ${markRegister("password")}`} /></label>
-              <label className="flex items-start gap-3 text-sm leading-6 text-[#667085] md:col-span-2"><input name="kvkk_onay" type="checkbox" className="mt-1 h-4 w-4 accent-[#8b5cf6]" /> KVKK aydınlatma metnini ve üyelik koşullarını okudum, kabul ediyorum.</label>
+              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre<input name="password" required type="password" autoComplete="new-password" minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} aria-invalid={registerError?.field === "password" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder={`En az ${PASSWORD_MIN} karakter`} className={`h-14 rounded-2xl border px-4 outline-none ${markRegister("password")}`} /></label>
+              <label className="grid gap-2 text-sm font-semibold text-[#344054]">Şifre Tekrar<input name="password_again" required type="password" autoComplete="new-password" minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} aria-invalid={registerError?.field === "password" || undefined} aria-describedby={registerError ? "kayit-hata" : undefined} placeholder="Şifrenizi tekrar girin" className={`h-14 rounded-2xl border px-4 outline-none ${markRegister("password")}`} /></label>
+              {/* AYDINLATMA ONAYI — işaretsiz başlar (defaultChecked YOK) ve
+                  gövdeye yalnız bu kutunun gerçek durumu yazılır. */}
+              <label className={`flex items-start gap-3 rounded-2xl border p-4 text-sm leading-6 text-[#667085] md:col-span-2 ${registerError?.field === "kvkk" ? FIELD_ERROR : "border-transparent"}`}>
+                <input
+                  name="kvkk_onay"
+                  type="checkbox"
+                  aria-invalid={registerError?.field === "kvkk" || undefined}
+                  aria-describedby={registerError ? "kayit-hata" : undefined}
+                  className="mt-1 h-4 w-4 shrink-0 accent-[#8b5cf6]"
+                />
+                <span>
+                  <Link href="/kvkk" target="_blank" className="font-semibold text-[#8b5cf6] underline underline-offset-2">Üyelik Aydınlatma Metni</Link>
+                  &apos;ni okudum, kişisel verilerimin üyelik kapsamında işlenmesini kabul ediyorum.
+                </span>
+              </label>
+              {/* PAZARLAMA E-POSTA İZNİ — yalnız yakalama açıkken, İŞARETSİZ,
+                  zorunlu DEĞİL. Metin API'den gelir (saklanan sürümle aynı). */}
+              {marketingShown && (
+                <label className="flex items-start gap-3 rounded-2xl border border-transparent p-4 text-sm leading-6 text-[#667085] md:col-span-2">
+                  <input name="marketing_email" type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-[#8b5cf6]" />
+                  <span>
+                    <span className="font-semibold text-[#344054]">{marketingConfig.text.label}</span>
+                    {marketingConfig.text.body && <span className="mt-1 block text-xs leading-5">{marketingConfig.text.body}</span>}
+                  </span>
+                </label>
+              )}
               <button type="submit" disabled={registerLoading} className="rounded-full bg-[#111827] px-8 py-4 text-lg font-bold text-white disabled:opacity-60 md:col-span-2">{registerLoading ? "Hesap oluşturuluyor…" : "Hesap Oluştur"}</button>
             </form>
             <div className="mt-6 flex items-center gap-3 rounded-[18px] bg-[#f7f5fc] p-4 text-sm text-[#667085]"><Shield className="h-5 w-5 text-[#8b5cf6]" /> Sipariş ve üyelik verileri güvenli bağlantı üzerinden işlenir.</div>

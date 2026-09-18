@@ -1,21 +1,16 @@
-import { NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/apiProxyHeaders";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
-
+/**
+ * Şifre sıfırlama talebi. Kimlik (e-posta/telefon) GÖVDEDE gider.
+ *
+ * Kimlik başlıkları burada özellikle önemlidir: API bu ucu IP 5/15dk,
+ * identifier 3/15dk ve `sent_to` 3/15dk + 5/gün kovalarıyla sınırlar. Gerçek
+ * IP iletilmezse bütün ziyaretçiler aynı kovayı paylaşır.
+ */
 export async function POST(request: Request) {
-  try {
-    const upstream = await fetch(`${API_ORIGIN}/api/auth/sifre-sifirla/talep`, {
-      method: "POST",
-      headers: { "Content-Type": request.headers.get("content-type") ?? "application/json" },
-      body: await request.text(),
-      cache: "no-store",
-    });
-    const data = await upstream.text();
-    return new NextResponse(data, {
-      status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
-    });
-  } catch {
-    return NextResponse.json({ error: "proxy_error" }, { status: 502 });
-  }
+  return forwardToApi(request, {
+    path: "/api/auth/sifre-sifirla/talep",
+    method: "POST",
+    body: await request.text(),
+  });
 }

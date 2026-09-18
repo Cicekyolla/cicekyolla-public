@@ -1,20 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/apiProxyHeaders";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
-
-/** Hoş geldin kupon KODU — yalnız giriş yapmış üyeye. Oturum yoksa 401. */
-export async function GET(request: NextRequest) {
-  try {
-    const upstream = await fetch(`${API_ORIGIN}/api/auth/welcome-coupon`, {
-      headers: { cookie: request.headers.get("cookie") ?? "" },
-      cache: "no-store",
-    });
-    const body = await upstream.text();
-    return new NextResponse(body, {
-      status: upstream.status,
-      headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
-    });
-  } catch {
-    return NextResponse.json({ error: "proxy_error" }, { status: 502 });
-  }
+/**
+ * Hoş geldin kupon KODU — yalnız giriş yapmış üyeye (oturum yoksa 401).
+ *
+ * Kod/uygunluk kararının tamamı API'de verilir (welcomeOffer.welcomeMemberState
+ * + DECISIONS #9 telefon kanıtı kapısı). Bu katman gövdeyi DEĞİŞTİRMEZ; ekran
+ * `available:false` + `reason` geldiğinde kupon uydurmaz.
+ */
+export async function GET(request: Request) {
+  return forwardToApi(request, {
+    path: "/api/auth/welcome-coupon",
+    cookie: true,
+  });
 }

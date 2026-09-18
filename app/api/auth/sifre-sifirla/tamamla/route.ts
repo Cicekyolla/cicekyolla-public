@@ -1,25 +1,23 @@
-import { NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/apiProxyHeaders";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
-
+/**
+ * Şifre belirleme / telefon kanıtının TAMAMLANMASI.
+ *
+ * ÇEREZ İLETİLMEK ZORUNDA (düzeltilen kök neden): API `resolveMemberSession`
+ * ile isteği atan üyeyi okuyor ve `memberOwnership.decidePhoneProof`'un B3/C2
+ * dallarını YALNIZ `session.authUserId === token.auth_user_id` ise çalıştırıyor
+ * (DESIGN §3.A.5 · A1-5). Çerez iletilmezse oturum açık bir üyenin telefon
+ * doğrulaması sessizce "kimliksiz talep" dalına düşer: geçmiş siparişleri
+ * hesabına bağlanmaz ve kullanıcı sebebini hiç öğrenmez.
+ *
+ * Başarıda API yeni oturum çerezi yazar (session_version arttı) → aktarılır.
+ */
 export async function POST(request: Request) {
-  try {
-    const upstream = await fetch(`${API_ORIGIN}/api/auth/sifre-sifirla/tamamla`, {
-      method: "POST",
-      headers: { "Content-Type": request.headers.get("content-type") ?? "application/json" },
-      body: await request.text(),
-      cache: "no-store",
-    });
-    const data = await upstream.text();
-    const response = new NextResponse(data, {
-      status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
-    });
-    // Şifre belirlenince oturum açılır; login route'uyla aynı çerez aktarımı.
-    const setCookie = upstream.headers.get("set-cookie");
-    if (setCookie) response.headers.set("set-cookie", setCookie);
-    return response;
-  } catch {
-    return NextResponse.json({ error: "proxy_error" }, { status: 502 });
-  }
+  return forwardToApi(request, {
+    path: "/api/auth/sifre-sifirla/tamamla",
+    method: "POST",
+    cookie: true,
+    body: await request.text(),
+    passSetCookie: true,
+  });
 }

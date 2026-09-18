@@ -28,6 +28,38 @@ export interface PaytrStatus {
 
 export const SUPPORT_WHATSAPP = "https://wa.me/905458813450";
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * SİPARİŞ/ÖDEME HATASI — HTTP DURUMU KAYBOLMAZ
+ *
+ * Eskiden yalnız `new Error(e.error)` fırlatılıyordu: çağıran taraf 409 (kupon
+ * reddi) ile 500'ü ayırt edemiyor ve müşteriye hep aynı genel metni
+ * gösteriyordu. `Error.message` sözleşmesi KORUNUR (mevcut karşılaştırmalar
+ * çalışmaya devam eder), yanına `status` ve `apiError` eklenir.
+ * ──────────────────────────────────────────────────────────────────────── */
+export class CheckoutApiError extends Error {
+  /** HTTP durumu (proxy hatasında 502). */
+  readonly status: number;
+  /** Sunucunun `{ error: ... }` gövdesi — Türkçe cümle ya da makine kodu. */
+  readonly apiError: string | null;
+
+  // NOT: "parameter property" (constructor(readonly x: number)) KULLANILMAZ.
+  // Node'un tip-sıyırma modu (`node --test lib/*.test.ts`) bu sözdizimini
+  // ayrıştıramıyor ve bu dosyayı import eden TÜM testler çöküyor
+  // (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX). Alanlar açıkça atanır.
+  constructor(status: number, apiError: string | null) {
+    super(apiError || String(status));
+    this.name = "CheckoutApiError";
+    this.status = status;
+    this.apiError = apiError;
+  }
+}
+
+async function readApiError(response: Response): Promise<CheckoutApiError> {
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  const apiError = typeof body?.error === "string" && body.error.trim() ? body.error.trim() : null;
+  return new CheckoutApiError(response.status, apiError);
+}
+
 export async function fetchBankAccounts(): Promise<BankAccountPublic[]> {
   try {
     const r = await fetch("/api/bank-accounts", { cache: "no-store" });
@@ -38,19 +70,38 @@ export async function fetchBankAccounts(): Promise<BankAccountPublic[]> {
   }
 }
 
-export async function createHavaleOrder(body: unknown): Promise<{ order_number: string; total_amount_minor: number }> {
+/** Havale yanıtı — `total_amount_minor` SUNUCUNUN yetkili toplamıdır. */
+export interface HavaleOrderResult {
+  order_number: string;
+  public_id?: string;
+  total_amount_minor?: number;
+  payment_status?: string;
+  payment_method?: string;
+  member_linked?: boolean;
+}
+
+export async function createHavaleOrder(body: unknown): Promise<HavaleOrderResult> {
   const r = await fetch("/api/payment/havale", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
-  if (!r.ok) { const e = await r.json().catch(() => null); throw new Error((e && e.error) || String(r.status)); }
+  if (!r.ok) throw await readApiError(r);
   return (await r.json()).data;
 }
 
-export async function initPaytr(body: unknown): Promise<{ merchant_oid: string; iframe_url: string }> {
+/** PayTR init yanıtı — tutar yine SUNUCUDAN (istemci hesabı gösterilmez). */
+export interface PaytrInitResult {
+  merchant_oid: string;
+  iframe_url: string;
+  iframe_token?: string;
+  total_amount_minor?: number;
+  member_linked?: boolean;
+}
+
+export async function initPaytr(body: unknown): Promise<PaytrInitResult> {
   const r = await fetch("/api/payment/paytr-init", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
-  if (!r.ok) { const e = await r.json().catch(() => null); throw new Error((e && e.error) || String(r.status)); }
+  if (!r.ok) throw await readApiError(r);
   return (await r.json()).data;
 }
 

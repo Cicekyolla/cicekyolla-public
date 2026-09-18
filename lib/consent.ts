@@ -5,7 +5,13 @@
  *  • Sahte iş yok: push aboneliği gerçek PushSubscription'dır, backend'e yazılır.
  *  • Desteklemeyen tarayıcıda hiçbir şey patlamaz; sessizce devre dışı kalır.
  *  • İzin reddedilmişse kullanıcı bir daha rahatsız edilmez (permission 'denied').
+ *  • KVKK/aydınlatma onayı UYDURULMAZ: kayıt gövdesine yalnız kullanıcının
+ *    gerçekten işaretlediği değer yazılır (DECISIONS D6 · DESIGN §3.A.10).
  */
+
+// Yalnız TİP alınır (derleme sırasında silinir) — bu modül `node --test` ile
+// doğrudan koşulabilsin diye çalışma zamanı bağımlılığı EKLENMEZ.
+import type { WelcomeCouponResponse } from "./memberAccountView";
 
 export type ConsentConfig = {
   cookie: {
@@ -176,59 +182,313 @@ export async function subscribeToPush(vapidPublicKey: string | null): Promise<Su
 
 /* ────────────────────── Hoş geldin kuponu ────────────────────── */
 
-export type WelcomeCoupon = {
-  available: boolean;
-  code?: string;
-  amount_minor?: number;
-  min_cart_total_minor?: number | null;
-  first_order_only?: boolean;
-  reason?: string;
-};
+/**
+ * Gövde sözleşmesi TEK yerde tanımlıdır (`lib/memberAccountView.ts`); popup ve
+ * Hesabım aynı alanları okur, ikinci bir tip türetilmez.
+ */
+export type WelcomeCoupon = WelcomeCouponResponse;
 
-/** Kupon KODU — yalnız giriş yapmış üyeye döner (401 = üye değil). */
+/**
+ * Kupon KODU — yalnız giriş yapmış üyeye döner (401 = üye değil).
+ * API gövdesi `{ data: {...} }` sarmalıdır (consentPushController.ts).
+ */
 export async function fetchWelcomeCoupon(): Promise<WelcomeCoupon> {
   try {
-    const res = await fetch("/api/auth/welcome-coupon", { cache: "no-store" });
-    if (!res.ok) return { available: false, reason: res.status === 401 ? "not_member" : "error" };
+    const res = await fetch("/api/auth/welcome-coupon", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return { available: false, reason: res.status === 401 ? "not_member" : "lookup_failed" };
     const json = (await res.json()) as { data?: WelcomeCoupon };
-    return json?.data ?? { available: false, reason: "error" };
+    return json?.data ?? { available: false, reason: "lookup_failed" };
   } catch {
-    return { available: false, reason: "error" };
+    return { available: false, reason: "lookup_failed" };
   }
 }
 
+/**
+ * Kayıt sonucu. Hata TÜRKÇE CÜMLEYE ÇEVRİLMEDEN döner: çeviri tek yerde,
+ * `lib/authErrors.ts`'te yapılır (teknik metin sızmasın, hesap sayımına yardım
+ * eden ayrım oluşmasın). `status: 0` → fetch throw etti, `body` fırlatılan
+ * hatadır; çağıran `viewForThrown` kullanır.
+ */
 export type RegisterResult =
   | { ok: true }
-  | { ok: false; message: string };
+  | { ok: false; status: number; body: unknown };
 
-/** Mevcut üyelik akışı (/api/auth/register). Başarıda oturum çerezi kurulur. */
-export async function registerMember(input: {
+export interface RegisterMemberInput {
   email: string;
   password: string;
   name?: string;
-}): Promise<RegisterResult> {
+  /**
+   * Aydınlatma/KVKK kutusu GERÇEKTEN işaretlendi mi?
+   *
+   * ZORUNLU ALAN (DECISIONS D6 · DESIGN §3.A.10). Eskiden bu dosya gövdeye
+   * sabit `kvkk_onay: true` yazıyordu: kullanıcı hiçbir şey onaylamamış olsa
+   * bile `auth_users.kvkk_onay_at` doluyordu ve admin ekranı "kayıt formunda
+   * onayladı" diyordu. Onay artık YALNIZ kullanıcının işaretinden gelir.
+   */
+  kvkkOnay: boolean;
+}
+
+/**
+ * `/api/auth/register` gövdesi — SAF fonksiyon (test edilebilir olsun diye
+ * ayrıldı). `kvkk_onay` alanı çağıranın verdiği değerdir; burada true'ya
+ * yükseltilmez. API `kvkk_onay !== true` ise 400 döner.
+ */
+export function registerRequestBody(input: RegisterMemberInput): Record<string, unknown> {
+  return {
+    email: input.email,
+    password: input.password,
+    name: input.name,
+    kvkk_onay: input.kvkkOnay === true,
+  };
+}
+
+/** Mevcut üyelik akışı (/api/auth/register). Başarıda oturum çerezi kurulur. */
+export async function registerMember(input: RegisterMemberInput): Promise<RegisterResult> {
+  let res: Response;
   try {
-    const res = await fetch("/api/auth/register", {
+    res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: input.email,
-        password: input.password,
-        name: input.name,
-        kvkk_onay: true,
-      }),
+      credentials: "include",
+      body: JSON.stringify(registerRequestBody(input)),
     });
-    if (res.ok) return { ok: true };
-    const json = (await res.json().catch(() => null)) as { message?: string; error?: string } | null;
-    /* API hata metnini "error" alanında gönderiyor (ör. 409 → "Bu e-posta veya
-       telefon zaten kayıtlı."). Önce message, sonra error okunur; ikisi de yoksa
-       genel metne düşülür. Eskiden yalnız message aranıyordu ve gerçek sebep
-       kullanıcıdan gizleniyordu. */
-    return {
-      ok: false,
-      message: json?.message ?? json?.error ?? "Kayıt tamamlanamadı. Lütfen tekrar deneyin.",
-    };
-  } catch {
-    return { ok: false, message: "Kayıt tamamlanamadı. Lütfen tekrar deneyin." };
+  } catch (thrown) {
+    return { ok: false, status: 0, body: thrown };
   }
+  if (res.ok) return { ok: true };
+  return { ok: false, status: res.status, body: await res.json().catch(() => null) };
+}
+
+/* ─────────────── Pazarlama e-posta izni (ticari elektronik ileti) ───────────────
+ *
+ * DESIGN §3.G.2: izin YALNIZ üç noktada ve YALNIZ kişinin kendi eylemiyle
+ * alınır — /giris kayıt formu, yeni üye penceresi, Hesabım anahtarı.
+ * KVKK/aydınlatma onayı ile KARIŞTIRILMAZ (ayrı kutu, ayrı kayıt).
+ *
+ * Kutucuk yalnız API "yakalama açık" derse çizilir (bayrak + hukukça onaylı
+ * metin sürümü). Metin API'den gelir; burada ikinci bir metin YAZILMAZ —
+ * aksi halde saklanan `text_version` ile ekranda okunan metin ayrışırdı.
+ * Kutucuk her zaman İŞARETSİZ başlar.
+ */
+
+export type MarketingConsentText = { version: string; label: string; body: string };
+
+export type MarketingConfig = {
+  capture_enabled: boolean;
+  unsubscribe_ready: boolean;
+  text: MarketingConsentText | null;
+};
+
+/** API `memberConsentState` görünümü (Hesabım okur, admin aynı satırı okur). */
+export type MarketingConsentState = {
+  status: "granted" | "withdrawn" | "none";
+  status_label: string;
+  granted_at: string | null;
+  withdrawn_at: string | null;
+  text_version: string | null;
+  capture_enabled: boolean;
+  suppressed_reason: string | null;
+  suppressed_label: string | null;
+};
+
+/** Kaynak adları API'nin kabul ettiği kümeyle AYNI (`.strict()` şema). */
+export type MarketingConsentSource = "account_settings" | "welcome_popup";
+
+export const MARKETING_CONFIG_PATH = "/api/marketing/config";
+export const MARKETING_CONSENT_PATH = "/api/auth/marketing/consent";
+
+const nonEmpty = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+
+/**
+ * `{ok, marketing_email:{…}}` → güvenli yapı. Biçim bozuksa null (kutucuk
+ * çizilmez: şüphede izin İSTENMEZ). Metin yoksa ya da boşsa yakalama kapalı
+ * sayılır — okunmamış bir metne onay verdirilemez.
+ */
+export function parseMarketingConfig(json: unknown): MarketingConfig | null {
+  const block = (json as { marketing_email?: unknown } | null)?.marketing_email as
+    | { capture_enabled?: unknown; unsubscribe_ready?: unknown; text?: unknown }
+    | undefined;
+  if (!block || typeof block !== "object") return null;
+  const rawText = block.text as { version?: unknown; label?: unknown; body?: unknown } | null | undefined;
+  const text =
+    rawText && nonEmpty(rawText.version) && nonEmpty(rawText.label) && typeof rawText.body === "string"
+      ? { version: rawText.version, label: rawText.label, body: rawText.body }
+      : null;
+  return {
+    capture_enabled: block.capture_enabled === true && text !== null,
+    unsubscribe_ready: block.unsubscribe_ready === true,
+    text,
+  };
+}
+
+/** Kayıt formlarında pazarlama kutucuğu çizilsin mi? */
+export function marketingCheckboxVisible(
+  config: MarketingConfig | null,
+): config is MarketingConfig & { text: MarketingConsentText } {
+  return config?.capture_enabled === true && config.text !== null;
+}
+
+/**
+ * /giris kayıt gövdesine eklenecek alan. Kutucuk ÇİZİLMEDİYSE hiçbir alan
+ * eklenmez (bayrak kapalıyken gövde bugünküyle birebir aynı kalır); çizildiyse
+ * kutunun GERÇEK durumu gider — true'ya yükseltilmez.
+ */
+export function registerMarketingField(shown: boolean, ticked: unknown): Record<string, boolean> {
+  return shown ? { marketing_email: ticked === true } : {};
+}
+
+/**
+ * Kayıt yanıtı izni KAYDETTİ mi? API kayıt transaction'ı içinde SAVEPOINT'le
+ * yazar ve sonucu `marketing_email` alanında döner (`"granted"` ya da
+ * `{status|outcome: "granted"}`). Alan yoksa (eski API) ya da başka bir sonuç
+ * varsa (`not_recorded`, `disabled`) → kaydedilmedi.
+ */
+export function registerConsentRecorded(body: unknown): boolean {
+  const value = (body as { marketing_email?: unknown } | null)?.marketing_email;
+  if (value === "granted") return true;
+  if (value && typeof value === "object") {
+    const v = value as { status?: unknown; outcome?: unknown };
+    return v.status === "granted" || v.outcome === "granted";
+  }
+  return false;
+}
+
+/** Kutu işaretlendi ama izin kaydedilmediyse kullanıcıya DÜRÜST not. */
+export const MARKETING_NOT_RECORDED_NOTICE =
+  "Üyeliğiniz oluşturuldu, ancak kampanya e-postası izniniz şu anda kaydedilemedi. Dilerseniz Hesabım sayfasından yeniden verebilirsiniz.";
+
+export function registerConsentNotice(shown: boolean, ticked: boolean, body: unknown): string | null {
+  if (!shown || !ticked) return null;
+  return registerConsentRecorded(body) ? null : MARKETING_NOT_RECORDED_NOTICE;
+}
+
+/** Üye ucu gövdesi — `granted` yalnız gerçek boolean true ise true. */
+export function marketingConsentRequestBody(
+  granted: unknown,
+  source: MarketingConsentSource,
+): { granted: boolean; source: MarketingConsentSource } {
+  return { granted: granted === true, source };
+}
+
+export function parseMarketingConsentState(json: unknown): MarketingConsentState | null {
+  const s = (json as { marketing_email?: unknown } | null)?.marketing_email as
+    | Partial<MarketingConsentState>
+    | undefined;
+  if (!s || typeof s !== "object") return null;
+  if (s.status !== "granted" && s.status !== "withdrawn" && s.status !== "none") return null;
+  return {
+    status: s.status,
+    status_label: nonEmpty(s.status_label) ? s.status_label : "",
+    granted_at: typeof s.granted_at === "string" ? s.granted_at : null,
+    withdrawn_at: typeof s.withdrawn_at === "string" ? s.withdrawn_at : null,
+    text_version: typeof s.text_version === "string" ? s.text_version : null,
+    capture_enabled: s.capture_enabled === true,
+    suppressed_reason: typeof s.suppressed_reason === "string" ? s.suppressed_reason : null,
+    suppressed_label: nonEmpty(s.suppressed_label) ? s.suppressed_label : null,
+  };
+}
+
+export type MarketingToggleView = {
+  /** Bölüm çizilsin mi? İzin varsa, izin geri çekilmişse ya da yakalama açıksa. */
+  visible: boolean;
+  checked: boolean;
+  /** Anahtar değiştirilebilir mi? İzin varken geri çekme her zaman; vermek yalnız yakalama açıkken. */
+  canToggle: boolean;
+  statusLabel: string;
+  /** Aktif gönderim engeli (Türkçe, sunucudan). */
+  suppressedLabel: string | null;
+  /** Anahtarın yanında okunacak onay metni (API'den; yoksa null). */
+  text: MarketingConsentText | null;
+};
+
+/**
+ * Hesabım anahtarı. Karar SUNUCUNUN alanlarından: durum, etiket, engel.
+ *   • izin VAR     → her koşulda gösterilir, geri çekilebilir (bayraktan bağımsız).
+ *   • geri çekilmiş → durum gösterilir; yeniden vermek yalnız yakalama açıkken.
+ *   • hiç yok       → yalnız yakalama açıkken (verilemeyecek bir izin için
+ *                     kutucuk çizilmez).
+ */
+export function marketingToggleView(
+  state: MarketingConsentState | null,
+  config: MarketingConfig | null,
+): MarketingToggleView {
+  const hidden: MarketingToggleView = {
+    visible: false,
+    checked: false,
+    canToggle: false,
+    statusLabel: "",
+    suppressedLabel: null,
+    text: null,
+  };
+  if (!state) return hidden;
+  const granted = state.status === "granted";
+  const canGrant = !granted && state.capture_enabled && marketingCheckboxVisible(config);
+  if (!granted && !canGrant && state.status !== "withdrawn") return hidden;
+  return {
+    visible: true,
+    checked: granted,
+    canToggle: granted || canGrant,
+    statusLabel: state.status_label,
+    suppressedLabel: state.suppressed_label,
+    text: marketingCheckboxVisible(config) ? config.text : null,
+  };
+}
+
+/** Üye ucunun hata yanıtı → Türkçe cümle (teknik kod ekrana basılmaz). */
+export function marketingErrorMessage(status: number, body: unknown): string {
+  const raw = (body as { error?: unknown } | null)?.error;
+  const human = typeof raw === "string" && /\s/.test(raw.trim()) ? raw.trim() : null;
+  if (status === 401) return "Oturumunuzun süresi dolmuş. Lütfen yeniden giriş yapın.";
+  if (status === 429) return human ?? "Çok fazla deneme yapıldı. Lütfen birkaç dakika sonra tekrar deneyin.";
+  if (status === 503 && human) return human;
+  if (status >= 500 || status === 0) return "İşlem şu anda tamamlanamadı. Lütfen daha sonra tekrar deneyin.";
+  return human ?? "İşlem tamamlanamadı. Lütfen sayfayı yenileyip tekrar deneyin.";
+}
+
+/** Yakalama kutucuğunun durumu. Hata olursa null → kutucuk çizilmez. */
+export async function fetchMarketingConfig(): Promise<MarketingConfig | null> {
+  try {
+    const res = await fetch(MARKETING_CONFIG_PATH, { cache: "no-store" });
+    if (!res.ok) return null;
+    return parseMarketingConfig(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+export type MarketingConsentResult =
+  | { ok: true; state: MarketingConsentState }
+  | { ok: false; status: number; message: string };
+
+async function consentCall(init: RequestInit): Promise<MarketingConsentResult> {
+  let res: Response;
+  try {
+    res = await fetch(MARKETING_CONSENT_PATH, { cache: "no-store", credentials: "include", ...init });
+  } catch {
+    return { ok: false, status: 0, message: marketingErrorMessage(0, null) };
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) return { ok: false, status: res.status, message: marketingErrorMessage(res.status, body) };
+  const state = parseMarketingConsentState(body);
+  return state ? { ok: true, state } : { ok: false, status: res.status, message: marketingErrorMessage(500, null) };
+}
+
+/** Üyenin güncel izni (Hesabım). */
+export function fetchMarketingConsent(): Promise<MarketingConsentResult> {
+  return consentCall({ method: "GET" });
+}
+
+/** İzin ver / geri çek — yanıt taze read-back'tir (ekran kendi tahminini göstermez). */
+export function setMarketingConsent(
+  granted: boolean,
+  source: MarketingConsentSource,
+): Promise<MarketingConsentResult> {
+  return consentCall({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(marketingConsentRequestBody(granted, source)),
+  });
 }
