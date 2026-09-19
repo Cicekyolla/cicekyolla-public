@@ -8,6 +8,7 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useI18n } from "@/lib/i18n";
 import { ExpiredDeliveryNotice } from "@/components/checkout/ExpiredDeliveryNotice";
+import { stashCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
 
 function deliveryFingerprint(delivery?: PendingDelivery) {
   if (!delivery) return null;
@@ -69,6 +70,13 @@ export default function CartCheckoutPage() {
     return { addons: mapped, initialAddonQty: quantities };
   }, [items]);
 
+  // KART: PayTR'ye giderken sepet TUTULUR (red → geri dönüş). Hangi satırların
+  // ödemeye gittiği bu sekmeye not edilir; /checkout/sonuc yalnız sunucu
+  // "ödendi" dediğinde bu satırları düşürür (lib/cardCheckoutSettle.ts).
+  const rememberCardCheckout = ({ merchantOid, draftKey }: { merchantOid: string; draftKey: string }) => {
+    stashCardCheckout(tabStorage(), { oid: merchantOid, cartKeys: items.map((item) => item.key), draftKey });
+  };
+
   // Sepet doluyken son geçerli görünümü tazele (render sırasında ref'e yazma yok).
   useEffect(() => {
     if (first) frozen.current = { first, addons, initialAddonQty, subtotalMinor, delivery: firstDelivery };
@@ -94,5 +102,5 @@ export default function CartCheckoutPage() {
   // Tüm alanlar view'dan okunur: sepet temizlendikten sonra da başarı ekranının
   // ihtiyaç duyduğu ana ürün verisi (ad, görsel, fiyat, adet) elde kalır.
   const v = view;
-  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><ExpiredDeliveryNotice className="mb-5" /><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} /></div></main>;
+  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><ExpiredDeliveryNotice className="mb-5" /><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} onCardPaymentStarted={rememberCardCheckout} /></div></main>;
 }

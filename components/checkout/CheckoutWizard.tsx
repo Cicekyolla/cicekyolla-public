@@ -87,9 +87,12 @@ type Props = { productName: string; productId: number | null; variantId?: number
   /** Teslimat checkout içinde düzenlenince sepete geri yazar (tek kaynak sepettir). */
   onDeliveryChange?: (delivery: PendingDelivery) => void;
   /** Hesap adımındaki "Düzenle" ile gelindiyse panel açık başlar. */
-  initialEditDelivery?: boolean };
+  initialEditDelivery?: boolean;
+  /** Kart: PayTR init başarılı → sepet sahibi bu oid'yi not eder; sepet ANCAK
+   *  /checkout/sonuc sunucu onayını görünce düşer (lib/cardCheckoutSettle.ts). */
+  onCardPaymentStarted?: (info: { merchantOid: string; draftKey: string }) => void };
 
-export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false }: Props) {
+export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false, onCardPaymentStarted }: Props) {
   // approx → "≈ $73"  ·  moneyTRY → gerçek tahsilat "₺2.999"
   const { approx: money, isForeign, moneyTRY } = useCurrency();
   const { t, intl } = useI18n();
@@ -453,6 +456,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Gelişmiş dönüşüm: sonuç sayfasındaki purchase için YALNIZ hash'ler
         // sessionStorage'a (≤300 ms, asla fırlatmaz; ödeme akışı etkilenmez).
         await stashCardPurchaseUserData(r.merchant_oid, senderEmail, senderPhone);
+        // Sepet burada TEMİZLENMEZ (kart reddinde geri dönülebilsin); yalnız
+        // hangi sepetin ödemeye gittiği not edilir. Hata ödeme akışını durdurmaz.
+        try { onCardPaymentStarted?.({ merchantOid: r.merchant_oid, draftKey: DRAFT_KEY }); } catch { /* yok say */ }
         // Aynı resmi PayTR adresi: bayrak açıksa site içinde <iframe>, kapalıysa
         // bugünkü gibi tam sayfa yönlendirme. Token/hash/callback DEĞİŞMEDİ.
         if (PAYTR_EMBED_ENABLED) {
