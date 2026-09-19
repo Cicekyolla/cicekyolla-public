@@ -43,6 +43,32 @@ const nextConfig = {
           { key: "CDN-Cache-Control", value: "public, s-maxage=31536000, stale-while-revalidate=86400" },
         ],
       },
+      {
+        // ŞİFRE BELİRLEME — tek kullanımlık hesap devralma anahtarı taşır
+        // (DESIGN §3.A.9). Bu sayfa:
+        //   • hiçbir yere Referer SIZDIRMAZ ("?token=" biçimi hâlâ canlıyken
+        //     bağlantıya tıklanan her dış kaynak token'ı görebilirdi),
+        //   • ne tarayıcıda ne kenarda ÖNBELLEĞE alınmaz (ortak bilgisayarda
+        //     geri tuşuyla forma dönülememesi için),
+        //   • arama motoruna kapalıdır (page.tsx metadata.robots ek olarak).
+        source: "/sifre-belirle",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0, must-revalidate" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
+        // E-POSTA TERCİHLERİ — kampanya postasındaki "Abonelikten çık"
+        // bağlantısı kişiye özel bir jeton taşır (DESIGN §3.G.2): Referer'a
+        // sızmaz, önbelleğe alınmaz, arama motoruna kapalıdır.
+        source: "/e-posta-tercihleri",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0, must-revalidate" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
     ];
   },
 

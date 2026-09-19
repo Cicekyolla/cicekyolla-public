@@ -1,16 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/apiProxyHeaders";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
-
-export async function GET(request: NextRequest) {
-  const cookie = request.headers.get("cookie") ?? "";
-  const upstream = await fetch(`${API_ORIGIN}/api/auth/account`, {
-    headers: { cookie },
-    cache: "no-store",
-  });
-  const body = await upstream.text();
-  return new NextResponse(body, {
-    status: upstream.status,
-    headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
+/**
+ * Hesabım'ın TEK veri kaynağı: `GET /api/auth/account`.
+ *
+ * Aynı gövde admin üye detayıyla aynı `accountOrders` sorgusundan üretilir, bu
+ * yüzden istemci hiçbir rakamı yeniden hesaplamaz. Üye oturumu şart → çerez
+ * iletilir. Hata artık yutulmuyor: upstream'e ulaşılamazsa 502 `proxy_error`
+ * döner ve ekran "bağlantı kurulamadı" der (eskiden fetch throw edip Next'in
+ * genel 500 sayfası çıkıyordu).
+ */
+export async function GET(request: Request) {
+  return forwardToApi(request, {
+    path: "/api/auth/account",
+    cookie: true,
   });
 }

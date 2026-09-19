@@ -39,9 +39,22 @@ import {
   registerMember,
   fetchWelcomeCoupon,
   formatMinor,
+  fetchMarketingConfig,
+  marketingCheckboxVisible,
+  setMarketingConsent,
+  MARKETING_NOT_RECORDED_NOTICE,
   type ConsentConfig,
+  type MarketingConfig,
   type WelcomeCoupon,
 } from "@/lib/consent";
+import {
+  PASSWORD_MIN,
+  validateRegister,
+  viewForResponse,
+  viewForThrown,
+  type AuthErrorView,
+} from "@/lib/authErrors";
+import { welcomeOfferView, welcomeRuleText } from "@/lib/memberAccountView";
 
 /* İçerik + kampanya ADMIN'den gelir (GET /api/consent/config).
    İndirim tutarı ve minimum sepet Kupon Merkezi'ndeki gerçek kupondan okunur;
@@ -72,6 +85,11 @@ function setDismissed() {
 /* Kritik alışveriş/ödeme akışları — TEK KAYNAK ConsentManager'da (bildirim
    popup'ı da aynı listeyi kullanır). */
 
+/** Alan çerçevesi — V100 değerleri; hata durumunda kırmızı. */
+function fieldBorder(invalid: boolean): string {
+  return invalid ? "1.5px solid rgba(239,68,68,0.5)" : "1.5px solid rgba(196,181,253,0.14)";
+}
+
 /** Çerez kararı verildi mi? Verilmeden pazarlama popup'ı bindirilmez (sıralı gösterim). */
 export function cookieDecided() {
   try {
@@ -90,7 +108,18 @@ export function NewMemberPopup() {
   const [phase, setPhase] = useState<"entry" | "success">("entry");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  /* Aydınlatma onayı: BAŞLANGIÇ DEĞERİ false (DECISIONS D6 · DESIGN §3.A.10).
+     Ön-işaretli kutu, onay alınmamış bir onayı alınmış gibi kaydeder. */
+  const [kvkkOnay, setKvkkOnay] = useState(false);
+  /* Pazarlama e-posta izni (DESIGN §3.G.2): KVKK onayından AYRI, zorunlu
+     DEĞİL, İŞARETSİZ başlar ve yalnız API "yakalama açık" derse çizilir. */
+  const [marketingConfig, setMarketingConfig] = useState<MarketingConfig | null>(null);
+  const [marketingTicked, setMarketingTicked] = useState(false);
+  /* Kutu işaretlendi ama izin kaydedilemediyse başarı ekranında dürüst not. */
+  const [marketingNotice, setMarketingNotice] = useState<string | null>(null);
   const [error, setError] = useState("");
+  /* Hangi alan vurgulanacak? (kırmızı çerçeve + aria-invalid) */
+  const [errorField, setErrorField] = useState<AuthErrorView["field"]>(null);
   const [loading, setLoading] = useState(false);
   const triggered = useRef(false);
   const [imgError, setImgError] = useState(false);
@@ -107,6 +136,20 @@ export function NewMemberPopup() {
       alive = false;
     };
   }, []);
+
+  /* Pazarlama izni kutucuğunun durumu YALNIZ pencere gerçekten açıldığında
+     okunur: bileşen kök layout'ta her sayfada bağlıdır; açılışta okumak her
+     sayfa görüntülemesinde API'ye fazladan bir istek demekti. */
+  useEffect(() => {
+    if (!visible || marketingConfig) return;
+    let alive = true;
+    fetchMarketingConfig().then((m) => {
+      if (alive) setMarketingConfig(m);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [visible, marketingConfig]);
 
   const getPathname = () => window.location.pathname;
   const isProductPage = () => getPathname().startsWith("/urun/");
@@ -168,43 +211,74 @@ export function NewMemberPopup() {
     scheduleOverlayRelease("member");
   }
 
+  function fail(view: AuthErrorView) {
+    setError(view.message);
+    setErrorField(view.field);
+  }
+
   /**
    * GERÇEK zincir: mevcut üyelik akışı (/api/auth/register) → oturum çerezi →
    * Kupon Merkezi'ndeki gerçek hoş geldin kuponunun KODU.
    * Kayıt başarısız olursa başarı ekranına GEÇİLMEZ; kupon uydurulmaz.
+   *
+   * Ön denetim `lib/authErrors.validateRegister` ile yapılır — giriş sayfasıyla
+   * AYNI kural ve AYNI metin. Burada ikinci bir şifre/e-posta kuralı yazılmaz
+   * (eskiden 6 karakter deniyordu, sunucu 8 istiyordu: kullanıcı sebebini
+   * göremeyen bir 400 alıyordu).
    */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !email.includes("@")) {
-      setError("Geçerli bir e-posta adresi girin.");
-      return;
-    }
-    if (password.trim().length < 6) {
-      setError("Şifre en az 6 karakter olmalı.");
-      return;
-    }
+    const preflight = validateRegister({ email, password, kvkkOnay });
+    if (preflight) return fail(preflight);
     setError("");
+    setErrorField(null);
     setLoading(true);
 
-    const reg = await registerMember({ email: email.trim(), password });
+    const reg = await registerMember({ email: email.trim(), password, kvkkOnay });
     if (!reg.ok) {
       setLoading(false);
-      setError(reg.message);
-      return;
+      return fail(reg.status === 0 ? viewForThrown(reg.body) : viewForResponse(reg.status, reg.body));
     }
 
-    /* Üye artık gerçekten kayıtlı ve oturumu açık. Kuponu backend belirler. */
+    /* Pazarlama izni: YALNIZ kutu gerçekten işaretlendiyse ve kutu gösterildiyse,
+       üyenin KENDİ oturumuyla (kaynak: welcome_popup). Kayıt zaten başarılı;
+       izin yazılamazsa üyelik bozulmaz, kullanıcıya söylenir. */
+    let consentNotice: string | null = null;
+    if (marketingCheckboxVisible(marketingConfig) && marketingTicked) {
+      const consent = await setMarketingConsent(true, "welcome_popup");
+      if (!consent.ok || consent.state.status !== "granted") consentNotice = MARKETING_NOT_RECORDED_NOTICE;
+    }
+    setMarketingNotice(consentNotice);
+
+    /* Üye artık gerçekten kayıtlı ve oturumu açık. Kuponu backend belirler.
+       Uygunluk kararı (telefon kanıtı / ilk sipariş / kontenjan) SUNUCUDA
+       verilir; burada yeniden hesaplanmaz — yalnız sunucunun cümlesi basılır. */
     const c = await fetchWelcomeCoupon();
+    const view = welcomeOfferView(c);
     setLoading(false);
-    if (!c.available || !c.code) {
-      /* Üyelik oldu ama kampanya uygun değil → YALAN "kazandınız" gösterme. */
-      setError("Üyeliğiniz oluşturuldu, ancak hoş geldin avantajı şu anda uygulanamıyor.");
+    if (view.state !== "usable" || !view.code) {
+      /* Üyelik oldu ama kampanya uygun değil → YALAN "kazandınız" gösterme.
+         Sebep sunucunun kendi cümlesidir (ör. "telefonunuzu doğrulayın"). */
+      setError(
+        [
+          view.message
+            ? `Üyeliğiniz oluşturuldu. ${view.message}`
+            : "Üyeliğiniz oluşturuldu, ancak hoş geldin avantajı şu anda uygulanamıyor.",
+          consentNotice,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+      setErrorField(null);
       return;
     }
     setCoupon(c);
     setJoined();
     setPhase("success");
   }
+
+  /** Başarı ekranındaki kural cümlesi — yalnız sunucunun alanlarından. */
+  const welcomeRule = welcomeRuleText(coupon);
 
   function handleContinue() {
     setVisible(false);
@@ -399,17 +473,19 @@ export function NewMemberPopup() {
                           <input
                             type="email"
                             value={email}
+                            autoComplete="email"
+                            aria-invalid={errorField === "email" || undefined}
+                            aria-describedby={error ? "uyelik-popup-hata" : undefined}
                             onChange={(e) => {
                               setEmail(e.target.value);
                               setError("");
+                              setErrorField(null);
                             }}
                             placeholder="E-posta adresiniz"
                             className="w-full text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
                             style={{
                               background: "rgba(255,255,255,0.06)",
-                              border: error
-                                ? "1.5px solid rgba(239,68,68,0.5)"
-                                : "1.5px solid rgba(196,181,253,0.14)",
+                              border: fieldBorder(errorField === "email"),
                               borderRadius: "14px",
                               padding: "13px 16px",
                             }}
@@ -418,9 +494,7 @@ export function NewMemberPopup() {
                               (e.target as HTMLElement).style.background = "rgba(255,255,255,0.09)";
                             }}
                             onBlur={(e) => {
-                              (e.target as HTMLElement).style.border = error
-                                ? "1.5px solid rgba(239,68,68,0.5)"
-                                : "1.5px solid rgba(196,181,253,0.14)";
+                              (e.target as HTMLElement).style.border = fieldBorder(errorField === "email");
                               (e.target as HTMLElement).style.background = "rgba(255,255,255,0.06)";
                             }}
                           />
@@ -430,27 +504,99 @@ export function NewMemberPopup() {
                           <input
                             type="password"
                             value={password}
+                            autoComplete="new-password"
+                            aria-invalid={errorField === "password" || undefined}
+                            aria-describedby={error ? "uyelik-popup-hata" : undefined}
                             onChange={(e) => {
                               setPassword(e.target.value);
                               setError("");
+                              setErrorField(null);
                             }}
-                            placeholder="Şifre belirleyin (en az 6 karakter)"
+                            /* Kural SUNUCUYLA aynı: 8-200 (memberAuthValidation). */
+                            placeholder={`Şifre belirleyin (en az ${PASSWORD_MIN} karakter)`}
                             className="w-full text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
                             style={{
                               background: "rgba(255,255,255,0.06)",
-                              border: error
-                                ? "1.5px solid rgba(239,68,68,0.5)"
-                                : "1.5px solid rgba(196,181,253,0.14)",
+                              border: fieldBorder(errorField === "password"),
                               borderRadius: "14px",
                               padding: "13px 16px",
                             }}
                           />
-                          {error && (
-                            <p className="mt-1.5 text-xs" style={{ color: "#F87171" }}>
-                              {error}
-                            </p>
-                          )}
                         </div>
+
+                        {/* ── AYDINLATMA ONAYI — İŞARETSİZ BAŞLAR, ZORUNLUDUR ──
+                            Kutu işaretlenmeden istek atılmaz; gövdeye de yalnız
+                            bu değer yazılır (lib/consent.registerRequestBody).
+                            Sunucu da `kvkk_onay !== true` ise 400 döner, yani
+                            onay iki katmanda aynı kuralla korunur. */}
+                        <label
+                          className="mb-3 flex cursor-pointer items-start gap-2.5 text-white/45"
+                          style={{ fontSize: "11px", lineHeight: 1.5 }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={kvkkOnay}
+                            aria-invalid={errorField === "kvkk" || undefined}
+                            aria-describedby={error ? "uyelik-popup-hata" : undefined}
+                            onChange={(e) => {
+                              setKvkkOnay(e.target.checked);
+                              setError("");
+                              setErrorField(null);
+                            }}
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#8B5CF6]"
+                            style={
+                              errorField === "kvkk"
+                                ? { outline: "1.5px solid rgba(239,68,68,0.6)", outlineOffset: "2px" }
+                                : undefined
+                            }
+                          />
+                          <span>
+                            <a
+                              href="/kvkk"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline underline-offset-2 transition-colors hover:text-white/70"
+                            >
+                              Üyelik Aydınlatma Metni
+                            </a>
+                            &apos;ni okudum, kişisel verilerimin üyelik kapsamında işlenmesini kabul
+                            ediyorum.
+                          </span>
+                        </label>
+
+                        {/* PAZARLAMA E-POSTA İZNİ — isteğe bağlı, işaretsiz başlar.
+                            Metin API'den gelir (saklanan metin sürümüyle aynı). */}
+                        {marketingCheckboxVisible(marketingConfig) && (
+                          <label
+                            className="mb-3 flex cursor-pointer items-start gap-2.5 text-white/45"
+                            style={{ fontSize: "11px", lineHeight: 1.5 }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={marketingTicked}
+                              onChange={(e) => setMarketingTicked(e.target.checked)}
+                              className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#8B5CF6]"
+                            />
+                            <span>
+                              <span className="text-white/70">{marketingConfig.text.label}</span>
+                              {marketingConfig.text.body && (
+                                <span className="mt-1 block text-white/35">{marketingConfig.text.body}</span>
+                              )}
+                            </span>
+                          </label>
+                        )}
+
+                        {error && (
+                          <p
+                            id="uyelik-popup-hata"
+                            role="alert"
+                            aria-live="assertive"
+                            className="mb-3 text-xs"
+                            style={{ color: "#F87171" }}
+                          >
+                            {error}
+                          </p>
+                        )}
 
                         <button
                           type="submit"
@@ -486,14 +632,12 @@ export function NewMemberPopup() {
                         Şimdi değil
                       </button>
 
-                      {/* KVKK — e-posta toplandığı için zorunlu; tek satır, tasarımı bozmaz */}
-                      <p className="mt-3 text-center text-white/20" style={{ fontSize: "10px" }}>
-                        E-postanız{" "}
-                        <a href="/kvkk" className="underline underline-offset-2 hover:text-white/40 transition-colors">
-                          Aydınlatma Metni
-                        </a>{" "}
-                        kapsamında işlenir.
-                      </p>
+                      {/* Aydınlatma metni artık formun İÇİNDE, işaretlenmesi ZORUNLU
+                          bir onay kutusudur (yukarı bakın). Buradaki eski bilgi
+                          satırı ("E-postanız … kapsamında işlenir") kaldırıldı:
+                          onay, okunduğunu varsayan bir dipnot değil, kullanıcının
+                          gerçekten verdiği bir karardır. Yerine ikinci bir vaat
+                          KOYULMADI — tutamayacağımız bir cümle yazmıyoruz. */}
                     </motion.div>
                   )}
 
@@ -539,14 +683,18 @@ export function NewMemberPopup() {
                         İlk sipariş ayrıcalığınız hazır.
                       </h2>
 
+                      {/* Kuralın metni SUNUCUDAN gelen alanlardan kurulur
+                          (welcomeRuleText); popup ikinci bir indirim kuralı
+                          yazmaz. Kural boş dönerse cümle hiç çizilmez. */}
                       <p className="text-white/42 text-sm leading-relaxed mb-6">
-                        {formatMinor(coupon?.amount_minor ?? cfg.amount_minor)} hoş geldin ayrıcalığınız
-                        üyeliğinize tanımlandı.
-                        {coupon?.min_cart_total_minor
-                          ? ` ${formatMinor(coupon.min_cart_total_minor)} ve üzeri siparişlerde geçerlidir.`
-                          : ""}
-                        {coupon?.first_order_only ? " Yalnızca ilk siparişinizde kullanılabilir." : ""}
+                        Hoş geldin ayrıcalığınız üyeliğinize tanımlandı.
+                        {welcomeRule ? ` ${welcomeRule}` : ""}
                       </p>
+                      {marketingNotice && (
+                        <p role="status" className="text-white/55 text-xs leading-relaxed mb-6">
+                          {marketingNotice}
+                        </p>
+                      )}
 
                       {/* GERÇEK kupon kodu — Kupon Merkezi'ndeki kampanyadan gelir.
                           Kod yoksa bu blok hiç çizilmez (uydurma kod gösterilmez). */}

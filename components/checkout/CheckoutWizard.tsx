@@ -12,7 +12,7 @@
 // API'den string gelen değerler Zod validasyonunu düşürüyordu.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -22,12 +22,17 @@ import {
 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
+import { checkoutPrefillAllowed } from "@/lib/memberAccountView";
 import { readPendingDelivery, clearPendingDelivery, savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/DeliveryPlanner";
 import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon } from "./CheckoutFlow";
-import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, type BankAccountPublic } from "@/lib/payment";
+import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
+import { buildCouponRequestBody, buildOrderRegionFields, readCouponPreview, readServerTotalMinor } from "@/lib/couponState";
+import { classifyCheckoutFailure } from "@/lib/couponErrors";
+import { clearPendingCoupon, readPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
+import { attemptField, newAttemptKey } from "@/lib/checkoutAttempt";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
@@ -104,10 +109,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   }, [addons, t]);
 
   const [stepIdx, setStepIdx] = useState(2);
-  const [done, setDone] = useState<{ order_number: string } | null>(null);
+  /** Havale başarısı — TUTAR SUNUCUDAN gelir (baseline S: istemci hesabı gösteriliyordu). */
+  const [done, setDone] = useState<{ order_number: string; total_amount_minor: number | null } | null>(null);
   /** PayTR'nin resmi ödeme adresi — site İÇİNDE gösterilecekse doludur.
    *  Bayrak kapalıyken hep null kalır ve eski yönlendirme akışı çalışır. */
   const [paytrUrl, setPaytrUrl] = useState<string | null>(null);
+  /** PayTR ekranında yazan tutar — SUNUCUNUN tahsil edeceği tutar (istemci hesabı değil). */
+  const [paytrAmountMinor, setPaytrAmountMinor] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pd, setPd] = useState<PendingDelivery | null>(delivery ?? null);
@@ -134,22 +142,31 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const [visibility, setVisibility] = useState<"show" | "anonymous" | "hidden">("show");
   const [surprise, setSurprise] = useState(false);
   const [addonQty, setAddonQty] = useState<Record<number, number>>(initialAddonQty ?? {});
-  // Kupon (indirim daima backend /api/public/coupon motorundan gelir; frontend hesap yapmaz)
+  // Kupon (indirim daima backend /api/coupon motorundan gelir; frontend hesap yapmaz)
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; discount_minor: number } | null>(null);
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  /** Sunucu kuponu siparişte reddettiyse kupon kaldırılır ve müşteri devam edebilir. */
+  const [couponRejected, setCouponRejected] = useState(false);
   const qty = Math.max(1, Math.round(quantity));
 
   // --- Checkout taslağı (sessionStorage): yenilemede ödeme-dışı bilgiler korunur ---
   const DRAFT_KEY = `cy_checkout_draft_${productSlug ?? "default"}`;
   const draftLoaded = useMemo(() => ({ v: false }), []);
+  /** Bu checkout oturumunun deneme anahtarı (yenilemede/geri dönüşte AYNI kalır,
+   *  böylece kart ekranından dönüp tekrar deneyen müşteri kendi kuponunu bloke
+   *  görmez — backend eski rezervasyonu "superseded" yapar). */
+  const attemptKeyRef = useRef<string>("");
+  /** Taslakta anahtar varsa o kullanılır, yoksa ilk ihtiyaçta üretilir. */
+  const attemptKey = () => (attemptKeyRef.current ||= newAttemptKey());
   useEffect(() => {
     if (typeof window === "undefined" || draftLoaded.v) return;
     try {
       const raw = window.sessionStorage.getItem(DRAFT_KEY);
       if (raw) {
         const d = JSON.parse(raw);
+        if (typeof d.attemptKey === "string" && d.attemptKey) attemptKeyRef.current = d.attemptKey;
         if (d.recipientName != null) setRecipientName(d.recipientName);
         if (d.recipientPhone != null) setRecipientPhone(d.recipientPhone);
         if (d.occasion != null) setOccasion(d.occasion);
@@ -185,6 +202,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       .then((response) => response.ok ? response.json() : null)
       .then((account) => {
         if (!account?.customer) return;
+        // W4-2: hesaptaki e-posta sahibinin onayını bekliyorsa (telefon kanıtıyla
+        // devralınmış giriş) ad/e-posta HİÇ doldurulmaz — başkasının yazdığı
+        // adrese sipariş bildirimi gitmesin. Telefon kanıtlı olduğu için kalır.
+        if (!checkoutPrefillAllowed(account)) {
+          setSenderPhone((current) => current || account.customer.phone || "");
+          return;
+        }
         setSenderName((current) => current || account.customer.name || "");
         setSenderPhone((current) => current || account.customer.phone || "");
         setSenderEmail((current) => current || account.customer.email || "");
@@ -199,6 +223,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
         recipientName, recipientPhone, occasion, notes, specialNote, address,
         cardMessage, senderName, senderPhone, senderEmail, visibility, surprise, addonQty,
+        // Deneme anahtarı taslakla birlikte yaşar; KART VERİSİ DEĞİL, yalnız
+        // rastgele bir metin (opak token).
+        attemptKey: attemptKeyRef.current || null,
       }));
     } catch { /* kota dolabilir, yok say */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,38 +239,71 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const discountMinor = coupon?.discount_minor ?? 0;
   const total = Math.max(0, subtotal - discountMinor);
 
+  /** Kupon önizlemesinin kalemleri — ana ürün + seçili ek ürünler (varyantlı). */
+  const couponLines = useMemo(() => [
+    { productId, variantId: variantId ?? null, quantity: qty, unitPriceMinor: priceMinor },
+    ...addons
+      .filter((a) => (addonQty[a.id] || 0) > 0)
+      .map((a) => ({ productId: a.productId ?? a.id, variantId: a.variantId ?? null, quantity: addonQty[a.id], unitPriceMinor: a.priceMinor })),
+  ], [productId, variantId, qty, priceMinor, addons, addonQty]);
+
   // Sepet değişince uygulanmış kupon geçersiz olabilir → temizle (yeniden uygulanır).
   useEffect(() => { if (coupon) { setCoupon(null); setCouponMsg(null); } /* eslint-disable-next-line */ }, [addonQty]);
 
-  const applyCoupon = async () => {
-    const code = couponInput.trim();
+  /**
+   * Kuponu motora doğrulat. Tutar/geçerlilik İSTEMCİDE ÜRETİLMEZ; `readCouponPreview`
+   * yalnız sunucunun yazdığını okur. `silent=true` (sepetten taşınan kod) başarısız
+   * olursa sessizce düşer — müşteri checkout'a girer girmez hata görmesin.
+   */
+  const validateCoupon = async (rawCode: string, silent = false) => {
+    const code = rawCode.trim();
     if (!code) return;
-    setCouponBusy(true); setCouponMsg(null);
+    setCouponBusy(true);
+    if (!silent) setCouponMsg(null);
+    setCouponRejected(false);
     try {
-      const items = [
-        { product_id: productId != null ? Number(productId) : null, quantity: qty },
-        ...addons.filter((a) => (addonQty[a.id] || 0) > 0).map((a) => ({ product_id: Number(a.productId ?? a.id), quantity: addonQty[a.id] })),
-      ].filter((it) => it.product_id != null);
-      // Not: bölgesel kupon için ileride pd'ye sayısal city_id/district_id eklenince
-      // buraya geçirilecek. Şu an bölge gönderilmez → backend bölgesiz kuponu her yerde geçerli sayar.
       const res = await fetch("/api/coupon", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, items }),
+        // Varyant kimliği: motorun fiyat tabanı = siparişin faturaladığı fiyat.
+        // Bölge kimliği yalnız gerçekten biliniyorsa gider (uydurulmaz).
+        body: JSON.stringify(buildCouponRequestBody(code, couponLines, pd)),
       });
-      const json = await res.json().catch(() => null);
-      const d = json?.data;
-      if (d?.valid && d.discount_minor > 0) {
-        setCoupon({ code: d.code, discount_minor: d.discount_minor });
+      const preview = readCouponPreview(await res.json().catch(() => null), code);
+      if (res.ok && preview.valid) {
+        setCoupon({ code: preview.code, discount_minor: preview.discountMinor });
+        setCouponInput(preview.code);
+        savePendingCoupon(preview.code);
         setCouponMsg(null);
-      } else {
-        setCoupon(null);
-        setCouponMsg(d?.message ?? t("co.couponFail"));
+        return;
       }
+      setCoupon(null);
+      clearPendingCoupon();
+      // Sunucunun Türkçe gerekçesi aynen gösterilir; sebep uydurulmaz.
+      if (!silent) setCouponMsg(preview.message ?? t("co.couponFail"));
     } catch {
-      setCoupon(null); setCouponMsg(t("co.couponErr"));
+      setCoupon(null);
+      if (!silent) setCouponMsg(t("co.couponErr"));
     } finally { setCouponBusy(false); }
   };
-  const removeCoupon = () => { setCoupon(null); setCouponInput(""); setCouponMsg(null); };
+
+  const applyCoupon = () => { void validateCoupon(couponInput); };
+  const removeCoupon = () => { setCoupon(null); setCouponInput(""); setCouponMsg(null); setCouponRejected(false); clearPendingCoupon(); };
+
+  // /sepet'te uygulanan kupon KODU checkout'a taşınır (tutar taşınmaz) ve burada
+  // motora YENİDEN doğrulatılır. Eskiden kupon sepet ile checkout arasında
+  // kayboluyordu (E2E "Y"): müşteri indirimi sepette görüp ödeme ekranında
+  // indirimsiz tutarla karşılaşıyordu.
+  const restoredCoupon = useRef(false);
+  useEffect(() => {
+    if (restoredCoupon.current || done) return;
+    const pending = readPendingCoupon();
+    if (!pending) { restoredCoupon.current = true; return; }
+    if (couponLines.length === 0) return;
+    restoredCoupon.current = true;
+    setCouponInput(pending.code);
+    void validateCoupon(pending.code, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponLines.length, done]);
 
   const dateStr = fmtDate(pd?.date, intl);
   const slotStr = pd?.slotLabel ?? (pd?.slotStart ? mapToSlot(pd.slotStart) : null);
@@ -326,6 +386,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         recipient_name: recipientName, recipient_phone: recipientPhone || null,
         delivery_address: address || null, delivery_district: pd?.district || null,
         delivery_city: pd?.city || null,
+        // Bölge kuponu ve teslimat kaydı için SAYISAL il/ilçe — yalnız gerçekten
+        // biliniyorsa gönderilir (bugünkü teslimat kaydı yalnız ad taşır).
+        ...buildOrderRegionFields(pd),
+        // Deneme anahtarı: aynı checkout'tan ikinci deneme önceki kupon
+        // rezervasyonunu serbest bıraksın (yoksa müşteri kendi kuponunu 45 dk
+        // "kullanılmış" görebilir). Üretilemezse alan hiç gönderilmez.
+        ...attemptField(attemptKey()),
         // KARGO = kurye slotu KESİNLİKLE yok (backend de siler; burada hiç gönderilmez).
         delivery_date: pd?.date || null,
         delivery_time_slot: pd?.mode === "cargo" ? null : (pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null)),
@@ -366,8 +433,17 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           items,
           userData,
         });
-        setDone({ order_number: r.order_number });
+        // Başarı ekranında yazacak tutar SUNUCUNUN yetkili toplamıdır: sunucu
+        // fiyatı/indirimi yeniden hesaplar ve para kıskacını uygular, bu yüzden
+        // istemci toplamı ayrışabilir (baseline S). Müşteri bankaya yatıracağı
+        // tutarı yanlış görmemeli.
+        setDone({
+          order_number: r.order_number,
+          total_amount_minor: readServerTotalMinor(r.total_amount_minor, total).minor,
+        });
         clearPendingDelivery();
+        // Kupon kodu köprüsü burada kapanır; sonraki sipariş temiz başlar.
+        clearPendingCoupon();
         try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
         onComplete?.();
       } else {
@@ -380,6 +456,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Aynı resmi PayTR adresi: bayrak açıksa site içinde <iframe>, kapalıysa
         // bugünkü gibi tam sayfa yönlendirme. Token/hash/callback DEĞİŞMEDİ.
         if (PAYTR_EMBED_ENABLED) {
+          // Çerçevenin üstündeki tutar da SUNUCUDAN: PayTR'nin tahsil edeceği
+          // tutar sunucunun hesabıdır, istemcinin değil (baseline S).
+          setPaytrAmountMinor(readServerTotalMinor(r.total_amount_minor, total).minor);
           setPaytrUrl(r.iframe_url);
           if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
           return;
@@ -388,12 +467,32 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         return;
       }
     } catch (failure) {
-      const reason = failure instanceof Error ? failure.message : "";
-      setError(reason === "delivery slot is no longer available"
-        ? t("co.err.slotGone")
-        : reason === "product_not_deliverable_to_address"
-          ? t("co.err.notDeliverable")
-          : t("co.err.generic"));
+      // KÖK NEDEN: sunucu kuponu siparişte reddettiğinde (limit doldu, ilk
+      // sipariş şartı, fiyat değişti, bölge…) müşteri yalnız "Sipariş
+      // oluşturulamadı" görüyordu; nedeni bilmediği için aynı düğmeye basıp
+      // aynı duvara çarpıyordu. Artık sunucunun Türkçe gerekçesi KUPON
+      // ALANININ YANINDA gösterilir ve müşteri kuponu kaldırıp devam edebilir.
+      // Ham teknik kod hiçbir dalda müşteriye gösterilmez (couponErrors).
+      const apiError = failure instanceof CheckoutApiError ? failure.apiError : (failure instanceof Error ? failure.message : null);
+      const kind = classifyCheckoutFailure({
+        status: failure instanceof CheckoutApiError ? failure.status : null,
+        error: apiError,
+        hadCoupon: Boolean(coupon),
+      });
+      if (kind.kind === "coupon") {
+        // Müşteri zaten "odeme" adımındadır (gönder düğmesi orada); kupon
+        // alanı ve gerekçe hemen görünür, ekran değiştirmek gerekmez.
+        setCouponRejected(true);
+        setCouponMsg(kind.couponMessage);
+        setError(null);
+      } else {
+        setCouponRejected(false);
+        setError(kind.kind === "slot"
+          ? t("co.err.slotGone")
+          : kind.kind === "not_deliverable"
+            ? t("co.err.notDeliverable")
+            : t("co.err.generic"));
+      }
     } finally {
       setLoading(false);
     }
@@ -405,7 +504,8 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
     return (
       <PaytrFrame
         url={paytrUrl}
-        amountLabel={`₺${(total / 100).toLocaleString("tr-TR")}`}
+        /* PayTR'nin tahsil edeceği tutar = sunucunun sipariş toplamı. */
+        amountLabel={`₺${((paytrAmountMinor ?? total) / 100).toLocaleString("tr-TR")}`}
         productName={shownName}
         onCancel={() => setPaytrUrl(null)}
       />
@@ -445,7 +545,8 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         <div className="mt-6 text-left rounded-2xl border border-[#EDE9FE] bg-[#FBFAFF] p-5">
           <div className="text-[13px] font-bold text-[#6D28D9] mb-1">{t("co.bankTitle")}</div>
           <div className="text-[12.5px] text-[#6B7280] mb-3">
-            {t("co.bankInstrAmount", { amount: moneyTRY(total), no: done.order_number })}
+            {/* Yatırılacak tutar SUNUCUNUN sipariş toplamıdır (istemci hesabı değil). */}
+            {t("co.bankInstrAmount", { amount: moneyTRY(done.total_amount_minor ?? total), no: done.order_number })}
           </div>
           {bankAccounts.length === 0 ? (
             <div className="text-[12px] text-[#9CA3AF]">{t("co.bankContact")}</div>
@@ -594,7 +695,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
                   address={address} region={`${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
                   dateStr={dateStr} slotStr={slotStr} typeStr={typeStr} cardMessage={cardMessage}
                   couponInput={couponInput} setCouponInput={setCouponInput}
-                  coupon={coupon} couponMsg={couponMsg} couponBusy={couponBusy}
+                  coupon={coupon} couponMsg={couponMsg} couponBusy={couponBusy} couponRejected={couponRejected}
                   applyCoupon={applyCoupon} removeCoupon={removeCoupon}
                   paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} bankAccounts={bankAccounts} cardEnabled={CARD_ENABLED}
                 />
@@ -1126,6 +1227,8 @@ function StepOdeme(p: {
   address: string; region: string; dateStr: string | null; slotStr: string | null; typeStr: string | null; cardMessage: string;
   couponInput: string; setCouponInput: (v: string) => void;
   coupon: { code: string; discount_minor: number } | null; couponMsg: string | null; couponBusy: boolean;
+  /** Sunucu kuponu SİPARİŞ anında reddetti: gerekçe kupon alanının yanında yazar. */
+  couponRejected: boolean;
   applyCoupon: () => void; removeCoupon: () => void;
   paymentMethod: "card" | "havale"; setPaymentMethod: (m: "card" | "havale") => void; bankAccounts: BankAccountPublic[]; cardEnabled: boolean;
 }) {
@@ -1194,12 +1297,28 @@ function StepOdeme(p: {
       <div className="mt-4 pt-4 border-t border-[#F1F0F5]">
         <label className="block text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-2">{t("common.couponCode")}</label>
         {hasDiscount ? (
-          <div className="flex items-center justify-between rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
-            <span className="flex items-center gap-2 text-[13.5px] font-semibold text-[#15803D]">
-              <TicketPercent className="w-4 h-4" /> {t("co.couponApplied", { code: p.coupon!.code })}
-            </span>
-            <button onClick={p.removeCoupon} className="text-[12.5px] font-semibold text-[#6B7280] hover:text-[#991B1B]">{t("common.remove")}</button>
-          </div>
+          /* Kupon uygulanmış. Sunucu siparişte reddettiyse (p.couponRejected)
+             aynı kutu uyarı rengine döner, SUNUCUNUN gerekçesi burada yazar ve
+             düğme "kaldır ve devam et"e dönüşür — müşteri siparişini
+             indirimsiz tamamlayabilir, genel hata metnine mahkûm kalmaz. */
+          <>
+            <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${p.couponRejected ? "bg-[#FFFBEB] border-[#FDE68A]" : "bg-[#F0FDF4] border-[#BBF7D0]"}`}>
+              <span className={`flex items-center gap-2 text-[13.5px] font-semibold ${p.couponRejected ? "text-[#92400E]" : "text-[#15803D]"}`}>
+                <TicketPercent className="w-4 h-4 flex-shrink-0" /> {t("co.couponApplied", { code: p.coupon!.code })}
+              </span>
+              <button onClick={p.removeCoupon}
+                className={`flex-shrink-0 text-[12.5px] font-semibold ${p.couponRejected ? "text-[#92400E] underline hover:text-[#7C2D12]" : "text-[#6B7280] hover:text-[#991B1B]"}`}>
+                {p.couponRejected ? t("co.couponRemoveAndContinue") : t("common.remove")}
+              </button>
+            </div>
+            {p.couponRejected && (
+              <div className="mt-2 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] px-3.5 py-2.5">
+                {/* Sunucunun Türkçe gerekçesi AYNEN; sebep istemcide üretilmez. */}
+                {p.couponMsg && <p className="text-[12.5px] font-semibold text-[#92400E]">{p.couponMsg}</p>}
+                <p className="mt-1 text-[12px] text-[#A16207]">{t("co.couponRejectedHint")}</p>
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div className="flex gap-2">
@@ -1207,12 +1326,12 @@ function StepOdeme(p: {
                 value={p.couponInput}
                 onChange={(e) => p.setCouponInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); p.applyCoupon(); } }}
-                placeholder="Kupon kodunuz"
+                placeholder={t("cart.enterCode")}
                 className="flex-1 px-4 py-3 rounded-2xl border border-[#E9E7F0] bg-[#FCFCFD] text-[14px] tracking-wide uppercase text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#C4B5FD] focus:bg-white focus:ring-4 focus:ring-[#F5F3FF] transition-all"
               />
               <button onClick={p.applyCoupon} disabled={p.couponBusy || !p.couponInput.trim()}
                 className={`px-5 rounded-2xl text-[14px] font-bold text-white transition-all ${p.couponBusy || !p.couponInput.trim() ? "bg-[#C4B5FD] cursor-not-allowed" : "bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.98]"}`}>
-                {p.couponBusy ? "…" : "Uygula"}
+                {p.couponBusy ? "…" : t("common.apply")}
               </button>
             </div>
             {p.couponMsg && <p className="mt-2 text-[12.5px] font-medium text-[#B91C1C]">{p.couponMsg}</p>}

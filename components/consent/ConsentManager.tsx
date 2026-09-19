@@ -42,6 +42,8 @@ import { loadMetaPixel } from "@/lib/metaPixel";
      /siparis       -> /siparis-takibi + /siparis-takip
      /hizli-siparis -> hızlı sipariş hunisi
      /odeme         -> ileride açılabilecek ödeme rotası için koruma
+     /e-posta-tercihleri -> kampanya e-postasından ÇIKAN kişiye pazarlama
+                       popup'ı gösterilmez (DESIGN §3.G.2)
    TEK KAYNAK: NewMemberPopup da bunu import eder. */
 export const MARKETING_BLOCKED_PATHS = [
   "/checkout",
@@ -49,6 +51,7 @@ export const MARKETING_BLOCKED_PATHS = [
   "/odeme",
   "/siparis",
   "/hizli-siparis",
+  "/e-posta-tercihleri",
 ];
 
 /** Bulunulan yol kritik alışveriş/ödeme akışı mı? */
