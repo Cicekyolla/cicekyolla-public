@@ -294,13 +294,17 @@ export default function GirisForm() {
               {/* PAZARLAMA E-POSTA İZNİ — yalnız yakalama açıkken, İŞARETSİZ,
                   zorunlu DEĞİL. Metin API'den gelir (saklanan sürümle aynı). */}
               {marketingShown && (
-                <label className="flex items-start gap-3 rounded-2xl border border-transparent p-4 text-sm leading-6 text-[#667085] md:col-span-2">
-                  <input name="marketing_email" type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-[#8b5cf6]" />
-                  <span>
-                    <span className="font-semibold text-[#344054]">{marketingConfig.text.label}</span>
-                    {marketingConfig.text.body && <span className="mt-1 block text-xs leading-5">{marketingConfig.text.body}</span>}
-                  </span>
-                </label>
+                <fieldset className="grid gap-2 rounded-2xl border border-[#ede9fe] bg-[#fcfaff] p-4 md:col-span-2">
+                  {/* Yönetmelik m.7/5: "ticari elektronik ileti" kenar başlığı + en az 12 punto (16px). */}
+                  {marketingConfig.text.heading && <legend className="px-1 text-base font-bold text-[#1f1b2d]">{marketingConfig.text.heading}</legend>}
+                  <label className="flex items-start gap-3 text-base leading-7 text-[#667085]">
+                    <input name="marketing_email" type="checkbox" className="mt-1.5 h-4 w-4 shrink-0 accent-[#8b5cf6]" />
+                    <span>
+                      <span className="font-semibold text-[#344054]">{marketingConfig.text.label}</span>
+                      {marketingConfig.text.body && <span className="mt-1 block text-base leading-7">{marketingConfig.text.body}</span>}
+                    </span>
+                  </label>
+                </fieldset>
               )}
               <button type="submit" disabled={registerLoading} className="rounded-full bg-[#111827] px-8 py-4 text-lg font-bold text-white disabled:opacity-60 md:col-span-2">{registerLoading ? "Hesap oluşturuluyor…" : "Hesap Oluştur"}</button>
             </form>

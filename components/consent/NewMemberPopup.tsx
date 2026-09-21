@@ -567,9 +567,14 @@ export function NewMemberPopup() {
                         {/* PAZARLAMA E-POSTA İZNİ — isteğe bağlı, işaretsiz başlar.
                             Metin API'den gelir (saklanan metin sürümüyle aynı). */}
                         {marketingCheckboxVisible(marketingConfig) && (
+                          <div className="mb-3">
+                          {/* Yönetmelik m.7/5: kenar başlığı + en az 12 punto (16px). */}
+                          {marketingConfig.text.heading && (
+                            <p className="mb-1.5 font-bold text-white/90" style={{ fontSize: "16px", lineHeight: 1.4 }}>{marketingConfig.text.heading}</p>
+                          )}
                           <label
-                            className="mb-3 flex cursor-pointer items-start gap-2.5 text-white/45"
-                            style={{ fontSize: "11px", lineHeight: 1.5 }}
+                            className="flex cursor-pointer items-start gap-2.5 text-white/75"
+                            style={{ fontSize: "16px", lineHeight: 1.55 }}
                           >
                             <input
                               type="checkbox"
@@ -578,12 +583,13 @@ export function NewMemberPopup() {
                               className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#8B5CF6]"
                             />
                             <span>
-                              <span className="text-white/70">{marketingConfig.text.label}</span>
+                              <span className="font-semibold text-white/90">{marketingConfig.text.label}</span>
                               {marketingConfig.text.body && (
-                                <span className="mt-1 block text-white/35">{marketingConfig.text.body}</span>
+                                <span className="mt-1 block text-white/70">{marketingConfig.text.body}</span>
                               )}
                             </span>
                           </label>
+                          </div>
                         )}
 
                         {error && (
