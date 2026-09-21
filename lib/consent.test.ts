@@ -127,7 +127,12 @@ test("kutucuk YALNIZ yakalama açık + metin varken çizilir; kapalıyken/bozuk 
   );
   // "true" dizesi açık sayılmaz.
   assert.equal(marketingCheckboxVisible(parseMarketingConfig({ marketing_email: { capture_enabled: "true", text: TEXT } })), false);
-  assert.deepEqual(parseMarketingConfig(ON)?.text, TEXT);
+  // Eski sürüm (başlıksız) metin: heading null döner.
+  assert.deepEqual(parseMarketingConfig(ON)?.text, { ...TEXT, heading: null });
+  // Y1: kutucuk başlığı API'den gelir (m.7/5); boş başlık null sayılır.
+  const withHeading = { ok: true, marketing_email: { capture_enabled: true, unsubscribe_ready: true, text: { ...TEXT, heading: "Ticari Elektronik İleti İzni" } } };
+  assert.equal(parseMarketingConfig(withHeading)?.text?.heading, "Ticari Elektronik İleti İzni");
+  assert.equal(parseMarketingConfig({ marketing_email: { capture_enabled: true, text: { ...TEXT, heading: "  " } } })?.text?.heading, null);
 });
 
 test("/giris gövdesi: kutucuk yoksa alan HİÇ eklenmez; varsa gerçek değer (true'ya yükseltilmez)", () => {
@@ -165,7 +170,7 @@ test("Hesabım anahtarı: izin yok + yakalama kapalı → çizilmez; izin VARSA 
   assert.deepEqual([granted.visible, granted.checked, granted.canToggle, granted.statusLabel], [true, true, true, "İzin verildi"]);
 
   const canGrant = marketingToggleView(state(), on);
-  assert.deepEqual([canGrant.visible, canGrant.checked, canGrant.canToggle, canGrant.text], [true, false, true, TEXT]);
+  assert.deepEqual([canGrant.visible, canGrant.checked, canGrant.canToggle, canGrant.text], [true, false, true, { ...TEXT, heading: null }]);
 
   // Geri çekilmiş + yakalama kapalı: durum görünür (read-back) ama yeniden verilemez.
   const withdrawnOff = marketingToggleView(

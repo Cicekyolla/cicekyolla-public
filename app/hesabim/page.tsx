@@ -687,11 +687,15 @@ export default function AccountPage() {
                 className="mt-1 h-4 w-4 shrink-0 accent-primary"
               />
               <span className="min-w-0">
-                <span className="font-semibold">
+                {/* Yönetmelik m.7/5: kenar başlığı + en az 12 punto (16px). */}
+                {marketingView.text?.heading && (
+                  <span className="mb-1 block text-base font-bold text-foreground">{marketingView.text.heading}</span>
+                )}
+                <span className="text-base font-semibold">
                   {marketingView.text?.label ?? "Kampanya ve indirim duyurularını e-posta ile almak istiyorum."}
                 </span>
                 {marketingView.text?.body && (
-                  <span className="mt-2 block text-sm leading-6 text-muted-foreground">{marketingView.text.body}</span>
+                  <span className="mt-2 block text-base leading-7 text-muted-foreground">{marketingView.text.body}</span>
                 )}
                 {marketingView.statusLabel && (
                   <span className="mt-3 block text-sm text-muted-foreground">

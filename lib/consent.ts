@@ -274,7 +274,13 @@ export async function registerMember(input: RegisterMemberInput): Promise<Regist
  * Kutucuk her zaman İŞARETSİZ başlar.
  */
 
-export type MarketingConsentText = { version: string; label: string; body: string };
+export type MarketingConsentText = {
+  version: string;
+  /** Kutucuğun üstündeki başlık (Yönetmelik m.7/5: "Ticari Elektronik İleti İzni"). Eski sürümde yok → null. */
+  heading: string | null;
+  label: string;
+  body: string;
+};
 
 export type MarketingConfig = {
   capture_enabled: boolean;
@@ -312,10 +318,10 @@ export function parseMarketingConfig(json: unknown): MarketingConfig | null {
     | { capture_enabled?: unknown; unsubscribe_ready?: unknown; text?: unknown }
     | undefined;
   if (!block || typeof block !== "object") return null;
-  const rawText = block.text as { version?: unknown; label?: unknown; body?: unknown } | null | undefined;
+  const rawText = block.text as { version?: unknown; heading?: unknown; label?: unknown; body?: unknown } | null | undefined;
   const text =
     rawText && nonEmpty(rawText.version) && nonEmpty(rawText.label) && typeof rawText.body === "string"
-      ? { version: rawText.version, label: rawText.label, body: rawText.body }
+      ? { version: rawText.version, heading: nonEmpty(rawText.heading) ? rawText.heading : null, label: rawText.label, body: rawText.body }
       : null;
   return {
     capture_enabled: block.capture_enabled === true && text !== null,
