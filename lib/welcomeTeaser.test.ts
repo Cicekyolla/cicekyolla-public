@@ -116,3 +116,26 @@ test("KAYNAK: üyelik, KVKK ve isteğe bağlı pazarlama izni aynen korunur", ()
   assert.match(src, /href="\/kvkk"/);
   assert.match(src, /fetchWelcomeCoupon\(\)/, "kupon kodu sunucudan");
 });
+
+test("KAYNAK: uzun izin açıklaması kapalı başlar — AÇMAK İZİN VERMEK DEĞİLDİR", () => {
+  const src = readFileSync(join(ROOT, "components/consent/NewMemberPopup.tsx"), "utf8");
+  assert.match(src, /const \[marketingTextOpen, setMarketingTextOpen\] = useState\(false\)/, "metin kapalı başlar");
+  assert.match(src, /setMarketingTextOpen\(false\)/, "her açılışta yine kapalı");
+  // Açma düğmesi AYRI bir düğmedir ve yalnız görünürlüğü değiştirir.
+  assert.match(src, /onClick=\{\(\) => setMarketingTextOpen\(\(open\) => !open\)\}/);
+  assert.match(src, /aria-expanded=\{marketingTextOpen\}/);
+  assert.match(src, /aria-controls="hosgeldin-izin-metni"/);
+  assert.match(src, /"İzin metninin tamamını oku"/);
+  assert.match(src, /\{marketingTextOpen && \(/, "tam metin yalnız açıkken çizilir");
+  // Onay kutusu yalnız kendi onChange'i ile değişir: açma düğmesi kutuya dokunmaz.
+  assert.equal((src.match(/setMarketingTicked\(/g) ?? []).length, 1, "kutuyu yalnız kendi onChange'i değiştirir");
+  assert.match(src, /onChange=\{\(e\) => setMarketingTicked\(e\.target\.checked\)\}/);
+});
+
+test("KAYNAK: panel kompakt — masaüstünde tam boy levha değil", () => {
+  const src = readFileSync(join(ROOT, "components/consent/NewMemberPopup.tsx"), "utf8");
+  assert.doesNotMatch(src, /sm:h-\[100dvh\]/, "masaüstünde tam ekran yükseklik yok");
+  assert.match(src, /sm:w-\[372px\]/, "masaüstünde dar kart");
+  assert.match(src, /sm:bottom-6 sm:right-6/, "sağ altta duran kart");
+  assert.match(src, /max-h-\[82dvh\]/, "mobilde ekranın tamamını örtmez");
+});

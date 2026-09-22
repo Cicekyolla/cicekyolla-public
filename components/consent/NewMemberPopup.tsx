@@ -15,8 +15,12 @@
  *     masaüstünde sağdan kompakt yan panel, mobilde ekran yüksekliğine sığan,
  *     kendi içinde kayan alt panel. Büyük kahraman görseli yok.
  *  3. Üyelik, KVKK onayı (zorunlu, işaretsiz başlar), isteğe bağlı pazarlama
- *     izni (işaretsiz, tam metin, 16px) ve kupon kodu AYNI akışla çalışır:
+ *     izni (işaretsiz, 16px) ve kupon kodu AYNI akışla çalışır:
  *     /api/auth/register → (işaretliyse) izin → /api/auth/welcome-coupon.
+ *     Panel kompakt kalsın diye uzun izin AÇIKLAMASI kapalı başlar: ilk
+ *     bakışta yalnız kısa onay cümlesi + işaretsiz kutu görünür, tamamı
+ *     "İzin metninin tamamını oku" düğmesiyle AYNI panelde açılır. Metni
+ *     AÇMAK İZİN VERMEK DEĞİLDİR — açma düğmesi ile onay kutusu ayrıdır.
  *  4. Tasarım: Version 72 marka dili (Fraunces + Manrope, #8B5CF6 mor,
  *     koyu #0B0418 panel) — eski pencerenin renk/radius/gölge değerleri korunur.
  *
@@ -29,7 +33,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, Check, Gift } from "lucide-react";
+import { X, ArrowRight, Check, Gift, ChevronDown } from "lucide-react";
 import { acquireOverlay, releaseOverlay, MARKETING_BLOCKED_PATHS } from "./ConsentManager";
 import {
   fetchConsentConfig,
@@ -102,8 +106,8 @@ export function cookieDecided() {
 
 const FIELD_STYLE = {
   background: "rgba(255,255,255,0.06)",
-  borderRadius: "14px",
-  padding: "13px 16px",
+  borderRadius: "12px",
+  padding: "10px 14px", // kompakt ama rahat dokunulur (~44px yükseklik)
   fontSize: "16px", // iOS: 16px altı odakta sayfayı yakınlaştırır
 } as const;
 
@@ -130,6 +134,9 @@ export function NewMemberPopup() {
      DEĞİL, İŞARETSİZ başlar ve yalnız API "yakalama açık" derse çizilir. */
   const [marketingConfig, setMarketingConfig] = useState<MarketingConfig | null>(null);
   const [marketingTicked, setMarketingTicked] = useState(false);
+  /* Uzun izin açıklaması KAPALI başlar (panel küçük kalsın). Bu yalnız
+     GÖSTERİM durumudur: açmak onay değildir, onay kutusuna dokunmaz. */
+  const [marketingTextOpen, setMarketingTextOpen] = useState(false);
   /* Kutu işaretlendi ama izin kaydedilemediyse sonuç ekranında dürüst not. */
   const [marketingNotice, setMarketingNotice] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -250,6 +257,8 @@ export function NewMemberPopup() {
   /** Tek açılış yolu: müşterinin teklif alanına dokunması. */
   function openPanel() {
     setIsDesktop(window.matchMedia("(min-width: 640px)").matches);
+    /* Her açılışta kısa görünüm: uzun izin açıklaması yine kapalı başlar. */
+    setMarketingTextOpen(false);
     /* Diğer otomatik pencereler (Haberdar Ol, teslimat adresi) üstüne binmesin. */
     heldOverlay.current = acquireOverlay("member");
     setVisible(true);
@@ -324,7 +333,9 @@ export function NewMemberPopup() {
   /** Başarı ekranındaki kural cümlesi — yalnız sunucunun alanlarından. */
   const welcomeRule = welcomeRuleText(coupon);
 
-  const hiddenOffset = isDesktop ? { x: "100%" } : { y: "100%" };
+  /* Masaüstünde panel dev bir yan levha değil, sağ altta duran küçük bir kart:
+     ekrandan kaymak yerine hafifçe belirir. Mobilde alttan yükselir. */
+  const hiddenOffset = isDesktop ? { opacity: 0, y: 18, scale: 0.98 } : { y: "100%" };
 
   return (
     <>
@@ -416,10 +427,12 @@ export function NewMemberPopup() {
               aria-labelledby="hosgeldin-panel-baslik"
               tabIndex={-1}
               initial={hiddenOffset}
-              animate={{ x: 0, y: 0 }}
+              animate={{ x: 0, y: 0, opacity: 1, scale: 1 }}
               exit={hiddenOffset}
-              transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed inset-x-0 bottom-0 z-[10001] flex max-h-[92dvh] flex-col overflow-hidden rounded-t-[24px] outline-none sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:h-[100dvh] sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-[28px]"
+              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+              /* Yükseklik İÇERİĞE göre: kısa görünümde panel küçük kalır, üst
+                 sınıra yalnız müşteri izin metnini açarsa dayanır. */
+              className="fixed inset-x-0 bottom-0 z-[10001] flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[22px] outline-none sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-h-[min(680px,calc(100dvh-48px))] sm:w-[372px] sm:rounded-[22px]"
               style={{
                 background: "#0B0418",
                 border: "1px solid rgba(196,181,253,0.10)",
@@ -432,10 +445,10 @@ export function NewMemberPopup() {
               </div>
 
               {/* ── Üst şerit: tutar + koşul + kapat (büyük görsel YOK) ── */}
-              <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 pb-3 pt-2 sm:px-7 sm:pb-4 sm:pt-6">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 pb-2.5 pt-2 sm:px-5 sm:pb-3 sm:pt-4">
+                <div className="flex items-center gap-2.5">
                   <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                     style={PRIMARY_BUTTON}
                     aria-hidden="true"
                   >
@@ -444,7 +457,7 @@ export function NewMemberPopup() {
                   <div className="leading-tight">
                     <p
                       className="font-bold"
-                      style={{ fontFamily: "var(--font-display)", fontSize: "24px", color: "#DDD6FE", letterSpacing: "-0.02em" }}
+                      style={{ fontFamily: "var(--font-display)", fontSize: "20px", color: "#DDD6FE", letterSpacing: "-0.02em" }}
                     >
                       {formatMinor(cfg.amount_minor)}
                     </p>
@@ -465,30 +478,30 @@ export function NewMemberPopup() {
               </div>
 
               {/* ── Gövde: kendi içinde kayar ── */}
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-4 sm:px-7 sm:pt-6">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-3 sm:px-5 sm:pt-4">
                 {phase === "entry" && (
                   <div>
                     <h2
                       id="hosgeldin-panel-baslik"
-                      className="mb-2 font-semibold text-white"
+                      className="mb-1 font-semibold text-white"
                       style={{
                         fontFamily: "var(--font-display)",
-                        fontSize: "clamp(20px, 5.4vw, 24px)",
-                        lineHeight: 1.15,
+                        fontSize: "clamp(17px, 4.3vw, 19px)",
+                        lineHeight: 1.2,
                         letterSpacing: "-0.015em",
                         whiteSpace: "pre-line",
                       }}
                     >
                       {cfg.title}
                     </h2>
-                    <p className="mb-2 text-sm leading-relaxed text-white/60">{cfg.description}</p>
-                    <p className="mb-4 flex items-center gap-1.5 text-xs text-white/50">
+                    <p className="mb-1.5 text-[12.5px] leading-snug text-white/60">{cfg.description}</p>
+                    <p className="mb-2 flex items-center gap-1.5 text-[11.5px] text-white/50">
                       <span style={{ color: "#A78BFA", fontSize: "8px" }} aria-hidden="true">◇</span>
                       {copy?.condition ?? "İlk siparişinize özel"}
                     </p>
 
                     <form onSubmit={handleSubmit} noValidate>
-                      <label className="mb-1 block text-xs font-semibold text-white/70" htmlFor="hosgeldin-eposta">
+                      <label className="mb-0.5 block text-[11.5px] font-semibold text-white/70" htmlFor="hosgeldin-eposta">
                         E-posta
                       </label>
                       <input
@@ -505,11 +518,11 @@ export function NewMemberPopup() {
                           setErrorField(null);
                         }}
                         placeholder="E-posta adresiniz"
-                        className="mb-3 w-full text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]/60"
+                        className="mb-2.5 w-full text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]/60"
                         style={{ ...FIELD_STYLE, border: fieldBorder(errorField === "email") }}
                       />
 
-                      <label className="mb-1 block text-xs font-semibold text-white/70" htmlFor="hosgeldin-sifre">
+                      <label className="mb-0.5 block text-[11.5px] font-semibold text-white/70" htmlFor="hosgeldin-sifre">
                         Şifre
                       </label>
                       <input
@@ -526,7 +539,7 @@ export function NewMemberPopup() {
                         }}
                         /* Kural SUNUCUYLA aynı: 8-200 (memberAuthValidation). */
                         placeholder={`En az ${PASSWORD_MIN} karakter`}
-                        className="mb-4 w-full text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]/60"
+                        className="mb-2.5 w-full text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]/60"
                         style={{ ...FIELD_STYLE, border: fieldBorder(errorField === "password") }}
                       />
 
@@ -534,9 +547,10 @@ export function NewMemberPopup() {
                           Kutu işaretlenmeden istek atılmaz; gövdeye de yalnız
                           bu değer yazılır (lib/consent.registerRequestBody).
                           Sunucu da `kvkk_onay !== true` ise 400 döner. */}
+                      {/* Kompakt: tek cümle + tam metne giden bağlantı (metin /kvkk sayfasında). */}
                       <label
-                        className="mb-4 flex cursor-pointer items-start gap-3 text-white/75"
-                        style={{ fontSize: "13px", lineHeight: 1.55 }}
+                        className="mb-2.5 flex cursor-pointer items-start gap-2.5 text-white/75"
+                        style={{ fontSize: "12.5px", lineHeight: 1.45 }}
                       >
                         <input
                           type="checkbox"
@@ -569,32 +583,57 @@ export function NewMemberPopup() {
                       </label>
 
                       {/* PAZARLAMA E-POSTA İZNİ — isteğe bağlı, işaretsiz başlar.
-                          Metin API'den gelir (saklanan metin sürümüyle aynı), TAMAMI gösterilir. */}
+                          Metin API'den gelir (saklanan metin sürümüyle aynı).
+                          İlk bakışta yalnız KISA onay cümlesi durur; uzun açıklama
+                          müşteri isterse açılır. Açmak onay DEĞİLDİR: açma düğmesi
+                          yalnız görünürlük durumunu değiştirir, kutuya dokunmaz. */}
                       {marketingCheckboxVisible(marketingConfig) && (
-                        <fieldset className="mb-4 rounded-[14px] p-3.5" style={{ border: "1px solid rgba(196,181,253,0.14)", background: "rgba(255,255,255,0.03)" }}>
+                        <fieldset className="mb-2 rounded-[12px] px-3 pb-2 pt-0.5" style={{ border: "1px solid rgba(196,181,253,0.14)", background: "rgba(255,255,255,0.03)" }}>
                           {/* Yönetmelik m.7/5: kenar başlığı + en az 12 punto (16px). */}
                           {marketingConfig.text.heading && (
-                            <legend className="px-1 font-bold text-white/90" style={{ fontSize: "16px", lineHeight: 1.4 }}>
+                            <legend className="px-1 font-bold text-white/90" style={{ fontSize: "16px", lineHeight: 1.35 }}>
                               {marketingConfig.text.heading}
                             </legend>
                           )}
                           <label
-                            className="flex cursor-pointer items-start gap-3 text-white/75"
-                            style={{ fontSize: "16px", lineHeight: 1.55 }}
+                            className="flex cursor-pointer items-start gap-2.5 text-white/75"
+                            style={{ fontSize: "16px", lineHeight: 1.45 }}
                           >
                             <input
                               type="checkbox"
                               checked={marketingTicked}
                               onChange={(e) => setMarketingTicked(e.target.checked)}
-                              className="mt-1 h-5 w-5 shrink-0 accent-[#8B5CF6]"
+                              className="mt-0.5 h-5 w-5 shrink-0 accent-[#8B5CF6]"
                             />
-                            <span>
-                              <span className="font-semibold text-white/90">{marketingConfig.text.label}</span>
-                              {marketingConfig.text.body && (
-                                <span className="mt-1 block text-white/70">{marketingConfig.text.body}</span>
-                              )}
-                            </span>
+                            <span className="font-semibold text-white/90">{marketingConfig.text.label}</span>
                           </label>
+                          {marketingConfig.text.body && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setMarketingTextOpen((open) => !open)}
+                                aria-expanded={marketingTextOpen}
+                                aria-controls="hosgeldin-izin-metni"
+                                className="mt-2 flex items-center gap-1 rounded text-[13px] text-[#C4B5FD] underline underline-offset-2 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]"
+                              >
+                                {marketingTextOpen ? "İzin metnini kapat" : "İzin metninin tamamını oku"}
+                                <ChevronDown
+                                  className={`h-3.5 w-3.5 transition-transform ${marketingTextOpen ? "rotate-180" : ""}`}
+                                  aria-hidden="true"
+                                />
+                              </button>
+                              {/* Tam metin kaldırılmadı: açıldığında aynı panelde, 16px okunur. */}
+                              {marketingTextOpen && (
+                                <p
+                                  id="hosgeldin-izin-metni"
+                                  className="mt-2 text-white/70"
+                                  style={{ fontSize: "16px", lineHeight: 1.5 }}
+                                >
+                                  {marketingConfig.text.body}
+                                </p>
+                              )}
+                            </>
+                          )}
                         </fieldset>
                       )}
 
@@ -612,13 +651,13 @@ export function NewMemberPopup() {
 
                       {/* Kayıt düğmesi panelin altında SABİT: uzun izin metni kaydırılırken de erişilebilir. */}
                       <div
-                        className="sticky bottom-0 -mx-5 px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 sm:-mx-7 sm:px-7"
+                        className="sticky bottom-0 -mx-4 px-4 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5 sm:-mx-5 sm:px-5"
                         style={{ background: "linear-gradient(to top, #0B0418 70%, rgba(11,4,24,0))" }}
                       >
                         <button
                           type="submit"
                           disabled={loading}
-                          className="flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0418]"
+                          className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0418]"
                           style={
                             loading
                               ? { background: "rgba(139,92,246,0.5)", boxShadow: "none", cursor: "not-allowed" }
@@ -640,7 +679,7 @@ export function NewMemberPopup() {
                         <button
                           type="button"
                           onClick={closePanel}
-                          className="mt-2 w-full py-1.5 text-center text-xs text-white/45 transition-colors hover:text-white/70"
+                          className="mt-1.5 w-full py-1 text-center text-xs text-white/45 transition-colors hover:text-white/70"
                         >
                           {cfg.dismiss_text || "Şimdi değil"}
                         </button>
@@ -651,11 +690,11 @@ export function NewMemberPopup() {
 
                 {/* Üyelik oluştu ama kupon şu an uygulanamıyor (ör. telefon doğrulama gerekiyor) */}
                 {phase === "registered" && (
-                  <div className="pb-6">
+                  <div className="pb-5">
                     <h2
                       id="hosgeldin-panel-baslik"
                       className="mb-2 font-semibold text-white"
-                      style={{ fontFamily: "var(--font-display)", fontSize: "22px", lineHeight: 1.2 }}
+                      style={{ fontFamily: "var(--font-display)", fontSize: "20px", lineHeight: 1.2 }}
                     >
                       Üyeliğiniz oluşturuldu.
                     </h2>
@@ -669,7 +708,7 @@ export function NewMemberPopup() {
                     )}
                     <a
                       href="/hesabim"
-                      className="mb-2 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-white"
+                      className="mb-2 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white"
                       style={PRIMARY_BUTTON}
                     >
                       Hesabım&apos;a git
@@ -687,9 +726,9 @@ export function NewMemberPopup() {
 
                 {/* Başarı — yalnız gerçek kayıt + gerçek kupon kodu */}
                 {phase === "success" && (
-                  <div className="pb-6">
+                  <div className="pb-5">
                     <div
-                      className="mb-4 flex h-11 w-11 items-center justify-center rounded-full"
+                      className="mb-3 flex h-11 w-11 items-center justify-center rounded-full"
                       style={PRIMARY_BUTTON}
                       aria-hidden="true"
                     >
@@ -698,7 +737,7 @@ export function NewMemberPopup() {
                     <h2
                       id="hosgeldin-panel-baslik"
                       className="mb-2 font-semibold text-white"
-                      style={{ fontFamily: "var(--font-display)", fontSize: "22px", lineHeight: 1.2 }}
+                      style={{ fontFamily: "var(--font-display)", fontSize: "20px", lineHeight: 1.2 }}
                     >
                       İlk sipariş ayrıcalığınız hazır.
                     </h2>
@@ -730,7 +769,7 @@ export function NewMemberPopup() {
                     <button
                       type="button"
                       onClick={closePanel}
-                      className="flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-white"
+                      className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white"
                       style={PRIMARY_BUTTON}
                     >
                       Alışverişe devam et
