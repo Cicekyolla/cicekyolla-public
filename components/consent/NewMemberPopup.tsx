@@ -11,6 +11,10 @@
  *  1. Sayfada yalnız küçük bir teklif alanı durur (sol alt; WhatsApp düğmesi
  *     sağ altta, ürün sayfasında mobil satın alma çubuğunun ÜSTÜNDE).
  *     Kendiliğinden hiçbir panel açılmaz; ürün kartı tıklaması ürün detayına gider.
+ *  1b. Ekranda başka bir pencere varsa (ör. "Çiçeğinizi nereye gönderelim?"
+ *     teslimat adresi penceresi) teklif alanı ÇİZİLMEZ ve panel açılmaz —
+ *     müşteri o pencereyi bitirince ya da kapatınca teklif geri gelir.
+ *     Tek kaynak: ConsentManager'ın tek overlay kilidi (overlayBusy).
  *  2. Panel YALNIZ müşteri teklif alanına dokununca açılır:
  *     masaüstünde sağdan kompakt yan panel, mobilde ekran yüksekliğine sığan,
  *     kendi içinde kayan alt panel. Büyük kahraman görseli yok.
@@ -34,7 +38,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { X, ArrowRight, Check, Gift, ChevronDown } from "lucide-react";
-import { acquireOverlay, releaseOverlay, MARKETING_BLOCKED_PATHS } from "./ConsentManager";
+import { acquireOverlay, releaseOverlay, onOverlayChange, overlayBusy, MARKETING_BLOCKED_PATHS } from "./ConsentManager";
 import {
   fetchConsentConfig,
   registerMember,
@@ -151,6 +155,9 @@ export function NewMemberPopup() {
   const [memberFlag, setMemberFlag] = useState<MemberFlagState>("joined");
   const [sessionState, setSessionState] = useState<MemberSessionState>("unknown");
   const [cookieOk, setCookieOk] = useState(false);
+  /* Başka bir pencere (teslimat adresi, çerez paneli …) açıkken teklif alanı
+     gizlenir; o pencere kapanınca geri gelir. Başlangıçta "gösterme". */
+  const [overlayFree, setOverlayFree] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const heldOverlay = useRef(false);
@@ -187,13 +194,18 @@ export function NewMemberPopup() {
       setMemberFlag(readMemberFlag());
       setSessionState(readSessionHint(sessionHintStorage(), Date.now()));
       setCookieOk(cookieDecided());
+      /* Teslimat adresi penceresi gibi başka bir popup açıksa teklif alanı
+         çizilmez (ConsentManager tek overlay kilidi — tek kaynak). */
+      setOverlayFree(!overlayBusy("member"));
     };
     refresh();
     const timer = window.setInterval(refresh, 3000);
+    const unsubOverlay = onOverlayChange(refresh);
     window.addEventListener(MEMBER_SESSION_EVENT, refresh);
     window.addEventListener("storage", refresh);
     return () => {
       window.clearInterval(timer);
+      unsubOverlay();
       window.removeEventListener(MEMBER_SESSION_EVENT, refresh);
       window.removeEventListener("storage", refresh);
     };
@@ -249,6 +261,7 @@ export function NewMemberPopup() {
       memberFlag,
       sessionState,
       cookieDecided: cookieOk,
+      overlayFree,
       isLocalePath: !!pathname && isGlobalLocalePath(pathname),
       blockedPrefixes: MARKETING_BLOCKED_PATHS,
     });
@@ -256,11 +269,17 @@ export function NewMemberPopup() {
 
   /** Tek açılış yolu: müşterinin teklif alanına dokunması. */
   function openPanel() {
+    /* Başka bir pencere (teslimat adresi …) açıksa ONUN ÜSTÜNE açılmaz.
+       Teklif alanı zaten gizlidir; bu ikinci kapı yarış durumları içindir.
+       Müşteri o pencereyi bitirince kilit boşalır, teklif geri gelir. */
+    if (!acquireOverlay("member")) {
+      setOverlayFree(false);
+      return;
+    }
+    heldOverlay.current = true;
     setIsDesktop(window.matchMedia("(min-width: 640px)").matches);
     /* Her açılışta kısa görünüm: uzun izin açıklaması yine kapalı başlar. */
     setMarketingTextOpen(false);
-    /* Diğer otomatik pencereler (Haberdar Ol, teslimat adresi) üstüne binmesin. */
-    heldOverlay.current = acquireOverlay("member");
     setVisible(true);
   }
 
