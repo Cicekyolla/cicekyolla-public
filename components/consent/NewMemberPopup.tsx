@@ -430,9 +430,12 @@ export function NewMemberPopup() {
               animate={{ x: 0, y: 0, opacity: 1, scale: 1 }}
               exit={hiddenOffset}
               transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-              /* Yükseklik İÇERİĞE göre: kısa görünümde panel küçük kalır, üst
-                 sınıra yalnız müşteri izin metnini açarsa dayanır. */
-              className="fixed inset-x-0 bottom-0 z-[10001] flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[22px] outline-none sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-h-[min(680px,calc(100dvh-48px))] sm:w-[372px] sm:rounded-[22px]"
+              /* Mobilde panel KISA açılır (ekranın ~%60'ı, en az 420px): ürünlerin
+                 büyük kısmı görünür kalır, form + izin metni + kayıt düğmesi
+                 panelin İÇİNDE kaydırılarak gezilir. Üst şerit (kapat düğmesi)
+                 ve alttaki kayıt düğmesi kaydırmadan bağımsız durur.
+                 Masaüstü kartı DEĞİŞMEDİ. */
+              className="fixed inset-x-0 bottom-0 z-[10001] flex max-h-[max(420px,60dvh)] flex-col overflow-hidden rounded-t-[22px] outline-none sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-h-[min(680px,calc(100dvh-48px))] sm:w-[372px] sm:rounded-[22px]"
               style={{
                 background: "#0B0418",
                 border: "1px solid rgba(196,181,253,0.10)",

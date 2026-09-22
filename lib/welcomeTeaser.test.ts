@@ -137,5 +137,7 @@ test("KAYNAK: panel kompakt — masaüstünde tam boy levha değil", () => {
   assert.doesNotMatch(src, /sm:h-\[100dvh\]/, "masaüstünde tam ekran yükseklik yok");
   assert.match(src, /sm:w-\[372px\]/, "masaüstünde dar kart");
   assert.match(src, /sm:bottom-6 sm:right-6/, "sağ altta duran kart");
-  assert.match(src, /max-h-\[82dvh\]/, "mobilde ekranın tamamını örtmez");
+  // Mobilde panel KISA açılır; gerisi panelin içinde kaydırılır.
+  assert.match(src, /max-h-\[max\(420px,60dvh\)\]/, "mobilde panel kısa açılır");
+  assert.match(src, /min-h-0 flex-1 overflow-y-auto overscroll-contain/, "gövde kendi içinde kayar");
 });
