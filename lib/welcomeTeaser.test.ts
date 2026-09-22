@@ -23,6 +23,7 @@ const base: WelcomeTeaserInput = {
   memberFlag: "none",
   sessionState: "guest",
   cookieDecided: true,
+  overlayFree: true,
   isLocalePath: false,
   blockedPrefixes: BLOCKED,
 };
@@ -43,6 +44,12 @@ test("gizli: kampanya kapalı / üye / katılmış / ertelenmiş / çerez karar�
   assert.equal(welcomeTeaserVisible({ ...base, cookieDecided: false }), false);
   assert.equal(welcomeTeaserVisible({ ...base, isLocalePath: true }), false);
   assert.equal(welcomeTeaserVisible({ ...base, pathname: "" }), false);
+});
+
+test("gizli: ekranda başka bir pencere (teslimat adresi) açıkken", () => {
+  assert.equal(welcomeTeaserVisible({ ...base, overlayFree: false }), false);
+  // Pencere kapanınca teklif yeniden kullanılabilir.
+  assert.equal(welcomeTeaserVisible({ ...base, overlayFree: true }), true);
 });
 
 test("gizli: ödeme/sepet/checkout ve üyelik formunun zaten olduğu sayfalar", () => {
@@ -130,6 +137,26 @@ test("KAYNAK: uzun izin açıklaması kapalı başlar — AÇMAK İZİN VERMEK D
   // Onay kutusu yalnız kendi onChange'i ile değişir: açma düğmesi kutuya dokunmaz.
   assert.equal((src.match(/setMarketingTicked\(/g) ?? []).length, 1, "kutuyu yalnız kendi onChange'i değiştirir");
   assert.match(src, /onChange=\{\(e\) => setMarketingTicked\(e\.target\.checked\)\}/);
+});
+
+test("KAYNAK: teslimat penceresi açıkken teklif alanı çizilmez, panel açılmaz", () => {
+  const src = readFileSync(join(ROOT, "components/consent/NewMemberPopup.tsx"), "utf8");
+  // Görünürlük kararı tek kaynaktan: ConsentManager'ın overlay kilidi.
+  assert.match(src, /overlayBusy\("member"\)/);
+  assert.match(src, /setOverlayFree\(!overlayBusy\("member"\)\)/);
+  assert.match(src, /onOverlayChange\(refresh\)/, "kilit el değiştirince hemen güncellenir");
+  assert.match(src, /const \[overlayFree, setOverlayFree\] = useState\(false\)/, "başlangıçta gösterme");
+  assert.match(src, /overlayFree,/, "kural bu girdiyi alır");
+  // İkinci kapı: kilit alınamıyorsa panel AÇILMAZ.
+  assert.match(src, /if \(!acquireOverlay\("member"\)\) \{\s*\n\s*setOverlayFree\(false\);\s*\n\s*return;/);
+  assert.equal((src.match(/setVisible\(true\)/g) ?? []).length, 1, "paneli açan tek yer openPanel");
+
+  const cm = readFileSync(join(ROOT, "components/consent/ConsentManager.tsx"), "utf8");
+  assert.match(cm, /export function overlayBusy\(exceptId\?: string\): boolean/);
+  assert.match(cm, /export function onOverlayChange\(fn: \(\) => void\)/);
+  // Kilit alınırken ve bırakılırken dinleyiciler haberdar edilir.
+  assert.match(cm, /if \(yeni\) notifyOverlayChange\(\);/);
+  assert.equal((cm.match(/notifyOverlayChange\(\)/g) ?? []).length, 4);
 });
 
 test("KAYNAK: panel kompakt — masaüstünde tam boy levha değil", () => {

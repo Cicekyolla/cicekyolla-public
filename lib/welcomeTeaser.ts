@@ -52,6 +52,12 @@ export interface WelcomeTeaserInput {
   sessionState: "unknown" | "guest" | "member";
   /** Çerez kararı verildi mi? Verilmeden alt bant ile üst üste binmesin. */
   cookieDecided: boolean;
+  /**
+   * Ekranda başka bir pencere (ör. teslimat adresi) açık DEĞİL mi?
+   * Açıkken teklif alanı çizilmez: müşteri o pencereyi bitirmeden üstüne
+   * ikinci bir panel açılmaz. Pencere kapanınca teklif yeniden görünür.
+   */
+  overlayFree: boolean;
   /** Global locale rotası mı (/en, /de …)? Orada TR kabuğu çizilmez. */
   isLocalePath: boolean;
   /** Pazarlama engelli yollar (checkout, sepet, ödeme …) — ConsentManager tek kaynak. */
@@ -64,6 +70,7 @@ export function welcomeTeaserVisible(i: WelcomeTeaserInput): boolean {
   if (i.memberFlag !== "none") return false;
   if (i.sessionState === "member") return false;
   if (!i.cookieDecided) return false;
+  if (!i.overlayFree) return false;
   if (i.isLocalePath) return false;
   const p = i.pathname ?? "";
   if (!p) return false;
