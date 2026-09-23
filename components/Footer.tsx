@@ -19,6 +19,13 @@ export interface FooterBrand {
 }
 
 const FOOTER_DELIVERY_LINKS = [
+  // 23 Eyl 2026 — İL HUB'I YETİMDİ.
+  // Ölçüm: ana sayfa, /teslimat-bolgeleri, /site-haritasi, /kurumsal ve /blog'un
+  // HİÇBİRİNDE href="/istanbul" yok; /istanbul yalnız kendi 39 ilçesinden link
+  // alıyordu (GSC 90g: 57 gösterim, 0 tıklama). Footer sitedeki her sayfada
+  // olduğu için hub'a kalıcı bir üst-seviye bağlantı veren en ucuz yüzey.
+  // Teslimat vaadi TAŞIMAZ — yalnız bağlantı. Diğer satırlar aynen korundu.
+  { label: "İstanbul", href: "/istanbul" },
   { label: "Kadıköy", href: "/istanbul/kadikoy" },
   { label: "Beşiktaş", href: "/istanbul/besiktas" },
   { label: "Şişli", href: "/istanbul/sisli" },
@@ -36,7 +43,10 @@ function teslimatLinkleri(pathname: string | null) {
   const m = /^\/([a-z]{2})(?:\/|$)/.exec(pathname ?? "");
   const locale = m && (GLOBAL_LOCALES as readonly string[]).includes(m[1]) ? m[1] : null;
   if (!locale) return FOOTER_DELIVERY_LINKS;
-  return FOOTER_DELIVERY_LINKS.filter((l) => l.href.startsWith("/istanbul/")).map((l) => ({
+  // 23 Eyl 2026: süzgeç "/istanbul/" idi, il hub'ı "/istanbul" bu testten
+  // geçemiyordu. /en/istanbul, /ru/istanbul canlıda 200 döndüğü ölçüldü —
+  // hub locale yolunda da gösterilebilir. Diğer iller aynen gizli kalır.
+  return FOOTER_DELIVERY_LINKS.filter((l) => l.href === "/istanbul" || l.href.startsWith("/istanbul/")).map((l) => ({
     ...l,
     href: `/${locale}${l.href}`,
   }));

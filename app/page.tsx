@@ -56,8 +56,15 @@ export const metadata: Metadata = {
   // SEO kurtarma (15 Ağu 2026, operatör onaylı): eski güçlü dönemin Wayback-kanıtlı
   // title'ı geri getirildi — "çiçek yolla" poz ~2 dönemi bu head ile kazanılmıştı.
   title: { absolute: "Çiçek Yolla - Online Çiçek Siparişi - Çiçek Gönder - Çiçekçi" },
+  // 23 Eyl 2026 — SNIPPET METNİ DEĞİŞTİ, TITLE'A DOKUNULMADI.
+  // Ölçüm (GSC 28g, /): "çiçekçi" 606 gösterim → 6 tıklama (%1,0), "çiçek gönder"
+  // 207 → 3, "çiçek siparişi" 114 → 4. Eski açıklamada "çiçekçi" kelimesi HİÇ
+  // geçmiyordu ve hiçbir ayırt edici söz yoktu; müşteriye neden bizi seçeceğini
+  // söylemiyordu. Yeni metin mobil önceliklidir: "çiçekçi" ve "İstanbul'da aynı
+  // gün" ilk 45 karakterde. Vaat kuralı korunur — aynı gün İstanbul'a bağlı,
+  // Türkiye geneli KARGO (bkz. lib/anasayfaAnahtarKelime.test.ts nöbetçisi).
   description:
-    "Online çiçek siparişi verin, sevdiklerinize güvenle çiçek gönderin. Özel günlere uygun çiçekleri ÇiçekYolla ile kolayca sipariş edin.",
+    "İstanbul'da aynı gün teslim eden çiçekçi. Adresi girin, o bölgeye gerçekten gidebilen çiçekleri görün; Türkiye genelinde kargoyla gönderin.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -66,7 +73,7 @@ export const metadata: Metadata = {
     siteName: "Çiçekyolla",
     title: "Çiçek Yolla - Online Çiçek Siparişi - Çiçek Gönder - Çiçekçi",
     description:
-      "Online çiçek siparişi verin, sevdiklerinize güvenle çiçek gönderin. Özel günlere uygun çiçekleri ÇiçekYolla ile kolayca sipariş edin.",
+      "İstanbul'da aynı gün teslim eden çiçekçi. Adresi girin, o bölgeye gerçekten gidebilen çiçekleri görün; Türkiye genelinde kargoyla gönderin.",
     images: [
       {
         url: "/opengraph-image",
@@ -79,7 +86,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Çiçek Yolla - Online Çiçek Siparişi - Çiçek Gönder - Çiçekçi",
-    description: "Online çiçek siparişi verin, sevdiklerinize güvenle çiçek gönderin.",
+    description: "İstanbul'da aynı gün teslim eden çiçekçi. Adresi girin, o bölgeye gidebilen çiçekleri görün.",
     images: ["/twitter-image"],
   },
   robots: indexRobots(),

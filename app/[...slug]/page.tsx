@@ -13,6 +13,7 @@ import { yonelme } from "@/lib/turkish";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
+import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
 import { getLinkData } from "@/lib/linkData";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 
@@ -265,7 +266,13 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     ...(cargoMode
       ? { delivery_model: "cargo_capable" as const }
       : { product_type: "flower", same_day_available: true }),
-    page_size: cargoMode ? 100 : 8,
+    // 23 Eyl 2026 — İL VİTRİNİ 4 ÜRÜNDE KALIYORDU.
+    // Ölçüm (canlı HTML): /istanbul 4 ürün · /ankara, /izmir, /antalya 100 ürün.
+    // Sebep bu satırdaki 8 + aşağıdaki slice(…, 4): yalnız "aynı gün" dalı,
+    // yani İstanbul, küçük kalıyordu. İstanbul en büyük ticari il sayfamız ve
+    // müşteri oraya "ne gönderebilirim" diye geliyor; 4 ürünle seçim yapamıyor.
+    // İlçe sayfaları zaten LOCATION_PAGE_SIZE (30) gösteriyor — aynı sayıya çekildi.
+    page_size: cargoMode ? 100 : LOCATION_PAGE_SIZE,
   } satisfies Parameters<typeof fetchProducts>[0];
   // Vitrin ürünleri yalnız ilçe kapsamı DIŞINDA kesin gerekli → hemen başlar;
   // ilçe kapsamındaki nadir fallback (coverage boş) aşağıda seri kalır.
@@ -351,9 +358,20 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   const products = productItems
     .filter((product) => !cargoMode || product.delivery_model_code === "cargo" || product.delivery_model_code === "same_day_and_cargo")
     .map(toCardProduct)
-    .slice(0, cargoMode ? 100 : 4);
+    .slice(0, cargoMode ? 100 : LOCATION_PAGE_SIZE);
+
+  /* 23 Eyl 2026 — KIRINTI YOLU YALNIZ LOKASYON DALINDA.
+     Page()'deki paylaşılan jsonLd fragment'ine EKLENMEZ: oradan CMS'teki
+     lokasyon olmayan sayfalar da geçiyor ve onlara uydurma İl→İlçe zinciri
+     sızardı. Adlar bu bileşenin kendi çözdüğü değerlerdir. */
+  const breadcrumbLd = locationBreadcrumbJsonLd(
+    parts,
+    [cityName, districtName, neighborhood],
+    absoluteUrl,
+  );
 
   return <main className="bg-[#fcfbfd] text-[#111827]">
+    {breadcrumbLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} /> : null}
     <section className="bg-white px-6 pb-16 pt-20 lg:px-14 lg:pb-24 lg:pt-28">
       <div className="mx-auto max-w-[1320px]">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode ? "1–3 iş günü kargo" : "Aynı gün hızlı teslimat"} — {place}</div>
