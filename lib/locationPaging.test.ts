@@ -300,7 +300,8 @@ test("KAYNAK: GlobalCatalogBrowser yalnız dilimi alır ve basar; istemci durumu
 });
 
 test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam katalog kart/prop olarak geçmez", () => {
-  assert.equal(page.split("catalogItems(locale, plan, view.ids)").length - 1, 2, "commerce + kargo aynı dilim");
+  // 24 Eyl 2026: 4. parametre = aynı gün rozeti (kargo: false, nötr: !note) — dilim aynı
+  assert.equal(page.split("catalogItems(locale, plan, view.ids,").length - 1, 2, "commerce + kargo aynı dilim");
   assert.ok(!page.includes("plan.byId.values()"), "tüm ürünler kart modeline çevrilmez");
   assert.ok(!page.includes("allOrder={"), "allOrder bileşene prop geçmez");
   assert.ok(!page.includes("flattenPlan(plan)"), "kargo tam listeyi kart modeline çevirmez");
@@ -311,7 +312,7 @@ test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam ka
   assert.match(items, /return ids\s*\.map\(\(id\) => plan\.byId\.get\(id\)\)/);
   for (const name of ["CatalogCommerceSection", "CargoCatalogSection"]) {
     const src = fn(name);
-    assert.ok(src.includes("<GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />"), name);
+    assert.match(src, /<GlobalCatalogBrowser locale=\{locale\} items=\{catalogItems\(locale, plan, view\.ids, (!note|false)\)\} view=\{view\} \/>/, name);
     assert.ok(!GIZLEME.test(src), `${name}: gizleme yok`);
   }
 });

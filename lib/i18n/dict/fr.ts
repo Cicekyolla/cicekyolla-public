@@ -145,7 +145,7 @@ const fr: Dict = {
   "pdp.tabs.shipping": "Détails d'expédition",
   "pdp.noContent": "Aucun contenu supplémentaire pour ce produit.",
   "pdp.region": "Zone de livraison :",
-  "pdp.regionSameDay": "Livraison le jour même disponible.",
+  "pdp.regionSameDay": "La livraison le jour même est possible dans nos zones de coursiers d'Istanbul.",
   "pdp.shippingNote1": "Le jour et l'heure de livraison sont fixés lors de la commande selon la demande dans votre zone. Les horaires peuvent varier selon la météo et le trafic.",
   "pdp.shippingNote2": "Vous pouvez ajouter une carte cadeau lors de la commande et demander une validation photo du produit préparé.",
   "pdp.breadcrumbProduct": "Produit",

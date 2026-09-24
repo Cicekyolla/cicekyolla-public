@@ -145,7 +145,7 @@ const es: Dict = {
   "pdp.tabs.shipping": "Detalles de envío",
   "pdp.noContent": "No hay contenido adicional para este producto.",
   "pdp.region": "Zona de entrega:",
-  "pdp.regionSameDay": "Entrega el mismo día disponible.",
+  "pdp.regionSameDay": "La entrega el mismo día está disponible dentro de nuestras zonas de reparto de Estambul.",
   "pdp.shippingNote1": "El día y la hora de entrega se fijan al finalizar el pedido según la demanda de su zona. Los horarios pueden variar por clima y tráfico.",
   "pdp.shippingNote2": "Puede añadir una tarjeta de regalo al finalizar el pedido y solicitar la aprobación por foto del producto preparado.",
   "pdp.breadcrumbProduct": "Producto",

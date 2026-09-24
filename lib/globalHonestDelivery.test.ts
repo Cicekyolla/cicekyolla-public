@@ -95,3 +95,25 @@ test("locale PDP Product JSON-LD: URL locale yolundan, TR /urun yolu korunur", (
   assert.ok(src.includes("path: localeProductPath(locale, surface.slug)"), "locale PDP yolu");
   assert.ok(src.includes(`<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />`));
 });
+
+test("ürün kartı 'Aynı Gün Teslim' rozeti yalnız aynı gün sunumunda; kargo ve nötr sunumda rozet yok", () => {
+  const src = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
+  assert.ok(src.includes("function catalogItems(locale: GlobalLocale, plan: LocationCatalogPlan, ids: readonly number[], sameDayBadge = true)"));
+  assert.ok(src.includes("sameDay: sameDayBadge && !!p.same_day_available"));
+  assert.ok(src.includes("items={catalogItems(locale, plan, view.ids, !note)}"), "aynı gün bölümü: nötr notu varsa rozet kapalı");
+  assert.ok(src.includes("items={catalogItems(locale, plan, view.ids, false)}"), "kargo bölümü: rozet kapalı");
+  assert.ok(src.includes("{ ...detailToCard(locale, d, p.name), sameDay: false }"), "kargo yedek yolu: rozet kapalı");
+});
+
+test("reachCopy notu (13 dil): kargo süresi yalnız kargolanabilir ürünler için nitelenmiş; locale PDP bölge cümlesi İstanbul kurye bölgesiyle sınırlı", async () => {
+  const QUAL = /shipped|versandfähig|expédiable|verzendbar|spedibil|aptos para envío|expedíve|göndərilə bilən|пригодные к пересылке|القابلة للشحن|可寄送|発送可能|발송 가능/u;
+  for (const l of GLOBAL_LOCALES) assert.match(REACH[l].catalogNote("X"), QUAL, l + " notu ürün-koşullu değil");
+  const IST = /Istanbul|Istambul|Estambul|İstanbul|Стамбул|إسطنبول|伊斯坦布尔|イスタンブール|이스탄불/u;
+  for (const l of GLOBAL_LOCALES) {
+    const dict = readFileSync(new URL(`./i18n/dict/${l}.ts`, import.meta.url), "utf8");
+    const m = dict.match(/"pdp\.regionSameDay":\s*"([^"]*)"/);
+    assert.ok(m && IST.test(m[1]), l + " pdp.regionSameDay İstanbul kurye bölgesi nitelemesi taşımalı");
+  }
+  const tr = readFileSync(new URL("./i18n/dict/tr.ts", import.meta.url), "utf8");
+  assert.match(tr, /"pdp\.regionSameDay":\s*"Aynı gün teslimat/, "TR sözlüğü dokunulmadı");
+});

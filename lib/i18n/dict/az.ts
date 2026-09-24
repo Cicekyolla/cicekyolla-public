@@ -145,7 +145,7 @@ const az: Dict = {
   "pdp.tabs.shipping": "Göndərilmə detalları",
   "pdp.noContent": "Bu məhsul üçün əlavə məlumat yoxdur.",
   "pdp.region": "Çatdırılma bölgəsi:",
-  "pdp.regionSameDay": "Eyni gün çatdırılma mümkündür.",
+  "pdp.regionSameDay": "Eyni gün çatdırılma İstanbul kuryer zonalarımız daxilində mümkündür.",
   "pdp.shippingNote1": "Uyğun çatdırılma günü və saatı sifariş addımında bölgənizdəki sıxlığa görə müəyyən edilir. Çatdırılma saatları hava və yol vəziyyətinə görə dəyişə bilər.",
   "pdp.shippingNote2": "Hədiyyə qeydinizi sifariş addımında əlavə edə, hazırlanan məhsulun foto ilə təsdiqini tələb edə bilərsiniz.",
   "pdp.breadcrumbProduct": "Məhsul",

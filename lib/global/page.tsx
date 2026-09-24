@@ -156,12 +156,14 @@ type CategoryTile = { slug: string; name: string; count: number; img?: string };
 
 /** Lokasyon planı → katalog kartları YALNIZ verilen id'ler için (sayfa dilimi; sıra korunur). Tam liste
     kart modeline çevrilmez, DOM'a / RSC yüküne girmez. Kart modeli sunucuda; ürün başına istek yok. */
-function catalogItems(locale: GlobalLocale, plan: LocationCatalogPlan, ids: readonly number[]): CatalogBrowserItem[] {
+function catalogItems(locale: GlobalLocale, plan: LocationCatalogPlan, ids: readonly number[], sameDayBadge = true): CatalogBrowserItem[] {
   const seg = SEGMENTS[locale];
+  // sameDayBadge=false (kargo / nötr sunum): kart "Aynı Gün Teslim" rozeti basmaz — ürün aynı güne uygun olsa da
+  // bu lokasyon/adres için karar ödemede verilir (ürün özelliği ≠ bu adrese vaat).
   return ids
     .map((id) => plan.byId.get(id))
     .filter((p): p is CatalogProduct => p !== undefined)
-    .map((p) => ({ id: p.id, href: `/${locale}/${seg.product}/${p.slug}`, card: rowToCard(locale, p) }));
+    .map((p) => ({ id: p.id, href: `/${locale}/${seg.product}/${p.slug}`, card: { ...rowToCard(locale, p), sameDay: sameDayBadge && !!p.same_day_available } }));
 }
 
 // Foundation yedek metinleri — global_pages 'home' onaylanana kadar (noindex).
@@ -411,7 +413,7 @@ async function CatalogCommerceSection({ locale, catalog, plan, view, note }: {
       <section className="mt-12" data-global-location-catalog>
         <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
         <p className="mb-4 text-[12.5px] text-[#6B7280]" data-commerce-note={note ? "neutral" : undefined}>{note ?? shop.from}</p>
-        <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />
+        <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids, !note)} view={view} />
       </section>
     );
   }
@@ -516,7 +518,7 @@ async function CargoCatalogSection({ locale, city, label, catalog, plan, view }:
     // sayfanın 24'lük dilimi + sayfalama; tam liste kart modeline çevrilmez.
     // Plan GlobalPageBody'de bir kez kurulur (kategori kartlarıyla paylaşılır).
     kartlar = [];
-    if (plan.allOrder.length) browser = <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />;
+    if (plan.allOrder.length) browser = <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids, false)} view={view} />;
   } else {
     // Kargolanabilir ürün kümesi (tüm sayfalar; ≤ 300 kayıt — profil listesi küçüktür).
     const deliverable = new Set<string>();
@@ -529,7 +531,7 @@ async function CargoCatalogSection({ locale, city, label, catalog, plan, view }:
     const detaylar = await Promise.all(
       uygun.map(async (p) => {
         const d = await fetchProductBySlug(p.tr_slug);
-        return d ? { card: detailToCard(locale, d, p.name), href: `/${locale}/${seg.product}/${p.slug}` } : null;
+        return d ? { card: { ...detailToCard(locale, d, p.name), sameDay: false }, href: `/${locale}/${seg.product}/${p.slug}` } : null;
       })
     );
     kartlar = detaylar.filter(Boolean) as { card: CardProductUi; href: string }[];

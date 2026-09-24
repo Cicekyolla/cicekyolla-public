@@ -145,7 +145,7 @@ const ja: Dict = {
   "pdp.tabs.shipping": "配送について",
   "pdp.noContent": "この商品に追加情報はありません。",
   "pdp.region": "配達エリア：",
-  "pdp.regionSameDay": "当日配達が可能です。",
+  "pdp.regionSameDay": "イスタンブールの配達エリア内では当日配達が可能です。",
   "pdp.shippingNote1": "配達日時はご注文時に地域の混雑状況に応じて決まります。天候や交通状況により変動することがあります。",
   "pdp.shippingNote2": "ご注文時にメッセージカードを追加でき、完成品の写真確認もご依頼いただけます。",
   "pdp.breadcrumbProduct": "商品",

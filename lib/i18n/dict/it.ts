@@ -145,7 +145,7 @@ const it: Dict = {
   "pdp.tabs.shipping": "Dettagli spedizione",
   "pdp.noContent": "Nessun contenuto aggiuntivo per questo prodotto.",
   "pdp.region": "Zona di consegna:",
-  "pdp.regionSameDay": "Consegna in giornata disponibile.",
+  "pdp.regionSameDay": "La consegna in giornata è disponibile nelle nostre zone corriere di Istanbul.",
   "pdp.shippingNote1": "Giorno e ora di consegna vengono fissati al checkout in base alla domanda nella tua zona. Gli orari possono variare per meteo e traffico.",
   "pdp.shippingNote2": "Puoi aggiungere un biglietto al checkout e richiedere l'approvazione con foto del prodotto preparato.",
   "pdp.breadcrumbProduct": "Prodotto",

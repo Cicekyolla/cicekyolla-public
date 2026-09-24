@@ -145,7 +145,7 @@ const zh: Dict = {
   "pdp.tabs.shipping": "配送详情",
   "pdp.noContent": "该商品暂无更多信息。",
   "pdp.region": "配送区域：",
-  "pdp.regionSameDay": "可当日配送。",
+  "pdp.regionSameDay": "伊斯坦布尔配送范围内可当日送达。",
   "pdp.shippingNote1": "配送日期和时间在结账时根据您所在区域的需求确定。配送时间可能因天气和交通而变化。",
   "pdp.shippingNote2": "您可以在结账时添加贺卡，并申请成品照片确认。",
   "pdp.breadcrumbProduct": "商品",

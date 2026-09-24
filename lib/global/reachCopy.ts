@@ -24,7 +24,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["International cards", "Visa & Mastercard accepted"],
       ["Personal message", "Your card travels with the gift"],
     ],
-    catalogNote: (p) => `Same-day courier where our Istanbul bands reach ${p}; elsewhere tracked courier in 1–3 business days — the checkout shows what your address can receive.`,
+    catalogNote: (p) => `Same-day courier where our Istanbul bands reach ${p}; elsewhere, items that can be shipped travel by tracked courier in 1–3 business days — the checkout shows what your address can receive.`,
   },
   de: {
     trust: (p) => [
@@ -33,7 +33,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Internationale Karten", "Visa & Mastercard werden akzeptiert"],
       ["Persönliche Grußkarte", "Ihre Karte reist mit dem Geschenk"],
     ],
-    catalogNote: (p) => `Taggleicher Kurier, wo unsere Istanbuler Zonen ${p} erreichen; sonst Kurier mit Sendungsverfolgung in 1–3 Werktagen — der Checkout zeigt, was Ihre Adresse empfangen kann.`,
+    catalogNote: (p) => `Taggleicher Kurier, wo unsere Istanbuler Zonen ${p} erreichen; sonst reisen versandfähige Artikel per Kurier mit Sendungsverfolgung in 1–3 Werktagen — der Checkout zeigt, was Ihre Adresse empfangen kann.`,
   },
   fr: {
     trust: (p) => [
@@ -42,7 +42,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Cartes internationales", "Visa & Mastercard acceptées"],
       ["Message personnel", "Votre carte voyage avec le cadeau"],
     ],
-    catalogNote: (p) => `Coursier le jour même là où nos zones d'Istanbul atteignent ${p} ; ailleurs transporteur suivi sous 1 à 3 jours ouvrés — le paiement indique ce que votre adresse peut recevoir.`,
+    catalogNote: (p) => `Coursier le jour même là où nos zones d'Istanbul atteignent ${p} ; ailleurs, les articles expédiables voyagent par transporteur suivi sous 1 à 3 jours ouvrés — le paiement indique ce que votre adresse peut recevoir.`,
   },
   nl: {
     trust: (p) => [
@@ -51,7 +51,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Internationale kaarten", "Visa & Mastercard geaccepteerd"],
       ["Persoonlijk kaartje", "Je kaartje reist mee met het cadeau"],
     ],
-    catalogNote: (p) => `Koerier op dezelfde dag waar onze Istanbulse zones ${p} bereiken; elders koerier met track & trace binnen 1–3 werkdagen — bij het afrekenen zie je wat jouw adres kan ontvangen.`,
+    catalogNote: (p) => `Koerier op dezelfde dag waar onze Istanbulse zones ${p} bereiken; elders gaan verzendbare artikelen met een koerier met track & trace binnen 1–3 werkdagen — bij het afrekenen zie je wat jouw adres kan ontvangen.`,
   },
   it: {
     trust: (p) => [
@@ -60,7 +60,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Carte internazionali", "Visa & Mastercard accettate"],
       ["Messaggio personale", "Il tuo biglietto viaggia con il regalo"],
     ],
-    catalogNote: (p) => `Corriere in giornata dove le nostre zone di Istanbul raggiungono ${p}; altrove corriere tracciato in 1–3 giorni lavorativi — il checkout mostra cosa può ricevere il tuo indirizzo.`,
+    catalogNote: (p) => `Corriere in giornata dove le nostre zone di Istanbul raggiungono ${p}; altrove gli articoli spedibili viaggiano con corriere tracciato in 1–3 giorni lavorativi — il checkout mostra cosa può ricevere il tuo indirizzo.`,
   },
   es: {
     trust: (p) => [
@@ -69,7 +69,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Tarjetas internacionales", "Se aceptan Visa y Mastercard"],
       ["Mensaje personal", "Tu tarjeta viaja con el regalo"],
     ],
-    catalogNote: (p) => `Mensajero el mismo día donde nuestras zonas de Estambul llegan a ${p}; en el resto, mensajería con seguimiento en 1–3 días laborables — al pagar verás qué puede recibir tu dirección.`,
+    catalogNote: (p) => `Mensajero el mismo día donde nuestras zonas de Estambul llegan a ${p}; en el resto, los artículos aptos para envío viajan por mensajería con seguimiento en 1–3 días laborables — al pagar verás qué puede recibir tu dirección.`,
   },
   pt: {
     trust: (p) => [
@@ -78,7 +78,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Cartões internacionais", "Visa & Mastercard aceites"],
       ["Mensagem pessoal", "O seu cartão viaja com o presente"],
     ],
-    catalogNote: (p) => `Estafeta no mesmo dia onde as nossas zonas de Istambul chegam a ${p}; noutros pontos transportadora com seguimento em 1–3 dias úteis — o checkout mostra o que a sua morada pode receber.`,
+    catalogNote: (p) => `Estafeta no mesmo dia onde as nossas zonas de Istambul chegam a ${p}; noutros pontos, os artigos expedíveis seguem por transportadora com seguimento em 1–3 dias úteis — o checkout mostra o que a sua morada pode receber.`,
   },
   az: {
     trust: (p) => [
@@ -87,7 +87,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Beynəlxalq kartlar", "Visa və Mastercard qəbul olunur"],
       ["Şəxsi mesaj", "Kartınız hədiyyə ilə birlikdə gedir"],
     ],
-    catalogNote: (p) => `İstanbul zonalarımızın ${p} ərazisinə çatdığı yerlərdə eyni gün kuryer; digər yerlərdə izlənən kuryerlə 1–3 iş günü — ödəniş mərhələsi ünvanınızın nə ala biləcəyini göstərir.`,
+    catalogNote: (p) => `İstanbul zonalarımızın ${p} ərazisinə çatdığı yerlərdə eyni gün kuryer; digər yerlərdə göndərilə bilən məhsullar izlənən kuryerlə 1–3 iş günündə — ödəniş mərhələsi ünvanınızın nə ala biləcəyini göstərir.`,
   },
   ru: {
     trust: (p) => [
@@ -96,7 +96,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["Международные карты", "Принимаются Visa и Mastercard"],
       ["Личное сообщение", "Ваша открытка едет вместе с подарком"],
     ],
-    catalogNote: (p) => `Курьер в тот же день там, куда наши стамбульские зоны доходят в ${p}; в остальных местах курьер с отслеживанием за 1–3 рабочих дня — при оформлении видно, что может получить ваш адрес.`,
+    catalogNote: (p) => `Курьер в тот же день там, куда наши стамбульские зоны доходят в ${p}; в остальных местах товары, пригодные к пересылке, едут курьером с отслеживанием за 1–3 рабочих дня — при оформлении видно, что может получить ваш адрес.`,
   },
   ar: {
     trust: (p) => [
@@ -105,7 +105,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["بطاقات دولية", "نقبل Visa وMastercard"],
       ["رسالة شخصية", "بطاقتك تسافر مع الهدية"],
     ],
-    catalogNote: (p) => `توصيل في نفس اليوم حيث تصل نطاقاتنا في إسطنبول إلى ${p}؛ وفي غير ذلك شحن متتبَّع خلال 1–3 أيام عمل — تُظهر صفحة الدفع ما يمكن لعنوانك استلامه.`,
+    catalogNote: (p) => `توصيل في نفس اليوم حيث تصل نطاقاتنا في إسطنبول إلى ${p}؛ وفي غير ذلك تُشحن المنتجات القابلة للشحن بشحن متتبَّع خلال 1–3 أيام عمل — تُظهر صفحة الدفع ما يمكن لعنوانك استلامه.`,
   },
   zh: {
     trust: (p) => [
@@ -114,7 +114,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["国际银行卡", "接受Visa和Mastercard"],
       ["个性化留言", "卡片随礼物一起送达"],
     ],
-    catalogNote: (p) => `伊斯坦布尔配送范围覆盖${p}的区域可当日送达；其他区域由可追踪快递在1–3个工作日内送达——结账时会显示您的地址可以收到的服务。`,
+    catalogNote: (p) => `伊斯坦布尔配送范围覆盖${p}的区域可当日送达；其他区域，可寄送的商品由可追踪快递在1–3个工作日内送达——结账时会显示您的地址可以收到的服务。`,
   },
   ja: {
     trust: (p) => [
@@ -123,7 +123,7 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["海外発行カード", "Visa・Mastercardをご利用いただけます"],
       ["メッセージカード", "カードはギフトと一緒に届きます"],
     ],
-    catalogNote: (p) => `イスタンブールの配達エリアが${p}に届く範囲は当日配達、それ以外は追跡可能な宅配便で1〜3営業日。お届け先で利用できる方法は決済時に表示されます。`,
+    catalogNote: (p) => `イスタンブールの配達エリアが${p}に届く範囲は当日配達、それ以外は発送可能な商品のみ追跡可能な宅配便で1〜3営業日。お届け先で利用できる方法は決済時に表示されます。`,
   },
   ko: {
     trust: (p) => [
@@ -132,6 +132,6 @@ export const REACH: Record<GlobalLocale, ReachCopy> = {
       ["해외 카드", "Visa 및 Mastercard 사용 가능"],
       ["개인 메시지", "카드가 선물과 함께 전달됩니다"],
     ],
-    catalogNote: (p) => `이스탄불 배송 구역이 ${p}에 닿는 곳은 당일 배송, 그 외 지역은 추적 가능한 택배로 영업일 기준 1–3일. 결제 시 해당 주소에서 가능한 방식이 표시됩니다.`,
+    catalogNote: (p) => `이스탄불 배송 구역이 ${p}에 닿는 곳은 당일 배송, 그 외 지역은 발송 가능한 상품에 한해 추적 가능한 택배로 영업일 기준 1–3일. 결제 시 해당 주소에서 가능한 방식이 표시됩니다.`,
   },
 };

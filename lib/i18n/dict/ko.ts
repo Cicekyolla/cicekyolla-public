@@ -145,7 +145,7 @@ const ko: Dict = {
   "pdp.tabs.shipping": "배송 안내",
   "pdp.noContent": "이 상품에 대한 추가 정보가 없습니다.",
   "pdp.region": "배송 지역:",
-  "pdp.regionSameDay": "당일 배송이 가능합니다.",
+  "pdp.regionSameDay": "이스탄불 배송 구역 내에서는 당일 배송이 가능합니다.",
   "pdp.shippingNote1": "배송 날짜와 시간은 주문 단계에서 해당 지역의 수요에 따라 정해집니다. 날씨와 교통 상황에 따라 달라질 수 있습니다.",
   "pdp.shippingNote2": "주문 단계에서 메시지 카드를 추가하고 완성품 사진 확인을 요청할 수 있습니다.",
   "pdp.breadcrumbProduct": "상품",

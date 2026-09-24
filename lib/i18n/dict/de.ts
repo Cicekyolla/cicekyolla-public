@@ -145,7 +145,7 @@ const de: Dict = {
   "pdp.tabs.shipping": "Versanddetails",
   "pdp.noContent": "Für dieses Produkt sind keine weiteren Inhalte verfügbar.",
   "pdp.region": "Liefergebiet:",
-  "pdp.regionSameDay": "Lieferung am selben Tag möglich.",
+  "pdp.regionSameDay": "Lieferung am selben Tag ist in unseren Istanbuler Kurierzonen möglich.",
   "pdp.shippingNote1": "Liefertag und -zeit werden beim Bestellvorgang je nach Auslastung in Ihrem Gebiet festgelegt. Lieferzeiten können wetter- und verkehrsbedingt variieren.",
   "pdp.shippingNote2": "Sie können beim Bestellvorgang eine Grußkarte hinzufügen und eine Fotofreigabe des vorbereiteten Produkts anfordern.",
   "pdp.breadcrumbProduct": "Produkt",

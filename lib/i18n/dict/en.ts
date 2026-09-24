@@ -145,7 +145,7 @@ const en: Dict = {
   "pdp.tabs.shipping": "Shipping Details",
   "pdp.noContent": "No additional content is available for this product.",
   "pdp.region": "Delivery area:",
-  "pdp.regionSameDay": "Same-day delivery is available.",
+  "pdp.regionSameDay": "Same-day delivery is available within our Istanbul courier zones.",
   "pdp.shippingNote1": "The available delivery day and time are set at checkout based on demand in your area. Delivery times may vary with weather and traffic.",
   "pdp.shippingNote2": "You can add a gift note at checkout and request a photo approval of the prepared product.",
   "pdp.breadcrumbProduct": "Product",

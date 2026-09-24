@@ -145,7 +145,7 @@ const nl: Dict = {
   "pdp.tabs.shipping": "Verzenddetails",
   "pdp.noContent": "Er is geen extra informatie voor dit product.",
   "pdp.region": "Bezorggebied:",
-  "pdp.regionSameDay": "Bezorging op dezelfde dag is mogelijk.",
+  "pdp.regionSameDay": "Bezorging op dezelfde dag is mogelijk binnen onze koerierszones in Istanbul.",
   "pdp.shippingNote1": "Bezorgdag en -tijd worden bij het afrekenen bepaald op basis van de drukte in uw gebied. Bezorgtijden kunnen variëren door weer en verkeer.",
   "pdp.shippingNote2": "U kunt bij het afrekenen een kaartje toevoegen en fotogoedkeuring van het gemaakte product aanvragen.",
   "pdp.breadcrumbProduct": "Product",
