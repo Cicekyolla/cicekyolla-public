@@ -75,6 +75,12 @@ test("kaynak nöbeti — TR landing: motor kararı (meta.reach) sözleri yöneti
   assert.ok(src.includes(`useLocationGrid || (locationData != null && (reachOut || reach === "far"))`), "boş liste kapısı");
   assert.ok(src.includes("data-far-note") && src.includes("{farThreshold} ve üzeri ürünler, günün planı uygunsa"), "uzak notu koşullu; eşik API'den");
   assert.doesNotMatch(src.slice(src.indexOf("data-far-note")), /09:00|18:00/, "slot saati TR notuna gömülmez");
+  // Meta açıklaması + hero + mahalle kartı etiketi de aynı karardan: 'adrese göre' modunda statik "aynı gün" YOK
+  assert.ok(src.includes(`description: locationSeoDescription(parts, cityName, districtName, neighborhood, await trMetaDeliveryMode(parts)),`), "meta açıklaması motor kararıyla");
+  assert.ok(src.includes(`if (mode === "neutral") return`) && src.includes("teslimat seçenekleri adresinize göre ödeme adımında gösterilir"), "nötr meta sözü");
+  assert.ok(src.includes(`deliveryLabel={hoodDeliveryLabel}`), "mahalle kartı etiketi");
+  const cards = readFileSync(new URL("../components/location/NeighborhoodCards.tsx", import.meta.url), "utf8");
+  assert.ok(cards.includes(`{deliveryLabel ?? "Aynı gün teslimat"}`), "kart etiketi prop'tan; varsayılan bugünkü");
 });
 
 test("kaynak nöbeti — PDP planlayıcı: eşik altı nedeni açık yazılır (planner.thresholdNote), karar API'de; 14 sözlükte anahtar var ve notDeliverable parantezsiz", () => {

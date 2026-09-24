@@ -17,6 +17,8 @@ type NeighborhoodCardsProps = {
   currentSlug?: string;
   /** Mahalle sayfası varyantı: başlık "diğer mahalleler" olur, ilçe geri linki eklenir. */
   variant?: "district" | "neighborhood";
+  /** ADDITIVE (108): kart alt etiketi — motor kararıyla gelir; yoksa bugünkü "Aynı gün teslimat". */
+  deliveryLabel?: string;
 };
 
 function displayName(name: string): string {
@@ -30,6 +32,7 @@ export function NeighborhoodCards({
   neighborhoods,
   currentSlug,
   variant = "district",
+  deliveryLabel,
 }: NeighborhoodCardsProps) {
   const items = neighborhoods.filter((n) => n.slug !== currentSlug);
   if (items.length === 0) return null;
@@ -77,7 +80,7 @@ export function NeighborhoodCards({
                   {displayName(n.name)} Çiçekçi
                 </span>
                 <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-[#9b94a8]">
-                  <Truck className="h-3.5 w-3.5 text-[#8b5cf6]" /> Aynı gün teslimat
+                  <Truck className="h-3.5 w-3.5 text-[#8b5cf6]" /> {deliveryLabel ?? "Aynı gün teslimat"}
                 </span>
               </span>
               <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-[#f5f0ff] text-[#8b5cf6] transition-transform group-hover:translate-x-0.5">
