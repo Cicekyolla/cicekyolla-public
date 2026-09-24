@@ -60,8 +60,10 @@ export function TrustStrip({ locale }: { locale: GlobalLocale }) {
  * farklı sözler: kurye ile 1–3 iş günü, Türkiye'de hazırlanır, uluslararası
  * kart, mesaj kartı. Aynı gün / saat / atölye ziyareti vaadi YOK (cargoCopy).
  */
-export function CargoTrustStrip({ locale, city }: { locale: GlobalLocale; city: string }) {
-  const items = CARGO[locale].trust(cityDisplayName(locale, city));
+export function CargoTrustStrip({ locale, city, label }: { locale: GlobalLocale; city: string;
+  /** ADDITIVE: şehir eksonimi yerine basılacak ad (band dışı İstanbul ilçesi: ilçe adı). */
+  label?: string }) {
+  const items = CARGO[locale].trust(label ?? cityDisplayName(locale, city));
   return (
     <Wrap className="mt-8">
       <div className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-5 md:grid-cols-4 md:px-7" data-cargo-trust>

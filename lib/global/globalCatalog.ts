@@ -50,7 +50,13 @@ export interface GlobalCatalogResponse {
   total: number;
   selection: "manual" | "none";
   featured_ids: number[];
-  location: { city: string; district: string | null; neighborhood: string | null; found: boolean; same_day: boolean } | null;
+  location: {
+    city: string; district: string | null; neighborhood: string | null; found: boolean; same_day: boolean;
+    /** ADDITIVE (API 24 Eyl 2026): aynı gün kararının kaynağı — 'city_rule' | 'engine' | 'engine_unresolved'; eski API'de yok. */
+    same_day_source?: string;
+    /** ADDITIVE: motor bandı adı (İstanbul ilçesi motorla çözüldüyse); yoksa null/yok. */
+    band?: string | null;
+  } | null;
   categories: CatalogCategory[];
   products: CatalogProduct[];
   /**
@@ -61,6 +67,18 @@ export interface GlobalCatalogResponse {
   location_sections?: unknown[] | null;
 }
 export type CatalogDecision = { mode: "fallback" } | { mode: "catalog"; catalog: GlobalCatalogResponse };
+
+/**
+ * TESLİMAT GERÇEĞİ (24 Eyl 2026): Delivery Motor bu lokasyon için "aynı gün YOK" dediyse
+ * (lokasyon çözüldü, same_day=false) sayfa KARGO sunumuna geçer — İstanbul'un kurye bandı
+ * dışındaki ilçeleri (Silivri, Şile, Çatalca …) dahil. Fallback / lokasyon yok / çözülemedi →
+ * false (bugünkü davranış: şehir kuralı karar verir).
+ */
+export function engineSaysCargo(source: CatalogDecision | null | undefined): boolean {
+  if (!source || source.mode !== "catalog") return false;
+  const loc = source.catalog.location;
+  return !!loc && loc.found === true && loc.same_day === false;
+}
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const isIdList = (v: unknown): v is number[] => Array.isArray(v) && v.every((x) => typeof x === "number");

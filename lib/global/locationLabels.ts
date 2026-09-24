@@ -52,22 +52,24 @@ export type Etiket = {
   ustEtiket: string;
   /** Breadcrumb aria-label */
   yol: string;
+  /** ADDITIVE (24 Eyl 2026): kırıntı JSON-LD ilk basamağı — o dilin ana sayfası (/<locale>) */
+  ana: string;
 };
 
 export const LABELS: Record<GlobalLocale, Etiket> = {
-  en: { ilceler: (l, c) => `Districts of ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Neighbourhoods of ${d}`, ustEtiket: "Delivery areas", yol: "Breadcrumb" },
-  de: { ilceler: (l, c) => `Bezirke von ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Stadtteile von ${d}`, ustEtiket: "Liefergebiete", yol: "Navigationspfad" },
-  fr: { ilceler: (l, c) => `Arrondissements ${frDe(CITY_NAMES[l][c])}`, mahalleler: (d) => `Quartiers de ${d}`, ustEtiket: "Zones de livraison", yol: "Fil d'Ariane" },
-  nl: { ilceler: (l, c) => `Districten van ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Wijken van ${d}`, ustEtiket: "Bezorggebieden", yol: "Kruimelpad" },
-  it: { ilceler: (l, c) => `Distretti di ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Quartieri di ${d}`, ustEtiket: "Zone di consegna", yol: "Percorso" },
-  es: { ilceler: (l, c) => `Distritos de ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Barrios de ${d}`, ustEtiket: "Zonas de entrega", yol: "Ruta de navegación" },
-  pt: { ilceler: (l, c) => `Distritos de ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Bairros de ${d}`, ustEtiket: "Áreas de entrega", yol: "Caminho" },
-  az: { ilceler: (_l, c) => `${CITY_GEN.az[c]} rayonları`, mahalleler: (d) => `${d} məhəllələri`, ustEtiket: "Çatdırılma bölgələri", yol: "Naviqasiya" },
-  ru: { ilceler: (_l, c) => `Районы ${CITY_GEN.ru[c]}`, mahalleler: (d) => `Кварталы района ${d}`, ustEtiket: "Зоны доставки", yol: "Навигация" },
-  ar: { ilceler: (l, c) => `مناطق ${CITY_NAMES[l][c]}`, mahalleler: (d) => `أحياء ${d}`, ustEtiket: "مناطق التوصيل", yol: "مسار التنقل" },
-  zh: { ilceler: (l, c) => `${CITY_NAMES[l][c]}各区`, mahalleler: (d) => `${d}的街区`, ustEtiket: "配送区域", yol: "导航路径" },
-  ja: { ilceler: (l, c) => `${CITY_NAMES[l][c]}の地区`, mahalleler: (d) => `${d}の町名`, ustEtiket: "配達エリア", yol: "パンくずリスト" },
-  ko: { ilceler: (l, c) => `${CITY_NAMES[l][c]}의 구`, mahalleler: (d) => `${d}의 동네`, ustEtiket: "배송 지역", yol: "경로" },
+  en: { ana: "Home", ilceler: (l, c) => `Districts of ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Neighbourhoods of ${d}`, ustEtiket: "Delivery areas", yol: "Breadcrumb" },
+  de: { ana: "Startseite", ilceler: (l, c) => `Bezirke von ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Stadtteile von ${d}`, ustEtiket: "Liefergebiete", yol: "Navigationspfad" },
+  fr: { ana: "Accueil", ilceler: (l, c) => `Arrondissements ${frDe(CITY_NAMES[l][c])}`, mahalleler: (d) => `Quartiers de ${d}`, ustEtiket: "Zones de livraison", yol: "Fil d'Ariane" },
+  nl: { ana: "Home", ilceler: (l, c) => `Districten van ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Wijken van ${d}`, ustEtiket: "Bezorggebieden", yol: "Kruimelpad" },
+  it: { ana: "Home", ilceler: (l, c) => `Distretti di ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Quartieri di ${d}`, ustEtiket: "Zone di consegna", yol: "Percorso" },
+  es: { ana: "Inicio", ilceler: (l, c) => `Distritos de ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Barrios de ${d}`, ustEtiket: "Zonas de entrega", yol: "Ruta de navegación" },
+  pt: { ana: "Início", ilceler: (l, c) => `Distritos de ${CITY_NAMES[l][c]}`, mahalleler: (d) => `Bairros de ${d}`, ustEtiket: "Áreas de entrega", yol: "Caminho" },
+  az: { ana: "Ana səhifə", ilceler: (_l, c) => `${CITY_GEN.az[c]} rayonları`, mahalleler: (d) => `${d} məhəllələri`, ustEtiket: "Çatdırılma bölgələri", yol: "Naviqasiya" },
+  ru: { ana: "Главная", ilceler: (_l, c) => `Районы ${CITY_GEN.ru[c]}`, mahalleler: (d) => `Кварталы района ${d}`, ustEtiket: "Зоны доставки", yol: "Навигация" },
+  ar: { ana: "الرئيسية", ilceler: (l, c) => `مناطق ${CITY_NAMES[l][c]}`, mahalleler: (d) => `أحياء ${d}`, ustEtiket: "مناطق التوصيل", yol: "مسار التنقل" },
+  zh: { ana: "首页", ilceler: (l, c) => `${CITY_NAMES[l][c]}各区`, mahalleler: (d) => `${d}的街区`, ustEtiket: "配送区域", yol: "导航路径" },
+  ja: { ana: "ホーム", ilceler: (l, c) => `${CITY_NAMES[l][c]}の地区`, mahalleler: (d) => `${d}の町名`, ustEtiket: "配達エリア", yol: "パンくずリスト" },
+  ko: { ana: "홈", ilceler: (l, c) => `${CITY_NAMES[l][c]}의 구`, mahalleler: (d) => `${d}의 동네`, ustEtiket: "배송 지역", yol: "경로" },
 };
 
 /** Şehir kökü bilinmiyorsa İstanbul etiketi (eski çağıranlar: tek parametre). */

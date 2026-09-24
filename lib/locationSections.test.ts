@@ -145,7 +145,8 @@ test("KAYNAK: kargo destinasyonu — duygu ve CTA render edilmez; kategori kartl
   assert.match(body, /case "story":\s*return cargoCity \? \(\s*<MessageSection locale=\{locale\} \/>/);
   assert.match(body, /case "reviews":\s*return <GlobalGoogleTrust/, "yorumlar kargoda da basılır");
   assert.match(body, /case "categories":\s*return tiles\.length > 0 \?/, "kategori kartları kargoda da (kargo-süzülmüş plan)");
-  assert.match(body, /const cargoCity = loc && !isSameDayDestination\(loc\.city\) \? loc\.city : null;/);
+  // 24 Eyl 2026: kargo kararı şehir kuralı VEYA Delivery Motor (engineSaysCargo) — bkz. lib/globalHonestDelivery.test.ts
+  assert.match(body, /const cargoCity = loc && \(!isSameDayDestination\(loc\.city\) \|\| engineSaysCargo\(source\)\) \? loc\.city : null;/);
 });
 
 test("KAYNAK: TEK plan paylaşılır (commerce + categories + emotion); ek istek yok; bölüm sırası mevcut /catalog yanıtından", () => {
