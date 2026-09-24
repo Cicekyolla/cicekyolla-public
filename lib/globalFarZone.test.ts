@@ -81,6 +81,9 @@ test("kaynak nöbeti — TR landing: motor kararı (meta.reach) sözleri yöneti
   assert.ok(src.includes(`deliveryLabel={hoodDeliveryLabel}`), "mahalle kartı etiketi");
   const cards = readFileSync(new URL("../components/location/NeighborhoodCards.tsx", import.meta.url), "utf8");
   assert.ok(cards.includes(`{deliveryLabel ?? "Aynı gün teslimat"}`), "kart etiketi prop'tan; varsayılan bugünkü");
+  // Kapanış CTA'sı: nötr modda "Bugün Teslim Edelim" / "aynı gün planlanır" YOK; out modda kargo sözü + gece şeridi yok
+  assert.ok(src.includes(`reachNeutral ? <>Sipariş Ver,<br />Adrese Göre Teslim Edelim</>`), "nötr kapanış başlığı");
+  assert.ok(src.includes(`{cargoMode || reachOut ? null : <NightOrderStrip />}`), "gece şeridi out modda yok");
 });
 
 test("kaynak nöbeti — PDP planlayıcı: eşik altı nedeni açık yazılır (planner.thresholdNote), karar API'de; 14 sözlükte anahtar var ve notDeliverable parantezsiz", () => {
