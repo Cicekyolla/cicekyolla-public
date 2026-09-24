@@ -44,7 +44,12 @@ export function isPresentableMessage(text: unknown): boolean {
   return true;
 }
 
-export type CheckoutFailureKind = "coupon" | "slot" | "not_deliverable" | "generic";
+/**
+ *  "delivery_changed" → müşterinin seçtiği teslimat seçeneği artık geçerli değil (servis kapandı, eşik/band değişti,
+ *                       slot bandı uyuşmuyor): sipariş SESSİZCE başka yönteme çevrilmez; teslimat paneli yeniden açılır.
+ *  "cart_split"       → sepetteki ürünler bu adrese TEK bir yöntemle gidemiyor: ödeme öncesi açık ayırma mesajı.
+ */
+export type CheckoutFailureKind = "coupon" | "slot" | "not_deliverable" | "delivery_changed" | "cart_split" | "generic";
 
 export type CheckoutFailure = {
   kind: CheckoutFailureKind;
@@ -66,6 +71,8 @@ export function classifyCheckoutFailure(input: {
   const error = typeof input.error === "string" ? input.error.trim() : "";
   if (error === "delivery slot is no longer available") return { kind: "slot", couponMessage: null };
   if (error === "product_not_deliverable_to_address") return { kind: "not_deliverable", couponMessage: null };
+  if (error === "delivery_option_changed") return { kind: "delivery_changed", couponMessage: null };
+  if (error === "cart_needs_split") return { kind: "cart_split", couponMessage: null };
   const machine = (MACHINE_ERROR_CODES as readonly string[]).includes(error);
   // KUPON VERDİKTİ = SUNUCUNUN 409'u. `status === null` demek "sunucudan yanıt
   // HİÇ alınamadı"dır (tarayıcı `fetch` fırlattı: çevrimdışı, DNS, iptal) —
@@ -80,4 +87,13 @@ export function classifyCheckoutFailure(input: {
     return { kind: "coupon", couponMessage: error };
   }
   return { kind: "generic", couponMessage: null };
+}
+
+/** Sunucu ayrıntısındaki (details.items) engelleyen ürün adları — mesajda listelenir; ad yoksa ürün no. */
+export function blockingItemNames(details: unknown): string[] {
+  const d = details as { items?: Array<{ product_id?: number; name?: string | null }>; blocking_product_ids?: number[]; courier_only_product_ids?: number[]; cargo_only_product_ids?: number[]; undeliverable_product_ids?: number[] } | null;
+  if (!d || !Array.isArray(d.items)) return [];
+  const ids = new Set<number>([...(d.blocking_product_ids ?? []), ...(d.courier_only_product_ids ?? []), ...(d.cargo_only_product_ids ?? []), ...(d.undeliverable_product_ids ?? [])].map(Number));
+  const picked = ids.size > 0 ? d.items.filter((i) => ids.has(Number(i.product_id))) : d.items;
+  return picked.map((i) => (typeof i.name === "string" && i.name.trim() ? i.name.trim() : `#${i.product_id ?? "?"}`));
 }

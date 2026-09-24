@@ -19,6 +19,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl } from "@/lib/site-config";
+import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
+import { toPlainText } from "@/lib/richText";
+import { withXDefault } from "./hreflang";
+import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
+import { LABELS } from "./locationLabels";
 import { fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
 import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
 import { ProductImage } from "@/components/product/ProductImage";
@@ -31,7 +36,7 @@ import { LocationBreadcrumb, LocationGrid, ilceBasligi, mahalleBasligi, cityDisp
 import { CARGO, CARGO_COLLECTION_PATH } from "./cargoCopy";
 import {
   TrustStrip, EmotionSection, DistanceSection, AtelierSection,
-  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip,
+  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip, NeutralTrustStrip, FarTrustStrip,
 } from "./sections";
 import { GlobalGoogleTrust } from "@/components/global/GlobalGoogleTrust";
 import { GlobalCatalogBrowser, type CatalogBrowserItem } from "@/components/global/GlobalCatalogBrowser";
@@ -54,7 +59,8 @@ import {
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
-import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
+import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, deliveryPresentation, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
+import { REACH, FAR, formatThresholdTl } from "./reachCopy";
 import {
   parseLocationSections, renderableLocationSections, DEFAULT_LOCATION_SECTIONS,
   type LocationSection, type LocationSectionId,
@@ -150,12 +156,14 @@ type CategoryTile = { slug: string; name: string; count: number; img?: string };
 
 /** Lokasyon planı → katalog kartları YALNIZ verilen id'ler için (sayfa dilimi; sıra korunur). Tam liste
     kart modeline çevrilmez, DOM'a / RSC yüküne girmez. Kart modeli sunucuda; ürün başına istek yok. */
-function catalogItems(locale: GlobalLocale, plan: LocationCatalogPlan, ids: readonly number[]): CatalogBrowserItem[] {
+function catalogItems(locale: GlobalLocale, plan: LocationCatalogPlan, ids: readonly number[], sameDayBadge = true): CatalogBrowserItem[] {
   const seg = SEGMENTS[locale];
+  // sameDayBadge=false (kargo / nötr sunum): kart "Aynı Gün Teslim" rozeti basmaz — ürün aynı güne uygun olsa da
+  // bu lokasyon/adres için karar ödemede verilir (ürün özelliği ≠ bu adrese vaat).
   return ids
     .map((id) => plan.byId.get(id))
     .filter((p): p is CatalogProduct => p !== undefined)
-    .map((p) => ({ id: p.id, href: `/${locale}/${seg.product}/${p.slug}`, card: rowToCard(locale, p) }));
+    .map((p) => ({ id: p.id, href: `/${locale}/${seg.product}/${p.slug}`, card: { ...rowToCard(locale, p), sameDay: sameDayBadge && !!p.same_day_available } }));
 }
 
 // Foundation yedek metinleri — global_pages 'home' onaylanana kadar (noindex).
@@ -222,7 +230,8 @@ function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, st
       languages[alt.locale] = absoluteUrl(path);
     }
   }
-  return Object.keys(languages).length > 1 ? languages : null;
+  // ADDITIVE (24 Eyl 2026): x-default = kümedeki EN (yoksa alfabetik ilk) — lib/global/hreflang.ts
+  return Object.keys(languages).length > 1 ? withXDefault(languages) : null;
 }
 
 export async function localeMetadata(locale: GlobalLocale, path: string[]): Promise<Metadata> {
@@ -273,7 +282,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[]): Prom
           languages[alt.locale] = absoluteUrl(`/${alt.locale}/${SEGMENTS[alt.locale].category}/${alt.slug}`);
         }
       }
-      if (Object.keys(languages).length > 1) meta.alternates = { canonical: self, languages };
+      if (Object.keys(languages).length > 1) meta.alternates = { canonical: self, languages: withXDefault(languages) };
     }
     return meta;
   }
@@ -296,7 +305,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[]): Prom
           languages[alt.locale] = absoluteUrl(localeProductPath(alt.locale, alt.slug));
         }
       }
-      if (Object.keys(languages).length > 1) meta.alternates = { canonical: self, languages };
+      if (Object.keys(languages).length > 1) meta.alternates = { canonical: self, languages: withXDefault(languages) };
     }
     return meta;
   }
@@ -387,8 +396,10 @@ function CategoryCardsSection({ locale, tiles }: { locale: GlobalLocale; tiles: 
 }
 
 /** Ürün alanı (aynı gün şehri): başlık + not + kategori çipleri + ürün ızgarası (+ sayfalama); yedek yolda bugünkü popüler + raflar. */
-async function CatalogCommerceSection({ locale, catalog, plan, view }: {
+async function CatalogCommerceSection({ locale, catalog, plan, view, note }: {
   locale: GlobalLocale; catalog: LocaleCatalog; plan: LocationCatalogPlan | null;
+  /** ADDITIVE: nötr modda (sınır/belirsiz erişim) ürün alanı üst notu — vaat yerine "ödemede doğrulanır". */
+  note?: string;
   /** Bu isteğin katalog görünümü (?category + ?page); plan varsa dolu. */
   view: LocationCatalogView | null;
 }) {
@@ -401,8 +412,8 @@ async function CatalogCommerceSection({ locale, catalog, plan, view }: {
     return (
       <section className="mt-12" data-global-location-catalog>
         <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
-        <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
-        <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />
+        <p className="mb-4 text-[12.5px] text-[#6B7280]" data-commerce-note={note ? "neutral" : undefined}>{note ?? shop.from}</p>
+        <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids, !note)} view={view} />
       </section>
     );
   }
@@ -447,7 +458,7 @@ async function CatalogCommerceSection({ locale, catalog, plan, view }: {
       {oneKartlar.length > 0 && (
         <section className="mt-12">
           <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
-          <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
+          <p className="mb-4 text-[12.5px] text-[#6B7280]" data-commerce-note={note ? "neutral" : undefined}>{note ?? shop.from}</p>
           <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
             {oneKartlar.map(({ card: c, href }, idx) => (
               <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
@@ -487,14 +498,17 @@ async function CatalogCommerceSection({ locale, catalog, plan, view }: {
  * ailesindeki kargolanabilir koleksiyona bilinçli köprü (mevcut PDP CTA'sıyla
  * aynı commerce handoff kararı).
  */
-async function CargoCatalogSection({ locale, city, catalog, plan, view }: {
-  locale: GlobalLocale; city: string; catalog: LocaleCatalog; plan: LocationCatalogPlan | null;
+async function CargoCatalogSection({ locale, city, label, catalog, plan, view }: {
+  locale: GlobalLocale; city: string;
+  /** ADDITIVE: başlıkta şehir eksonimi yerine basılacak ad (band dışı İstanbul ilçesi). */
+  label?: string;
+  catalog: LocaleCatalog; plan: LocationCatalogPlan | null;
   /** Bu isteğin katalog görünümü (?category + ?page); plan varsa dolu. */
   view: LocationCatalogView | null;
 }) {
   const copy = CARGO[locale];
   const seg = SEGMENTS[locale];
-  const cityName = cityDisplayName(locale, city);
+  const cityName = label ?? cityDisplayName(locale, city);
 
   let kartlar: { card: CardProductUi; href: string }[];
   let browser: React.ReactNode = null;
@@ -504,7 +518,7 @@ async function CargoCatalogSection({ locale, city, catalog, plan, view }: {
     // sayfanın 24'lük dilimi + sayfalama; tam liste kart modeline çevrilmez.
     // Plan GlobalPageBody'de bir kez kurulur (kategori kartlarıyla paylaşılır).
     kartlar = [];
-    if (plan.allOrder.length) browser = <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />;
+    if (plan.allOrder.length) browser = <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids, false)} view={view} />;
   } else {
     // Kargolanabilir ürün kümesi (tüm sayfalar; ≤ 300 kayıt — profil listesi küçüktür).
     const deliverable = new Set<string>();
@@ -517,7 +531,7 @@ async function CargoCatalogSection({ locale, city, catalog, plan, view }: {
     const detaylar = await Promise.all(
       uygun.map(async (p) => {
         const d = await fetchProductBySlug(p.tr_slug);
-        return d ? { card: detailToCard(locale, d, p.name), href: `/${locale}/${seg.product}/${p.slug}` } : null;
+        return d ? { card: { ...detailToCard(locale, d, p.name), sameDay: false }, href: `/${locale}/${seg.product}/${p.slug}` } : null;
       })
     );
     kartlar = detaylar.filter(Boolean) as { card: CardProductUi; href: string }[];
@@ -575,11 +589,16 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   const loc = parseLocationKey(row.page_key);
   let kirinti: React.ReactNode = null;
   let izgara: React.ReactNode = null;
+  // ADDITIVE (24 Eyl 2026): görsel kırıntının BreadcrumbList JSON-LD karşılığı (aynı adlar, aynı yollar)
+  // + kargo sunumunda kullanılacak yer adı (ilçe/mahalle sayfasında ilçe adı).
+  let kirintiLd: string | null = null;
+  let yerAdi: string | null = null;
   if (loc) {
     if (loc.kind === "city") {
       const ilceler = await fetchLocaleDistricts(locale, loc.city);
       // Kök sayfada da kırıntı: şehir (o dilin eksonimi) GEÇERLİ sayfa olarak — kendine link yok.
       kirinti = <LocationBreadcrumb locale={locale} city={loc.city} cityName={cityDisplayName(locale, loc.city)} />;
+      kirintiLd = localeBreadcrumbJsonLd(locale, [loc.city], [cityDisplayName(locale, loc.city)], absoluteUrl, LABELS[locale].ana);
       izgara = (
         <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}`} items={ilceler} title={ilceBasligi(locale, loc.city)} />
       );
@@ -588,6 +607,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       kirinti = (
         <LocationBreadcrumb locale={locale} city={loc.city} cityName={cityName} district={loc.district} districtName={districtName} />
       );
+      kirintiLd = localeBreadcrumbJsonLd(locale, [loc.city, loc.district], [cityName, districtName], absoluteUrl, LABELS[locale].ana);
+      yerAdi = districtName;
       izgara = (
         <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}/${loc.district}`} items={items}
           title={mahalleBasligi(locale, districtName)} />
@@ -598,6 +619,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         <LocationBreadcrumb locale={locale} city={loc.city} cityName={cityName} district={loc.district}
           districtName={districtName} neighborhoodName={neighborhoodName} />
       );
+      kirintiLd = localeBreadcrumbJsonLd(locale, [loc.city, loc.district, loc.neighborhood], [cityName, districtName, neighborhoodName], absoluteUrl, LABELS[locale].ana);
+      yerAdi = districtName;
       // Mahalle sayfası: kardeş mahalleler ilçe sayfasında; burada kırıntı yeterli.
     }
   }
@@ -605,8 +628,25 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   // (atölye, aynı gün teslimat kanıtı, "Istanbul florists") BASILMAZ — yanlış
   // şehir ve yanlış teslimat vaadi olur. Yerine kargo güven şeridi + yalnız bu
   // şehre GERÇEKTEN gidebilen ürünler (Delivery Motor teslimat profili).
-  const cargoCity = loc && !isSameDayDestination(loc.city) ? loc.city : null;
+  // ADDITIVE (24 Eyl 2026 — TESLİMAT GERÇEĞİ): kargo sunumu iki kaynaktan gelir:
+  //  (1) şehir kuralı (Antalya/Muğla/İzmir) — bugünkü davranış aynen;
+  //  (2) DELİVERY MOTOR: katalog yanıtında location.found && same_day=false ise (İstanbul'un
+  //      kurye bandı dışındaki ilçeleri — Silivri, Şile, Çatalca …) sayfa aynı gün vaadi
+  //      TAŞIMAZ; güven şeridi + ürün alanı kargo sözleriyle basılır. Motor sessizse (fallback)
+  //      bugünkü davranış korunur.
+  //  (3) 'mixed' (ilçe merkezi band kenarına yakın) ya da 'unknown' (çözülemedi) → NÖTR: vaat yok, katalog
+  //      kapanmaz, "adres için ödemede doğrulanır" (reachCopy). Belirsizlik ne vaade ne kapatmaya dönüşür.
+  const presentation = loc ? deliveryPresentation(source, isSameDayDestination(loc.city)) : "same_day";
+  const cargoCity = loc && presentation === "cargo" ? loc.city : null;
   const cargo = cargoCity !== null;
+  const neutral = presentation === "neutral";
+  //  (4) 'far' (API 108: İstanbul 45 km+ fiyat eşikli uzak band) → UZAK sunum: vaat yok, katalog API'de ürün bazında
+  //      süzülmüş gelir (eşik ve üzeri kuryeli + kargolanabilir); şerit + not eşiği API'den okur (reachCopy FAR); rozet yok.
+  const far = presentation === "far";
+  const farThreshold = far ? formatThresholdTl(locale, (source?.mode === "catalog" ? source.catalog.location?.min_product_price_minor : null) ?? null) : "";
+  // Kargo/nötr/uzak başlığında şehir yerine ilçe adı (İstanbul'un band dışı ilçesinde "Istanbul" yanıltıcı olurdu).
+  const cargoLabel = (cargoCity || neutral || far) && loc && loc.kind !== "city" && yerAdi ? yerAdi : undefined;
+  const neutralPlace = cargoLabel ?? (loc ? cityDisplayName(locale, loc.city) : "");
   // TEK plan: ürün alanı (çip + ızgara), kategori kartları ve duygu hedefleri AYNI sonucu paylaşır.
   const plan: LocationCatalogPlan | null = source?.mode === "catalog" ? planLocationPage(source.catalog) : null;
   // Bu isteğin katalog görünümü: filtre (?category) + 24'lük sayfa (?page). SON sıralı listeden (Tümü = allOrder,
@@ -617,7 +657,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   const tiles = locationTiles(catalog, plan, cargo);
   // Bölüm sırası: Admin (storefront structure.locationSections, catalog yanıtında) — yoksa varsayılan.
   // Kargo destinasyonunda emotion + cta listeden düşer (aynı gün / İstanbul vaadi yok).
-  const order = renderableLocationSections(sections ?? DEFAULT_LOCATION_SECTIONS, { cargo });
+  // Nötr modda da kapanış CTA'sı ("bugün gönder") basılmaz — vaat çağrışımı; duygu/hikâye bölümleri (vaat taşımaz) kalır.
+  const order = renderableLocationSections(sections ?? DEFAULT_LOCATION_SECTIONS, { cargo, neutral: neutral || far });
   // Sayfa ≥ 2: hafif devam sayfası — hero (kırıntı + H1, giriş YOK) + YALNIZ ürün alanı; SEO içeriği 1. sayfada.
   const continuation = isLocationContinuationPage(view, order);
   const t = mergedTexts(locale, null);
@@ -626,12 +667,15 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
     switch (id) {
       // Güven şeridi — kargo şehrinde kargo sözleri (1–3 iş günü; aynı gün/saat vaadi YOK).
       case "trust":
-        return cargoCity ? <CargoTrustStrip locale={locale} city={cargoCity} /> : <TrustStrip locale={locale} />;
+        return cargoCity ? <CargoTrustStrip locale={locale} city={cargoCity} label={cargoLabel} />
+          : far ? <FarTrustStrip locale={locale} place={neutralPlace} threshold={farThreshold} />
+          : neutral ? <NeutralTrustStrip locale={locale} place={neutralPlace} />
+          : <TrustStrip locale={locale} />;
       // Ürün alanı: başlık → kategori çipleri → ürün ızgarası (bu lokasyona teslim edilebilir katalog).
       case "commerce":
         return cargoCity
-          ? <CargoCatalogSection locale={locale} city={cargoCity} catalog={catalog} plan={plan} view={view} />
-          : <CatalogCommerceSection locale={locale} catalog={catalog} plan={plan} view={view} />;
+          ? <CargoCatalogSection locale={locale} city={cargoCity} label={cargoLabel} catalog={catalog} plan={plan} view={view} />
+          : <CatalogCommerceSection locale={locale} catalog={catalog} plan={plan} view={view} note={far ? FAR[locale].catalogNote(neutralPlace, farThreshold) : neutral ? REACH[locale].catalogNote(neutralPlace) : undefined} />;
       // Kategori keşif kartları — aynı plan (kargoda kargo-süzülmüş sayılar).
       case "categories":
         return tiles.length > 0 ? <CategoryCardsSection locale={locale} tiles={tiles} /> : null;
@@ -694,6 +738,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       <div data-location-section="hero" className="contents">
         {/* Lokasyon kırıntısı — üst seviyeler gerçek <a href> (şehir sayfasında da) */}
         {kirinti}
+        {kirintiLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: kirintiLd }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
         {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
@@ -876,6 +921,24 @@ export async function LocalePage({ locale, path, searchParams }: {
     const availableRelated = relatedRows.filter((r) => r.slug !== product.slug && r.cover_image_url);
     const price = product.sale_price_minor && Number(product.sale_price_minor) > 0 ? product.sale_price_minor : product.price_minor;
     const currentPriceMinor = Number(price);
+    // ADDITIVE (24 Eyl 2026): Product JSON-LD — TR PDP ile TEK KAYNAK (lib/productSchema.ts).
+    // Ad/açıklama o dilin yüzeyinden, URL locale PDP yolu; fiyat/stok/puan sayfadakiyle AYNI (TRY).
+    const rating = product as { rating_avg?: number | string | null; rating_count?: number | string | null };
+    const jsonLd = buildProductJsonLd({
+      name: surface.name ?? product.name,
+      slug: surface.slug,
+      path: localeProductPath(locale, surface.slug),
+      productId: product.id,
+      priceMinor: Number(price),
+      currency: product.currency,
+      stockQuantity: product.stock_quantity,
+      images: data.images,
+      shortDescription: surface.short_description ?? product.short_description,
+      longDescription: surface.long_description ?? product.long_description,
+      sku: product.sku,
+      ratingAvg: rating.rating_avg,
+      ratingCount: rating.rating_count,
+    }, { absolute: absoluteUrl, plainText: toPlainText });
     const [catalog, contact] = await Promise.all([fetchLocaleCatalog(locale), v80Contact()]);
     const localizedBySlug = new Map(catalog.products.map((cp) => [cp.tr_slug, cp]));
     // Zincir kuralı (§10): beden önerileri de locale ailesi İÇİNDE kalır —
@@ -916,6 +979,7 @@ export async function LocalePage({ locale, path, searchParams }: {
     return (
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-8">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
         <ProductDetail
           data={data}
           sizeProducts={sizeProducts}

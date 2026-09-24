@@ -38,7 +38,7 @@ test("Gece şeridi ana sayfada (CMS'li ve fallback yolu) ve İstanbul içi lokas
   const renderer = oku("components/home/HomepageRenderer.tsx");
   assert.equal((renderer.match(/<NightOrderStrip \/>/g) ?? []).length, 2, "HomepageRenderer: 2 bağlantı bekleniyor");
   const slug = oku("app/[...slug]/page.tsx");
-  assert.match(slug, /\{cargoMode \? null : <NightOrderStrip \/>\}/);
+  assert.match(slug, /\{cargoMode \|\| reachOut \? null : <NightOrderStrip \/>\}/);
 });
 
 test("UrgencyStrip fallback başlığı dört satış mesajından ikisini taşır", () => {

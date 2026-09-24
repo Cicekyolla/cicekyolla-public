@@ -300,7 +300,8 @@ test("KAYNAK: GlobalCatalogBrowser yalnız dilimi alır ve basar; istemci durumu
 });
 
 test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam katalog kart/prop olarak geçmez", () => {
-  assert.equal(page.split("catalogItems(locale, plan, view.ids)").length - 1, 2, "commerce + kargo aynı dilim");
+  // 24 Eyl 2026: 4. parametre = aynı gün rozeti (kargo: false, nötr: !note) — dilim aynı
+  assert.equal(page.split("catalogItems(locale, plan, view.ids,").length - 1, 2, "commerce + kargo aynı dilim");
   assert.ok(!page.includes("plan.byId.values()"), "tüm ürünler kart modeline çevrilmez");
   assert.ok(!page.includes("allOrder={"), "allOrder bileşene prop geçmez");
   assert.ok(!page.includes("flattenPlan(plan)"), "kargo tam listeyi kart modeline çevirmez");
@@ -311,7 +312,7 @@ test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam ka
   assert.match(items, /return ids\s*\.map\(\(id\) => plan\.byId\.get\(id\)\)/);
   for (const name of ["CatalogCommerceSection", "CargoCatalogSection"]) {
     const src = fn(name);
-    assert.ok(src.includes("<GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />"), name);
+    assert.match(src, /<GlobalCatalogBrowser locale=\{locale\} items=\{catalogItems\(locale, plan, view\.ids, (!note|false)\)\} view=\{view\} \/>/, name);
     assert.ok(!GIZLEME.test(src), `${name}: gizleme yok`);
   }
 });
@@ -323,7 +324,8 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(body.includes("{!continuation && row.intro_html ?"), "giriş yalnız 1. sayfada");
   assert.ok(body.includes("<h1 style={S.h1}>{row.h1}</h1>") && body.includes("{kirinti}"), "kırıntı + H1 her sayfada");
   assert.ok(body.includes('data-location-section="hero"') && body.includes("data-location-section={id}") && body.includes("{order.map(block)}"));
-  assert.match(body, /plan=\{plan\} view=\{view\} \/>\s*: <CatalogCommerceSection locale=\{locale\} catalog=\{catalog\} plan=\{plan\} view=\{view\} \/>/);
+  // 24 Eyl 2026: nötr modda ürün alanı üst notu (vaat yerine "ödemede doğrulanır") additive prop olarak geçer
+  assert.match(body, /plan=\{plan\} view=\{view\} \/>\s*: <CatalogCommerceSection locale=\{locale\} catalog=\{catalog\} plan=\{plan\} view=\{view\} note=\{far \? FAR\[locale\]\.catalogNote\(neutralPlace, farThreshold\) : neutral \? REACH\[locale\]\.catalogNote\(neutralPlace\) : undefined\} \/>/);
   assert.ok(page.includes("tiles = fallbackCategoryCards(catalog.categories)"));
   assert.ok(browser.includes("idx={Math.min(idx, 7)}") && !/<ProductCard[^>]*idx=\{idx\}/.test(page));
   // Metadata / canonical sorguyu okumaz (canonical sorgusuz yol DEĞİŞMEZ)

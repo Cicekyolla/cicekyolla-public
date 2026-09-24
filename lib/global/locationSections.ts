@@ -75,14 +75,18 @@ export function parseLocationSections(raw: unknown): LocationSection[] {
  * Bu sayfada basılacak bölüm id'leri, sırayla: yalnız açık olanlar; kargo destinasyonunda
  * aynı gün / İstanbul bloğu (emotion, cta) hiç basılmaz (Admin açık bıraksa bile).
  */
+/** Nötr (sınır/belirsiz erişim) modda basılmayan bloklar — kapanış CTA'sı "bugün gönder" çağrışımı taşır. */
+export const NEUTRAL_HIDDEN_LOCATION_SECTIONS: readonly LocationSectionId[] = Object.freeze(["cta"] as LocationSectionId[]);
+
 export function renderableLocationSections(
   sections: readonly Readonly<LocationSection>[],
-  opts: { cargo: boolean },
+  opts: { cargo: boolean; neutral?: boolean },
 ): LocationSectionId[] {
   const out: LocationSectionId[] = [];
   for (const s of sections) {
     if (!s.enabled || !isLocationSectionId(s.id) || out.includes(s.id)) continue;
     if (opts.cargo && CARGO_HIDDEN_LOCATION_SECTIONS.includes(s.id)) continue;
+    if (opts.neutral && NEUTRAL_HIDDEN_LOCATION_SECTIONS.includes(s.id)) continue;
     out.push(s.id);
   }
   return out;

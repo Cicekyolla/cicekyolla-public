@@ -30,7 +30,7 @@ import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages
 import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
 import { buildCouponRequestBody, buildOrderRegionFields, readCouponPreview, readServerTotalMinor } from "@/lib/couponState";
-import { classifyCheckoutFailure } from "@/lib/couponErrors";
+import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
 import { clearPendingCoupon, readPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
 import { attemptField, newAttemptKey } from "@/lib/checkoutAttempt";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
@@ -491,13 +491,23 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         setCouponRejected(true);
         setCouponMsg(kind.couponMessage);
         setError(null);
+      } else if (kind.kind === "delivery_changed" || kind.kind === "slot") {
+        // SESSİZ DÖNÜŞÜM YOK (24 Eyl 2026): seçilen teslimat seçeneği (kurye/özel araç + slot) artık geçerli değil
+        // ya da slot dolu/kapanmış → sipariş kargoya ÇEVRİLMEDİ (sunucu 409). Eski seçim düşer, teslimat paneli
+        // aynı adresle yeniden açılır; Delivery Engine güncel seçenekleri gösterir, müşteri yeniden seçip onaylar.
+        setCouponRejected(false);
+        setError(kind.kind === "slot" ? t("co.err.slotGone") : t("co.err.deliveryChanged"));
+        setDraftDelivery(null);
+        setEditingDelivery(true);
+        if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (kind.kind === "cart_split") {
+        // Sepetteki ürünler bu adrese TEK yöntemle gidemiyor (sipariş modeli tek yöntem taşır): ödeme öncesi durdur.
+        setCouponRejected(false);
+        const names = failure instanceof CheckoutApiError ? blockingItemNames(failure.details) : [];
+        setError(t("co.err.cartSplit", { items: names.length ? names.join(", ") : "—" }));
       } else {
         setCouponRejected(false);
-        setError(kind.kind === "slot"
-          ? t("co.err.slotGone")
-          : kind.kind === "not_deliverable"
-            ? t("co.err.notDeliverable")
-            : t("co.err.generic"));
+        setError(kind.kind === "not_deliverable" ? t("co.err.notDeliverable") : t("co.err.generic"));
       }
     } finally {
       setLoading(false);

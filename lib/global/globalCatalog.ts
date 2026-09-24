@@ -50,7 +50,19 @@ export interface GlobalCatalogResponse {
   total: number;
   selection: "manual" | "none";
   featured_ids: number[];
-  location: { city: string; district: string | null; neighborhood: string | null; found: boolean; same_day: boolean } | null;
+  location: {
+    city: string; district: string | null; neighborhood: string | null; found: boolean;
+    /** true = aynı gün sunulur; false = yalnız kargo; null = belirsiz/sınır (vaat yok, katalog açık). Eski API: boolean. */
+    same_day: boolean | null;
+    /** ADDITIVE (API 24 Eyl 2026): aynı gün kararının kaynağı — 'city_rule' | 'engine' | 'engine_unresolved'; eski API'de yok. */
+    same_day_source?: string;
+    /** ADDITIVE: 'in' | 'out' | 'mixed' | 'unknown' — motorun üç durumlu erişim kararı; eski API'de yok. */
+    reach?: string;
+    /** ADDITIVE: motor bandı adı (İstanbul ilçesi motorla çözüldüyse); yoksa null/yok. */
+    band?: string | null;
+    /** ADDITIVE (API 108): reach 'far' ise bandın ürün fiyat eşiği (TL kuruş) — metin için; karar API'de. */
+    min_product_price_minor?: number | null;
+  } | null;
   categories: CatalogCategory[];
   products: CatalogProduct[];
   /**
@@ -61,6 +73,42 @@ export interface GlobalCatalogResponse {
   location_sections?: unknown[] | null;
 }
 export type CatalogDecision = { mode: "fallback" } | { mode: "catalog"; catalog: GlobalCatalogResponse };
+
+/**
+ * TESLİMAT GERÇEĞİ (24 Eyl 2026): Delivery Motor bu lokasyon için "aynı gün YOK" dediyse
+ * (lokasyon çözüldü, same_day=false) sayfa KARGO sunumuna geçer — İstanbul'un kurye bandı
+ * dışındaki ilçeleri (Silivri, Şile, Çatalca …) dahil. Fallback / lokasyon yok / çözülemedi →
+ * false (bugünkü davranış: şehir kuralı karar verir).
+ */
+export function engineSaysCargo(source: CatalogDecision | null | undefined): boolean {
+  if (!source || source.mode !== "catalog") return false;
+  const loc = source.catalog.location;
+  return !!loc && loc.found === true && loc.same_day === false;
+}
+
+/**
+ * ÜÇ DURUMLU SUNUM (operatör geri bildirimi, 24 Eyl 2026):
+ *  "same_day" → bugünkü İstanbul sunumu
+ *  "cargo"    → kargo sunumu (şehir kuralı: Antalya/Muğla/İzmir; motor: reach 'out' / same_day=false)
+ *  "neutral"  → motor 'mixed' (ilçe merkezi band kenarına yakın) ya da 'unknown' (çözülemedi):
+ *               aynı gün VAADİ YOK, katalog KAPANMAZ, "adres için ödemede doğrulanır" dili.
+ * Motor sessizse (fallback / eski API alanı yok) şehir kuralı geçerlidir — bugünkü davranış.
+ */
+/**
+ *  "far"      → (API 108) İstanbul 45 km+ fiyat eşikli uzak band: sayfa vaadi YOK; eşik ve üzeri ürünlerde özel araç
+ *               seçeneği, diğerleri kargo — hepsi adres girilince PDP/checkout'ta; kart rozeti yok (reachCopy FAR).
+ */
+export type DeliveryPresentation = "same_day" | "cargo" | "neutral" | "far";
+export function deliveryPresentation(source: CatalogDecision | null | undefined, cityIsSameDay: boolean): DeliveryPresentation {
+  if (!cityIsSameDay) return "cargo";
+  if (!source || source.mode !== "catalog") return "same_day";
+  const loc = source.catalog.location;
+  if (!loc || loc.found !== true) return "same_day";
+  if (loc.reach === "far") return "far";
+  if (loc.same_day === false) return "cargo";
+  if (loc.same_day === null || loc.reach === "mixed" || loc.reach === "unknown") return "neutral";
+  return "same_day";
+}
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const isIdList = (v: unknown): v is number[] => Array.isArray(v) && v.every((x) => typeof x === "number");

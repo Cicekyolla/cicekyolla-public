@@ -13,6 +13,7 @@ import Image from "next/image";
 import { DIR, SEGMENTS, type GlobalLocale } from "./config";
 import { STORY, FEEL_IMAGES } from "./story";
 import { CARGO } from "./cargoCopy";
+import { REACH, FAR } from "./reachCopy";
 import { cityDisplayName } from "./locationLabels";
 import type { LocaleCatalog } from "./api";
 
@@ -60,11 +61,49 @@ export function TrustStrip({ locale }: { locale: GlobalLocale }) {
  * farklı sözler: kurye ile 1–3 iş günü, Türkiye'de hazırlanır, uluslararası
  * kart, mesaj kartı. Aynı gün / saat / atölye ziyareti vaadi YOK (cargoCopy).
  */
-export function CargoTrustStrip({ locale, city }: { locale: GlobalLocale; city: string }) {
-  const items = CARGO[locale].trust(cityDisplayName(locale, city));
+export function CargoTrustStrip({ locale, city, label }: { locale: GlobalLocale; city: string;
+  /** ADDITIVE: şehir eksonimi yerine basılacak ad (band dışı İstanbul ilçesi: ilçe adı). */
+  label?: string }) {
+  const items = CARGO[locale].trust(label ?? cityDisplayName(locale, city));
   return (
     <Wrap className="mt-8">
       <div className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-5 md:grid-cols-4 md:px-7" data-cargo-trust>
+        {items.map(([head, sub], i) => (
+          <div key={i}>
+            <p className="text-[13px] font-bold text-[#1A1830]">{head}</p>
+            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-[#6B6478]">{sub}</p>
+          </div>
+        ))}
+      </div>
+    </Wrap>
+  );
+}
+
+/**
+ * SINIR / BELİRSİZ ERİŞİM güven şeridi (İstanbul'un band kenarındaki ya da motorun çözemediği
+ * ilçe/mahallesi): aynı gün VAADİ YOK, "ödemede doğrulanır" dili; ürünler kapatılmaz (reachCopy).
+ */
+/** UZAK BÖLGE güven şeridi (API 108, reach 'far'): eşik ve üzeri ürünlerde koşullu özel araç + kargo; vaat yok. */
+export function FarTrustStrip({ locale, place, threshold }: { locale: GlobalLocale; place: string; threshold: string }) {
+  const items = FAR[locale].trust(place, threshold);
+  return (
+    <Wrap className="mt-8">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-5 md:grid-cols-4 md:px-7" data-far-trust>
+        {items.map(([head, sub], i) => (
+          <div key={i}>
+            <p className="text-[13px] font-bold text-[#1A1830]">{head}</p>
+            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-[#6B6478]">{sub}</p>
+          </div>
+        ))}
+      </div>
+    </Wrap>
+  );
+}
+export function NeutralTrustStrip({ locale, place }: { locale: GlobalLocale; place: string }) {
+  const items = REACH[locale].trust(place);
+  return (
+    <Wrap className="mt-8">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-[20px] border border-[#EFE9E1] bg-white/70 px-5 py-5 md:grid-cols-4 md:px-7" data-neutral-trust>
         {items.map(([head, sub], i) => (
           <div key={i}>
             <p className="text-[13px] font-bold text-[#1A1830]">{head}</p>
