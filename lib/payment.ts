@@ -41,23 +41,26 @@ export class CheckoutApiError extends Error {
   readonly status: number;
   /** Sunucunun `{ error: ... }` gövdesi — Türkçe cümle ya da makine kodu. */
   readonly apiError: string | null;
+  /** ADDITIVE (24 Eyl 2026): sunucunun `{ details }` alanı (sepet doğrulaması: hangi ürün, hangi yöntem). */
+  readonly details: unknown;
 
   // NOT: "parameter property" (constructor(readonly x: number)) KULLANILMAZ.
   // Node'un tip-sıyırma modu (`node --test lib/*.test.ts`) bu sözdizimini
   // ayrıştıramıyor ve bu dosyayı import eden TÜM testler çöküyor
   // (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX). Alanlar açıkça atanır.
-  constructor(status: number, apiError: string | null) {
+  constructor(status: number, apiError: string | null, details: unknown = null) {
     super(apiError || String(status));
     this.name = "CheckoutApiError";
     this.status = status;
     this.apiError = apiError;
+    this.details = details;
   }
 }
 
 async function readApiError(response: Response): Promise<CheckoutApiError> {
-  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  const body = (await response.json().catch(() => null)) as { error?: unknown; details?: unknown } | null;
   const apiError = typeof body?.error === "string" && body.error.trim() ? body.error.trim() : null;
-  return new CheckoutApiError(response.status, apiError);
+  return new CheckoutApiError(response.status, apiError, body?.details ?? null);
 }
 
 export async function fetchBankAccounts(): Promise<BankAccountPublic[]> {
