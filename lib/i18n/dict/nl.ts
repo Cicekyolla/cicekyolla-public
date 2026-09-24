@@ -33,6 +33,7 @@ const nl: Dict = {
   "header.decor": "🌿 Decoratie & Landschap",
 
   "common.free": "Gratis",
+  "common.deliveryFee": "Bezorgkosten",
   "common.edit": "Bewerken",
   "common.remove": "Verwijderen",
   "common.continue": "Doorgaan",
@@ -228,6 +229,7 @@ const nl: Dict = {
   "co.err.slotGone": "Het gekozen tijdvenster is inmiddels vol of gesloten. Je bestelling is niet aangemaakt; kies hieronder een nieuwe bezorgoptie.",
   "co.err.deliveryChanged": "De gekozen bezorgoptie is niet meer beschikbaar (de service, het tijdvenster of de voorwaarden zijn gewijzigd). Je bestelling is niet naar een andere methode omgezet; de huidige opties staan hieronder, kies opnieuw en bevestig.",
   "co.err.cartSplit": "De artikelen in je winkelwagen kunnen niet met één bezorgmethode naar dit adres worden bezorgd: {items}. Bestel deze artikelen apart of verwijder ze uit de winkelwagen; er is geen betaling afgeschreven.",
+  "co.err.totalChanged": "Het orderbedrag is gewijzigd (bezorgkosten, prijs of korting is bijgewerkt). Nieuw totaal: {total}. Controleer en bevestig opnieuw; er is geen betaling afgeschreven.",
   "co.err.notDeliverable": "Dit product kan niet naar het gekozen adres worden bezorgd. Bekijk passende producten op de productpagina.",
   "co.err.generic": "Bestelling kon niet worden aangemaakt. Uw gegevens blijven bewaard; probeer het opnieuw.",
   "co.done": "✦ Voltooid",

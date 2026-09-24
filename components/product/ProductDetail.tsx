@@ -404,6 +404,7 @@ export function ProductDetail({
                 lat: sel.address.lat ?? null,
                 lng: sel.address.lng ?? null,
                 band: sel.band ?? null,
+                deliveryFeeMinor: sel.feeMinor ?? 0,
               };
               savePendingDelivery(selectedDelivery);
               setDeliverySelection(selectedDelivery);

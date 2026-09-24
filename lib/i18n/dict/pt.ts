@@ -33,6 +33,7 @@ const pt: Dict = {
   "header.decor": "🌿 Decoração & Paisagismo",
 
   "common.free": "Grátis",
+  "common.deliveryFee": "Taxa de entrega",
   "common.edit": "Editar",
   "common.remove": "Remover",
   "common.continue": "Continuar",
@@ -228,6 +229,7 @@ const pt: Dict = {
   "co.err.slotGone": "A janela horária escolhida está agora cheia ou encerrada. A sua encomenda não foi criada; escolha uma nova opção de entrega abaixo.",
   "co.err.deliveryChanged": "A opção de entrega escolhida já não está disponível (o serviço, a janela horária ou as condições mudaram). A sua encomenda não foi alterada para outro método; as opções atuais estão listadas abaixo, escolha novamente e confirme.",
   "co.err.cartSplit": "Os artigos no seu carrinho não podem ser entregues nesta morada com um único método de entrega: {items}. Encomende estes artigos separadamente ou remova-os do carrinho; não foi feito nenhum pagamento.",
+  "co.err.totalChanged": "O valor da encomenda mudou (taxa de entrega, preço ou desconto atualizado). Novo total: {total}. Verifique e confirme novamente; não foi feito nenhum pagamento.",
   "co.err.notDeliverable": "Este produto não pode ser entregue na morada escolhida. Veja produtos compatíveis na página do produto.",
   "co.err.generic": "Não foi possível criar a encomenda. Os seus dados estão guardados; tente novamente.",
   "co.done": "✦ Concluído",

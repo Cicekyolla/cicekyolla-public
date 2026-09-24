@@ -37,6 +37,7 @@ const tr = {
 
   // ---- ortak
   "common.free": "Ücretsiz",
+  "common.deliveryFee": "Teslimat ücreti",
   "common.edit": "Düzenle",
   "common.remove": "Kaldır",
   "common.continue": "Devam Et",
@@ -239,6 +240,7 @@ const tr = {
   "co.err.slotGone": "Seçtiğiniz saat aralığı artık dolu veya kapanmış. Siparişiniz oluşturulmadı; lütfen aşağıdan yeni bir teslimat seçin.",
   "co.err.deliveryChanged": "Seçtiğiniz teslimat seçeneği artık geçerli değil (hizmet, saat aralığı veya koşullar değişti). Siparişiniz başka bir yönteme çevrilmedi; uygun seçenekler aşağıda yeniden listelendi, lütfen yeniden seçip onaylayın.",
   "co.err.cartSplit": "Sepetinizdeki ürünler bu adrese tek bir teslimat yöntemiyle gönderilemiyor: {items}. Lütfen bu ürünleri ayrı sipariş olarak verin ya da sepetten çıkarın; ödeme alınmadı.",
+  "co.err.totalChanged": "Sipariş tutarı değişti (teslimat ücreti, fiyat veya indirim güncellendi). Yeni toplam: {total}. Lütfen kontrol edip yeniden onaylayın; ödeme alınmadı.",
   "co.err.notDeliverable": "Bu ürün seçtiğiniz adrese gönderilemiyor. Ürün sayfasından adrese uygun ürünleri görebilirsiniz.",
   "co.err.generic": "Sipariş oluşturulamadı. Bilgileriniz korunuyor; lütfen tekrar deneyin.",
   "co.done": "✦ Tamamlandı",

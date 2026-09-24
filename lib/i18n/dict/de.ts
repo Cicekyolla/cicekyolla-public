@@ -33,6 +33,7 @@ const de: Dict = {
   "header.decor": "🌿 Dekoration & Landschaft",
 
   "common.free": "Kostenlos",
+  "common.deliveryFee": "Liefergebühr",
   "common.edit": "Bearbeiten",
   "common.remove": "Entfernen",
   "common.continue": "Weiter",
@@ -228,6 +229,7 @@ const de: Dict = {
   "co.err.slotGone": "Das gewählte Zeitfenster ist inzwischen voll oder geschlossen. Ihre Bestellung wurde nicht angelegt; bitte wählen Sie unten eine neue Lieferoption.",
   "co.err.deliveryChanged": "Die gewählte Lieferoption ist nicht mehr verfügbar (Service, Zeitfenster oder Bedingungen haben sich geändert). Ihre Bestellung wurde nicht auf eine andere Methode umgestellt; die aktuellen Optionen sind unten aufgeführt, bitte wählen Sie erneut und bestätigen Sie.",
   "co.err.cartSplit": "Die Artikel in Ihrem Warenkorb können nicht mit einer einzigen Liefermethode an diese Adresse geliefert werden: {items}. Bitte bestellen Sie diese Artikel separat oder entfernen Sie sie aus dem Warenkorb; es wurde keine Zahlung eingezogen.",
+  "co.err.totalChanged": "Der Bestellbetrag hat sich geändert (Liefergebühr, Preis oder Rabatt wurde aktualisiert). Neuer Gesamtbetrag: {total}. Bitte prüfen und erneut bestätigen; es wurde keine Zahlung eingezogen.",
   "co.err.notDeliverable": "Dieses Produkt kann nicht an die gewählte Adresse geliefert werden. Adressgerechte Produkte finden Sie auf der Produktseite.",
   "co.err.generic": "Bestellung konnte nicht angelegt werden. Ihre Angaben bleiben erhalten; bitte versuchen Sie es erneut.",
   "co.done": "✦ Abgeschlossen",

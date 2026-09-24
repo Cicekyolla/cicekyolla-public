@@ -33,6 +33,7 @@ const en: Dict = {
   "header.decor": "🌿 Decoration & Landscaping",
 
   "common.free": "Free",
+  "common.deliveryFee": "Delivery fee",
   "common.edit": "Edit",
   "common.remove": "Remove",
   "common.continue": "Continue",
@@ -228,6 +229,7 @@ const en: Dict = {
   "co.err.slotGone": "The time window you selected is now full or closed. Your order was not created; please choose a new delivery option below.",
   "co.err.deliveryChanged": "The delivery option you selected is no longer available (the service, time window or conditions changed). Your order was not switched to another method; the current options are listed below, please choose again and confirm.",
   "co.err.cartSplit": "The items in your cart cannot be delivered to this address with a single delivery method: {items}. Please order these items separately or remove them from the cart; no payment was taken.",
+  "co.err.totalChanged": "The order total changed (delivery fee, price or discount was updated). New total: {total}. Please review and confirm again; no payment was taken.",
   "co.err.notDeliverable": "This product can't be delivered to the selected address. See address-compatible products on the product page.",
   "co.err.generic": "Order couldn't be created. Your details are kept; please try again.",
   "co.done": "✦ Complete",

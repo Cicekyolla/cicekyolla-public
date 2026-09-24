@@ -33,6 +33,7 @@ const fr: Dict = {
   "header.decor": "🌿 Décoration & Paysage",
 
   "common.free": "Gratuit",
+  "common.deliveryFee": "Frais de livraison",
   "common.edit": "Modifier",
   "common.remove": "Retirer",
   "common.continue": "Continuer",
@@ -228,6 +229,7 @@ const fr: Dict = {
   "co.err.slotGone": "Le créneau choisi est désormais complet ou fermé. Votre commande n'a pas été créée ; veuillez choisir une nouvelle option de livraison ci-dessous.",
   "co.err.deliveryChanged": "L'option de livraison choisie n'est plus disponible (le service, le créneau ou les conditions ont changé). Votre commande n'a pas été basculée vers un autre mode ; les options actuelles sont listées ci-dessous, veuillez choisir à nouveau et confirmer.",
   "co.err.cartSplit": "Les articles de votre panier ne peuvent pas être livrés à cette adresse avec un seul mode de livraison : {items}. Veuillez commander ces articles séparément ou les retirer du panier ; aucun paiement n'a été prélevé.",
+  "co.err.totalChanged": "Le montant de la commande a changé (frais de livraison, prix ou remise mis à jour). Nouveau total : {total}. Veuillez vérifier et confirmer à nouveau ; aucun paiement n'a été prélevé.",
   "co.err.notDeliverable": "Ce produit ne peut pas être livré à l'adresse choisie. Consultez les produits compatibles sur la page produit.",
   "co.err.generic": "La commande n'a pas pu être créée. Vos informations sont conservées ; veuillez réessayer.",
   "co.done": "✦ Terminé",

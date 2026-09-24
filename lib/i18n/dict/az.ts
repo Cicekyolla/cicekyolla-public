@@ -33,6 +33,7 @@ const az: Dict = {
   "header.decor": "🌿 Dekorasiya & Landşaft",
 
   "common.free": "Pulsuz",
+  "common.deliveryFee": "Çatdırılma haqqı",
   "common.edit": "Redaktə et",
   "common.remove": "Sil",
   "common.continue": "Davam et",
@@ -228,6 +229,7 @@ const az: Dict = {
   "co.err.slotGone": "Seçdiyiniz vaxt aralığı artıq dolub və ya bağlanıb. Sifarişiniz yaradılmadı; zəhmət olmasa aşağıdan yeni çatdırılma seçin.",
   "co.err.deliveryChanged": "Seçdiyiniz çatdırılma seçimi artıq keçərli deyil (xidmət, vaxt aralığı və ya şərtlər dəyişib). Sifarişiniz başqa üsula çevrilmədi; mövcud seçimlər aşağıda yenidən göstərilib, zəhmət olmasa yenidən seçib təsdiqləyin.",
   "co.err.cartSplit": "Səbətinizdəki məhsullar bu ünvana tək bir çatdırılma üsulu ilə göndərilə bilmir: {items}. Zəhmət olmasa bu məhsulları ayrı sifariş edin və ya səbətdən çıxarın; ödəniş alınmayıb.",
+  "co.err.totalChanged": "Sifariş məbləği dəyişdi (çatdırılma haqqı, qiymət və ya endirim yeniləndi). Yeni cəm: {total}. Zəhmət olmasa yoxlayıb yenidən təsdiqləyin; ödəniş alınmayıb.",
   "co.err.notDeliverable": "Bu məhsul seçdiyiniz ünvana göndərilə bilmir. Məhsul səhifəsindən ünvana uyğun məhsullara baxa bilərsiniz.",
   "co.err.generic": "Sifariş yaradıla bilmədi. Məlumatlarınız qorunur; zəhmət olmasa yenidən cəhd edin.",
   "co.done": "✦ Tamamlandı",

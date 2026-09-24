@@ -13,6 +13,7 @@ import { ProductDisplayName } from "@/lib/i18n/content";
 import { useCurrency } from "@/lib/currency";
 import { buildCouponRequestBody, cartFingerprint, readCouponPreview, unanimousRegionIds } from "@/lib/couponState";
 import { clearPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
+import { cartDeliveryFeeMinor, cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
 
 // NOT: yerel `money` KALDIRILDI. Sepet artık seçili para birimini kullanır
 // (useCurrency().approx) — kalem, ara toplam, indirim ve GENEL TOPLAM aynı para
@@ -41,7 +42,10 @@ export default function CartPage() {
   /** Uygulanan kupon — kod + SUNUCUNUN yazdığı indirim. İstemci hesap yapmaz. */
   const [applied, setApplied] = useState<{ code: string; discountMinor: number } | null>(null);
   const discountMinor = applied?.discountMinor ?? 0;
-  const totalMinor = Math.max(0, subtotalMinor - discountMinor);
+  // TESLİMAT ÜCRETİ — motorun seçimle yazdığı ücret (PDP /check); sunucu sipariş anında yeniden hesaplar.
+  const deliveryFeeMinor = cartDeliveryFeeMinor(items.map((item) => item.delivery));
+  const deliveryLabel = deliveryMethodLabel(items[0]?.delivery, { sameDay: t("cart.deliverySameDay"), cargo: t("common.cargo"), none: t("common.cargo") });
+  const totalMinor = cartTotalMinor(subtotalMinor, discountMinor, deliveryFeeMinor);
 
   // Sepet (ürün/varyant/adet/FİYAT) değişince uygulanan kupon geçersiz sayılır:
   // aksi halde müşteri bayat bir indirim görür ve sipariş adımında sunucu
@@ -227,7 +231,7 @@ export default function CartPage() {
                   <div className="mt-7 space-y-3 text-[14px]">
                     <div className="flex justify-between"><span className="text-white/45">{t("common.subtotal")}</span><Num className="font-semibold text-white/85">{money(subtotalMinor)}</Num></div>
                     {discountMinor > 0 ? <div className="flex justify-between text-[#86EFAC]"><span>{t("common.discount")}</span><Num className="font-semibold">-{money(discountMinor)}</Num></div> : null}
-                    <div className="flex justify-between"><span className="text-white/45">{t("common.cargo")}</span><span className="font-semibold text-[#86EFAC]">{t("common.free")}</span></div>
+                    <div className="flex justify-between" data-delivery-fee-row><span className="text-white/45">{deliveryLabel}</span>{deliveryFeeMinor > 0 ? <Num className="font-semibold text-white/85">{money(deliveryFeeMinor)}</Num> : <span className="font-semibold text-[#86EFAC]">{t("common.free")}</span>}</div>
                   </div>
                   <div className="my-6 h-px" style={{ background: "rgba(196,181,253,0.13)" }} />
                   <div className="flex items-baseline justify-between">
