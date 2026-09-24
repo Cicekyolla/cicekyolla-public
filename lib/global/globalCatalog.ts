@@ -60,6 +60,8 @@ export interface GlobalCatalogResponse {
     reach?: string;
     /** ADDITIVE: motor bandı adı (İstanbul ilçesi motorla çözüldüyse); yoksa null/yok. */
     band?: string | null;
+    /** ADDITIVE (API 108): reach 'far' ise bandın ürün fiyat eşiği (TL kuruş) — metin için; karar API'de. */
+    min_product_price_minor?: number | null;
   } | null;
   categories: CatalogCategory[];
   products: CatalogProduct[];
@@ -92,12 +94,17 @@ export function engineSaysCargo(source: CatalogDecision | null | undefined): boo
  *               aynı gün VAADİ YOK, katalog KAPANMAZ, "adres için ödemede doğrulanır" dili.
  * Motor sessizse (fallback / eski API alanı yok) şehir kuralı geçerlidir — bugünkü davranış.
  */
-export type DeliveryPresentation = "same_day" | "cargo" | "neutral";
+/**
+ *  "far"      → (API 108) İstanbul 45 km+ fiyat eşikli uzak band: sayfa vaadi YOK; eşik ve üzeri ürünlerde özel araç
+ *               seçeneği, diğerleri kargo — hepsi adres girilince PDP/checkout'ta; kart rozeti yok (reachCopy FAR).
+ */
+export type DeliveryPresentation = "same_day" | "cargo" | "neutral" | "far";
 export function deliveryPresentation(source: CatalogDecision | null | undefined, cityIsSameDay: boolean): DeliveryPresentation {
   if (!cityIsSameDay) return "cargo";
   if (!source || source.mode !== "catalog") return "same_day";
   const loc = source.catalog.location;
   if (!loc || loc.found !== true) return "same_day";
+  if (loc.reach === "far") return "far";
   if (loc.same_day === false) return "cargo";
   if (loc.same_day === null || loc.reach === "mixed" || loc.reach === "unknown") return "neutral";
   return "same_day";

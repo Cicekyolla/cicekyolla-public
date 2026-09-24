@@ -42,6 +42,9 @@ interface SameDay {
   min_order_minor?: number;
   distance_km?: number;
   slots?: Slot[];
+  /** API 108: 'below_price_threshold' → adres uzak bandda, ürün eşik altında (kurye yok; kargo ayrıca değerlendirilir). */
+  reason?: string;
+  min_product_price_minor?: number | null;
 }
 interface CheckResult {
   product: { id: number | null; type: string | null; model: string };
@@ -448,14 +451,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
             ) : !result ? null : (() => {
               const showSameday = !!(sd?.available && sd.slots && sd.slots.length > 0);
               const showCargo = !!cargo?.available;
+              // 108: uzak band + ürün eşik altında → neden kurye yok, açık yazılır (eşik API'den; karar API'de).
+              const thresholdNote = sd?.reason === "below_price_threshold" && sd.min_product_price_minor != null
+                ? <p className="mb-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#6B7280]" data-threshold-note><AlertCircle className="w-3.5 h-3.5 mt-[1px] shrink-0 text-[#9CA3AF]" />{t("planner.thresholdNote", { amount: `₺${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(sd.min_product_price_minor / 100)}` })}</p>
+                : null;
               if (!showSameday && !showCargo) {
                 return (
-                  <DeliveryAlternatives
+                  <>{thresholdNote}<DeliveryAlternatives
                     excludeId={product.id}
                     city={result.location?.city}
                     district={result.location?.district}
                     categoryId={product.categoryId}
-                  />
+                  /></>
                 );
               }
               const cargoFree = (cargo?.fee_minor ?? 0) === 0;
@@ -464,6 +471,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                   <style>{`@keyframes cyExpand{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
                   {/* TESLİMAT SEÇENEĞİ KARTLARI */}
+                  {thresholdNote}
                   <div className="text-[11px] font-bold text-[#9CA3AF] tracking-wider mb-2">{t("planner.option")}</div>
                   <div className={`grid gap-2.5 ${showSameday && showCargo ? "sm:grid-cols-2" : "grid-cols-1"}`}>
                     {showSameday && (

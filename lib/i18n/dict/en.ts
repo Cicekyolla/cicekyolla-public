@@ -85,6 +85,7 @@ const en: Dict = {
 
   "planner.title": "Delivery address",
   "planner.sameDayOk": "Same day available",
+  "planner.thresholdNote": "Hand delivery to this address is offered for items priced {amount} and above; for this item the courier shipping option applies.",
   "planner.placeholder": "Type the delivery address (neighborhood / street / mall)",
   "planner.hint": "Select your address; we'll instantly show delivery days and time slots for your area.",
   "planner.closed": "Closed",
@@ -225,7 +226,7 @@ const en: Dict = {
   "co.err.phone": "Please enter a valid phone number (e.g. 05xx xxx xx xx).",
   "co.err.email": "Please enter a valid email address.",
   "co.err.slotGone": "The time slot you chose is now full or closed. Please pick a new time on the product page.",
-  "co.err.notDeliverable": "This product can't be delivered to the selected address (Istanbul same-day only). See address-compatible products on the product page.",
+  "co.err.notDeliverable": "This product can't be delivered to the selected address. See address-compatible products on the product page.",
   "co.err.generic": "Order couldn't be created. Your details are kept; please try again.",
   "co.done": "✦ Complete",
   "co.orderNo": "Your order number",

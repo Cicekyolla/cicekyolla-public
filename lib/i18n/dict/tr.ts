@@ -92,6 +92,7 @@ const tr = {
   // ---- teslimat planlayıcı
   "planner.title": "Teslimat adresi",
   "planner.sameDayOk": "Aynı gün uygun",
+  "planner.thresholdNote": "Bu adrese kurye teslimatı {amount} ve üzeri ürünlerde sunulur; bu ürün için kargo seçeneği geçerlidir.",
   "planner.placeholder": "Teslimat adresini yazın (mahalle / cadde / AVM)",
   "planner.hint": "Adresinizi seçin; bölgenize uygun teslimat günü ve saatlerini anında gösterelim.",
   "planner.closed": "Kapandı",
@@ -236,7 +237,7 @@ const tr = {
   "co.err.phone": "Lütfen geçerli bir telefon numarası girin (örn. 05xx xxx xx xx).",
   "co.err.email": "Lütfen geçerli bir e-posta adresi girin.",
   "co.err.slotGone": "Seçtiğiniz saat aralığı artık dolu veya kapanmış. Lütfen ürün sayfasından yeni bir saat seçin.",
-  "co.err.notDeliverable": "Bu ürün seçtiğiniz adrese gönderilemiyor (yalnız İstanbul içi aynı gün). Ürün sayfasından adrese uygun ürünleri görebilirsiniz.",
+  "co.err.notDeliverable": "Bu ürün seçtiğiniz adrese gönderilemiyor. Ürün sayfasından adrese uygun ürünleri görebilirsiniz.",
   "co.err.generic": "Sipariş oluşturulamadı. Bilgileriniz korunuyor; lütfen tekrar deneyin.",
   "co.done": "✦ Tamamlandı",
   "co.orderNo": "Sipariş numaranız",

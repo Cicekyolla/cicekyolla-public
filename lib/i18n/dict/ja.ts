@@ -85,6 +85,7 @@ const ja: Dict = {
 
   "planner.title": "お届け先住所",
   "planner.sameDayOk": "当日配達可",
+  "planner.thresholdNote": "この住所への手渡し配達は{amount}以上の商品が対象です。この商品は宅配便でのお届けとなります。",
   "planner.placeholder": "お届け先住所を入力（地区 / 通り / モール）",
   "planner.hint": "住所を選ぶと、お住まいの地域の配達日と時間帯をすぐに表示します。",
   "planner.closed": "受付終了",
@@ -225,7 +226,7 @@ const ja: Dict = {
   "co.err.phone": "有効な電話番号を入力してください（例：05xx xxx xx xx）。",
   "co.err.email": "有効なメールアドレスを入力してください。",
   "co.err.slotGone": "選択した時間帯は満枠または受付終了です。商品ページで新しい時間帯を選んでください。",
-  "co.err.notDeliverable": "この商品は選択した住所へお届けできません（イスタンブール当日配達のみ）。商品ページで対応商品をご覧ください。",
+  "co.err.notDeliverable": "この商品は選択した住所へお届けできません。商品ページで対応商品をご覧ください。",
   "co.err.generic": "注文を作成できませんでした。入力内容は保持されています。もう一度お試しください。",
   "co.done": "✦ 完了",
   "co.orderNo": "ご注文番号",

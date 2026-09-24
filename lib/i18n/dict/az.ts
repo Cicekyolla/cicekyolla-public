@@ -85,6 +85,7 @@ const az: Dict = {
 
   "planner.title": "Çatdırılma ünvanı",
   "planner.sameDayOk": "Eyni gün mümkündür",
+  "planner.thresholdNote": "Bu ünvana əldən çatdırılma {amount} və yuxarı qiymətli məhsullar üçün təklif olunur; bu məhsul üçün kuryer göndərişi keçərlidir.",
   "planner.placeholder": "Çatdırılma ünvanını yazın (məhəllə / küçə / ticarət mərkəzi)",
   "planner.hint": "Ünvanınızı seçin; bölgənizə uyğun çatdırılma günü və saatlarını dərhal göstərək.",
   "planner.closed": "Bağlandı",
@@ -225,7 +226,7 @@ const az: Dict = {
   "co.err.phone": "Zəhmət olmasa etibarlı telefon nömrəsi daxil edin (məs. 05xx xxx xx xx).",
   "co.err.email": "Zəhmət olmasa etibarlı e-poçt ünvanı daxil edin.",
   "co.err.slotGone": "Seçdiyiniz saat aralığı artıq dolu və ya bağlanıb. Zəhmət olmasa məhsul səhifəsindən yeni saat seçin.",
-  "co.err.notDeliverable": "Bu məhsul seçdiyiniz ünvana göndərilə bilmir (yalnız İstanbul daxili eyni gün). Məhsul səhifəsindən ünvana uyğun məhsullara baxa bilərsiniz.",
+  "co.err.notDeliverable": "Bu məhsul seçdiyiniz ünvana göndərilə bilmir. Məhsul səhifəsindən ünvana uyğun məhsullara baxa bilərsiniz.",
   "co.err.generic": "Sifariş yaradıla bilmədi. Məlumatlarınız qorunur; zəhmət olmasa yenidən cəhd edin.",
   "co.done": "✦ Tamamlandı",
   "co.orderNo": "Sifariş nömrəniz",

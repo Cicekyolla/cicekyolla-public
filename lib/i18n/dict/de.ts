@@ -85,6 +85,7 @@ const de: Dict = {
 
   "planner.title": "Lieferadresse",
   "planner.sameDayOk": "Tagglich möglich",
+  "planner.thresholdNote": "Die persönliche Zustellung an diese Adresse gibt es für Artikel ab {amount}; für diesen Artikel gilt der Versand per Kurier.",
   "planner.placeholder": "Lieferadresse eingeben (Stadtteil / Straße / Einkaufszentrum)",
   "planner.hint": "Wählen Sie Ihre Adresse; wir zeigen sofort Liefertage und Zeitfenster für Ihr Gebiet.",
   "planner.closed": "Geschlossen",
@@ -225,7 +226,7 @@ const de: Dict = {
   "co.err.phone": "Bitte geben Sie eine gültige Telefonnummer ein (z. B. 05xx xxx xx xx).",
   "co.err.email": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
   "co.err.slotGone": "Das gewählte Zeitfenster ist inzwischen ausgebucht oder geschlossen. Bitte wählen Sie auf der Produktseite eine neue Zeit.",
-  "co.err.notDeliverable": "Dieses Produkt kann nicht an die gewählte Adresse geliefert werden (nur Istanbul, selber Tag). Adressgerechte Produkte finden Sie auf der Produktseite.",
+  "co.err.notDeliverable": "Dieses Produkt kann nicht an die gewählte Adresse geliefert werden. Adressgerechte Produkte finden Sie auf der Produktseite.",
   "co.err.generic": "Bestellung konnte nicht angelegt werden. Ihre Angaben bleiben erhalten; bitte versuchen Sie es erneut.",
   "co.done": "✦ Abgeschlossen",
   "co.orderNo": "Ihre Bestellnummer",

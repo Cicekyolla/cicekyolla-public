@@ -73,10 +73,10 @@ test("kaynak nöbeti: GlobalPageBody üç durumlu sunum; nötr şerit + not; kar
   assert.ok(src.includes(`const presentation = loc ? deliveryPresentation(source, isSameDayDestination(loc.city)) : "same_day";`), "sunum kararı");
   assert.ok(src.includes(`const cargoCity = loc && presentation === "cargo" ? loc.city : null;`));
   assert.ok(src.includes(`<NeutralTrustStrip locale={locale} place={neutralPlace} />`));
-  assert.ok(src.includes(`note={neutral ? REACH[locale].catalogNote(neutralPlace) : undefined}`));
+  assert.ok(src.includes(`note={far ? FAR[locale].catalogNote(neutralPlace, farThreshold) : neutral ? REACH[locale].catalogNote(neutralPlace) : undefined}`));
   assert.ok(src.includes("<CargoTrustStrip locale={locale} city={cargoCity} label={cargoLabel} />"));
   assert.ok(src.includes("<CargoCatalogSection locale={locale} city={cargoCity} label={cargoLabel}"));
-  assert.ok(src.includes("{ cargo, neutral }"), "bölüm sırası nötr modu bilir");
+  assert.ok(src.includes("{ cargo, neutral: neutral || far }"), "bölüm sırası nötr/uzak modu bilir");
   const sections = readFileSync(new URL("./global/sections.tsx", import.meta.url), "utf8");
   assert.ok(sections.includes("CARGO[locale].trust(label ?? cityDisplayName(locale, city))"));
   assert.ok(sections.includes("data-neutral-trust"));

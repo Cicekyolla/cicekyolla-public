@@ -308,7 +308,6 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     // Hata durumunda orijinal HTML/blocks kullan
   }
   // (cargoMode yukarıda, PERF bloğunda tanımlanır — iş kuralı aynı.)
-  const deliveryTime = cargoMode ? "1–3 iş günü" : district?.time || "Aynı gün";
   // Saat vaadi statik veriden yazılmaz: kesin saat yalnız Delivery Engine'den
   // (HeroDeliveryBar / DeliveryPlanner) gelir. DELIVERY_DATA.cutoff render edilmez.
   const neighborhoods = district?.neighborhoods || [];
@@ -330,6 +329,17 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     }
   }
   const useLocationGrid = locationData != null && locationData.items.length > 0;
+  // 108 / TESLİMAT GERÇEĞİ — TR ile 13 Global dil AYNI motor kararı: liste ucu meta.reach taşır.
+  //   'out'   → kargo sözleri (1–3 iş günü); liste API'de kargolanabilir ürünlere daraltılmış gelir.
+  //   'far'   → adrese göre: eşik ve üzeri ürünlerde özel araç (günün planı uygunsa), diğerleri kargo — vaat yok.
+  //   'mixed' / 'unknown' → vaat yok ("adrese göre"); 'in' ya da motor sessiz (eski API) → bugünkü sözler.
+  const reach = locationData?.meta?.reach ?? null;
+  const reachOut = reach === "out";
+  const reachNeutral = reach === "mixed" || reach === "unknown" || reach === "far";
+  const farThreshold = reach === "far" && locationData?.meta?.min_product_price_minor != null
+    ? `₺${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(locationData.meta.min_product_price_minor / 100)}`
+    : null;
+  const deliveryTime = cargoMode || reachOut ? "1–3 iş günü" : reachNeutral ? "Adrese göre belirlenir" : district?.time || "Aynı gün";
 
   // ── ADDITIVE (HATA 3): sayfa bağlamına göre GERÇEK çapraz bağlantı verisi.
   // Sabit 5 linkli blok yerine — il sayfasında o ilin tüm ilçeleri (gerçek
@@ -352,7 +362,9 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     }
   }
 
-  const productItems = useLocationGrid
+  // Daralan erişimde (out/far) motorun süzdüğü liste boşsa genel ürün listesine DÜŞÜLMEZ (kuryeli ucuz ürünler
+  // uzak ilçede yeniden açılmasın); diğer durumlarda bugünkü fallback aynen.
+  const productItems = useLocationGrid || (locationData != null && (reachOut || reach === "far"))
     ? []
     : await (productsPromise ?? fetchProducts(productsQuery));
   const products = productItems
@@ -374,7 +386,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     {breadcrumbLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} /> : null}
     <section className="bg-white px-6 pb-16 pt-20 lg:px-14 lg:pb-24 lg:pt-28">
       <div className="mx-auto max-w-[1320px]">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode ? "1–3 iş günü kargo" : "Aynı gün hızlı teslimat"} — {place}</div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode || reachOut ? "1–3 iş günü kargo" : reachNeutral ? "Teslimat adrese göre" : "Aynı gün hızlı teslimat"} — {place}</div>
         {adminH1
           ? <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{adminH1}</h1>
           : <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{place} Çiçekçi<br /><span className="text-[#8b5cf6]">Çiçek Siparişi</span></h1>}
@@ -427,7 +439,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
-    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{useLocationGrid && locationData ? (
+    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{useLocationGrid && locationData ? (
       // Coverage Engine ürünleri: 12 SSR + "Daha Fazla Göster" (24/36/48) + gerçek filtreler.
       <LocationProducts
         citySlug={parts[0]}

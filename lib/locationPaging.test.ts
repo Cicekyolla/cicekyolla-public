@@ -325,7 +325,7 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(body.includes("<h1 style={S.h1}>{row.h1}</h1>") && body.includes("{kirinti}"), "kırıntı + H1 her sayfada");
   assert.ok(body.includes('data-location-section="hero"') && body.includes("data-location-section={id}") && body.includes("{order.map(block)}"));
   // 24 Eyl 2026: nötr modda ürün alanı üst notu (vaat yerine "ödemede doğrulanır") additive prop olarak geçer
-  assert.match(body, /plan=\{plan\} view=\{view\} \/>\s*: <CatalogCommerceSection locale=\{locale\} catalog=\{catalog\} plan=\{plan\} view=\{view\} note=\{neutral \? REACH\[locale\]\.catalogNote\(neutralPlace\) : undefined\} \/>/);
+  assert.match(body, /plan=\{plan\} view=\{view\} \/>\s*: <CatalogCommerceSection locale=\{locale\} catalog=\{catalog\} plan=\{plan\} view=\{view\} note=\{far \? FAR\[locale\]\.catalogNote\(neutralPlace, farThreshold\) : neutral \? REACH\[locale\]\.catalogNote\(neutralPlace\) : undefined\} \/>/);
   assert.ok(page.includes("tiles = fallbackCategoryCards(catalog.categories)"));
   assert.ok(browser.includes("idx={Math.min(idx, 7)}") && !/<ProductCard[^>]*idx=\{idx\}/.test(page));
   // Metadata / canonical sorguyu okumaz (canonical sorgusuz yol DEĞİŞMEZ)

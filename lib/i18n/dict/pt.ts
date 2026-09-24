@@ -85,6 +85,7 @@ const pt: Dict = {
 
   "planner.title": "Morada de entrega",
   "planner.sameDayOk": "Mesmo dia disponível",
+  "planner.thresholdNote": "A entrega em mão nesta morada está disponível para artigos a partir de {amount}; para este artigo aplica-se o envio por transportadora.",
   "planner.placeholder": "Escreva a morada de entrega (bairro / rua / centro comercial)",
   "planner.hint": "Selecione a morada; mostraremos de imediato os dias e horários de entrega da sua zona.",
   "planner.closed": "Fechado",
@@ -225,7 +226,7 @@ const pt: Dict = {
   "co.err.phone": "Introduza um número de telefone válido (ex. 05xx xxx xx xx).",
   "co.err.email": "Introduza um e-mail válido.",
   "co.err.slotGone": "O horário escolhido já está esgotado ou fechado. Escolha um novo horário na página do produto.",
-  "co.err.notDeliverable": "Este produto não pode ser entregue na morada escolhida (apenas Istambul no mesmo dia). Veja produtos compatíveis na página do produto.",
+  "co.err.notDeliverable": "Este produto não pode ser entregue na morada escolhida. Veja produtos compatíveis na página do produto.",
   "co.err.generic": "Não foi possível criar a encomenda. Os seus dados estão guardados; tente novamente.",
   "co.done": "✦ Concluído",
   "co.orderNo": "O seu número de encomenda",

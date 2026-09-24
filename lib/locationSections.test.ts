@@ -110,7 +110,7 @@ test("KAYNAK: hero (kırıntı → H1 → giriş) HER ZAMAN önce, sonra bölüm
   const map = body.indexOf("{order.map(block)}");
   assert.ok(hero > 0 && hero < kirinti && kirinti < h1 && h1 < intro && intro < map, "hero → bölümler");
   // 24 Eyl 2026: nötr (sınır/belirsiz erişim) modu bölüm sırasına iletilir (CTA düşer) — bkz. lib/globalHonestDelivery.test.ts
-  assert.match(body, /const order = renderableLocationSections\(sections \?\? DEFAULT_LOCATION_SECTIONS, \{ cargo, neutral \}\);/);
+  assert.match(body, /const order = renderableLocationSections\(sections \?\? DEFAULT_LOCATION_SECTIONS, \{ cargo, neutral: neutral \|\| far \}\);/);
   // <main> içinde bölüm bileşeni doğrudan basılmaz — sıra yalnız order listesinden gelir.
   const main = body.slice(body.indexOf("<main "), body.indexOf("</main>"));
   for (const tag of ["<TrustStrip", "<CargoTrustStrip", "<CatalogCommerceSection", "<CargoCatalogSection", "<CategoryCardsSection", "<EmotionSection", "<GlobalGoogleTrust", "<DistanceSection", "<MessageSection", "<LocationGrid", "{izgara}", "<FaqSection", "<FinalCta"]) {

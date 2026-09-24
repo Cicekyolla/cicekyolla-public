@@ -85,6 +85,7 @@ const nl: Dict = {
 
   "planner.title": "Bezorgadres",
   "planner.sameDayOk": "Dezelfde dag mogelijk",
+  "planner.thresholdNote": "Persoonlijke bezorging op dit adres is er voor artikelen vanaf {amount}; voor dit artikel geldt verzending per koerier.",
   "planner.placeholder": "Typ het bezorgadres (wijk / straat / winkelcentrum)",
   "planner.hint": "Kies uw adres; we tonen direct bezorgdagen en tijdvakken voor uw gebied.",
   "planner.closed": "Gesloten",
@@ -225,7 +226,7 @@ const nl: Dict = {
   "co.err.phone": "Voer een geldig telefoonnummer in (bijv. 05xx xxx xx xx).",
   "co.err.email": "Voer een geldig e-mailadres in.",
   "co.err.slotGone": "Het gekozen tijdvak is inmiddels vol of gesloten. Kies een nieuwe tijd op de productpagina.",
-  "co.err.notDeliverable": "Dit product kan niet naar het gekozen adres worden bezorgd (alleen Istanbul, dezelfde dag). Bekijk passende producten op de productpagina.",
+  "co.err.notDeliverable": "Dit product kan niet naar het gekozen adres worden bezorgd. Bekijk passende producten op de productpagina.",
   "co.err.generic": "Bestelling kon niet worden aangemaakt. Uw gegevens blijven bewaard; probeer het opnieuw.",
   "co.done": "✦ Voltooid",
   "co.orderNo": "Uw bestelnummer",

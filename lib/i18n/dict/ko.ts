@@ -85,6 +85,7 @@ const ko: Dict = {
 
   "planner.title": "배송 주소",
   "planner.sameDayOk": "당일 배송 가능",
+  "planner.thresholdNote": "이 주소로의 직접 배송은 {amount} 이상 상품에 제공됩니다. 이 상품은 택배 배송이 적용됩니다.",
   "planner.placeholder": "배송 주소 입력 (동네 / 거리 / 쇼핑몰)",
   "planner.hint": "주소를 선택하면 해당 지역의 배송 날짜와 시간대를 바로 보여드립니다.",
   "planner.closed": "마감",
@@ -225,7 +226,7 @@ const ko: Dict = {
   "co.err.phone": "유효한 전화번호를 입력해 주세요 (예: 05xx xxx xx xx).",
   "co.err.email": "유효한 이메일 주소를 입력해 주세요.",
   "co.err.slotGone": "선택한 시간대가 마감되었거나 종료되었습니다. 상품 페이지에서 새 시간을 선택해 주세요.",
-  "co.err.notDeliverable": "이 상품은 선택한 주소로 배송할 수 없습니다 (이스탄불 당일 배송 전용). 상품 페이지에서 주소에 맞는 상품을 확인하세요.",
+  "co.err.notDeliverable": "이 상품은 선택한 주소로 배송할 수 없습니다. 상품 페이지에서 주소에 맞는 상품을 확인하세요.",
   "co.err.generic": "주문을 생성할 수 없습니다. 입력 정보는 유지됩니다. 다시 시도해 주세요.",
   "co.done": "✦ 완료",
   "co.orderNo": "주문 번호",

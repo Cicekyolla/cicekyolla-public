@@ -85,6 +85,7 @@ const fr: Dict = {
 
   "planner.title": "Adresse de livraison",
   "planner.sameDayOk": "Jour même disponible",
+  "planner.thresholdNote": "La livraison en main propre à cette adresse est proposée pour les articles à partir de {amount} ; pour cet article, l'envoi par transporteur s'applique.",
   "planner.placeholder": "Saisissez l'adresse de livraison (quartier / rue / centre commercial)",
   "planner.hint": "Sélectionnez votre adresse ; nous afficherons aussitôt les jours et créneaux de livraison de votre zone.",
   "planner.closed": "Fermé",
@@ -225,7 +226,7 @@ const fr: Dict = {
   "co.err.phone": "Veuillez saisir un numéro de téléphone valide (ex. 05xx xxx xx xx).",
   "co.err.email": "Veuillez saisir une adresse e-mail valide.",
   "co.err.slotGone": "Le créneau choisi est désormais complet ou fermé. Veuillez choisir un nouvel horaire sur la page produit.",
-  "co.err.notDeliverable": "Ce produit ne peut pas être livré à l'adresse choisie (Istanbul le jour même uniquement). Consultez les produits compatibles sur la page produit.",
+  "co.err.notDeliverable": "Ce produit ne peut pas être livré à l'adresse choisie. Consultez les produits compatibles sur la page produit.",
   "co.err.generic": "La commande n'a pas pu être créée. Vos informations sont conservées ; veuillez réessayer.",
   "co.done": "✦ Terminé",
   "co.orderNo": "Votre numéro de commande",
