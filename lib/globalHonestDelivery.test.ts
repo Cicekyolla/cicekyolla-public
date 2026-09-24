@@ -1,47 +1,85 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { engineSaysCargo, catalogDecision } from "./global/globalCatalog.ts";
+import { engineSaysCargo, deliveryPresentation, catalogDecision } from "./global/globalCatalog.ts";
+import { renderableLocationSections, DEFAULT_LOCATION_SECTIONS, NEUTRAL_HIDDEN_LOCATION_SECTIONS } from "./global/locationSections.ts";
+import { REACH } from "./global/reachCopy.ts";
+import { GLOBAL_LOCALES } from "./global/config.ts";
 import { buildProductJsonLd } from "./productSchema.ts";
 
 /**
  * TESLİMAT GERÇEĞİ (24 Eyl 2026): canlı Delivery Motor İstanbul'da Maltepe şubeden 45 km'ye kadar
  * aynı gün kurye tanıyor; Silivri (103 km), Şile (67 km), Çatalca (83 km) vb. servis alanı DIŞINDA.
- * 13 dildeki İstanbul lokasyon sayfaları ise şehir kuralıyla ("istanbul = aynı gün") aynı gün
- * vaadi ve yalnız-kurye ürünleri basıyordu → checkout'ta "adrese gidemez" duvarı.
- * Bu test, katalog yanıtındaki motor kararının (location.same_day=false) sayfayı KARGO sunumuna
- * geçirdiğini ve motor sessizken bugünkü davranışın korunduğunu nöbet tutar.
+ * 13 dildeki İstanbul lokasyon sayfaları şehir kuralıyla aynı gün vaadi basıyordu.
+ * ÜÇ DURUMLU sunum (operatör geri bildirimi): same_day → bugünkü; cargo → yalnız kargo;
+ * neutral → 'mixed'/'unknown': VAAT YOK, KATALOG KAPANMAZ, "ödemede doğrulanır".
  */
 
 const base = { locale: "en", total: 1, selection: "none", featured_ids: [], categories: [], products: [] };
-const loc = (o: Partial<{ found: boolean; same_day: boolean }>) => ({ city: "istanbul", district: "silivri", neighborhood: null, found: true, same_day: true, ...o });
+const loc = (o: Partial<{ found: boolean; same_day: boolean | null; reach: string }>) => ({ city: "istanbul", district: "silivri", neighborhood: null, found: true, same_day: true, ...o });
+const dec = (o: Partial<{ found: boolean; same_day: boolean | null; reach: string }>) => catalogDecision({ ...base, location: loc(o) }, true);
 
-test("engineSaysCargo: lokasyon çözüldü + same_day=false → kargo sunumu", () => {
-  const d = catalogDecision({ ...base, location: loc({ same_day: false }) }, true);
-  assert.equal(d.mode, "catalog");
-  assert.equal(engineSaysCargo(d), true);
-});
-
-test("engineSaysCargo: same_day=true → İstanbul davranışı aynen (regresyon yok)", () => {
-  assert.equal(engineSaysCargo(catalogDecision({ ...base, location: loc({}) }, true)), false);
-});
-
-test("engineSaysCargo: motor sessiz (fallback) / lokasyon yok / çözülemedi → false (bugünkü davranış)", () => {
+test("engineSaysCargo: lokasyon çözüldü + same_day=false → kargo; true/null → hayır", () => {
+  assert.equal(engineSaysCargo(dec({ same_day: false })), true);
+  assert.equal(engineSaysCargo(dec({})), false);
+  assert.equal(engineSaysCargo(dec({ same_day: null, reach: "mixed" })), false);
   assert.equal(engineSaysCargo({ mode: "fallback" }), false);
   assert.equal(engineSaysCargo(undefined), false);
-  assert.equal(engineSaysCargo(null), false);
-  assert.equal(engineSaysCargo(catalogDecision({ ...base, location: null }, false)), false);
-  // found=false → katalog boş ama sunum kararı şehir kuralına kalır (yeni vaat üretilmez)
-  assert.equal(engineSaysCargo(catalogDecision({ ...base, location: loc({ found: false, same_day: false }) }, true)), false);
 });
 
-test("kaynak nöbeti: GlobalPageBody kargo kararı şehir kuralı VEYA motor; kargo bölümleri ilçe adını alır", () => {
+test("deliveryPresentation: kargo şehri daima cargo; İstanbul 'in' same_day; 'out' cargo; 'mixed'/'unknown' NEUTRAL", () => {
+  assert.equal(deliveryPresentation(dec({}), false), "cargo", "Antalya/Muğla/İzmir şehir kuralı");
+  assert.equal(deliveryPresentation(dec({ same_day: true, reach: "in" }), true), "same_day");
+  assert.equal(deliveryPresentation(dec({ same_day: false, reach: "out" }), true), "cargo");
+  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "mixed" }), true), "neutral", "Başakşehir: kenar → vaat yok, katalog açık");
+  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "unknown" }), true), "neutral", "motor çözemedi → belirsizlik vaat DEĞİL");
+  assert.equal(deliveryPresentation(dec({ same_day: true, reach: "unknown" }), true), "neutral", "reach alanı belirsiz diyorsa same_day=true olsa da vaat yok");
+});
+
+test("deliveryPresentation: motor sessiz (fallback / lokasyon yok / çözülemedi / eski API) → bugünkü şehir kuralı", () => {
+  assert.equal(deliveryPresentation({ mode: "fallback" }, true), "same_day");
+  assert.equal(deliveryPresentation(undefined, true), "same_day");
+  assert.equal(deliveryPresentation(catalogDecision({ ...base, location: null }, false), true), "same_day");
+  assert.equal(deliveryPresentation(dec({ found: false, same_day: false }), true), "same_day", "found=false → katalog boş ama sunum şehir kuralı");
+  assert.equal(deliveryPresentation(dec({ same_day: true }), true), "same_day", "eski API (reach alanı yok, boolean) → aynen");
+});
+
+test("nötr modda kapanış CTA'sı düşer; duygu/hikâye/kategori kalır; kargo davranışı değişmez", () => {
+  const neutral = renderableLocationSections(DEFAULT_LOCATION_SECTIONS, { cargo: false, neutral: true });
+  assert.ok(!neutral.includes("cta"));
+  for (const id of ["trust", "commerce", "categories", "emotion", "reviews", "story", "locations", "content"]) assert.ok(neutral.includes(id as never), id);
+  assert.deepEqual([...NEUTRAL_HIDDEN_LOCATION_SECTIONS], ["cta"]);
+  const cargo = renderableLocationSections(DEFAULT_LOCATION_SECTIONS, { cargo: true });
+  assert.ok(!cargo.includes("emotion") && !cargo.includes("cta"));
+  const sameDay = renderableLocationSections(DEFAULT_LOCATION_SECTIONS, { cargo: false });
+  assert.equal(sameDay.length, DEFAULT_LOCATION_SECTIONS.length);
+});
+
+const GARANTI_YASAK = /\b(guarantee|garantiert|garanti|garantie|garanzia|garantía|garantido|zəmanət|гарант|ضمان|保证|保証|보장)\b|\b\d{1,2}\s?(min|dk|dakika|minutes|minuten)\b|90\s?(dk|min)/iu;
+test("reachCopy (13 dil): 'ödemede doğrulanır' dili var; garanti/dakika vaadi yok; yer adı doldurulur", () => {
+  const conf = /checkout|ödeme|Checkout|paiement|afrekenen|caja|pagar|decis|결제|決済|结账|الدفع|оформлен|zahl|ödəniş/i;
+  for (const l of GLOBAL_LOCALES) {
+    const items = REACH[l].trust("Başakşehir");
+    assert.equal(items.length, 4, l);
+    const all = items.flat().join(" ") + " " + REACH[l].catalogNote("Başakşehir");
+    assert.ok(all.includes("Başakşehir"), l + " yer adı");
+    assert.ok(conf.test(all), l + " ödemede doğrulama dili");
+    assert.doesNotMatch(all, GARANTI_YASAK, l + " garanti/dakika vaadi");
+  }
+});
+
+test("kaynak nöbeti: GlobalPageBody üç durumlu sunum; nötr şerit + not; kargo bölümleri ilçe adını alır", () => {
   const src = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
-  assert.ok(src.includes("(!isSameDayDestination(loc.city) || engineSaysCargo(source))"), "cargoCity kararı");
+  assert.ok(src.includes(`const presentation = loc ? deliveryPresentation(source, isSameDayDestination(loc.city)) : "same_day";`), "sunum kararı");
+  assert.ok(src.includes(`const cargoCity = loc && presentation === "cargo" ? loc.city : null;`));
+  assert.ok(src.includes(`<NeutralTrustStrip locale={locale} place={neutralPlace} />`));
+  assert.ok(src.includes(`note={neutral ? REACH[locale].catalogNote(neutralPlace) : undefined}`));
   assert.ok(src.includes("<CargoTrustStrip locale={locale} city={cargoCity} label={cargoLabel} />"));
   assert.ok(src.includes("<CargoCatalogSection locale={locale} city={cargoCity} label={cargoLabel}"));
+  assert.ok(src.includes("{ cargo, neutral }"), "bölüm sırası nötr modu bilir");
   const sections = readFileSync(new URL("./global/sections.tsx", import.meta.url), "utf8");
   assert.ok(sections.includes("CARGO[locale].trust(label ?? cityDisplayName(locale, city))"));
+  assert.ok(sections.includes("data-neutral-trust"));
 });
 
 test("locale PDP Product JSON-LD: URL locale yolundan, TR /urun yolu korunur", () => {

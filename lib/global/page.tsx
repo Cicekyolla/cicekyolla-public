@@ -36,7 +36,7 @@ import { LocationBreadcrumb, LocationGrid, ilceBasligi, mahalleBasligi, cityDisp
 import { CARGO, CARGO_COLLECTION_PATH } from "./cargoCopy";
 import {
   TrustStrip, EmotionSection, DistanceSection, AtelierSection,
-  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip,
+  ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip, NeutralTrustStrip,
 } from "./sections";
 import { GlobalGoogleTrust } from "@/components/global/GlobalGoogleTrust";
 import { GlobalCatalogBrowser, type CatalogBrowserItem } from "@/components/global/GlobalCatalogBrowser";
@@ -59,7 +59,8 @@ import {
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
-import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, engineSaysCargo, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
+import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, deliveryPresentation, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
+import { REACH } from "./reachCopy";
 import {
   parseLocationSections, renderableLocationSections, DEFAULT_LOCATION_SECTIONS,
   type LocationSection, type LocationSectionId,
@@ -393,8 +394,10 @@ function CategoryCardsSection({ locale, tiles }: { locale: GlobalLocale; tiles: 
 }
 
 /** Ürün alanı (aynı gün şehri): başlık + not + kategori çipleri + ürün ızgarası (+ sayfalama); yedek yolda bugünkü popüler + raflar. */
-async function CatalogCommerceSection({ locale, catalog, plan, view }: {
+async function CatalogCommerceSection({ locale, catalog, plan, view, note }: {
   locale: GlobalLocale; catalog: LocaleCatalog; plan: LocationCatalogPlan | null;
+  /** ADDITIVE: nötr modda (sınır/belirsiz erişim) ürün alanı üst notu — vaat yerine "ödemede doğrulanır". */
+  note?: string;
   /** Bu isteğin katalog görünümü (?category + ?page); plan varsa dolu. */
   view: LocationCatalogView | null;
 }) {
@@ -407,7 +410,7 @@ async function CatalogCommerceSection({ locale, catalog, plan, view }: {
     return (
       <section className="mt-12" data-global-location-catalog>
         <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
-        <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
+        <p className="mb-4 text-[12.5px] text-[#6B7280]" data-commerce-note={note ? "neutral" : undefined}>{note ?? shop.from}</p>
         <GlobalCatalogBrowser locale={locale} items={catalogItems(locale, plan, view.ids)} view={view} />
       </section>
     );
@@ -453,7 +456,7 @@ async function CatalogCommerceSection({ locale, catalog, plan, view }: {
       {oneKartlar.length > 0 && (
         <section className="mt-12">
           <h2 className="mb-1 text-[19px] font-semibold text-[#1C0838]">{ui.popular}</h2>
-          <p className="mb-4 text-[12.5px] text-[#6B7280]">{shop.from}</p>
+          <p className="mb-4 text-[12.5px] text-[#6B7280]" data-commerce-note={note ? "neutral" : undefined}>{note ?? shop.from}</p>
           <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
             {oneKartlar.map(({ card: c, href }, idx) => (
               <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
@@ -629,10 +632,15 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   //      kurye bandı dışındaki ilçeleri — Silivri, Şile, Çatalca …) sayfa aynı gün vaadi
   //      TAŞIMAZ; güven şeridi + ürün alanı kargo sözleriyle basılır. Motor sessizse (fallback)
   //      bugünkü davranış korunur.
-  const cargoCity = loc && (!isSameDayDestination(loc.city) || engineSaysCargo(source)) ? loc.city : null;
+  //  (3) 'mixed' (ilçe merkezi band kenarına yakın) ya da 'unknown' (çözülemedi) → NÖTR: vaat yok, katalog
+  //      kapanmaz, "adres için ödemede doğrulanır" (reachCopy). Belirsizlik ne vaade ne kapatmaya dönüşür.
+  const presentation = loc ? deliveryPresentation(source, isSameDayDestination(loc.city)) : "same_day";
+  const cargoCity = loc && presentation === "cargo" ? loc.city : null;
   const cargo = cargoCity !== null;
-  // Kargo başlığında şehir yerine ilçe adı (İstanbul'un band dışı ilçesinde "Istanbul" yanıltıcı olurdu).
-  const cargoLabel = cargoCity && loc && loc.kind !== "city" && yerAdi ? yerAdi : undefined;
+  const neutral = presentation === "neutral";
+  // Kargo/nötr başlığında şehir yerine ilçe adı (İstanbul'un band dışı ilçesinde "Istanbul" yanıltıcı olurdu).
+  const cargoLabel = (cargoCity || neutral) && loc && loc.kind !== "city" && yerAdi ? yerAdi : undefined;
+  const neutralPlace = cargoLabel ?? (loc ? cityDisplayName(locale, loc.city) : "");
   // TEK plan: ürün alanı (çip + ızgara), kategori kartları ve duygu hedefleri AYNI sonucu paylaşır.
   const plan: LocationCatalogPlan | null = source?.mode === "catalog" ? planLocationPage(source.catalog) : null;
   // Bu isteğin katalog görünümü: filtre (?category) + 24'lük sayfa (?page). SON sıralı listeden (Tümü = allOrder,
@@ -643,7 +651,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   const tiles = locationTiles(catalog, plan, cargo);
   // Bölüm sırası: Admin (storefront structure.locationSections, catalog yanıtında) — yoksa varsayılan.
   // Kargo destinasyonunda emotion + cta listeden düşer (aynı gün / İstanbul vaadi yok).
-  const order = renderableLocationSections(sections ?? DEFAULT_LOCATION_SECTIONS, { cargo });
+  // Nötr modda da kapanış CTA'sı ("bugün gönder") basılmaz — vaat çağrışımı; duygu/hikâye bölümleri (vaat taşımaz) kalır.
+  const order = renderableLocationSections(sections ?? DEFAULT_LOCATION_SECTIONS, { cargo, neutral });
   // Sayfa ≥ 2: hafif devam sayfası — hero (kırıntı + H1, giriş YOK) + YALNIZ ürün alanı; SEO içeriği 1. sayfada.
   const continuation = isLocationContinuationPage(view, order);
   const t = mergedTexts(locale, null);
@@ -652,12 +661,14 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
     switch (id) {
       // Güven şeridi — kargo şehrinde kargo sözleri (1–3 iş günü; aynı gün/saat vaadi YOK).
       case "trust":
-        return cargoCity ? <CargoTrustStrip locale={locale} city={cargoCity} label={cargoLabel} /> : <TrustStrip locale={locale} />;
+        return cargoCity ? <CargoTrustStrip locale={locale} city={cargoCity} label={cargoLabel} />
+          : neutral ? <NeutralTrustStrip locale={locale} place={neutralPlace} />
+          : <TrustStrip locale={locale} />;
       // Ürün alanı: başlık → kategori çipleri → ürün ızgarası (bu lokasyona teslim edilebilir katalog).
       case "commerce":
         return cargoCity
           ? <CargoCatalogSection locale={locale} city={cargoCity} label={cargoLabel} catalog={catalog} plan={plan} view={view} />
-          : <CatalogCommerceSection locale={locale} catalog={catalog} plan={plan} view={view} />;
+          : <CatalogCommerceSection locale={locale} catalog={catalog} plan={plan} view={view} note={neutral ? REACH[locale].catalogNote(neutralPlace) : undefined} />;
       // Kategori keşif kartları — aynı plan (kargoda kargo-süzülmüş sayılar).
       case "categories":
         return tiles.length > 0 ? <CategoryCardsSection locale={locale} tiles={tiles} /> : null;

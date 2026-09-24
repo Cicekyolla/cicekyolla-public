@@ -51,9 +51,13 @@ export interface GlobalCatalogResponse {
   selection: "manual" | "none";
   featured_ids: number[];
   location: {
-    city: string; district: string | null; neighborhood: string | null; found: boolean; same_day: boolean;
+    city: string; district: string | null; neighborhood: string | null; found: boolean;
+    /** true = aynı gün sunulur; false = yalnız kargo; null = belirsiz/sınır (vaat yok, katalog açık). Eski API: boolean. */
+    same_day: boolean | null;
     /** ADDITIVE (API 24 Eyl 2026): aynı gün kararının kaynağı — 'city_rule' | 'engine' | 'engine_unresolved'; eski API'de yok. */
     same_day_source?: string;
+    /** ADDITIVE: 'in' | 'out' | 'mixed' | 'unknown' — motorun üç durumlu erişim kararı; eski API'de yok. */
+    reach?: string;
     /** ADDITIVE: motor bandı adı (İstanbul ilçesi motorla çözüldüyse); yoksa null/yok. */
     band?: string | null;
   } | null;
@@ -78,6 +82,25 @@ export function engineSaysCargo(source: CatalogDecision | null | undefined): boo
   if (!source || source.mode !== "catalog") return false;
   const loc = source.catalog.location;
   return !!loc && loc.found === true && loc.same_day === false;
+}
+
+/**
+ * ÜÇ DURUMLU SUNUM (operatör geri bildirimi, 24 Eyl 2026):
+ *  "same_day" → bugünkü İstanbul sunumu
+ *  "cargo"    → kargo sunumu (şehir kuralı: Antalya/Muğla/İzmir; motor: reach 'out' / same_day=false)
+ *  "neutral"  → motor 'mixed' (ilçe merkezi band kenarına yakın) ya da 'unknown' (çözülemedi):
+ *               aynı gün VAADİ YOK, katalog KAPANMAZ, "adres için ödemede doğrulanır" dili.
+ * Motor sessizse (fallback / eski API alanı yok) şehir kuralı geçerlidir — bugünkü davranış.
+ */
+export type DeliveryPresentation = "same_day" | "cargo" | "neutral";
+export function deliveryPresentation(source: CatalogDecision | null | undefined, cityIsSameDay: boolean): DeliveryPresentation {
+  if (!cityIsSameDay) return "cargo";
+  if (!source || source.mode !== "catalog") return "same_day";
+  const loc = source.catalog.location;
+  if (!loc || loc.found !== true) return "same_day";
+  if (loc.same_day === false) return "cargo";
+  if (loc.same_day === null || loc.reach === "mixed" || loc.reach === "unknown") return "neutral";
+  return "same_day";
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
