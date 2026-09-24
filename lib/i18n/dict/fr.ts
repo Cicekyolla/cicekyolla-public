@@ -173,6 +173,7 @@ const fr: Dict = {
   "cart.couponRemoved": "Coupon supprimé.",
   "cart.checkout": "Passer la commande",
   "cart.needDelivery": "Pour continuer, complétez la livraison des articles sans sélection de livraison.",
+  "cart.deliveryMismatch": "Les articles de votre panier ont des choix de livraison différents (adresse, date, mode ou créneau). Une commande = une livraison : choisissez la même livraison sur les pages produit ou commandez les articles séparément.",
   "cart.note": "La commande est créée après vérification des informations de livraison.",
   "cart.removeItem": "Retirer l'article",
   "cart.steps": "Panier · Extras · Destinataire · Livraison · Confirmation",

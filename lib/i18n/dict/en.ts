@@ -173,6 +173,7 @@ const en: Dict = {
   "cart.couponRemoved": "Coupon removed.",
   "cart.checkout": "Checkout",
   "cart.needDelivery": "To continue, complete the delivery for items without a delivery selection.",
+  "cart.deliveryMismatch": "The items in your cart have different delivery selections (address, date, method or time window). One order has one delivery: choose the same delivery on the product pages or order the items separately.",
   "cart.note": "Your order is created after delivery details are verified.",
   "cart.removeItem": "Remove item",
   "cart.steps": "Cart · Add-ons · Recipient · Delivery · Confirm",

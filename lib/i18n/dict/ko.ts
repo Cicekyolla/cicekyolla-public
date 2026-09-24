@@ -173,6 +173,7 @@ const ko: Dict = {
   "cart.couponRemoved": "쿠폰이 삭제되었습니다.",
   "cart.checkout": "주문하기",
   "cart.needDelivery": "계속하려면 배송이 선택되지 않은 상품의 배송을 설정해 주세요.",
+  "cart.deliveryMismatch": "장바구니 상품들의 배송 선택(주소, 날짜, 방식 또는 시간대)이 서로 다릅니다. 한 주문에는 하나의 배송만 가능합니다. 상품 페이지에서 같은 배송을 선택하거나 상품을 따로 주문해 주세요.",
   "cart.note": "배송 정보 확인 후 주문이 생성됩니다.",
   "cart.removeItem": "상품 삭제",
   "cart.steps": "장바구니 · 추가 상품 · 받는 분 · 배송 · 확인",

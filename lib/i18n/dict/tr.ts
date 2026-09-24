@@ -183,6 +183,7 @@ const tr = {
   "cart.couponRemoved": "Kupon kaldırıldı.",
   "cart.checkout": "Siparişi Tamamla",
   "cart.needDelivery": "Devam etmek için teslimatı seçilmemiş ürünlerin teslimatını tamamlayın.",
+  "cart.deliveryMismatch": "Sepetinizdeki ürünlerin teslimat seçimleri (adres, tarih, yöntem veya saat) birbirinden farklı. Tek siparişte tek teslimat yapılır: ürün sayfasından aynı teslimatı seçin ya da ürünleri ayrı sipariş verin.",
   "cart.note": "Teslimat bilgileri doğrulanarak sipariş kaydı oluşturulur.",
   "cart.removeItem": "Ürünü kaldır",
   "cart.steps": "Sepet · Ek Ürünler · Alıcı · Teslimat · Onay",

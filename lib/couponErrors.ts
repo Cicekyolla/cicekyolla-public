@@ -74,7 +74,7 @@ export function classifyCheckoutFailure(input: {
   if (error === "delivery_option_changed") return { kind: "delivery_changed", couponMessage: null };
   if (error === "cart_needs_split") return { kind: "cart_split", couponMessage: null };
   // TUTAR KİLİDİ: sunucu toplamı ≠ müşterinin gördüğü toplam (teslimat ücreti / fiyat / indirim değişti) → yeni tutarla yeniden onay.
-  if (error === "total_changed") return { kind: "total_changed", couponMessage: null };
+  if (error === "total_changed" || error === "total_confirmation_required") return { kind: "total_changed", couponMessage: null };
   const machine = (MACHINE_ERROR_CODES as readonly string[]).includes(error);
   // KUPON VERDİKTİ = SUNUCUNUN 409'u. `status === null` demek "sunucudan yanıt
   // HİÇ alınamadı"dır (tarayıcı `fetch` fırlattı: çevrimdışı, DNS, iptal) —

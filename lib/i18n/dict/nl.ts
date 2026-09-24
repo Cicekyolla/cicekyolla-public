@@ -173,6 +173,7 @@ const nl: Dict = {
   "cart.couponRemoved": "Kortingscode verwijderd.",
   "cart.checkout": "Bestelling afronden",
   "cart.needDelivery": "Om door te gaan, voltooi de bezorging voor artikelen zonder bezorgkeuze.",
+  "cart.deliveryMismatch": "De artikelen in je winkelwagen hebben verschillende bezorgkeuzes (adres, datum, methode of tijdvenster). Eén bestelling heeft één bezorging: kies dezelfde bezorging op de productpagina's of bestel de artikelen apart.",
   "cart.note": "Uw bestelling wordt aangemaakt na controle van de bezorggegevens.",
   "cart.removeItem": "Artikel verwijderen",
   "cart.steps": "Winkelwagen · Extra's · Ontvanger · Bezorging · Bevestiging",

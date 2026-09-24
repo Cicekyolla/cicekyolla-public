@@ -173,6 +173,7 @@ const zh: Dict = {
   "cart.couponRemoved": "优惠券已移除。",
   "cart.checkout": "去结账",
   "cart.needDelivery": "请先为未选择配送的商品完成配送设置。",
+  "cart.deliveryMismatch": "购物车中商品的配送选择（地址、日期、方式或时段）不一致。一个订单只有一种配送：请在商品页面选择相同的配送，或将商品分开下单。",
   "cart.note": "订单将在验证配送信息后创建。",
   "cart.removeItem": "移除商品",
   "cart.steps": "购物车 · 加购 · 收件人 · 配送 · 确认",

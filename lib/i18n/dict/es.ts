@@ -173,6 +173,7 @@ const es: Dict = {
   "cart.couponRemoved": "Cupón eliminado.",
   "cart.checkout": "Finalizar pedido",
   "cart.needDelivery": "Para continuar, complete la entrega de los artículos sin entrega seleccionada.",
+  "cart.deliveryMismatch": "Los artículos de tu cesta tienen selecciones de entrega distintas (dirección, fecha, método o franja horaria). Un pedido tiene una sola entrega: elige la misma entrega en las páginas de producto o pide los artículos por separado.",
   "cart.note": "El pedido se crea tras verificar los datos de entrega.",
   "cart.removeItem": "Quitar artículo",
   "cart.steps": "Carrito · Extras · Destinatario · Entrega · Confirmación",

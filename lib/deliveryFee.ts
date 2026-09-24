@@ -31,3 +31,19 @@ export function deliveryMethodLabel(
   const band = (d.band ?? "").replace(/^İstanbul\s*-\s*/i, "").trim();
   return band || labels.sameDay;
 }
+
+/** Teslimat seçiminin kimliği: adres (placeId ya da metin), tarih, yöntem, slot. Ücret kimliğe girmez (motor belirler). */
+export function deliverySelectionKey(d: Pick<PendingDelivery, "placeId" | "address" | "date" | "mode" | "slotId"> | null | undefined): string | null {
+  if (!d?.date || !(d.placeId || d.address)) return null;
+  return [d.placeId || d.address, d.date, d.mode ?? "", d.mode === "cargo" ? "" : String(d.slotId ?? "")].join("|");
+}
+
+/**
+ * Sepet TEK gönderimdir (sipariş modeli tek teslimat taşır; checkout ilk satırın teslimatını kullanır). Satırların
+ * seçimi (adres/tarih/yöntem/slot) farklıysa sessizce tek teslimata indirgenmez: sepet ödeme öncesi durur.
+ */
+export function cartDeliveriesMatch(deliveries: ReadonlyArray<PendingDelivery | null | undefined>): boolean {
+  const keys = deliveries.map(deliverySelectionKey);
+  if (keys.length === 0 || keys.some((k) => k === null)) return false;
+  return keys.every((k) => k === keys[0]);
+}

@@ -173,6 +173,7 @@ const de: Dict = {
   "cart.couponRemoved": "Gutschein entfernt.",
   "cart.checkout": "Zur Kasse",
   "cart.needDelivery": "Um fortzufahren, vervollständigen Sie die Lieferung für Artikel ohne Lieferauswahl.",
+  "cart.deliveryMismatch": "Die Artikel in Ihrem Warenkorb haben unterschiedliche Lieferauswahlen (Adresse, Datum, Methode oder Zeitfenster). Eine Bestellung hat eine Lieferung: Wählen Sie auf den Produktseiten dieselbe Lieferung oder bestellen Sie die Artikel getrennt.",
   "cart.note": "Ihre Bestellung wird nach Prüfung der Lieferdaten angelegt.",
   "cart.removeItem": "Artikel entfernen",
   "cart.steps": "Warenkorb · Extras · Empfänger · Lieferung · Bestätigung",

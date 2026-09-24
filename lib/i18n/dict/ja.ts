@@ -173,6 +173,7 @@ const ja: Dict = {
   "cart.couponRemoved": "クーポンを削除しました。",
   "cart.checkout": "レジに進む",
   "cart.needDelivery": "続行するには、配達未設定の商品の配達を設定してください。",
+  "cart.deliveryMismatch": "カート内の商品で配達の選択（住所・日付・方法・時間帯）が異なります。1回のご注文につき配達は1つです。商品ページで同じ配達を選ぶか、商品を別々にご注文ください。",
   "cart.note": "配達情報の確認後にご注文が作成されます。",
   "cart.removeItem": "商品を削除",
   "cart.steps": "カート · 追加商品 · お届け先 · 配達 · 確認",

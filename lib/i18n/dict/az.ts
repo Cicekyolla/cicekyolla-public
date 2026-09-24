@@ -173,6 +173,7 @@ const az: Dict = {
   "cart.couponRemoved": "Kupon silindi.",
   "cart.checkout": "Sifarişi tamamla",
   "cart.needDelivery": "Davam etmək üçün çatdırılması seçilməmiş məhsulların çatdırılmasını tamamlayın.",
+  "cart.deliveryMismatch": "Səbətinizdəki məhsulların çatdırılma seçimləri (ünvan, tarix, üsul və ya vaxt aralığı) fərqlidir. Bir sifarişdə bir çatdırılma olur: məhsul səhifələrindən eyni çatdırılmanı seçin və ya məhsulları ayrı sifariş edin.",
   "cart.note": "Çatdırılma məlumatları təsdiqlənərək sifariş qeydi yaradılır.",
   "cart.removeItem": "Məhsulu sil",
   "cart.steps": "Səbət · Əlavə məhsullar · Alıcı · Çatdırılma · Təsdiq",

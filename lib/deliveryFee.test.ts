@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { cartDeliveryFeeMinor, cartTotalMinor, deliveryMethodLabel } from "./deliveryFee.ts";
+import { cartDeliveryFeeMinor, cartTotalMinor, deliveryMethodLabel, cartDeliveriesMatch, deliverySelectionKey } from "./deliveryFee.ts";
 import { classifyCheckoutFailure } from "./couponErrors.ts";
 import { GLOBAL_LOCALES } from "./global/config.ts";
 
@@ -65,5 +65,32 @@ test("14 sözlük: common.deliveryFee ve co.err.totalChanged ({total})", () => {
     assert.ok(/"common\.deliveryFee": "[^"]{3,}"/.test(d), l + " common.deliveryFee");
     const m = d.match(/"co\.err\.totalChanged": "([^"]+)"/);
     assert.ok(m && m[1].includes("{total}"), l + " co.err.totalChanged {total}");
+  }
+});
+
+test("ÇOK ÜRÜNLÜ SEPET: seçimler aynıysa tek gönderim, ücret BİR kez; adres/tarih/yöntem/slot farklıysa sepet durur (sessiz tek teslimat yok)", () => {
+  const sile = { placeId: "sile-1", address: "Şile", date: "2027-01-15", mode: "sameday" as const, slotId: 77, band: "İstanbul - Uzak Bölge Özel Araç (45-150 km)", deliveryFeeMinor: 50000 };
+  assert.equal(cartDeliveriesMatch([sile, { ...sile }]), true);
+  assert.equal(cartDeliveryFeeMinor([sile, { ...sile }]), 50000, "iki ürün, ücret bir kez (toplanmaz)");
+  assert.equal(cartTotalMinor(729900 + 659900, 0, 50000), 1439800);
+  assert.equal(cartDeliveriesMatch([sile, { ...sile, date: "2027-01-16" }]), false, "tarih farklı");
+  assert.equal(cartDeliveriesMatch([sile, { ...sile, slotId: 78 }]), false, "slot farklı");
+  assert.equal(cartDeliveriesMatch([sile, { ...sile, mode: "cargo", slotId: null }]), false, "yöntem farklı");
+  assert.equal(cartDeliveriesMatch([sile, { ...sile, placeId: "maltepe-1", address: "Maltepe" }]), false, "adres farklı");
+  assert.equal(cartDeliveriesMatch([sile, undefined]), false, "teslimatsız satır");
+  assert.equal(cartDeliveriesMatch([]), false);
+  assert.equal(deliverySelectionKey({ placeId: "x", address: "A", date: "2027-01-15", mode: "cargo", slotId: 5 }), "x|2027-01-15|cargo|", "kargoda slot kimliğe girmez");
+});
+
+test("kaynak nöbeti — sepet kapısı: seçimler uyuşmuyorsa checkout bağlantısı kapalı + açık mesaj; checkout sayfası da aynı kuralı uygular; total_confirmation_required aynı sınıf", () => {
+  const cart = readFileSync(new URL("../app/sepet/page.tsx", import.meta.url), "utf8");
+  assert.ok(cart.includes("const deliveriesMatch = allHaveDelivery && cartDeliveriesMatch(items.map((item) => item.delivery));"), "kapı");
+  assert.ok(cart.includes("{allHaveDelivery && deliveriesMatch ? (") && cart.includes('{allHaveDelivery ? t("cart.deliveryMismatch") : t("cart.needDelivery")}'), "mesaj");
+  const co = readFileSync(new URL("../app/checkout/page.tsx", import.meta.url), "utf8");
+  assert.ok(co.includes("const sameDelivery = items.every((item) => deliveryFingerprint(item.delivery) === fingerprint);") && co.includes("!deliveryIsComplete || !sameDelivery"), "checkout kapısı mevcut");
+  assert.equal(classifyCheckoutFailure({ status: 409, error: "total_confirmation_required", hadCoupon: false }).kind, "total_changed");
+  for (const l of [...GLOBAL_LOCALES, "tr"]) {
+    const d = readFileSync(new URL(`./i18n/dict/${l}.ts`, import.meta.url), "utf8");
+    assert.ok(/"cart\.deliveryMismatch": "[^"]{20,}"/.test(d), l + " cart.deliveryMismatch");
   }
 });
