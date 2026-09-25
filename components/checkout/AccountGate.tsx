@@ -18,6 +18,7 @@ import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { useProductName } from "@/lib/i18n/content";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
+import { cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 // Para yazımı bileşen içinde useCurrency().approx ile alınır (checkout = yaklaşık).
@@ -67,7 +68,11 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
   const shownName = useProductName(productId, productName);
   const TRUST = TRUST_ICONS.map((icon, i) => ({ icon, label: t(TRUST_KEYS[i] as "co.gate.ssl") }));
   const dateStr = formatDate(pd?.date, intl);
-  const typeStr = pd?.mode === "cargo" ? t("co.gate.freeCargo") : pd?.mode === "sameday" ? t("co.trust.sameDay") : null;
+  // TESLİMAT ÜCRETİ (25 Eyl 2026): hesap adımı özeti de motorun ücretini ve yöntem adını gösterir; toplam ücreti içerir
+  // (sepet/checkout/sunucu ile aynı formül). Kargo ücretsizse mevcut "Ücretsiz Kargo" etiketi kalır.
+  const gateDeliveryFee = Math.max(0, Math.round(Number(pd?.deliveryFeeMinor ?? 0)) || 0);
+  const typeStr = pd?.mode === "cargo" ? t("co.gate.freeCargo") : pd?.mode === "sameday" ? deliveryMethodLabel(pd, { sameDay: t("co.trust.sameDay"), cargo: t("co.gate.freeCargo"), none: t("co.trust.sameDay") }) : null;
+  const gateTotal = cartTotalMinor(totalMinor ?? priceMinor * quantity, 0, gateDeliveryFee);
   // TEK HUNİ: giriş sonrası dönüş her zaman checkout'un kendisidir.
   // Eski fallback /hizli-siparis'e dönüyordu; o route artık ürün sayfasına
   // yönlendiriyor ve müşteri giriş yaptıktan sonra sepetini kaybediyormuş gibi
@@ -121,9 +126,16 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
         </div>
       )}
 
-      <div className="mt-4 pt-4 flex items-baseline justify-between" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
-        <span className="text-[12px] text-white/40">{t("common.total")}</span>
-        <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(totalMinor ?? priceMinor * quantity)}</span>
+      <div className="mt-4 pt-4 space-y-1.5" style={{ borderTop: "1px solid rgba(196,181,253,0.13)" }}>
+        {pd?.mode && (
+          <div className="flex items-center justify-between text-[12px] text-white/40" data-delivery-fee-row>
+            <span>{t("common.deliveryFee")}</span>{gateDeliveryFee > 0 ? <span>{money(gateDeliveryFee)}</span> : <span className="text-[#86EFAC]">{t("common.free")}</span>}
+          </div>
+        )}
+        <div className="flex items-baseline justify-between">
+          <span className="text-[12px] text-white/40">{t("common.total")}</span>
+          <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(gateTotal)}</span>
+        </div>
       </div>
 
       {/* %100 ÇiçekYolla Garantisi — checkout'un İLK ekranı (hesap adımı) da

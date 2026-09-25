@@ -104,3 +104,11 @@ test("İKİ ÜRÜN ÜCRETSİZ KARGO: aynı adrese kargo seçimi → seçimler uy
   assert.equal(cartDeliveriesMatch([far, cargo]), false, "biri özel araç biri kargo → tek teslimat yok, sepet durur");
   assert.equal(cartDeliveriesMatch([far, { ...far, placeId: "maltepe-1" }]), false, "farklı adres → sepet durur (en yüksek ücretle birleştirme YOK)");
 });
+
+test("kaynak nöbeti — checkout hesap adımı (AccountGate) özeti: teslimat ücreti satırı + ücretli toplam (₺7.299 değil ₺7.799); yöntem adı band'dan", () => {
+  const gate = readFileSync(new URL("../components/checkout/AccountGate.tsx", import.meta.url), "utf8");
+  assert.ok(gate.includes("const gateTotal = cartTotalMinor(totalMinor ?? priceMinor * quantity, 0, gateDeliveryFee);"), "toplam ücretli");
+  assert.ok(gate.includes("{money(gateTotal)}") && !gate.includes("{money(totalMinor ?? priceMinor * quantity)}"), "eski ücretsiz toplam kalktı");
+  assert.ok(gate.includes("data-delivery-fee-row"), "ücret satırı");
+  assert.ok(gate.includes("deliveryMethodLabel(pd, {"), "yöntem adı motor bandından");
+});
