@@ -31,6 +31,7 @@ import type { CheckoutAddon } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
 import { buildCouponRequestBody, buildOrderRegionFields, readCouponPreview, readServerTotalMinor } from "@/lib/couponState";
 import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
+import { cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
 import { clearPendingCoupon, readPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
 import { attemptField, newAttemptKey } from "@/lib/checkoutAttempt";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
@@ -240,7 +241,11 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   );
   const subtotal = priceMinor * qty + addonsTotal;
   const discountMinor = coupon?.discount_minor ?? 0;
-  const total = Math.max(0, subtotal - discountMinor);
+  // TESLİMAT ÜCRETİ — TEK KAYNAK MOTOR: seçimle yazılan ücret (PDP/checkout paneli /check). Toplam = ara toplam − indirim + ücret;
+  // sunucu sipariş anında aynı ücreti motordan yeniden hesaplar (expected_total_minor eşleşmezse 409 total_changed → yeniden onay).
+  const deliveryFeeMinor = Math.max(0, Math.round(Number(pd?.deliveryFeeMinor ?? 0)) || 0);
+  const deliveryLabel = deliveryMethodLabel(pd, { sameDay: t("co.deliverySameDayLine"), cargo: t("co.deliveryCargoLine"), none: t("co.steps.delivery") });
+  const total = cartTotalMinor(subtotal, discountMinor, deliveryFeeMinor);
 
   /** Kupon önizlemesinin kalemleri — ana ürün + seçili ek ürünler (varyantlı). */
   const couponLines = useMemo(() => [
@@ -401,6 +406,8 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         delivery_time_slot: pd?.mode === "cargo" ? null : (pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null)),
         delivery_slot_id: pd?.mode === "cargo" ? null : (pd?.slotId ?? null),
         delivery_method: pd?.mode === "cargo" ? "cargo" : pd?.mode === "sameday" ? "courier" : null,
+        // TUTAR KİLİDİ: müşterinin gördüğü toplam; sunucu kendi hesabıyla eşleşmezse sipariş yazmaz (409 total_changed).
+        expected_total_minor: total,
         card_message: composedCard, source: "web",
         ads_gclid: adsAttr.gclid,
         ads_gbraid: adsAttr.gbraid,
@@ -500,6 +507,16 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         setDraftDelivery(null);
         setEditingDelivery(true);
         if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (kind.kind === "total_changed") {
+        // Sunucu toplamı farklı (teslimat ücreti / fiyat / indirim değişti): ücret sunucunun değeriyle tazelenir,
+        // yeni toplam gösterilir; müşteri kontrol edip YENİDEN onaylar. Tahsilat asla gösterilenden farklı yapılmaz.
+        setCouponRejected(false);
+        const d = (failure instanceof CheckoutApiError ? failure.details : null) as { total_amount_minor?: number; delivery_fee_minor?: number } | null;
+        if (d && d.delivery_fee_minor != null && pd) {
+          const next = { ...pd, deliveryFeeMinor: Number(d.delivery_fee_minor) };
+          setPd(next); savePendingDelivery(next); onDeliveryChange?.(next);
+        }
+        setError(t("co.err.totalChanged", { total: money(Number(d?.total_amount_minor ?? total)) }));
       } else if (kind.kind === "cart_split") {
         // Sepetteki ürünler bu adrese TEK yöntemle gidemiyor (sipariş modeli tek yöntem taşır): ödeme öncesi durdur.
         setCouponRejected(false);
@@ -615,7 +632,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       <div className="grid lg:grid-cols-[360px_1fr] gap-6 lg:gap-8 items-start mt-8">
         <div className="order-2 lg:order-1">
           <LivingReceipt
-            productName={shownName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug}
+            productName={shownName} coverUrl={coverUrl} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} productSlug={productSlug} deliveryFee={deliveryFeeMinor} deliveryLabel={deliveryLabel}
             addons={addons} addonQty={addonQty} coupon={coupon}
             regionLabel={`${pd?.neighborhood ? pd.neighborhood + ", " : ""}${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
             placeName={pd?.placeName ?? null} dateStr={dateStr} slotStr={slotStr} typeStr={typeStr}
@@ -664,6 +681,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
                   lat: sel.address.lat ?? null,
                   lng: sel.address.lng ?? null,
                   band: sel.band ?? null,
+                  deliveryFeeMinor: sel.feeMinor ?? 0,
                   occasion: pd?.occasion,
                 });
               }}
@@ -705,7 +723,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
               {stepKey === "ekurun" && <StepAddons addons={addons} addonQty={addonQty} setAddon={setAddon} />}
               {stepKey === "odeme" && (
                 <StepOdeme
-                  productName={shownName} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal}
+                  productName={shownName} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} deliveryFee={deliveryFeeMinor} deliveryLabel={deliveryLabel}
                   addons={addons} addonQty={addonQty}
                   recipientName={recipientName} occasion={occasion}
                   address={address} region={`${pd?.district ?? ""}${pd?.city ? " / " + pd.city : ""}`}
@@ -1238,6 +1256,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
 /* ---------------------------- Adım: Ödeme/Özet -------------------------- */
 function StepOdeme(p: {
   productName: string; productPrice: number; productQty: number; total: number; subtotal: number;
+  deliveryFee: number; deliveryLabel: string;
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
   recipientName: string; occasion: string | null;
   address: string; region: string; dateStr: string | null; slotStr: string | null; typeStr: string | null; cardMessage: string;
@@ -1374,6 +1393,9 @@ function StepOdeme(p: {
             </div>
           </>
         )}
+        <div className="flex items-center justify-between text-[13.5px] text-[#6B7280]" data-delivery-fee-row>
+          <span>{t("common.deliveryFee")} · {p.deliveryLabel}</span>{p.deliveryFee > 0 ? <Num>{money(p.deliveryFee)}</Num> : <span className="font-semibold text-[#15803D]">{t("common.free")}</span>}
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-[14px] font-semibold text-[#6B7280]">{t("common.total")}</span>
           <Num className="text-[22px] font-bold text-[#111827]">{money(p.total)}</Num>
@@ -1424,6 +1446,7 @@ function RevRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ clas
 /* ---------------------------- Yaşayan Fiş ------------------------------- */
 function LivingReceipt(p: {
   productName: string; coverUrl?: string | null; productPrice: number; productQty: number; total: number; subtotal: number; productSlug?: string;
+  deliveryFee: number; deliveryLabel: string;
   addons: CheckoutAddon[]; addonQty: Record<number, number>;
   coupon: { code: string; discount_minor: number } | null;
   regionLabel: string; placeName: string | null; dateStr: string | null; slotStr: string | null; typeStr: string | null;
@@ -1514,6 +1537,9 @@ function LivingReceipt(p: {
               </div>
             </>
           )}
+          <div className="flex items-center justify-between text-[12px] text-white/40" data-delivery-fee-row>
+            <span>{t("common.deliveryFee")} · {p.deliveryLabel}</span>{p.deliveryFee > 0 ? <span>{money(p.deliveryFee)}</span> : <span className="text-[#86EFAC]">{t("common.free")}</span>}
+          </div>
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] text-white/40">Toplam</span>
             <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(p.total)}</span>

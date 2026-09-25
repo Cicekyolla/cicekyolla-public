@@ -49,7 +49,7 @@ export function isPresentableMessage(text: unknown): boolean {
  *                       slot bandı uyuşmuyor): sipariş SESSİZCE başka yönteme çevrilmez; teslimat paneli yeniden açılır.
  *  "cart_split"       → sepetteki ürünler bu adrese TEK bir yöntemle gidemiyor: ödeme öncesi açık ayırma mesajı.
  */
-export type CheckoutFailureKind = "coupon" | "slot" | "not_deliverable" | "delivery_changed" | "cart_split" | "generic";
+export type CheckoutFailureKind = "coupon" | "slot" | "not_deliverable" | "delivery_changed" | "cart_split" | "total_changed" | "generic";
 
 export type CheckoutFailure = {
   kind: CheckoutFailureKind;
@@ -73,6 +73,8 @@ export function classifyCheckoutFailure(input: {
   if (error === "product_not_deliverable_to_address") return { kind: "not_deliverable", couponMessage: null };
   if (error === "delivery_option_changed") return { kind: "delivery_changed", couponMessage: null };
   if (error === "cart_needs_split") return { kind: "cart_split", couponMessage: null };
+  // TUTAR KİLİDİ: sunucu toplamı ≠ müşterinin gördüğü toplam (teslimat ücreti / fiyat / indirim değişti) → yeni tutarla yeniden onay.
+  if (error === "total_changed" || error === "total_confirmation_required") return { kind: "total_changed", couponMessage: null };
   const machine = (MACHINE_ERROR_CODES as readonly string[]).includes(error);
   // KUPON VERDİKTİ = SUNUCUNUN 409'u. `status === null` demek "sunucudan yanıt
   // HİÇ alınamadı"dır (tarayıcı `fetch` fırlattı: çevrimdışı, DNS, iptal) —

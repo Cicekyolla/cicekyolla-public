@@ -33,6 +33,7 @@ const zh: Dict = {
   "header.decor": "🌿 装饰与园艺",
 
   "common.free": "免费",
+  "common.deliveryFee": "配送费",
   "common.edit": "编辑",
   "common.remove": "移除",
   "common.continue": "继续",
@@ -172,6 +173,7 @@ const zh: Dict = {
   "cart.couponRemoved": "优惠券已移除。",
   "cart.checkout": "去结账",
   "cart.needDelivery": "请先为未选择配送的商品完成配送设置。",
+  "cart.deliveryMismatch": "购物车中商品的配送选择（地址、日期、方式或时段）不一致。一个订单只有一种配送：请在商品页面选择相同的配送，或将商品分开下单。",
   "cart.note": "订单将在验证配送信息后创建。",
   "cart.removeItem": "移除商品",
   "cart.steps": "购物车 · 加购 · 收件人 · 配送 · 确认",
@@ -228,6 +230,7 @@ const zh: Dict = {
   "co.err.slotGone": "您选择的时段已满或已关闭。订单未创建；请在下方选择新的配送方式。",
   "co.err.deliveryChanged": "您选择的配送方式已不可用（服务、时段或条件已变更）。您的订单未被改为其他方式；当前可用选项已在下方重新列出，请重新选择并确认。",
   "co.err.cartSplit": "购物车中的商品无法用同一种配送方式送达该地址：{items}。请将这些商品分开下单或从购物车中移除；未扣款。",
+  "co.err.totalChanged": "订单金额已变更（配送费、价格或折扣已更新）。新总额：{total}。请核对后重新确认；未扣款。",
   "co.err.notDeliverable": "该商品无法配送至所选地址。请在商品页面查看适用商品。",
   "co.err.generic": "订单创建失败。您的信息已保留，请重试。",
   "co.done": "✦ 已完成",

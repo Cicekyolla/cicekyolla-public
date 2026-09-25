@@ -33,6 +33,7 @@ const ko: Dict = {
   "header.decor": "🌿 데코 & 조경",
 
   "common.free": "무료",
+  "common.deliveryFee": "배송비",
   "common.edit": "수정",
   "common.remove": "삭제",
   "common.continue": "계속",
@@ -172,6 +173,7 @@ const ko: Dict = {
   "cart.couponRemoved": "쿠폰이 삭제되었습니다.",
   "cart.checkout": "주문하기",
   "cart.needDelivery": "계속하려면 배송이 선택되지 않은 상품의 배송을 설정해 주세요.",
+  "cart.deliveryMismatch": "장바구니 상품들의 배송 선택(주소, 날짜, 방식 또는 시간대)이 서로 다릅니다. 한 주문에는 하나의 배송만 가능합니다. 상품 페이지에서 같은 배송을 선택하거나 상품을 따로 주문해 주세요.",
   "cart.note": "배송 정보 확인 후 주문이 생성됩니다.",
   "cart.removeItem": "상품 삭제",
   "cart.steps": "장바구니 · 추가 상품 · 받는 분 · 배송 · 확인",
@@ -228,6 +230,7 @@ const ko: Dict = {
   "co.err.slotGone": "선택하신 시간대가 마감되었거나 닫혔습니다. 주문이 생성되지 않았습니다. 아래에서 새 배송 옵션을 선택해 주세요.",
   "co.err.deliveryChanged": "선택하신 배송 옵션을 더 이상 이용할 수 없습니다(서비스, 시간대 또는 조건이 변경됨). 주문이 다른 방식으로 바뀌지 않았습니다. 현재 가능한 옵션을 아래에 다시 표시했으니 다시 선택하고 확인해 주세요.",
   "co.err.cartSplit": "장바구니의 상품을 이 주소로 하나의 배송 방식으로 보낼 수 없습니다: {items}. 해당 상품을 별도 주문하거나 장바구니에서 제거해 주세요. 결제는 이루어지지 않았습니다.",
+  "co.err.totalChanged": "주문 금액이 변경되었습니다(배송비, 가격 또는 할인이 업데이트됨). 새 합계: {total}. 확인 후 다시 승인해 주세요. 결제는 이루어지지 않았습니다.",
   "co.err.notDeliverable": "이 상품은 선택한 주소로 배송할 수 없습니다. 상품 페이지에서 주소에 맞는 상품을 확인하세요.",
   "co.err.generic": "주문을 생성할 수 없습니다. 입력 정보는 유지됩니다. 다시 시도해 주세요.",
   "co.done": "✦ 완료",

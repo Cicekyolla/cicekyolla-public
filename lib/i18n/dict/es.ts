@@ -33,6 +33,7 @@ const es: Dict = {
   "header.decor": "🌿 Decoración y paisajismo",
 
   "common.free": "Gratis",
+  "common.deliveryFee": "Gastos de entrega",
   "common.edit": "Editar",
   "common.remove": "Quitar",
   "common.continue": "Continuar",
@@ -172,6 +173,7 @@ const es: Dict = {
   "cart.couponRemoved": "Cupón eliminado.",
   "cart.checkout": "Finalizar pedido",
   "cart.needDelivery": "Para continuar, complete la entrega de los artículos sin entrega seleccionada.",
+  "cart.deliveryMismatch": "Los artículos de tu cesta tienen selecciones de entrega distintas (dirección, fecha, método o franja horaria). Un pedido tiene una sola entrega: elige la misma entrega en las páginas de producto o pide los artículos por separado.",
   "cart.note": "El pedido se crea tras verificar los datos de entrega.",
   "cart.removeItem": "Quitar artículo",
   "cart.steps": "Carrito · Extras · Destinatario · Entrega · Confirmación",
@@ -228,6 +230,7 @@ const es: Dict = {
   "co.err.slotGone": "La franja horaria elegida ya está completa o cerrada. Tu pedido no se ha creado; elige una nueva opción de entrega abajo.",
   "co.err.deliveryChanged": "La opción de entrega elegida ya no está disponible (el servicio, la franja horaria o las condiciones han cambiado). Tu pedido no se cambió a otro método; las opciones actuales aparecen abajo, elige de nuevo y confirma.",
   "co.err.cartSplit": "Los artículos de tu cesta no pueden entregarse en esta dirección con un único método de entrega: {items}. Pide estos artículos por separado o quítalos de la cesta; no se ha realizado ningún cobro.",
+  "co.err.totalChanged": "El importe del pedido ha cambiado (se actualizaron los gastos de entrega, el precio o el descuento). Nuevo total: {total}. Revisa y confirma de nuevo; no se ha realizado ningún cobro.",
   "co.err.notDeliverable": "Este producto no puede entregarse en la dirección elegida. Vea productos compatibles en la página del producto.",
   "co.err.generic": "No se pudo crear el pedido. Sus datos se conservan; inténtelo de nuevo.",
   "co.done": "✦ Completado",
