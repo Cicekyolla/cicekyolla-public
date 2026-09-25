@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer, type FooterBrand } from "@/components/Footer";
+import { resolveSiteIdentity } from "@/lib/siteIdentity";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
@@ -99,6 +100,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         logoTagline: typeof heroConfig.logo_tagline === "string" ? heroConfig.logo_tagline : "Premium Çiçekçi",
         contactPhone: typeof heroConfig.contact_phone === "string" && heroConfig.contact_phone.trim() ? heroConfig.contact_phone : "0507 441 34 74",
         contactEmail: typeof heroConfig.contact_email === "string" && heroConfig.contact_email.trim() ? heroConfig.contact_email : "info@cicekyolla.com.tr",
+        // TEK DAMAR (25 Eyl 2026): footer'ın adresi, WhatsApp'ı ve çalışma saati de aynı hero.config'ten (iletişim sayfası + Google şeması ile aynı).
+        identity: resolveSiteIdentity(heroConfig),
       };
       headerColors = {
         bg: typeof heroConfig.header_bg_color === "string" ? heroConfig.header_bg_color : "#0f0a1f",
