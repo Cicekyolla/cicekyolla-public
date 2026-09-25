@@ -94,3 +94,13 @@ test("kaynak nöbeti — sepet kapısı: seçimler uyuşmuyorsa checkout bağlan
     assert.ok(/"cart\.deliveryMismatch": "[^"]{20,}"/.test(d), l + " cart.deliveryMismatch");
   }
 });
+
+test("İKİ ÜRÜN ÜCRETSİZ KARGO: aynı adrese kargo seçimi → seçimler uyuşur, ücret 0, toplam yalnız ürünler; farklı adres → kapı kapalı", () => {
+  const cargo = { placeId: "sile-1", address: "Şile", date: "2027-01-15", mode: "cargo" as const, slotId: null, band: null, deliveryFeeMinor: 0 };
+  assert.equal(cartDeliveriesMatch([cargo, { ...cargo }]), true);
+  assert.equal(cartDeliveryFeeMinor([cargo, { ...cargo }]), 0);
+  assert.equal(cartTotalMinor(235900 + 189900, 0, 0), 425800);
+  const far = { ...cargo, mode: "sameday" as const, slotId: 77, deliveryFeeMinor: 50000 };
+  assert.equal(cartDeliveriesMatch([far, cargo]), false, "biri özel araç biri kargo → tek teslimat yok, sepet durur");
+  assert.equal(cartDeliveriesMatch([far, { ...far, placeId: "maltepe-1" }]), false, "farklı adres → sepet durur (en yüksek ücretle birleştirme YOK)");
+});
