@@ -14,7 +14,8 @@ import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoCon
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
-import { istanbulDistrictJsonLd } from "@/lib/siteIdentity";
+import { istanbulDistrictJsonLd, resolveSiteIdentity } from "@/lib/siteIdentity";
+import { getPublishedHomepage } from "@/lib/homepage";
 import { getLinkData } from "@/lib/linkData";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 
@@ -586,10 +587,14 @@ export default async function Page({ params }: PageProps) {
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
   const staticParts = deliveryParts(path);
   if (staticParts) {
-    // YEREL KİMLİK (25 Eyl 2026): yalnız İstanbul İLÇE sayfaları aynı işletme (@id) + ilçe hizmet düğümünü taşır.
-    const localLd = staticParts[0] === "istanbul" && staticParts.length === 2
-      ? istanbulDistrictJsonLd({ path, areaName: locationLabel(page, prettySlug(staticParts[1])), pageName: page.h1 ?? "" })
-      : null;
+    // TEK DAMAR (25 Eyl 2026): yalnız İstanbul İLÇE sayfaları aynı işletme (@id) + ilçe hizmet düğümünü taşır;
+    // kimlik (NAP, saat, harita) Admin hero.config'ten (ana sayfa şeması, footer ve /iletisim ile aynı kaynak).
+    let localLd: string | null = null;
+    if (staticParts[0] === "istanbul" && staticParts.length === 2) {
+      const homepage = await getPublishedHomepage().catch(() => null);
+      const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
+      localLd = istanbulDistrictJsonLd(identity, { path, areaName: locationLabel(page, prettySlug(staticParts[1])), pageName: page.h1 ?? "" });
+    }
     return <><DeliveryLanding page={page} path={path} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
   }
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.

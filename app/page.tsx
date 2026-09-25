@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { floristLocalFields } from "@/lib/siteIdentity";
+import { floristLocalFields, resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
@@ -96,12 +96,12 @@ export const metadata: Metadata = {
 /** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir.
  *  V65 fix: logo artık kırık /logo.png yerine GERÇEK logo URL'sine bağlanır
  *  (CMS hero config.logo_url — admin'in yüklediği logo; yoksa repo'daki marka SVG'si). */
-function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
+function HomeJsonLd({ logoUrl, identity }: { logoUrl: string; identity: SiteIdentity }) {
   const schema = [
     {
       "@context": "https://schema.org",
-      // YEREL KİMLİK (25 Eyl 2026): Organization + Florist, tam NAP, saat, harita, GBP bağı — lib/siteIdentity.ts tek kaynak.
-      ...floristLocalFields(),
+      // TEK DAMAR (25 Eyl 2026): Organization + Florist, tam NAP, saat, harita, GBP bağı — Admin hero.config → resolveSiteIdentity.
+      ...floristLocalFields(identity),
      foundingDate: "1986",
       slogan: "1986'dan beri, her çiçekte bir usta dokunuşu.",
       knowsAbout: ["Çiçek tasarımı", "Özel tasarım buket ve aranjman", "Saksı bitkileri toptan ve perakende", "Canlı ve yapay çiçek dekorasyonu", "Peyzaj tasarım ve bakım", "Düğün, davet ve kurumsal organizasyon çiçekçiliği", "Online çiçek gönderimi"],
@@ -228,6 +228,8 @@ export default async function HomePage() {
   const heroSection = publishedHomepage?.sections.find((s) => s.type === "hero");
   const cmsLogoUrl = typeof heroSection?.config?.logo_url === "string" ? (heroSection.config.logo_url as string) : null;
   const schemaLogoUrl = cmsLogoUrl ?? `${SITE_URL}/brand/cicekyolla-brand.svg`;
+  // TEK DAMAR (25 Eyl 2026): işletme kimliği (NAP, saat, harita) aynı hero.config'ten; footer ve /iletisim ile aynı kaynak.
+  const identity = resolveSiteIdentity(heroSection?.config);
 
   // V65: her product_showcase başlık/CTA/tema slotunu alır. Yalnız boş vitrin
   // varsa canlı katalog dolgusu için ürün istekleri atılır; tamamı manuelse
@@ -277,7 +279,7 @@ export default async function HomePage() {
 
     return (
       <>
-        <HomeJsonLd logoUrl={schemaLogoUrl} />
+        <HomeJsonLd logoUrl={schemaLogoUrl} identity={identity} />
         <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills, heroBanner }} />
         {showTestimonials && <Testimonials />}
         {showInstagram && <InstagramGallery config={instagramSection?.config} />}
@@ -291,7 +293,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <HomeJsonLd logoUrl={schemaLogoUrl} />
+      <HomeJsonLd logoUrl={schemaLogoUrl} identity={identity} />
 
       {/* §Koleksiyonlar — bağımsız section: Header'dan sonra, Hero'dan önce (TazeÇiçek düzeni).
           Hero'ya absolute/floating bağlı DEĞİL; normal akışta yatay slider.
