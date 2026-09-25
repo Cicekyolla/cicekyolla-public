@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Clock3, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
 import { fetchSeoPage } from "@/lib/api";
+import { SITE_IDENTITY } from "@/lib/siteIdentity";
 
 export const metadata: Metadata = { title:"İletişim", description:"ÇiçekYolla iletişim kanalları, çalışma saatleri ve mesaj formu." };
 
@@ -8,7 +9,8 @@ const FALLBACK = [
   { kind:"whatsapp", label:"WhatsApp", value:"0545 881 34 50", note:"Sipariş ve destek için" },
   { kind:"phone", label:"Telefon", value:"0507 441 34 74", note:"Her gün 08:00–22:00" },
   { kind:"email", label:"E-posta", value:"info@cicekyolla.com.tr", note:"24 saat içinde yanıt" },
-  { kind:"address", label:"Adres", value:"İstanbul, Türkiye", note:"ÇiçekYolla" },
+  // YEREL KİMLİK (25 Eyl 2026): görünür adres Google İşletme Profili ile birebir aynı (NAP tutarlılığı).
+  { kind:"address", label:"Adres", value:SITE_IDENTITY.addressLine, note:"ÇiçekYolla · Maltepe" },
 ];
 const ICONS = { whatsapp:MessageCircle, phone:Phone, email:Mail, address:MapPin };
 function hrefFor(kind:string,value:string){ if(kind==="whatsapp") return "https://wa.me/"+value.replace(/\D/g,"").replace(/^0/,"90"); if(kind==="phone") return "tel:"+value.replace(/\s/g,""); if(kind==="email") return "mailto:"+value; return "#"; }

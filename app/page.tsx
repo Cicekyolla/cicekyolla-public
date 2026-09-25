@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { floristLocalFields } from "@/lib/siteIdentity";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
@@ -99,8 +100,8 @@ function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
   const schema = [
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      name: "Çiçekyolla",
+      // YEREL KİMLİK (25 Eyl 2026): Organization + Florist, tam NAP, saat, harita, GBP bağı — lib/siteIdentity.ts tek kaynak.
+      ...floristLocalFields(),
      foundingDate: "1986",
       slogan: "1986'dan beri, her çiçekte bir usta dokunuşu.",
       knowsAbout: ["Çiçek tasarımı", "Özel tasarım buket ve aranjman", "Saksı bitkileri toptan ve perakende", "Canlı ve yapay çiçek dekorasyonu", "Peyzaj tasarım ve bakım", "Düğün, davet ve kurumsal organizasyon çiçekçiliği", "Online çiçek gönderimi"],
@@ -114,15 +115,6 @@ function HomeJsonLd({ logoUrl }: { logoUrl: string }) {
         telephone: "+90-507-441-3474",
         contactType: "customer service",
         availableLanguage: "Turkish",
-      },
-      sameAs: [
-        "https://instagram.com/cicekyolla",
-        "https://facebook.com/cicekyolla",
-      ],
-      address: {
-        "@type": "PostalAddress",
-        addressCountry: "TR",
-        addressLocality: "İstanbul",
       },
     },
     {

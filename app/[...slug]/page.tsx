@@ -14,6 +14,7 @@ import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoCon
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
+import { istanbulDistrictJsonLd } from "@/lib/siteIdentity";
 import { getLinkData } from "@/lib/linkData";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 
@@ -583,7 +584,14 @@ export default async function Page({ params }: PageProps) {
   const faqLd = faqJsonLd(page);
   const rawSchema = page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
-  if (deliveryParts(path)) return <><DeliveryLanding page={page} path={path} />{jsonLd}</>;
+  const staticParts = deliveryParts(path);
+  if (staticParts) {
+    // YEREL KİMLİK (25 Eyl 2026): yalnız İstanbul İLÇE sayfaları aynı işletme (@id) + ilçe hizmet düğümünü taşır.
+    const localLd = staticParts[0] === "istanbul" && staticParts.length === 2
+      ? istanbulDistrictJsonLd({ path, areaName: locationLabel(page, prettySlug(staticParts[1])), pageName: page.h1 ?? "" })
+      : null;
+    return <><DeliveryLanding page={page} path={path} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
+  }
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
   const dyn = (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
   if (dyn) return <><DeliveryLanding page={page} path={path} dyn={dyn} />{jsonLd}</>;

@@ -9,6 +9,7 @@ import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
 import { BrandWordmark } from "./BrandWordmark";
 import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
 import { yonelme } from "@/lib/turkish";
+import { SITE_IDENTITY } from "@/lib/siteIdentity";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -219,7 +220,8 @@ export function Footer({
                 <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)" }}>
                   <MapPin className="w-3.5 h-3.5 text-[#A855F7]" />
                 </div>
-                <span className="text-sm text-[#6B7280] mt-1.5">İstanbul, Türkiye</span>
+                {/* YEREL KİMLİK (25 Eyl 2026): görünür adres Google İşletme Profili ile birebir (NAP tutarlılığı). */}
+                <span className="text-sm text-[#6B7280] mt-1.5">{SITE_IDENTITY.addressLine}</span>
               </li>
             </ul>
 
