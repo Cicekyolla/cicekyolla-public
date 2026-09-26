@@ -391,7 +391,7 @@ const tr = {
   "trust.a3": "Gerçek destek",
   "trust.a3d": "Sipariş öncesi ve sonrasında WhatsApp üzerinden bize ulaşabilirsiniz.",
   "trust.faq": "Ödeme güvenliği hakkında",
-  "trust.faqd": "Ödeme adımında yalnız o an geçerli seçenekler gösterilir: kredi/banka kartı (3-D Secure) ve havale/EFT. Yurt dışında verilmiş Visa/Mastercard kabul edilir; tahsilat Türk lirasıdır, çevrimi bankanız yapar.",
+  "trust.faqd": "Ödeme adımında yalnız o an geçerli seçenekler gösterilir: kredi/banka kartı (3-D Secure) ve havale/EFT. Tahsilat Türk lirasıdır; farklı para biriminde çevrimi bankanız yapar.",
   "trust.wa": "WhatsApp'tan bilgi alın",
   "occ.sevgili": "Sevgili",
   "occ.es": "Eş",

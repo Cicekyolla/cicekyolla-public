@@ -379,7 +379,7 @@ const nl: Dict = {
   "trust.a3": "Echte ondersteuning",
   "trust.a3d": "Voor en na uw bestelling bereikt u ons via WhatsApp.",
   "trust.faq": "Over betaalbeveiliging",
-  "trust.faqd": "Bij het betalen worden alleen de op dat moment geldige opties getoond: credit-/betaalkaart (3-D Secure) en bankoverschrijving. In het buitenland uitgegeven Visa/Mastercard worden geaccepteerd; u betaalt in Turkse lira en uw bank verzorgt de omrekening.",
+  "trust.faqd": "Bij het betalen worden alleen de op dat moment geldige opties getoond: credit-/betaalkaart (3-D Secure) en bankoverschrijving. U betaalt in Turkse lira; uw bank verzorgt de omrekening.",
   "trust.wa": "Info via WhatsApp",
   "occ.sevgili": "Partner",
   "occ.es": "Echtgeno(o)t(e)",

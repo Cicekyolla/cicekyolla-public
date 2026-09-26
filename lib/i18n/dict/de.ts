@@ -379,7 +379,7 @@ const de: Dict = {
   "trust.a3": "Echte Unterstützung",
   "trust.a3d": "Vor und nach der Bestellung erreichen Sie uns über WhatsApp.",
   "trust.faq": "Über die Zahlungssicherheit",
-  "trust.faqd": "Im Zahlungsschritt werden nur die aktuell gültigen Optionen angezeigt: Kredit-/Debitkarte (3-D Secure) und Banküberweisung. Im Ausland ausgestellte Visa/Mastercard werden akzeptiert; die Abrechnung erfolgt in Türkischer Lira, die Umrechnung übernimmt Ihre Bank.",
+  "trust.faqd": "Im Zahlungsschritt werden nur die aktuell gültigen Optionen angezeigt: Kredit-/Debitkarte (3-D Secure) und Banküberweisung. Die Abrechnung erfolgt in Türkischer Lira; die Umrechnung übernimmt Ihre Bank.",
   "trust.wa": "Infos über WhatsApp",
   "occ.sevgili": "Partner/in",
   "occ.es": "Ehepartner/in",

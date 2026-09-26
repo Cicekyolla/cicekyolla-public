@@ -379,7 +379,7 @@ const zh: Dict = {
   "trust.a3": "真实支持",
   "trust.a3d": "下单前后均可通过 WhatsApp 联系我们。",
   "trust.faq": "关于支付安全",
-  "trust.faqd": "付款步骤仅显示当时可用的选项：信用卡/借记卡（3-D Secure）和银行转账。接受境外发行的 Visa/Mastercard；以土耳其里拉计费，汇率换算由您的银行完成。",
+  "trust.faqd": "付款步骤仅显示当时可用的选项：信用卡/借记卡（3-D Secure）和银行转账。以土耳其里拉计费，汇率换算由您的银行完成。",
   "trust.wa": "通过 WhatsApp 咨询",
   "occ.sevgili": "恋人",
   "occ.es": "配偶",

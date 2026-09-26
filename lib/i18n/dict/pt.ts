@@ -379,7 +379,7 @@ const pt: Dict = {
   "trust.a3": "Apoio real",
   "trust.a3d": "Pode contactar-nos no WhatsApp antes e depois da encomenda.",
   "trust.faq": "Sobre a segurança do pagamento",
-  "trust.faqd": "No passo de pagamento são apresentadas apenas as opções válidas nesse momento: cartão de crédito/débito (3-D Secure) e transferência bancária. São aceites cartões Visa/Mastercard emitidos no estrangeiro; a cobrança é feita em liras turcas e a conversão é efetuada pelo seu banco.",
+  "trust.faqd": "No passo de pagamento são apresentadas apenas as opções válidas nesse momento: cartão de crédito/débito (3-D Secure) e transferência bancária. A cobrança é feita em liras turcas; a conversão é efetuada pelo seu banco.",
   "trust.wa": "Informação no WhatsApp",
   "occ.sevgili": "Namorado/a",
   "occ.es": "Cônjuge",

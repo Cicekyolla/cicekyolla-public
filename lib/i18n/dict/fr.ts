@@ -379,7 +379,7 @@ const fr: Dict = {
   "trust.a3": "Un vrai support",
   "trust.a3d": "Contactez-nous sur WhatsApp avant et après votre commande.",
   "trust.faq": "À propos de la sécurité des paiements",
-  "trust.faqd": "À l'étape de paiement, seules les options valables à ce moment sont affichées : carte de crédit/débit (3-D Secure) et virement bancaire. Les cartes Visa/Mastercard émises à l'étranger sont acceptées ; le débit est effectué en livres turques et la conversion est réalisée par votre banque.",
+  "trust.faqd": "À l'étape de paiement, seules les options valables à ce moment sont affichées : carte de crédit/débit (3-D Secure) et virement bancaire. Le débit est effectué en livres turques ; la conversion est réalisée par votre banque.",
   "trust.wa": "S'informer sur WhatsApp",
   "occ.sevgili": "Partenaire",
   "occ.es": "Conjoint(e)",

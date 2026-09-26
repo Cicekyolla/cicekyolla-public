@@ -379,7 +379,7 @@ const en: Dict = {
   "trust.a3": "Real support",
   "trust.a3d": "You can reach us on WhatsApp before and after your order.",
   "trust.faq": "About payment security",
-  "trust.faqd": "Only the options valid at that moment are shown at checkout: credit/debit card (3-D Secure) and bank transfer. Visa/Mastercard issued abroad are accepted; you are charged in Turkish lira and your bank converts the amount.",
+  "trust.faqd": "Only the options valid at that moment are shown at checkout: credit/debit card (3-D Secure) and bank transfer. You are charged in Turkish lira; your bank converts the amount.",
   "trust.wa": "Get info on WhatsApp",
   "occ.sevgili": "Partner",
   "occ.es": "Spouse",

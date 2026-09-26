@@ -379,7 +379,7 @@ const az: Dict = {
   "trust.a3": "Real dəstək",
   "trust.a3d": "Sifarişdən əvvəl və sonra WhatsApp vasitəsilə bizə çata bilərsiniz.",
   "trust.faq": "Ödəniş təhlükəsizliyi haqqında",
-  "trust.faqd": "Ödəniş addımında yalnız həmin an keçərli olan seçimlər göstərilir: kredit/debet kartı (3-D Secure) və bank köçürməsi. Xaricdə verilmiş Visa/Mastercard qəbul olunur; ödəniş Türk lirəsi ilə tutulur, çevrilməni bankınız edir.",
+  "trust.faqd": "Ödəniş addımında yalnız həmin an keçərli olan seçimlər göstərilir: kredit/debet kartı (3-D Secure) və bank köçürməsi. Ödəniş Türk lirəsi ilə tutulur; çevrilməni bankınız edir.",
   "trust.wa": "WhatsApp-dan məlumat alın",
   "occ.sevgili": "Sevgili",
   "occ.es": "Həyat yoldaşı",
