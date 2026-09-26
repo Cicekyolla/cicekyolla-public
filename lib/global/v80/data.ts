@@ -15,7 +15,8 @@ import { V80_DESTINATIONS, type V80Destination } from "./schema";
 import { fetchGlobalPage, fetchLocaleCatalog, fetchGlobalPagesInventory, fetchLiveDestinations, type LocaleCatalog } from "../api";
 import { fetchProductBySlug, type PublicProductDetail } from "@/lib/api";
 import { getPublishedHomepage } from "@/lib/homepage";
-import { buildV80Footer, type V80FooterModel } from "./footer";
+import { buildV80Footer, type V80FooterModel, type V80Contact } from "./footer";
+import { resolveSiteIdentity } from "@/lib/siteIdentity";
 import { mediaUrlOrNull, mediaDerivatives } from "@/lib/media";
 import { parseStorefrontConfig, activeProductRefs, mapStructureImages, type V80Config } from "./schema";
 import { resolveV80, WHATSAPP_URL, type V80SourceCategory, type V80SourceProduct, type V80View } from "./view";
@@ -178,18 +179,27 @@ const strOr = (v: unknown, d: string) => (typeof v === "string" && v.trim() ? v.
 /** TR footer ile AYNI iletişim kaynağı: yayımlı ana sayfa hero yapılandırması
     (contact_phone/contact_email; aynı varsayılanlar). getPublishedHomepage Next
     data cache'lidir (60 sn) → layout'un çağrısıyla aynı istek, ek yük yok. */
-export async function v80Contact(): Promise<{ phone: string; email: string }> {
+export async function v80Contact(): Promise<V80Contact> {
   try {
     const hp = await getPublishedHomepage();
     const c = hp?.sections.find((s) => s.type === "hero")?.config;
-    return { phone: strOr(c?.contact_phone, DEFAULT_PHONE), email: strOr(c?.contact_email, DEFAULT_EMAIL) };
+    // Release 1 (Global Foundation): adres ve saat de AYNI kimlik kaynağından (resolveSiteIdentity →
+    // TR footer/iletişim/şema ile birebir). Yeni kaynak YOK; Admin boşsa GBP yedeği.
+    const id = resolveSiteIdentity(c);
+    return {
+      phone: strOr(c?.contact_phone, DEFAULT_PHONE),
+      email: strOr(c?.contact_email, DEFAULT_EMAIL),
+      addressLine: id.addressLine,
+      hours: { opens: id.hours.opens, closes: id.hours.closes },
+    };
   } catch {
-    return { phone: DEFAULT_PHONE, email: DEFAULT_EMAIL };
+    const id = resolveSiteIdentity(null);
+    return { phone: DEFAULT_PHONE, email: DEFAULT_EMAIL, addressLine: id.addressLine, hours: { opens: id.hours.opens, closes: id.hours.closes } };
   }
 }
 
 /** Ana sayfa: görünüm modelinden (o dilde canlı kategoriler, yayımlı şehirler, metin geçersiz kılmaları). */
-export function v80FooterFromView(view: V80View, contact: { phone: string; email: string }): V80FooterModel {
+export function v80FooterFromView(view: V80View, contact: V80Contact): V80FooterModel {
   return buildV80Footer({
     locale: view.locale,
     texts: view.texts,
@@ -206,7 +216,7 @@ export function v80FooterFromView(view: V80View, contact: { phone: string; email
 /** Diğer locale sayfaları: katalog (o dilde canlı kategoriler) + yayımlı şehirler (tek küçük
     istek; uç henüz yoksa yalnız bilinen şehir basılır — sahte bağlantı yok). */
 export async function v80FooterFromCatalog(
-  locale: GlobalLocale, catalog: LocaleCatalog, contact: { phone: string; email: string }, knownLive: readonly string[] = []
+  locale: GlobalLocale, catalog: LocaleCatalog, contact: V80Contact, knownLive: readonly string[] = []
 ): Promise<V80FooterModel> {
   const seg = SEGMENTS[locale];
   const live = await fetchLiveDestinations(locale);

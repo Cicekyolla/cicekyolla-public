@@ -88,10 +88,21 @@ async function loadDict(locale: Locale): Promise<Dict> {
   return mod.default;
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  // Sunucu + ilk istemci render'ı daima TR (hydration güvenliği).
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
-  const [dict, setDict] = useState<Dict | undefined>(tr);
+export function I18nProvider({ children, initialLocale, initialDict }: {
+  children: ReactNode;
+  /** ADDITIVE (Release 1 — Global Foundation): locale rotalarında sunucu URL dilini ve o dilin
+      sözlüğünü verir → SSR HTML de o dilde çıkar ("Sepete Ekle" → "Add to Cart" sıçraması biter).
+      Kök provider (TR sayfaları) bu prop'ları vermez → davranış birebir eski hâli: daima TR. */
+  initialLocale?: Locale;
+  initialDict?: Dict;
+}) {
+  // Sunucu + ilk istemci render'ı AYNI prop'larla kurulur (hydration güvenliği): kökte TR,
+  // locale alt ağacında (V80Shell) URL dili. Mount efekti aynı URL dilini bulur ve seed'li
+  // önbelleğe düşer; state değişmez.
+  const seeded: Locale = initialLocale && initialLocale !== DEFAULT_LOCALE && initialDict ? initialLocale : DEFAULT_LOCALE;
+  if (seeded !== DEFAULT_LOCALE && initialDict && !cache[seeded]) cache[seeded] = initialDict;
+  const [locale, setLocaleState] = useState<Locale>(seeded);
+  const [dict, setDict] = useState<Dict | undefined>(seeded === DEFAULT_LOCALE ? tr : initialDict);
   const [ready, setReady] = useState(false);
 
   // Mount: URL locale (13 global dil) > cookie (URL = SEO source of truth;

@@ -18,8 +18,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { absoluteUrl } from "@/lib/site-config";
+import { absoluteUrl, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
+// ADDITIVE (Release 1 — Global Foundation): işletme kimliği TEK DAMAR (Admin hero.config →
+// resolveSiteIdentity) locale ana sayfa ve İstanbul ilçe sayfalarına da şema olarak basılır
+// (TR ana sayfa/ilçe ile aynı @id, aynı NAP/saat; aggregateRating YOK).
+import { floristLocalFields, istanbulDistrictJsonLd, resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
+import { getPublishedHomepage } from "@/lib/homepage";
 import { toPlainText } from "@/lib/richText";
 import { withXDefault } from "./hreflang";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
@@ -218,6 +223,29 @@ const UI: Record<GlobalLocale, { categories: string; popular: string; faq: strin
 };
 
 const NOINDEX = { index: false, follow: false } as const;
+
+/** Locale ilçe Service düğümü için hizmet türü (o dilde; şema metni, görünmez). */
+const SERVICE_TYPE: Record<GlobalLocale, string> = {
+  de: "Blumenlieferung", en: "Flower delivery", fr: "Livraison de fleurs", nl: "Bloemenbezorging", it: "Consegna fiori",
+  es: "Entrega de flores", pt: "Entrega de flores", az: "Gül çatdırılması", ru: "Доставка цветов", ar: "توصيل الزهور",
+  zh: "鲜花配送", ja: "花の配達", ko: "꽃 배달",
+};
+
+/** Yayımlı ana sayfa hero.config'inden işletme kimliği (TR yüzeylerle aynı kaynak; Next data cache'li). */
+async function siteIdentity(): Promise<SiteIdentity> {
+  const hp = await getPublishedHomepage().catch(() => null);
+  return resolveSiteIdentity(hp?.sections.find((s) => s.type === "hero")?.config);
+}
+
+/** Locale ana sayfa: Organization + Florist (TR ana sayfadaki düğümle aynı @id ve alanlar). */
+function localeHomeJsonLd(identity: SiteIdentity, locale: GlobalLocale): string {
+  return serializeJsonLd({
+    "@context": "https://schema.org",
+    ...floristLocalFields(identity),
+    url: SITE_URL,
+    inLanguage: locale,
+  });
+}
 
 // ---- Metadata -------------------------------------------------------------
 
@@ -592,6 +620,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   // ADDITIVE (24 Eyl 2026): görsel kırıntının BreadcrumbList JSON-LD karşılığı (aynı adlar, aynı yollar)
   // + kargo sunumunda kullanılacak yer adı (ilçe/mahalle sayfasında ilçe adı).
   let kirintiLd: string | null = null;
+  let localLd: string | null = null;
   let yerAdi: string | null = null;
   if (loc) {
     if (loc.kind === "city") {
@@ -609,6 +638,14 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       );
       kirintiLd = localeBreadcrumbJsonLd(locale, [loc.city, loc.district], [cityName, districtName], absoluteUrl, LABELS[locale].ana);
       yerAdi = districtName;
+      // Release 1: İstanbul ilçe sayfasında TR ilçe sayfasındaki Florist + Service düğümü (aynı kimlik kaynağı).
+      if (loc.city === "istanbul") {
+        const identity = await siteIdentity();
+        localLd = istanbulDistrictJsonLd(identity, {
+          path: `/${locale}/${row.page_key}`, areaName: districtName, pageName: row.h1 ?? "",
+          serviceType: SERVICE_TYPE[locale], cityLabel: cityName,
+        });
+      }
       izgara = (
         <LocationGrid locale={locale} baseHref={`/${locale}/${loc.city}/${loc.district}`} items={items}
           title={mahalleBasligi(locale, districtName)} />
@@ -739,6 +776,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {/* Lokasyon kırıntısı — üst seviyeler gerçek <a href> (şehir sayfasında da) */}
         {kirinti}
         {kirintiLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: kirintiLd }} /> : null}
+        {localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
         {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
@@ -761,7 +799,7 @@ export async function LocalePage({ locale, path, searchParams }: {
   if (parsed.kind === "home") {
     // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;
     // approved 'home' yoksa da vitrin varsayılan kopyayla çizilir (metadata NOINDEX kalır).
-    const [view, contact] = await Promise.all([loadV80(locale), v80Contact()]);
+    const [view, contact, identity] = await Promise.all([loadV80(locale), v80Contact(), siteIdentity()]);
     const header = {
       locale,
       nav: view.nav,
@@ -771,6 +809,8 @@ export async function LocalePage({ locale, path, searchParams }: {
     };
     return (
       <V80Shell locale={locale} header={header} footer={v80FooterFromView(view, contact)}>
+        {/* Release 1: locale ana sayfada da işletme şeması (TR ana sayfa ile aynı kaynak/düğüm). */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localeHomeJsonLd(identity, locale) }} />
         <V80Page view={view} />
       </V80Shell>
     );

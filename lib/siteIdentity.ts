@@ -176,9 +176,16 @@ export function floristLocalFields(id: SiteIdentity): Record<string, unknown> {
  * İstanbul İLÇE sayfaları (/istanbul/<ilçe>): aynı işletmenin bu ilçeye verdiği hizmet + kompakt işletme düğümü.
  * Mahalle sayfalarına ve İstanbul dışına eklenmez (tek fiziksel konum; hizmet alanı ilçe).
  */
-export function istanbulDistrictJsonLd(id: SiteIdentity, input: { path: string; areaName: string; pageName: string }): string {
+export function istanbulDistrictJsonLd(id: SiteIdentity, input: {
+  path: string; areaName: string; pageName: string;
+  /** ADDITIVE (Release 1): locale ilçe sayfaları için hizmet türü ve şehir etiketi o dilde;
+      verilmezse TR varsayılanları (TR sayfaları birebir aynı çıktı). */
+  serviceType?: string; cityLabel?: string;
+}): string {
   const url = absoluteUrl(input.path);
   const area = input.areaName.trim() || "İstanbul";
+  const serviceType = input.serviceType?.trim() || "Çiçek teslimatı";
+  const cityLabel = input.cityLabel?.trim() || "İstanbul";
   const graph = [
     {
       "@type": ["Organization", "Florist"],
@@ -197,9 +204,9 @@ export function istanbulDistrictJsonLd(id: SiteIdentity, input: { path: string; 
       "@type": "Service",
       "@id": `${url}#service`,
       name: input.pageName.trim() || `${area} çiçek teslimatı`,
-      serviceType: "Çiçek teslimatı",
+      serviceType,
       url,
-      areaServed: { "@type": "AdministrativeArea", name: `${area}, İstanbul` },
+      areaServed: { "@type": "AdministrativeArea", name: `${area}, ${cityLabel}` },
       provider: { "@id": FLORIST_ID },
     },
   ];
