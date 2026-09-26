@@ -42,6 +42,7 @@ import { CARGO, CARGO_COLLECTION_PATH } from "./cargoCopy";
 import {
   TrustStrip, EmotionSection, DistanceSection, AtelierSection,
   ConciergeSection, DeliveryProofSection, MessageSection, FinalCta, CargoTrustStrip, NeutralTrustStrip, FarTrustStrip,
+  CutoffStrip, type CutoffRow,
 } from "./sections";
 import { GlobalGoogleTrust } from "@/components/global/GlobalGoogleTrust";
 import { GlobalCatalogBrowser, type CatalogBrowserItem } from "@/components/global/GlobalCatalogBrowser";
@@ -53,6 +54,10 @@ import {
   isSameDayDestination,
   SEGMENTS,
   DIR,
+  DESTINATION_ROOT,
+  isIntentPageKey,
+  INTENT_PAGE_CATEGORY,
+  type IntentPageKey,
 } from "./config";
 import {
   fetchProductSurface,
@@ -61,6 +66,7 @@ import {
   fetchCategorySurface,
   fetchLocaleCatalog,
   fetchGlobalCatalog,
+  fetchDistrictReach,
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
@@ -605,13 +611,50 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
   );
 }
 
-async function GlobalPageBody({ locale, row, catalog, source, sections, searchParams }: {
+/** RELEASE 3: niyet sayfasında ?category yoksa varsayılan kategori (yalnız o dilde canlı ürünü varsa; yoksa süzgeçsiz). */
+function withIntentCategory(searchParams: LocationSearchParams | undefined, catalog: LocaleCatalog, categorySlug: string | null): LocationSearchParams | undefined {
+  if (!categorySlug || searchParams?.category) return searchParams;
+  const exists = catalog.categories.some((c) => c.slug === categorySlug && (c.live_products ?? 0) > 0);
+  return exists ? { ...(searchParams ?? {}), category: categorySlug } : searchParams;
+}
+
+/** RELEASE 3: kesme saati şeridinde gösterilen merkez ilçeler (yabancı müşterinin otel/hastane yoğunluğu). Yalnız o dilde yayında olan ilçeler basılır. */
+const INTENT_CUTOFF_DISTRICTS = ["besiktas", "sisli", "beyoglu", "kadikoy", "fatih", "uskudar", "bakirkoy", "atasehir"] as const;
+/** Delivery Motor'dan merkez ilçelerin erişim + kesme saati satırları (paralel; uç yoksa boş → şerit basılmaz). */
+async function intentCutoffRows(locale: GlobalLocale): Promise<CutoffRow[]> {
+  const districts = await fetchLocaleDistricts(locale, DESTINATION_ROOT).catch(() => [] as { slug: string; name: string }[]);
+  const chosen = INTENT_CUTOFF_DISTRICTS.map((slug) => districts.find((d) => d.slug === slug)).filter((d): d is { slug: string; name: string } => !!d);
+  const rows = await Promise.all(chosen.map(async (d) => {
+    const r = await fetchDistrictReach(locale, DESTINATION_ROOT, d.slug);
+    return r ? { district: d.slug, name: d.name, reach: r.reach, cutoff_time: r.cutoff_time } : null;
+  }));
+  return rows.filter((r): r is CutoffRow => !!r);
+}
+
+/** RELEASE 3: FAQPage JSON-LD — yalnız sayfanın GERÇEK SSS verisinden (global_pages.faq); uydurma soru yok. */
+function faqJsonLd(faq: { q: string; a: string }[] | null | undefined): string | null {
+  const items = (faq ?? []).filter((f) => f.q?.trim() && f.a?.trim());
+  if (!items.length) return null;
+  return serializeJsonLd({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((f) => ({ "@type": "Question", name: f.q.trim(), acceptedAnswer: { "@type": "Answer", text: f.a.trim() } })),
+  });
+}
+
+async function GlobalPageBody({ locale, row, catalog, source, sections, searchParams: rawSearchParams, intent, cutoffs }: {
   locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog; source?: CatalogDecision;
   /** Bölüm sırası/görünürlüğü (catalog yanıtı location_sections → parseLocationSections); yoksa varsayılan. */
   sections?: readonly Readonly<LocationSection>[];
   /** İstek sorgusu: ?category=<slug> + ?page=<N> (lokasyon kataloğu sayfalaması). Canonical sorgusuz yol kalır. */
   searchParams?: LocationSearchParams;
+  /** RELEASE 3: niyet sayfası anahtarı (kırıntı ana sayfa → sayfa; FAQPage; WhatsApp ön-metni = H1). */
+  intent?: IntentPageKey | null;
+  /** RELEASE 3: merkez ilçelerin gerçek kesme saati satırları (Delivery Motor); yoksa şerit basılmaz. */
+  cutoffs?: CutoffRow[] | null;
 }) {
+  // RELEASE 3: niyet sayfasında ?category yoksa varsayılan kategori (lokasyon sayfalarında sorgu aynen geçer).
+  const searchParams = intent ? withIntentCategory(rawSearchParams, catalog, INTENT_PAGE_CATEGORY[intent]) : rawSearchParams;
   // Lokasyon yüzeyi ise: üst hiyerarşi (crawlable kırıntı) + bir alt seviyenin
   // GERÇEK listesi. Veri TR location core ∩ o dilde yayında olan yüzeyler.
   const loc = parseLocationKey(row.page_key);
@@ -622,6 +665,19 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   let kirintiLd: string | null = null;
   let localLd: string | null = null;
   let yerAdi: string | null = null;
+  // RELEASE 3: niyet sayfası — görünür kırıntı (ana sayfa → bu sayfa) + aynı adlarla BreadcrumbList + gerçek SSS'den FAQPage.
+  const faqLd = intent ? faqJsonLd(row.faq) : null;
+  const waText = intent && row.h1 ? row.h1 : undefined;
+  if (intent) {
+    kirinti = (
+      <nav aria-label="Breadcrumb" className="mb-3 text-[12.5px] text-[#6B7280]">
+        <Link href={`/${locale}`} className="text-[#6D28D9] hover:underline">{LABELS[locale].ana}</Link>
+        <span aria-hidden="true" className="mx-1.5">›</span>
+        <span aria-current="page" className="font-semibold text-[#1F2937]">{row.h1}</span>
+      </nav>
+    );
+    kirintiLd = localeBreadcrumbJsonLd(locale, [row.page_key], [row.h1], absoluteUrl, LABELS[locale].ana);
+  }
   if (loc) {
     if (loc.kind === "city") {
       const ilceler = await fetchLocaleDistricts(locale, loc.city);
@@ -732,7 +788,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
           <>
             <DistanceSection locale={locale} />
             <AtelierSection locale={locale} />
-            <ConciergeSection locale={locale} />
+            <ConciergeSection locale={locale} waText={waText} />
             <DeliveryProofSection locale={locale} />
             <MessageSection locale={locale} />
           </>
@@ -754,7 +810,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         ) : null;
       // Kapanış CTA'sı İstanbul hikâyesi taşır ("deliver in Istanbul") — kargo şehrinde basılmaz.
       case "cta":
-        return cargoCity ? null : <FinalCta locale={locale} catalog={catalog} />;
+        return cargoCity ? null : <FinalCta locale={locale} catalog={catalog} waText={waText} />;
       default:
         return null;
     }
@@ -777,9 +833,12 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {kirinti}
         {kirintiLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: kirintiLd }} /> : null}
         {localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}
+        {faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
         {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
+        {/* RELEASE 3: niyet sayfasında girişten hemen sonra gerçek kesme saati şeridi (yalnız motor verisi varsa). */}
+        {intent && cutoffs && cutoffs.length > 0 ? <CutoffStrip locale={locale} rows={cutoffs} /> : null}
       </div>
       {/* Bölümler Admin sırasında (varsayılan: güven → ürünler → kategoriler → duygu → yorumlar → hikâye → lokasyonlar → içerik → CTA). */}
       {order.map(block)}
@@ -819,6 +878,9 @@ export async function LocalePage({ locale, path, searchParams }: {
   if (parsed.kind === "page") {
     // Lokasyon yüzeyi ise Global katalog bu lokasyonun teslimat uygunluğuyla TEK istekte (paralel).
     const locKey = parseLocationKey(parsed.key);
+    // RELEASE 3: niyet sayfası (hotel-delivery / hospital-delivery / delivery-without-address) — İstanbul
+    // şehir kataloğuyla (aynı gün destinasyonu) ürün alanı; varsayılan kategori süzgeci INTENT_PAGE_CATEGORY.
+    const intent = isIntentPageKey(parsed.key) ? parsed.key : null;
     const [row, catalog, contact, catalogResp] = await Promise.all([
       fetchGlobalPage(locale, parsed.key),
       fetchLocaleCatalog(locale),
@@ -829,17 +891,21 @@ export async function LocalePage({ locale, path, searchParams }: {
             district: locKey.kind === "city" ? undefined : locKey.district,
             neighborhood: locKey.kind === "neighborhood" ? locKey.neighborhood : undefined,
           })
-        : Promise.resolve(null),
+        : intent
+          ? fetchGlobalCatalog(locale, { city: DESTINATION_ROOT })
+          : Promise.resolve(null),
     ]);
     if (!row) notFound();
-    const source = locKey ? catalogDecision(catalogResp, true) : undefined;
+    const source = locKey || intent ? catalogDecision(catalogResp, true) : undefined;
     // Bölüm sırası AYNI katalog yanıtından (ek istek YOK); eski API / alan yok → varsayılan sıra.
     const sections = parseLocationSections(catalogResp?.location_sections);
     // Bu sayfanın şehir kökü kesinlikle yayımlı (satır var) → uç yoksa bile footer'da basılır.
-    const footer = await v80FooterFromCatalog(locale, catalog, contact, [parsed.key.split("/")[0]]);
+    const footer = await v80FooterFromCatalog(locale, catalog, contact, [intent ? DESTINATION_ROOT : parsed.key.split("/")[0]]);
+    // Kesme saati şeridi: otel/hastane sayfalarında (adressiz teslimat sayfası WhatsApp öncelikli; kurye vaadi taşımaz).
+    const cutoffs = intent && intent !== "delivery-without-address" ? await intentCutoffRows(locale) : null;
     return (
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
-        <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} sections={sections} searchParams={searchParams} />
+        <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} sections={sections} searchParams={searchParams} intent={intent} cutoffs={cutoffs} />
       </V80Shell>
     );
   }

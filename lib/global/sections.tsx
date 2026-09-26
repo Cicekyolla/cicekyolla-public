@@ -16,6 +16,7 @@ import { CARGO } from "./cargoCopy";
 import { REACH, FAR } from "./reachCopy";
 import { cityDisplayName } from "./locationLabels";
 import type { LocaleCatalog } from "./api";
+import { LocalTimeHint } from "@/components/global/LocalTimeHint";
 
 const WA = "https://wa.me/905458813450";
 
@@ -229,7 +230,61 @@ export function AtelierSection({ locale }: { locale: GlobalLocale }) {
 // 5) WHATSAPP CONCIERGE — ikon değil, kişisel florist satış kanalı
 //    Mevcut WhatsApp hattına bağlanır; Cloud API zincirine dokunulmaz.
 // ---------------------------------------------------------------------------
-export function ConciergeSection({ locale }: { locale: GlobalLocale }) {
+// ---------------------------------------------------------------------------
+// RELEASE 3 — KESME SAATİ ŞERİDİ (niyet sayfaları): Delivery Motor'un ilçe kararı + bandın gerçek kesme saati.
+// Rakam UYDURULMAZ: saat yalnız API /reach cutoff_time'dan; 'mixed'/'unknown' → "ödemede doğrulanır";
+// 'out'/'far' → kurye vaadi yok. Ziyaretçi saat dilimi istemcide (LocalTimeHint) gösterilir.
+// ---------------------------------------------------------------------------
+export interface CutoffRow { district: string; name: string; reach: string; cutoff_time: string | null }
+const CUTOFF_COPY: Record<GlobalLocale, { title: string; note: string; until: string; checkout: string; noSameDay: string; tz: string }> = {
+  en: { title: "Same-day order cut-off by district", note: "Istanbul time (GMT+3). Read from our delivery engine; the exact option for the recipient's address is shown at checkout.", until: "order until {time}", checkout: "confirmed at checkout for the address", noSameDay: "no same-day courier", tz: "Istanbul" },
+  de: { title: "Bestellschluss für Same-Day nach Bezirk", note: "Istanbuler Zeit (GMT+3). Aus unserer Liefer-Engine; die genaue Option für die Adresse erscheint im Checkout.", until: "bestellen bis {time}", checkout: "wird im Checkout für die Adresse bestätigt", noSameDay: "kein Same-Day-Kurier", tz: "Istanbul" },
+  fr: { title: "Heure limite de commande pour le jour même, par arrondissement", note: "Heure d'Istanbul (GMT+3). Lue depuis notre moteur de livraison ; l'option exacte pour l'adresse s'affiche au paiement.", until: "commander avant {time}", checkout: "confirmé au paiement pour l'adresse", noSameDay: "pas de coursier le jour même", tz: "Istanbul" },
+  nl: { title: "Bestel-deadline voor bezorging dezelfde dag, per district", note: "Tijd in Istanbul (GMT+3). Uit onze bezorgengine; de exacte optie voor het adres verschijnt bij het afrekenen.", until: "bestellen tot {time}", checkout: "bij het afrekenen bevestigd voor het adres", noSameDay: "geen koerier dezelfde dag", tz: "Istanbul" },
+  it: { title: "Orario limite per la consegna in giornata, per distretto", note: "Ora di Istanbul (GMT+3). Letta dal nostro motore di consegna; l'opzione esatta per l'indirizzo appare al pagamento.", until: "ordina entro le {time}", checkout: "confermato al pagamento per l'indirizzo", noSameDay: "nessun corriere in giornata", tz: "Istanbul" },
+  es: { title: "Hora límite de pedido para entrega el mismo día, por distrito", note: "Hora de Estambul (GMT+3). Leída de nuestro motor de entregas; la opción exacta para la dirección se muestra al pagar.", until: "pide antes de las {time}", checkout: "se confirma al pagar para la dirección", noSameDay: "sin mensajería el mismo día", tz: "Estambul" },
+  pt: { title: "Hora limite de encomenda para entrega no mesmo dia, por distrito", note: "Hora de Istambul (GMT+3). Lida do nosso motor de entregas; a opção exata para a morada aparece no pagamento.", until: "encomende até às {time}", checkout: "confirmado no pagamento para a morada", noSameDay: "sem estafeta no mesmo dia", tz: "Istambul" },
+  az: { title: "Rayon üzrə eyni gün sifariş son saatı", note: "İstanbul vaxtı (GMT+3). Çatdırılma mühərrikimizdən oxunur; ünvan üçün dəqiq seçim ödəniş zamanı göstərilir.", until: "{time}-a qədər sifariş", checkout: "ünvan üçün ödənişdə təsdiqlənir", noSameDay: "eyni gün kuryer yoxdur", tz: "İstanbul" },
+  ru: { title: "Время приёма заказов на доставку в тот же день, по районам", note: "Время Стамбула (GMT+3). Данные нашей системы доставки; точный вариант для адреса показывается при оформлении.", until: "заказ до {time}", checkout: "подтверждается при оформлении для адреса", noSameDay: "курьера в тот же день нет", tz: "Стамбул" },
+  ar: { title: "آخر موعد للطلب للتوصيل في نفس اليوم حسب المنطقة", note: "بتوقيت إسطنبول (GMT+3). من محرك التوصيل لدينا؛ الخيار الدقيق للعنوان يظهر عند الدفع.", until: "اطلب حتى {time}", checkout: "يُؤكَّد عند الدفع للعنوان", noSameDay: "لا توصيل بالمندوب في نفس اليوم", tz: "إسطنبول" },
+  zh: { title: "各区当日送达下单截止时间", note: "伊斯坦布尔时间（GMT+3）。来自我们的配送引擎；收件地址的准确选项在结账时显示。", until: "{time} 前下单", checkout: "结账时按地址确认", noSameDay: "无当日专人配送", tz: "伊斯坦布尔" },
+  ja: { title: "地区別・当日配達の注文締切", note: "イスタンブール時間（GMT+3）。当店の配送エンジンの値です。お届け先住所の正確な選択肢はお会計時に表示されます。", until: "{time} までのご注文", checkout: "お会計時に住所で確認", noSameDay: "当日配達なし", tz: "イスタンブール" },
+  ko: { title: "구역별 당일 배송 주문 마감", note: "이스탄불 시간(GMT+3). 배송 엔진 기준이며, 수령 주소의 정확한 옵션은 결제 시 표시됩니다.", until: "{time}까지 주문", checkout: "결제 시 주소 기준으로 확인", noSameDay: "당일 배송 없음", tz: "이스탄불" },
+};
+const hhmm = (t: string | null) => (t && /^\d{2}:\d{2}/.test(t) ? t.slice(0, 5) : null);
+
+export function CutoffStrip({ locale, rows }: { locale: GlobalLocale; rows: CutoffRow[] }) {
+  const c = CUTOFF_COPY[locale];
+  const usable = rows.filter((r) => r.name);
+  if (!usable.length) return null;
+  return (
+    <section className="mt-8 rounded-[18px] border border-[#EFE9E1] bg-[#FBFAF7] px-5 py-5" data-cutoff-strip>
+      <h2 className="text-[16px] font-semibold text-[#1C0838]">{c.title}</h2>
+      <p className="mt-1 text-[12.5px] text-[#6B7280]">{c.note}</p>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+        {usable.map((r) => {
+          const t = hhmm(r.cutoff_time);
+          const sameDay = r.reach === "in" && t;
+          const label = sameDay ? c.until.replace("{time}", t!) : (r.reach === "mixed" || r.reach === "unknown") ? c.checkout : c.noSameDay;
+          return (
+            <li key={r.district} className="flex flex-wrap items-baseline gap-x-2 rounded-[12px] bg-white px-3 py-2 text-[13px] text-[#1F2937]" data-reach={r.reach}>
+              <span className="font-semibold">{r.name}</span>
+              <span className="text-[#4B5563]"><bdi dir="ltr">{label}</bdi></span>
+              {sameDay ? <LocalTimeHint istanbulTime={t!} className="text-[11.5px] text-[#9A93A6]" /> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** RELEASE 3: niyet sayfaları WhatsApp bağlantısına sayfa bağlamını (H1) hazır mesaj olarak ekler; verilmezse bugünkü düz link. */
+export function waHref(text?: string): string {
+  return text && text.trim() ? `${WA}?text=${encodeURIComponent(text.trim())}` : WA;
+}
+
+export function ConciergeSection({ locale, waText }: { locale: GlobalLocale; waText?: string }) {
   const s = STORY[locale].concierge;
   const rtl = DIR[locale] === "rtl";
   return (
@@ -265,7 +320,7 @@ export function ConciergeSection({ locale }: { locale: GlobalLocale }) {
             </div>
 
             <a
-              href={WA}
+              href={waHref(waText)}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 inline-flex w-fit items-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-[13.5px] font-bold text-white transition hover:brightness-95"
@@ -352,7 +407,7 @@ export function MessageSection({ locale }: { locale: GlobalLocale }) {
 // ---------------------------------------------------------------------------
 // 8) KAPANIŞ — bugün hatırlandığını hissettirin
 // ---------------------------------------------------------------------------
-export function FinalCta({ locale, catalog }: { locale: GlobalLocale; catalog: LocaleCatalog }) {
+export function FinalCta({ locale, catalog, waText }: { locale: GlobalLocale; catalog: LocaleCatalog; waText?: string }) {
   const s = STORY[locale].final;
   const seg = SEGMENTS[locale];
   const ilk = catalog.categories.find((c) => (c.live_products ?? 0) > 0);
@@ -376,7 +431,7 @@ export function FinalCta({ locale, catalog }: { locale: GlobalLocale; catalog: L
             <Link href={shopHref} className="rounded-full bg-white px-6 py-3 text-[13.5px] font-bold text-[#5C3D8F] transition hover:bg-white/90">
               {s.cta}
             </Link>
-            <a href={WA} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/60 px-6 py-3 text-[13.5px] font-bold text-white transition hover:bg-white/10">
+            <a href={waHref(waText)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/60 px-6 py-3 text-[13.5px] font-bold text-white transition hover:bg-white/10">
               {s.ctaAlt}
             </a>
           </div>

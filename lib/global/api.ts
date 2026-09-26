@@ -32,6 +32,32 @@ export interface LocaleInventory {
   categories: { slug: string; updated_at: string }[];
 }
 
+/** RELEASE 3 — ilçe erişimi + kesme saati (API /reach: katalog ucuyla aynı motor kararı, ürün listesi yok). 5 dk tazeleme. */
+export interface DistrictReach {
+  city: string; district: string; reach: "in" | "mixed" | "out" | "far" | "unknown" | string;
+  same_day: boolean | null; band: string | null; distance_km: number | null; cutoff_time: string | null;
+}
+const reachMemo = new Map<string, { at: number; v: DistrictReach | null }>();
+const REACH_MEMO_MS = 5 * 60_000;
+export async function fetchDistrictReach(locale: GlobalLocale, city: string, district: string): Promise<DistrictReach | null> {
+  // Motor kararı ilçe başına 10 dk API'de önbellekli; burada süreç içi 5 dk memo (Data Cache YOK — dosya kuralı no-store).
+  const key = `${city}/${district}`;
+  const hit = reachMemo.get(key);
+  if (hit && Date.now() - hit.at < REACH_MEMO_MS) return hit.v;
+  let v: DistrictReach | null = null;
+  try {
+    const resp = await fetch(`${API_ORIGIN}/api/public/global/reach?locale=${locale}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`, { cache: "no-store" });
+    if (resp.ok) {
+      const json = (await resp.json()) as { data?: DistrictReach };
+      v = json?.data ?? null;
+    }
+  } catch {
+    v = null;
+  }
+  if (v) reachMemo.set(key, { at: Date.now(), v });
+  return v;
+}
+
 async function getJson<T>(path: string): Promise<T | null> {
   try {
     const resp = await fetch(`${API_ORIGIN}${path}`, { cache: "no-store" });

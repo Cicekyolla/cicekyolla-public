@@ -34,6 +34,9 @@ test("parseLocalePath: lokasyon yüzeyleri — destinasyon kapısı (İstanbul +
   assert.deepEqual(parseLocalePath("de", ["istanbul", "kadikoy", "moda"]), { kind: "page", key: "istanbul/kadikoy/moda" });
   // Kurul kararı dışındaki şehir (Ankara) açılmaz; derinlik 3 ile sınırlı; büyük harf red
   assert.equal(parseLocalePath("de", ["ankara"]).kind, "unknown");
+  // RELEASE 3: yalnız izin listesindeki niyet anahtarları tek segmentle açılır (bkz. globalIntentPages.test)
+  assert.deepEqual(parseLocalePath("en", ["hotel-delivery"]), { kind: "page", key: "hotel-delivery" });
+  assert.equal(parseLocalePath("en", ["hotel-delivery", "x"]).kind, "unknown");
   assert.equal(parseLocalePath("de", ["istanbul", "kadikoy", "moda", "x"]).kind, "unknown");
   assert.equal(parseLocalePath("de", ["istanbul", "Kadikoy"]).kind, "unknown");
 });
