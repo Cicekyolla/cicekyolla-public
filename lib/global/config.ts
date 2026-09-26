@@ -84,6 +84,25 @@ export function isSameDayDestination(city: string): boolean {
   return city === DESTINATION_ROOT;
 }
 
+/**
+ * RELEASE 3 (26 Eyl 2026) — NİYET SAYFALARI (satın alma engelini çözen, elle yazılmış, en fazla 3 pilot).
+ * Tek segmentli, 13 dilde ortak ASCII anahtar; `global_pages(locale, page_key)` satırı approved
+ * değilse 404 (motor aynı). Ülke sayfası fabrikası YOK; genel "from abroad" landing'i YOK (/en ile çakışır).
+ * API `STATIC_PAGE_KEYS` ile birebir aynı küme (yetim taraması dışı). Kategori: ürün bloğunun
+ * varsayılan filtresi (o dilde canlı kategori slug'ı; yoksa katalog süzgeçsiz).
+ */
+export const INTENT_PAGE_KEYS = ["hotel-delivery", "hospital-delivery", "delivery-without-address"] as const;
+export type IntentPageKey = (typeof INTENT_PAGE_KEYS)[number];
+export function isIntentPageKey(v: unknown): v is IntentPageKey {
+  return typeof v === "string" && (INTENT_PAGE_KEYS as readonly string[]).includes(v);
+}
+/** Niyet sayfası ürün bloğu varsayılan kategori (EN slug; diğer dillerde aynı kategorinin o dildeki slug'ı katalogdan çözülür). */
+export const INTENT_PAGE_CATEGORY: Record<IntentPageKey, string | null> = {
+  "hotel-delivery": "orchids",
+  "hospital-delivery": "potted-plants",
+  "delivery-without-address": null,
+};
+
 /** [[...path]] segmentleri → sayfa türü. Bilinmeyen her şey "unknown" (=404). */
 export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLocalePath {
   if (segs.length === 0) return { kind: "home" };
@@ -97,6 +116,10 @@ export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLoc
   // render yalnız approved global_pages kaydıyla; bilinmeyen şehir = 404).
   if (isDestinationRoot(segs[0]) && segs.length <= 3 && segs.every((s) => SLUG_RE.test(s))) {
     return { kind: "page", key: segs.join("/") };
+  }
+  // Niyet sayfaları (RELEASE 3): yalnız izin listesindeki tek segment; başka slug açılmaz (ankara → unknown).
+  if (segs.length === 1 && isIntentPageKey(segs[0])) {
+    return { kind: "page", key: segs[0] };
   }
   return { kind: "unknown" };
 }

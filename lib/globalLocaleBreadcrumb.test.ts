@@ -47,5 +47,6 @@ test("13 dilde 'ana sayfa' etiketi dolu ve Türkçe değil", () => {
 test("kaynak nöbeti: lokasyon sayfası kırıntı JSON-LD'yi hero bloğunda basar", () => {
   const src = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
   assert.ok(src.includes(`{kirintiLd ? <script type="application/ld+json"`), "kırıntı JSON-LD script etiketi");
-  assert.equal(src.split("localeBreadcrumbJsonLd(locale,").length - 1, 3, "şehir + ilçe + mahalle dallarının üçü de");
+  // RELEASE 3 (26 Eyl 2026): şehir + ilçe + mahalle + niyet sayfası (ana sayfa → sayfa) = 4 çağrı
+  assert.equal(src.split("localeBreadcrumbJsonLd(locale,").length - 1, 4, "şehir + ilçe + mahalle dalları + niyet sayfası");
 });
