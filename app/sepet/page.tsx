@@ -178,7 +178,7 @@ export default function CartPage() {
                                 href={`/urun/${item.productSlug}`}
                                 className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-3 py-1 text-[12px] font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]"
                               >
-                                <AlertTriangle className="h-3.5 w-3.5" /> Teslimat seçilmedi — seçmek için dokunun
+                                <AlertTriangle className="h-3.5 w-3.5" /> {t("cart.rowNeedsDelivery")}
                               </Link>
                             )}
                           </div>
@@ -265,7 +265,7 @@ export default function CartPage() {
                       değişmedi; panel koyu olduğu için beyaz (inverse) master kullanılır. */}
                   <div className="mt-6 flex items-center justify-center gap-2.5">
                     <FlowerGuaranteeBadge color="#ffffff" className="h-11 w-11 shrink-0 opacity-80 lg:h-12 lg:w-12" />
-                    <span className="text-[12.5px] font-semibold text-white/70">%100 ÇiçekYolla Garantisi</span>
+                    <span className="text-[12.5px] font-semibold text-white/70">{t("pdp.guaranteeTitle")}</span>
                   </div>
 
                   {/* Güven şeridi — checkout paneliyle aynı */}

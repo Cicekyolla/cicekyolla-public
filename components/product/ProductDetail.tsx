@@ -122,6 +122,14 @@ export function ProductDetail({
   // Fiyat yazımı seçili para biriminde. Taban DAİMA TRY kuruş; gerçek tahsilat TRY.
   const { money } = useCurrency();
   const { product, images, variants } = data;
+  const { t, locale } = useI18n();
+  // Faz 2: onaylı çeviri varsa ad/açıklama SUNUMDA değişir; id/slug/fiyat/varyant/sepet TR kaynak kayıttır.
+  const tx = useProductTranslation(product.slug);
+  const displayName = tx?.name || presentation?.name || product.name;
+  // Release 1 (Global Foundation): locale sunumunda (presentation var) görsel alt metni ÇEVRİLMİŞ ad —
+  // API'deki Türkçe alt metni İngilizce sayfaya sızmasın. TR PDP'de (presentation yok) davranış birebir eski.
+  const imageAlt = (im: { alt?: string | null }, fallback: string = product.name): string =>
+    presentation?.name ? displayName : (im.alt ?? fallback);
   const sortedImages: PublicProductImage[] = [...images].sort((a, b) => {
     if (a.role === "cover") return -1;
     if (b.role === "cover") return 1;
@@ -131,7 +139,7 @@ export function ProductDetail({
   const lifestyleExtras: PublicProductImage[] = (LIFESTYLE_GALLERY[product.slug] ?? []).map((url, i) => ({
     id: -(i + 1),
     url,
-    alt: `${product.name} — yaşam alanında`,
+    alt: presentation?.name ? t("pdp.lifestyleAlt", { name: displayName }) : `${product.name} — yaşam alanında`,
     role: "gallery",
     sort_order: 100 + i,
   }));
@@ -142,10 +150,6 @@ export function ProductDetail({
   // Adet — tek CTA sepete ürünü bu adetle yazar (funnel: ürün + variant + quantity + teslimat).
   const [quantity, setQuantity] = useState(1);
   const [wish, setWish] = useState(false);
-  const { t, locale } = useI18n();
-  // Faz 2: onaylı çeviri varsa ad/açıklama SUNUMDA değişir; id/slug/fiyat/varyant/sepet TR kaynak kayıttır.
-  const tx = useProductTranslation(product.slug);
-  const displayName = tx?.name || presentation?.name || product.name;
   const displayShort = tx?.short_description ?? presentation?.short_description ?? product.short_description;
   const displayLong = tx?.long_description ?? presentation?.long_description ?? product.long_description;
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -172,8 +176,12 @@ export function ProductDetail({
   // Artık ürünün KANONİK adresi kullanılır: sunucuda da istemcide de AYNI
   // ve DAİMA dolu. Tarayıcının o anki adresine bağımlılık kalktı.
   const waProductUrl = absoluteUrl(canonicalPath ?? `/urun/${product.slug}`);
+  // Release 1: locale sunumunda hazır mesaj o dilde ve ÇEVRİLMİŞ ürün adıyla (pdp.waText, 14 dil);
+  // TR PDP'de operatörün alıştığı Türkçe biçim BİREBİR korunur (productWaMessage.test.ts kilidi).
   const waText = encodeURIComponent(
-    `Merhaba, "${product.name}" ürününü sipariş vermek istiyorum. ${waProductUrl}`,
+    presentation?.name
+      ? t("pdp.waText", { name: displayName, url: waProductUrl })
+      : `Merhaba, "${product.name}" ürününü sipariş vermek istiyorum. ${waProductUrl}`,
   );
 
   const cover = gallery[active];
@@ -220,7 +228,7 @@ export function ProductDetail({
                   className="w-full h-full object-contain p-4"
                 />
               ) : (
-                <ProductImage src={cover.url} alt={cover.alt ?? product.name} priority padding="16px" derivatives={cover.derivatives} blurhash={cover.blurhash} sizes={PDP_MAIN_SIZES} avifMedia={PDP_MAIN_AVIF_MEDIA} />
+                <ProductImage src={cover.url} alt={imageAlt(cover)} priority padding="16px" derivatives={cover.derivatives} blurhash={cover.blurhash} sizes={PDP_MAIN_SIZES} avifMedia={PDP_MAIN_AVIF_MEDIA} />
               )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#C4B5FD]">
@@ -257,7 +265,7 @@ export function ProductDetail({
           {/* Tam ekran büyütme (dokun → zoom/lightbox) */}
           {lightboxOpen && gallery.length > 0 ? (
             <Lightbox
-              items={gallery.map((im): LightboxItem => ({ url: im.url, alt: im.alt, isVideo: isVideo(im.url) }))}
+              items={gallery.map((im): LightboxItem => ({ url: im.url, alt: presentation?.name ? displayName : im.alt, isVideo: isVideo(im.url) }))}
               index={active}
               onIndexChange={setActive}
               onClose={() => setLightboxOpen(false)}
@@ -275,7 +283,7 @@ export function ProductDetail({
                 >
                   {isVideo(img.url)
                     ? <video src={img.url} muted draggable={false} onContextMenu={(e) => e.preventDefault()} className="w-full h-full object-contain bg-white p-1.5" />
-                    : <ProductImage src={img.url} alt={img.alt ?? ""} padding="6px" protect={false} />}
+                    : <ProductImage src={img.url} alt={imageAlt(img, "")} padding="6px" protect={false} />}
                 </button>
               ))}
             </div>
@@ -506,7 +514,7 @@ export function ProductDetail({
           <div className="mt-6 flex items-center gap-3">
             <FlowerGuaranteeBadge color="#0BADA6" className="h-12 w-12 shrink-0 lg:h-16 lg:w-16" />
             <div className="min-w-0">
-              <p className="text-[14px] font-bold leading-tight text-[#111827]">%100 ÇiçekYolla Garantisi</p>
+              <p className="text-[14px] font-bold leading-tight text-[#111827]">{t("pdp.guaranteeTitle")}</p>
               <p className="mt-0.5 text-[12.5px] text-[#6B7280]">{t("pdp.trust.fresh")}</p>
             </div>
           </div>

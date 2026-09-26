@@ -60,6 +60,9 @@ export function FlowerGuaranteeBadge({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-label="%100 ÇiçekYolla Garantisi"
+      /* Marka mührü metni bilinçli olarak Türkçedir (Garanti Mührü kuralı); locale sayfalarında
+         dil sinyali karışmasın diye SVG kendi dilini bildirir. Görsel çıktı değişmez. */
+      lang="tr"
       className={className}
     >
       <defs>
