@@ -201,6 +201,27 @@ export function ProductDetail({
           <span className="text-[#111827] font-medium truncate max-w-[220px]">{displayName}</span>
         </nav>
       </div>
+      {/* Global (13 dil) PDP'lerde BreadcrumbList eksikti (TR'de BreadcrumbSchemaTracker
+          var ama yalnız "/urun/" yoluna bakıyor, locale yollarında hiç çalışmıyordu — SEO
+          denetimi bulgusu). TR zaten kendi mekanizmasından yayınlıyor; burada yalnız
+          Global'i tamamlıyoruz, TR'de İKİNCİ bir BreadcrumbList üretmiyoruz. Ortadaki
+          "Ürünler" basamağı atlanır: Global'de tıklanabilir bir katalog hub'ı yok (yukarıdaki
+          görünür breadcrumb'ta da link değil, düz metin) — var olmayan bir URL uydurmamak için. */}
+      {locale !== "tr" && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: t("common.homePage"), item: absoluteUrl(`/${locale}`) },
+                { "@type": "ListItem", position: 2, name: displayName, item: absoluteUrl(canonicalPath ?? `/urun/${product.slug}`) },
+              ],
+            }).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
 
       <div className="max-w-[1280px] mx-auto px-5 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
         {/* GALERİ */}
