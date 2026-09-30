@@ -42,6 +42,9 @@ interface SameDay {
   min_order_minor?: number;
   distance_km?: number;
   slots?: Slot[];
+  /** API 108: 'below_price_threshold' → adres uzak bandda, ürün eşik altında (kurye yok; kargo ayrıca değerlendirilir). */
+  reason?: string;
+  min_product_price_minor?: number | null;
 }
 interface CheckResult {
   product: { id: number | null; type: string | null; model: string };
@@ -57,6 +60,8 @@ export interface SelectedDelivery {
   mode: "sameday" | "cargo";
   slot?: Slot;
   band?: string;
+  /** Motorun ücreti (TRY kuruş): band ücreti + slot ek ücreti (kurye/özel araç) ya da kargo ücreti. Sepet/checkout toplamı bunu gösterir. */
+  feeMinor?: number;
   address: AddressResult;
 }
 
@@ -328,7 +333,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
     } else if (result.cargo?.available) {
       // Tek seçenek kargo → karar kendiliğinden kesinleşir: slot YOK, 1-3 iş günü.
       setMode("cargo");
-      if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", address });
+      if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", feeMinor: Number(result.cargo?.fee_minor ?? 0), address });
     } else {
       onSelect?.(null); // satılamaz (fail closed)
     }
@@ -336,7 +341,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
 
   const onPickSlot = (s: Slot) => {
     setSlotId(s.id);
-    if (address) onSelect?.({ date: isoOf(dayOffset), mode: "sameday", slot: s, band: result?.same_day.band, address });
+    if (address) onSelect?.({ date: isoOf(dayOffset), mode: "sameday", slot: s, band: result?.same_day.band, feeMinor: Number(result?.same_day?.fee_minor ?? 0) + Number(s.extra_fee_minor ?? 0), address });
   };
 
   const sd = result?.same_day;
@@ -448,14 +453,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
             ) : !result ? null : (() => {
               const showSameday = !!(sd?.available && sd.slots && sd.slots.length > 0);
               const showCargo = !!cargo?.available;
+              // 108: uzak band + ürün eşik altında → neden kurye yok, açık yazılır (eşik API'den; karar API'de).
+              const thresholdNote = sd?.reason === "below_price_threshold" && sd.min_product_price_minor != null
+                ? <p className="mb-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#6B7280]" data-threshold-note><AlertCircle className="w-3.5 h-3.5 mt-[1px] shrink-0 text-[#9CA3AF]" />{t("planner.thresholdNote", { amount: `₺${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(sd.min_product_price_minor / 100)}` })}</p>
+                : null;
               if (!showSameday && !showCargo) {
                 return (
-                  <DeliveryAlternatives
+                  <>{thresholdNote}<DeliveryAlternatives
                     excludeId={product.id}
                     city={result.location?.city}
                     district={result.location?.district}
                     categoryId={product.categoryId}
-                  />
+                  /></>
                 );
               }
               const cargoFree = (cargo?.fee_minor ?? 0) === 0;
@@ -464,6 +473,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                   <style>{`@keyframes cyExpand{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
                   {/* TESLİMAT SEÇENEĞİ KARTLARI */}
+                  {thresholdNote}
                   <div className="text-[11px] font-bold text-[#9CA3AF] tracking-wider mb-2">{t("planner.option")}</div>
                   <div className={`grid gap-2.5 ${showSameday && showCargo ? "sm:grid-cols-2" : "grid-cols-1"}`}>
                     {showSameday && (
@@ -489,7 +499,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                     )}
                     {showCargo && (
                       <button
-                        onClick={() => { setMode("cargo"); if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", address }); }}
+                        onClick={() => { setMode("cargo"); if (address) onSelect?.({ date: isoOf(dayOffset), mode: "cargo", feeMinor: Number(result?.cargo?.fee_minor ?? 0), address }); }}
                         className={`relative text-left rounded-[20px] border p-3.5 min-h-[92px] transition-all ${
                           mode === "cargo"
                             ? "border-[#7C3AED] bg-[#F5F3FF] shadow-[0_6px_20px_rgba(124,58,237,0.18)]"

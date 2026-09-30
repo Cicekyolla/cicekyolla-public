@@ -13,6 +13,9 @@ import { yonelme } from "@/lib/turkish";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
+import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
+import { istanbulDistrictJsonLd, resolveSiteIdentity } from "@/lib/siteIdentity";
+import { getPublishedHomepage } from "@/lib/homepage";
 import { getLinkData } from "@/lib/linkData";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 
@@ -76,16 +79,24 @@ function locationLabel(page: SeoPublicPage, fallback: string): string {
   return fromHeading || fallback;
 }
 
-function locationSeoDescription(parts: string[], cityName: string, districtName: string, neighborhood: string): string {
+/** İstanbul lokasyonunda teslimat sözü motor kararına göre: "same_day" (bugünkü) | "cargo" (out) | "neutral" (far/mixed/unknown). */
+type TrDeliveryMode = "same_day" | "cargo" | "neutral";
+function trDeliveryMode(reach: string | null | undefined): TrDeliveryMode {
+  if (reach === "out") return "cargo";
+  if (reach === "far" || reach === "mixed" || reach === "unknown") return "neutral";
+  return "same_day";
+}
+function locationSeoDescription(parts: string[], cityName: string, districtName: string, neighborhood: string, mode: TrDeliveryMode = "same_day"): string {
   const isIstanbul = parts[0] === "istanbul";
   const location = neighborhood
     ? `${cityName} ${districtName} ${neighborhood} Mahallesi`
     : districtName
       ? `${cityName} ${districtName}`
       : cityName;
-  return isIstanbul
-    ? `${location} bölgesine taze çiçekler, premium buketler ve özel tasarım aranjmanlarla aynı gün hızlı teslimat.`
-    : `${location} bölgesine taze çiçekler, premium buketler ve özel tasarım aranjmanlar 1–3 iş günü içinde güvenli kargoyla ulaştırılır.`;
+  if (!isIstanbul || mode === "cargo") return `${location} bölgesine taze çiçekler, premium buketler ve özel tasarım aranjmanlar 1–3 iş günü içinde güvenli kargoyla ulaştırılır.`;
+  // 108 / TESLİMAT GERÇEĞİ: motor "adrese göre" diyorsa (far/mixed/unknown) statik aynı gün sözü yazılmaz.
+  if (mode === "neutral") return `${location} bölgesine taze çiçekler, premium buketler ve özel tasarım aranjmanlar; teslimat seçenekleri adresinize göre ödeme adımında gösterilir.`;
+  return `${location} bölgesine taze çiçekler, premium buketler ve özel tasarım aranjmanlarla aynı gün hızlı teslimat.`;
 }
 
 function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
@@ -265,7 +276,13 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     ...(cargoMode
       ? { delivery_model: "cargo_capable" as const }
       : { product_type: "flower", same_day_available: true }),
-    page_size: cargoMode ? 100 : 8,
+    // 23 Eyl 2026 — İL VİTRİNİ 4 ÜRÜNDE KALIYORDU.
+    // Ölçüm (canlı HTML): /istanbul 4 ürün · /ankara, /izmir, /antalya 100 ürün.
+    // Sebep bu satırdaki 8 + aşağıdaki slice(…, 4): yalnız "aynı gün" dalı,
+    // yani İstanbul, küçük kalıyordu. İstanbul en büyük ticari il sayfamız ve
+    // müşteri oraya "ne gönderebilirim" diye geliyor; 4 ürünle seçim yapamıyor.
+    // İlçe sayfaları zaten LOCATION_PAGE_SIZE (30) gösteriyor — aynı sayıya çekildi.
+    page_size: cargoMode ? 100 : LOCATION_PAGE_SIZE,
   } satisfies Parameters<typeof fetchProducts>[0];
   // Vitrin ürünleri yalnız ilçe kapsamı DIŞINDA kesin gerekli → hemen başlar;
   // ilçe kapsamındaki nadir fallback (coverage boş) aşağıda seri kalır.
@@ -301,11 +318,9 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     // Hata durumunda orijinal HTML/blocks kullan
   }
   // (cargoMode yukarıda, PERF bloğunda tanımlanır — iş kuralı aynı.)
-  const deliveryTime = cargoMode ? "1–3 iş günü" : district?.time || "Aynı gün";
   // Saat vaadi statik veriden yazılmaz: kesin saat yalnız Delivery Engine'den
   // (HeroDeliveryBar / DeliveryPlanner) gelir. DELIVERY_DATA.cutoff render edilmez.
   const neighborhoods = district?.neighborhoods || [];
-  const seoDescription = locationSeoDescription(parts, cityName, districtName, neighborhood);
 
   // ── ADDITIVE (Faz 1): İlçe/mahalle sayfaları Admin/DB tek kaynağından beslenir.
   // Coverage ürünleri + gerçek mahalleler paralel çekilir; API erişilemezse
@@ -323,6 +338,20 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     }
   }
   const useLocationGrid = locationData != null && locationData.items.length > 0;
+  // 108 / TESLİMAT GERÇEĞİ — TR ile 13 Global dil AYNI motor kararı: liste ucu meta.reach taşır.
+  //   'out'   → kargo sözleri (1–3 iş günü); liste API'de kargolanabilir ürünlere daraltılmış gelir.
+  //   'far'   → adrese göre: eşik ve üzeri ürünlerde özel araç (günün planı uygunsa), diğerleri kargo — vaat yok.
+  //   'mixed' / 'unknown' → vaat yok ("adrese göre"); 'in' ya da motor sessiz (eski API) → bugünkü sözler.
+  const reach = locationData?.meta?.reach ?? null;
+  const reachOut = reach === "out";
+  const reachNeutral = reach === "mixed" || reach === "unknown" || reach === "far";
+  const farThreshold = reach === "far" && locationData?.meta?.min_product_price_minor != null
+    ? `₺${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(locationData.meta.min_product_price_minor / 100)}`
+    : null;
+  const deliveryTime = cargoMode || reachOut ? "1–3 iş günü" : reachNeutral ? "Adrese göre belirlenir" : district?.time || "Aynı gün";
+  const seoDescription = locationSeoDescription(parts, cityName, districtName, neighborhood, trDeliveryMode(reach));
+  // Mahalle kartı alt etiketi: motor kararıyla aynı söz (out → kargo, adrese göre → nötr, aksi bugünkü).
+  const hoodDeliveryLabel = cargoMode || reachOut ? "Kargoyla 1–3 iş günü" : reachNeutral ? "Teslimat adrese göre" : undefined;
 
   // ── ADDITIVE (HATA 3): sayfa bağlamına göre GERÇEK çapraz bağlantı verisi.
   // Sabit 5 linkli blok yerine — il sayfasında o ilin tüm ilçeleri (gerçek
@@ -345,25 +374,38 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     }
   }
 
-  const productItems = useLocationGrid
+  // Daralan erişimde (out/far) motorun süzdüğü liste boşsa genel ürün listesine DÜŞÜLMEZ (kuryeli ucuz ürünler
+  // uzak ilçede yeniden açılmasın); diğer durumlarda bugünkü fallback aynen.
+  const productItems = useLocationGrid || (locationData != null && (reachOut || reach === "far"))
     ? []
     : await (productsPromise ?? fetchProducts(productsQuery));
   const products = productItems
     .filter((product) => !cargoMode || product.delivery_model_code === "cargo" || product.delivery_model_code === "same_day_and_cargo")
     .map(toCardProduct)
-    .slice(0, cargoMode ? 100 : 4);
+    .slice(0, cargoMode ? 100 : LOCATION_PAGE_SIZE);
+
+  /* 23 Eyl 2026 — KIRINTI YOLU YALNIZ LOKASYON DALINDA.
+     Page()'deki paylaşılan jsonLd fragment'ine EKLENMEZ: oradan CMS'teki
+     lokasyon olmayan sayfalar da geçiyor ve onlara uydurma İl→İlçe zinciri
+     sızardı. Adlar bu bileşenin kendi çözdüğü değerlerdir. */
+  const breadcrumbLd = locationBreadcrumbJsonLd(
+    parts,
+    [cityName, districtName, neighborhood],
+    absoluteUrl,
+  );
 
   return <main className="bg-[#fcfbfd] text-[#111827]">
+    {breadcrumbLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} /> : null}
     <section className="bg-white px-6 pb-16 pt-20 lg:px-14 lg:pb-24 lg:pt-28">
       <div className="mx-auto max-w-[1320px]">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode ? "1–3 iş günü kargo" : "Aynı gün hızlı teslimat"} — {place}</div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode || reachOut ? "1–3 iş günü kargo" : reachNeutral ? "Teslimat adrese göre" : "Aynı gün hızlı teslimat"} — {place}</div>
         {adminH1
           ? <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{adminH1}</h1>
           : <h1 className="mt-10 max-w-4xl font-serif text-6xl font-semibold leading-[.98] text-[#121827] md:text-7xl lg:text-8xl">{place} Çiçekçi<br /><span className="text-[#8b5cf6]">Çiçek Siparişi</span></h1>}
         <p className="mt-8 max-w-2xl text-xl leading-9 text-[#667085]">{seoDescription}</p>
         <div className="mt-12 grid max-w-3xl gap-5 md:grid-cols-2">
           <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Clock3 className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{deliveryTime}</div><div className="mt-1 text-sm text-[#9b94a8]">Ortalama teslimat süresi</div></div></div>
-          <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Truck className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{cargoMode ? "Güvenli Kargo" : "Hızlı Teslimat"}</div><div className="mt-1 text-sm text-[#9b94a8]">{cargoMode ? "Özenli ve korumalı paketleme" : "Yalnız İstanbul içi"}</div></div></div>
+          <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Truck className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{cargoMode || reachOut ? "Güvenli Kargo" : reachNeutral ? "Teslimat Seçenekleri" : "Hızlı Teslimat"}</div><div className="mt-1 text-sm text-[#9b94a8]">{cargoMode || reachOut ? "Özenli ve korumalı paketleme" : reachNeutral ? "Ödeme adımında adrese göre" : "Yalnız İstanbul içi"}</div></div></div>
         </div>
         <div className="mt-12 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-[#8b5cf6] px-9 py-4 font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]">Koleksiyonu Keşfet</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-[#e8e1f0] bg-white px-9 py-4 font-bold text-[#141020]"><MessageCircle className="h-5 w-5" /> WhatsApp'tan Sipariş</Link></div>
       </div>
@@ -378,6 +420,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
         neighborhoods={dbHood.neighborhoods}
         currentSlug={parts[2]}
         variant={parts[2] ? "neighborhood" : "district"}
+        deliveryLabel={hoodDeliveryLabel}
       />
     ) : neighborhoods.length > 0 ? <section className="border-y border-[#eee9f6] bg-[#f7f5fc] px-6 py-16 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-10 flex items-center gap-4"><span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#8b5cf6]"><MapPin className="h-5 w-5" /></span><p className="text-xs font-bold uppercase tracking-[.32em] text-[#8b5cf6]">Teslimat yapılan mahalleler</p></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{neighborhoods.map((item) => <Link key={item} href={`/${parts[0]}/${parts[1]}/${slugifyTR(item)}-mah`} className="flex items-center gap-4 rounded-[20px] border border-[#ece7f4] bg-white px-5 py-5 text-lg font-medium text-[#1f2937] shadow-[0_12px_34px_rgba(45,22,72,.04)]"><span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full bg-[#f5f0ff]"><Check className="h-4 w-4 text-[#8b5cf6]" /></span>{item}</Link>)}</div></div></section> : null}
 
@@ -409,7 +452,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
-    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{useLocationGrid && locationData ? (
+    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{useLocationGrid && locationData ? (
       // Coverage Engine ürünleri: 12 SSR + "Daha Fazla Göster" (24/36/48) + gerçek filtreler.
       <LocationProducts
         citySlug={parts[0]}
@@ -428,9 +471,9 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     {page.faq && page.faq.length > 0 ? <section className="bg-gradient-to-b from-[#f7f5fc] to-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-14 text-center"><h2 className="font-serif text-5xl font-semibold text-[#140b20]">Sıkça Sorulan Sorular</h2><p className="mt-4 text-lg text-[#667085]">{place} bölgesinde çiçek gönderimiyle ilgili merak edilen konular</p></div><div className="grid gap-6 md:grid-cols-2">{page.faq.map((item, i) => item.q && item.a ? <div key={i} className="rounded-[20px] border border-[#ebe7f2] bg-white p-8 shadow-sm"><h3 className="font-semibold text-[#140b20]">{item.q}</h3><p className="mt-4 text-[#667085]">{item.a}</p></div> : null)}</div></div></section> : null}
 
     {/* Gece Çiçek Siparişi — yalnız İstanbul içi (aynı gün) sayfalarında; kargo sayfalarında yok. */}
-    {cargoMode ? null : <NightOrderStrip />}
+    {cargoMode || reachOut ? null : <NightOrderStrip />}
 
-    <section className="bg-gradient-to-r from-[#14051f] via-[#2e1065] to-[#6d28d9] px-6 py-20 text-white lg:px-14"><div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[1fr_1.15fr]"><div><p className="text-xs font-bold uppercase tracking-[.3em] text-[#c4b5fd]">{yonelme(place)} özel</p><h2 className="mt-6 font-serif text-5xl font-semibold leading-tight">{cargoMode ? <>Özenle Hazırlayalım,<br />Güvenle Ulaştıralım</> : <>Bugün Sipariş Ver,<br />Bugün Teslim Edelim</>}</h2><p className="mt-8 text-xl leading-9 text-[#ede9fe]">{cargoMode ? `${place} bölgesine gönderilecek siparişiniz özenle hazırlanır, korumalı şekilde paketlenir ve 1–3 iş günü içinde kargoyla teslim edilir.` : `${place} bölgesine çiçek göndermek hiç bu kadar kolay olmamıştı. Uygun teslimat akışında siparişiniz aynı gün planlanır; acil ve gece siparişleri için WhatsApp'tan bilgi alabilirsiniz.`}</p><div className="mt-10 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-white px-8 py-4 font-bold text-[#6d28d9]">Çiçekleri İncele</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-white/25 px-8 py-4 font-bold text-white"><MessageCircle className="h-5 w-5" /> WhatsApp ile Sipariş</Link></div></div><div className="border-l border-white/15 pl-0 text-lg leading-9 text-[#ede9fe] lg:pl-10"><p>{cityName} ve çevresine çiçek göndermek için güvenilir adresiniz ÇiçekYolla. Taptaze çiçeklerimiz, özenle hazırlanmış buketlerimiz ve profesyonel ekibimizle sevdiklerinize özel anlar yaratıyoruz.</p><p className="mt-7">Doğum günü, sevgililer günü, anneler günü veya herhangi bir özel gün için zarif seçeneklerimiz mevcut. WhatsApp üzerinden de destek sağlıyoruz.</p></div></div></section>
+    <section className="bg-gradient-to-r from-[#14051f] via-[#2e1065] to-[#6d28d9] px-6 py-20 text-white lg:px-14"><div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[1fr_1.15fr]"><div><p className="text-xs font-bold uppercase tracking-[.3em] text-[#c4b5fd]">{yonelme(place)} özel</p><h2 className="mt-6 font-serif text-5xl font-semibold leading-tight">{cargoMode || reachOut ? <>Özenle Hazırlayalım,<br />Güvenle Ulaştıralım</> : reachNeutral ? <>Sipariş Ver,<br />Adrese Göre Teslim Edelim</> : <>Bugün Sipariş Ver,<br />Bugün Teslim Edelim</>}</h2><p className="mt-8 text-xl leading-9 text-[#ede9fe]">{cargoMode || reachOut ? `${place} bölgesine gönderilecek siparişiniz özenle hazırlanır, korumalı şekilde paketlenir ve 1–3 iş günü içinde kargoyla teslim edilir.` : reachNeutral ? `${place} bölgesine göndereceğiniz siparişin teslimat seçenekleri ödeme adımında adresinize göre gösterilir; acil ve gece siparişleri için WhatsApp'tan bilgi alabilirsiniz.` : `${place} bölgesine çiçek göndermek hiç bu kadar kolay olmamıştı. Uygun teslimat akışında siparişiniz aynı gün planlanır; acil ve gece siparişleri için WhatsApp'tan bilgi alabilirsiniz.`}</p><div className="mt-10 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-white px-8 py-4 font-bold text-[#6d28d9]">Çiçekleri İncele</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-white/25 px-8 py-4 font-bold text-white"><MessageCircle className="h-5 w-5" /> WhatsApp ile Sipariş</Link></div></div><div className="border-l border-white/15 pl-0 text-lg leading-9 text-[#ede9fe] lg:pl-10"><p>{cityName} ve çevresine çiçek göndermek için güvenilir adresiniz ÇiçekYolla. Taptaze çiçeklerimiz, özenle hazırlanmış buketlerimiz ve profesyonel ekibimizle sevdiklerinize özel anlar yaratıyoruz.</p><p className="mt-7">Doğum günü, sevgililer günü, anneler günü veya herhangi bir özel gün için zarif seçeneklerimiz mevcut. WhatsApp üzerinden de destek sağlıyoruz.</p></div></div></section>
   </main>;
 }
 
@@ -518,8 +561,18 @@ async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<P
     // burada da uygulanır — brand'i tekrar eklemek "... | ÇiçekYolla | ÇiçekYolla"
     // duplicate title'ına yol açıyordu (kanıtlandı: canlı /istanbul/kadikoy).
     title: `${place} Çiçekçi — ${place} Çiçek Siparişi`,
-    description: locationSeoDescription(parts, cityName, districtName, neighborhood),
+    description: locationSeoDescription(parts, cityName, districtName, neighborhood, await trMetaDeliveryMode(parts)),
   };
+}
+/** Meta açıklaması için motor kararı: yalnız İstanbul ilçe/mahalle; liste isteği sayfayla aynı (önbellekli). Hata → bugünkü söz. */
+async function trMetaDeliveryMode(parts: string[]): Promise<TrDeliveryMode> {
+  if (parts[0] !== "istanbul" || parts.length < 2) return "same_day";
+  try {
+    const data = await fetchLocationProducts(parts[0], parts[1], { neighborhood: parts[2], page_size: 30 });
+    return trDeliveryMode(data?.meta?.reach ?? null);
+  } catch {
+    return "same_day";
+  }
 }
 
 export default async function Page({ params }: PageProps) {
@@ -532,7 +585,18 @@ export default async function Page({ params }: PageProps) {
   const faqLd = faqJsonLd(page);
   const rawSchema = page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
-  if (deliveryParts(path)) return <><DeliveryLanding page={page} path={path} />{jsonLd}</>;
+  const staticParts = deliveryParts(path);
+  if (staticParts) {
+    // TEK DAMAR (25 Eyl 2026): yalnız İstanbul İLÇE sayfaları aynı işletme (@id) + ilçe hizmet düğümünü taşır;
+    // kimlik (NAP, saat, harita) Admin hero.config'ten (ana sayfa şeması, footer ve /iletisim ile aynı kaynak).
+    let localLd: string | null = null;
+    if (staticParts[0] === "istanbul" && staticParts.length === 2) {
+      const homepage = await getPublishedHomepage().catch(() => null);
+      const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
+      localLd = istanbulDistrictJsonLd(identity, { path, areaName: locationLabel(page, prettySlug(staticParts[1])), pageName: page.h1 ?? "" });
+    }
+    return <><DeliveryLanding page={page} path={path} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
+  }
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
   const dyn = (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
   if (dyn) return <><DeliveryLanding page={page} path={path} dyn={dyn} />{jsonLd}</>;

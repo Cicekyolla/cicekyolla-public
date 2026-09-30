@@ -15,7 +15,16 @@
 //   • API sözleşmesi DEĞİŞMEZ — bu katman tamamen istemci tarafıdır.
 // ---------------------------------------------------------------------------
 
-export type AuthErrorField = "identifier" | "password" | "email" | "phone" | "name" | null;
+export type AuthErrorField = "identifier" | "password" | "email" | "phone" | "name" | "kvkk" | null;
+
+/**
+ * Şifre kuralı SUNUCUYLA aynıdır: api/backend/src/memberAuthValidation.ts
+ * `parsePassword` 8-200 karakter ister ve dışında 400 döner. Burada tekrar
+ * yazılmasının nedeni, kullanıcıyı sunucuya gidip 400 almadan uyarmaktır —
+ * kural iki yerde DEĞİL, tek kural iki katmanda uygulanır.
+ */
+export const PASSWORD_MIN = 8;
+export const PASSWORD_MAX = 200;
 
 export interface AuthErrorView {
   /** Kullanıcıya gösterilecek Türkçe cümle. */
@@ -42,6 +51,34 @@ export function isEmailLike(value: string): boolean {
 export function looksLikePhone(value: string): boolean {
   const digits = value.replace(/\D/g, "");
   return digits.length >= 10 && digits.length <= 13;
+}
+
+/**
+ * Türk CEP numarası → E.164 (`+90 5xx xxx xx xx`).
+ * api/backend/src/memberAuthValidation.ts `normalizeTrMobile` ile AYNI kümeyi
+ * kabul eder. Sunucu sabit hattı REDDEDER (tek sahiplik kanıtı kanalı WhatsApp);
+ * bu yüzden kullanıcı 0212'li numarayı yazınca sunucuya gitmeden uyarılır —
+ * aksi halde kayıt 400 ile geri döner ve sebebi ekranda görünmez.
+ */
+export function normalizeTrMobile(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return null;
+  let msisdn: string | null = null;
+  if (digits.length === 10) msisdn = digits;
+  else if (digits.length === 11 && digits.startsWith("0")) msisdn = digits.slice(1);
+  else if (digits.length === 12 && digits.startsWith("90")) msisdn = digits.slice(2);
+  else if (digits.length === 13 && digits.startsWith("090")) msisdn = digits.slice(3);
+  if (!msisdn || !/^5\d{9}$/.test(msisdn)) return null;
+  return `+90${msisdn}`;
+}
+
+/** `+905071234567` → `0507 123 45 67` (ekranda gösterim; ham değer değişmez). */
+export function formatTrMobile(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = normalizeTrMobile(value);
+  if (!normalized) return null;
+  const d = normalized.slice(3);
+  return `0${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6, 8)} ${d.slice(8, 10)}`;
 }
 
 /**
@@ -152,14 +189,79 @@ export function validateResetRequest(identifier: string): AuthErrorView | null {
 /** Yeni şifre ön denetimi (sunucu 8–200 bekler). */
 export function validateNewPassword(password: string, again: string): AuthErrorView | null {
   if (!password) return { message: "Yeni şifrenizi girin.", field: "password", kind: "empty" };
-  if (password.length < 8) {
-    return { message: "Şifreniz en az 8 karakter olmalı.", field: "password", kind: "format" };
-  }
-  if (password.length > 200) {
-    return { message: "Şifreniz en fazla 200 karakter olabilir.", field: "password", kind: "format" };
-  }
+  const rule = validatePasswordRule(password);
+  if (rule) return rule;
   if (password !== again) {
     return { message: "Şifreler eşleşmiyor. İki alana da aynı şifreyi yazın.", field: "password", kind: "format" };
+  }
+  return null;
+}
+
+/** Şifre uzunluk kuralı — TEK yer (kayıt, popup ve şifre belirleme aynısını okur). */
+export function validatePasswordRule(password: string): AuthErrorView | null {
+  if (password.length < PASSWORD_MIN) {
+    return { message: `Şifreniz en az ${PASSWORD_MIN} karakter olmalı.`, field: "password", kind: "format" };
+  }
+  if (password.length > PASSWORD_MAX) {
+    return { message: `Şifreniz en fazla ${PASSWORD_MAX} karakter olabilir.`, field: "password", kind: "format" };
+  }
+  return null;
+}
+
+export interface RegisterInput {
+  name?: string;
+  phone?: string;
+  email: string;
+  password: string;
+  /** İki alanlı formlarda ikinci şifre; popup'ta yoktur (undefined → kontrol edilmez). */
+  passwordAgain?: string;
+  /** Aydınlatma/KVKK kutusu GERÇEKTEN işaretlendi mi? Varsayılan olarak false. */
+  kvkkOnay: boolean;
+}
+
+/**
+ * Kayıt formu ön denetimi — sunucunun `parseRegisterInput` kuralıyla aynı sıra
+ * ve aynı kabul kümesi.
+ *
+ * KRİTİK (DECISIONS D6 / DESIGN §3.A.10): `kvkkOnay` ASLA sabit true olamaz.
+ * Sunucu `kvkk_onay !== true` ise 400 döner; istemci de kutucuk işaretlenmeden
+ * istek atmaz. Böylece "onayı arka planda true göndermek" yolu kapanır.
+ *
+ * `name` / `phone` alanı OLMAYAN formlar (pop-up) bu alanları hiç göndermez;
+ * verildiyse biçimi doğrulanır.
+ */
+export function validateRegister(input: RegisterInput): AuthErrorView | null {
+  const name = (input.name ?? "").trim();
+  const phone = (input.phone ?? "").trim();
+  const email = (input.email ?? "").trim();
+
+  if (input.name !== undefined && !name) {
+    return { message: "Ad ve soyadınızı girin.", field: "name", kind: "empty" };
+  }
+  if (input.phone !== undefined) {
+    if (!phone) return { message: "Telefon numaranızı girin.", field: "phone", kind: "empty" };
+    if (!normalizeTrMobile(phone)) {
+      return {
+        message: "Cep telefonu numaranızı 5xx xxx xx xx biçiminde girin. Sabit hat numarası kullanılamaz.",
+        field: "phone",
+        kind: "format",
+      };
+    }
+  }
+  if (!email) return { message: "E-posta adresinizi girin.", field: "email", kind: "empty" };
+  if (!isEmailLike(email)) return { message: "Geçerli bir e-posta adresi girin.", field: "email", kind: "format" };
+  if (!input.password) return { message: "Şifrenizi girin.", field: "password", kind: "empty" };
+  const rule = validatePasswordRule(input.password);
+  if (rule) return rule;
+  if (input.passwordAgain !== undefined && input.password !== input.passwordAgain) {
+    return { message: "Şifreler eşleşmiyor. İki alana da aynı şifreyi yazın.", field: "password", kind: "format" };
+  }
+  if (input.kvkkOnay !== true) {
+    return {
+      message: "Devam etmek için Üyelik Aydınlatma Metni'ni okuduğunuzu onaylayın.",
+      field: "kvkk",
+      kind: "empty",
+    };
   }
   return null;
 }

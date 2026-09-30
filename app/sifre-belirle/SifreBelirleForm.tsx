@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { FormAlert } from "@/components/auth/FormAlert";
-import { validateNewPassword, viewForResponse, viewForThrown } from "@/lib/authErrors";
+import { PASSWORD_MAX, PASSWORD_MIN, validateNewPassword, viewForResponse, viewForThrown } from "@/lib/authErrors";
+import { takeResetToken, urlWithoutResetToken } from "@/lib/resetToken";
 
 type TokenState = "kontrol" | "gecerli" | "gecersiz";
 
@@ -16,19 +17,47 @@ export default function SifreBelirleForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<"error" | "success">("error");
+  /* Onay kutusu İŞARETSİZ başlar; gövdeye gerçek değeri gider (DESIGN §3.A.10).
+     API `sifre-sifirla/tamamla` yeni bir giriş oluşturacaksa `kvkk_onay`
+     bekliyor — sabit true göndermek, alınmamış onayı kaydetmek olurdu. */
+  const [kvkkOnay, setKvkkOnay] = useState(false);
 
-  // Token URL'den okunur; sunucuya sorulup hâlâ geçerli mi doğrulanır ki
-  // kullanıcı süresi dolmuş bir bağlantıda boşuna form doldurmasın.
+  /*
+   * Token okuma (DESIGN §3.A.9).
+   *
+   * İKİ BİÇİM de okunur: önce `#token=` (API `RESET_LINK_FRAGMENT=true` iken —
+   * fragment sunucuya ve Referer'a hiç gitmez), sonra bugünkü `?token=`.
+   * Böylece API bayrağı açıldığında public'te hiçbir şey değiştirmek gerekmez
+   * ve bayrak kapalıyken eski bağlantılar çalışmaya devam eder.
+   *
+   * Sayfanın başındaki satır içi script token'ı çoğunlukla zaten almış ve
+   * adresi temizlemiş olur; burada yalnız o değer devralınır. Script hiç
+   * çalışmadıysa (tarayıcı engeli) URL'den okunur ve adres BURADA temizlenir.
+   *
+   * Doğrulama isteği POST'tur: token'ı yeniden bir sorgu dizesine yazmak,
+   * fragment'e taşımanın bütün kazancını geri verirdi.
+   */
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("token") ?? "";
-    setToken(fromUrl);
+    const fromUrl = takeResetToken(window as unknown as Record<string, unknown> & { location: Location });
     if (!fromUrl) {
       setTokenState("gecersiz");
       return;
     }
+    setToken(fromUrl);
+    try {
+      const cleaned = urlWithoutResetToken(window.location);
+      if (cleaned !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+        window.history.replaceState(null, "", cleaned);
+      }
+    } catch {
+      /* history erişilemezse sayfa yine çalışır; yalnız adres temizlenmez. */
+    }
     let cancelled = false;
-    fetch(`/api/auth/sifre-sifirla/gecerli?token=${encodeURIComponent(fromUrl)}`, {
+    fetch("/api/auth/sifre-sifirla/gecerli", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
+      body: JSON.stringify({ token: fromUrl }),
     })
       .then((response) => response.json())
       .then((data: { usable?: boolean }) => {
@@ -51,9 +80,9 @@ export default function SifreBelirleForm() {
     // Ön denetim sunucu kuralıyla (8-200) AYNI; hata artık kırmızı ve alan işaretli.
     const preflight = validateNewPassword(password, passwordAgain);
     if (preflight) { setTone("error"); setMessage(preflight.message); return; }
-    if (form.get("kvkk_onay") !== "on") {
+    if (!kvkkOnay) {
       setTone("error");
-      setMessage("Devam etmek için KVKK aydınlatma metnini onaylayın.");
+      setMessage("Devam etmek için Üyelik Aydınlatma Metni'ni okuduğunuzu onaylayın.");
       return;
     }
 
@@ -65,7 +94,7 @@ export default function SifreBelirleForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ token, password, kvkk_onay: true }),
+        body: JSON.stringify({ token, password, kvkk_onay: kvkkOnay }),
       });
     } catch (thrown) {
       setLoading(false);
@@ -129,9 +158,10 @@ export default function SifreBelirleForm() {
                   name="password"
                   required
                   type="password"
-                  minLength={8}
+                  minLength={PASSWORD_MIN}
+                  maxLength={PASSWORD_MAX}
                   autoComplete="new-password"
-                  placeholder="En az 8 karakter"
+                  placeholder={`En az ${PASSWORD_MIN} karakter`}
                   aria-invalid={tone === "error" && message ? true : undefined}
                   aria-describedby={message ? "sifre-belirle-hata" : undefined}
                   className={`h-14 rounded-[var(--radius)] border bg-input-background px-4 outline-none transition-colors duration-200 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${tone === "error" && message ? "border-[#FCA5A5]" : "border-border"}`}
@@ -143,7 +173,8 @@ export default function SifreBelirleForm() {
                   name="password_again"
                   required
                   type="password"
-                  minLength={8}
+                  minLength={PASSWORD_MIN}
+                  maxLength={PASSWORD_MAX}
                   autoComplete="new-password"
                   placeholder="Şifrenizi tekrar girin"
                   className="h-14 rounded-[var(--radius)] border border-border bg-input-background px-4 outline-none transition-colors duration-200 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -153,9 +184,20 @@ export default function SifreBelirleForm() {
                 <input
                   name="kvkk_onay"
                   type="checkbox"
-                  className="mt-1 h-4 w-4 accent-[var(--primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  checked={kvkkOnay}
+                  onChange={(event) => {
+                    setKvkkOnay(event.target.checked);
+                    setMessage(null);
+                  }}
+                  aria-describedby={message ? "sifre-belirle-hata" : undefined}
+                  className="mt-1 h-4 w-4 shrink-0 accent-[var(--primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 />
-                KVKK aydınlatma metnini ve üyelik koşullarını okudum, kabul ediyorum.
+                <span>
+                  <Link href="/kvkk" target="_blank" className="font-semibold text-primary underline underline-offset-2">
+                    Üyelik Aydınlatma Metni
+                  </Link>
+                  &apos;ni okudum, kişisel verilerimin üyelik kapsamında işlenmesini kabul ediyorum.
+                </span>
               </label>
               <button
                 type="submit"

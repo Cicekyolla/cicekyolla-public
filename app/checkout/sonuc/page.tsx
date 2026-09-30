@@ -1,11 +1,15 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Check, X, Loader2, MessageCircle } from "lucide-react";
-import { paytrStatus, SUPPORT_WHATSAPP } from "@/lib/payment";
+import { paytrStatus, SUPPORT_WHATSAPP, type PaytrStatus } from "@/lib/payment";
 import { trackPaidPurchase } from "@/lib/purchaseAnalytics";
+import { useCart } from "@/lib/cart";
+import { clearPendingDelivery } from "@/lib/pendingDelivery";
+import { clearPendingCoupon } from "@/lib/pendingCoupon";
+import { dropCardCheckout, readCardCheckout, settleCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
 
 /* /checkout/sonuc — PayTR kart ödemesi dönüş sayfası.
    Ödeme onaylanınca (webhook) sipariş numarası GÖSTERİLİR; kural: no ödemeden sonra.
@@ -18,6 +22,29 @@ function Sonuc() {
 
   const [state, setState] = useState<"checking" | "paid" | "failed">("checking");
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  // Sunucunun onayladığı ödeme (HMAC doğrulanmış callback → payments.status='paid').
+  const [confirmed, setConfirmed] = useState<PaytrStatus | null>(null);
+  const { items, hydrated, removeItem } = useCart();
+  const settledRef = useRef(false);
+
+  /* SEPET — yalnız DOĞRULANMIŞ ödemeden sonra ve yalnız bu sekmede ödemeye
+     giden satırlar düşer (lib/cardCheckoutSettle.ts). Başarısız / bekleyen
+     ödemede ve not yoksa (başka sekme, doğrudan ziyaret) sepete dokunulmaz;
+     not silindiği için sayfa yenilemesi ikinci kez temizlemez. */
+  useEffect(() => {
+    if (!confirmed || !hydrated || settledRef.current) return;
+    settledRef.current = true;
+    const storage = tabStorage();
+    const stash = readCardCheckout(storage, oid);
+    const decision = settleCardCheckout({ oid, status: confirmed, stash, items });
+    if (!decision.settle) return;
+    for (const key of decision.removedKeys) removeItem(key);
+    // Havale başarısıyla aynı: kupon/teslimat köprüsü ve form taslağı kapanır.
+    clearPendingDelivery();
+    clearPendingCoupon();
+    if (stash?.draftKey) { try { storage?.removeItem(stash.draftKey); } catch { /* yok say */ } }
+    dropCardCheckout(storage, oid);
+  }, [confirmed, hydrated, items, oid, removeItem]);
 
   /* ÇERÇEVEDEN ÇIKIŞ — PayTR site içinde <iframe> ile gösterildiğinde
      merchant_ok_url / merchant_fail_url ÇERÇEVENİN İÇİNE yüklenir. O hâlde
@@ -43,6 +70,7 @@ function Sonuc() {
         if (s.paid && s.order_number) {
           trackPaidPurchase(s);
           setOrderNumber(s.order_number);
+          setConfirmed(s);
           setState("paid");
           return;
         }

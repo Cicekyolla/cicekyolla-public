@@ -19,7 +19,7 @@ import { avifMediaFromSizes } from "@/lib/avifPolicy";
 // 534 px+ genişlikte DPR≥3 gibi büyük yüksek-DPR ekranlarda.
 const CARD_SIZES = "(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw";
 const CARD_AVIF_MEDIA = avifMediaFromSizes(CARD_SIZES);
-import { useT, Num } from "@/lib/i18n";
+import { useT, Num, type DictKey } from "@/lib/i18n";
 import { useCurrency } from "@/lib/currency";
 import { useProductName } from "@/lib/i18n/content";
 
@@ -51,44 +51,48 @@ export type CardContextTag = { label: string; isOccasion: boolean };
 export type ProductDeliveryPromise = "today" | "tomorrow";
 
 type CardTag = { label: string; icon: string; tone: "occasion" | "category" | "delivery" | "promo" };
+/** Rozet metni üreticisi: kartın sözlük çevirmeni (useT). Test için dışa açık. */
+export type CardTagT = (key: DictKey) => string;
 
 // Etiketler HARDCODED değil — ürünün gerçek alanlarından (ad, tip, teslimat, kampanya) +
 // kategori bağlamından türetilir. Sahte sosyal kanıt YOK. Öncelik: amaç > kategori > teslimat > premium/kampanya. Maks 3.
-function deriveTags(p: Product, ctx?: CardContextTag): CardTag[] {
+// Release 1 (Global Foundation): metinler sözlükten (card.tag.*) — locale sayfalarında rozetler de
+// o dilde; TR sözlüğü eski metinlerin aynısını taşır (TR kart birebir).
+export function deriveTags(p: Product, ctx: CardContextTag | undefined, t: CardTagT): CardTag[] {
   const tags: CardTag[] = [];
   const n = (p.name || "").toLocaleLowerCase("tr");
   const has = (...k: string[]) => k.some((x) => n.includes(x));
 
   // 1) GÖNDERİM AMACI
   if (ctx?.isOccasion) tags.push({ label: ctx.label, icon: "🎯", tone: "occasion" });
-  else if (has("sevgili", "romantik", "aşk")) tags.push({ label: "Sevgiliye Özel", icon: "🌹", tone: "occasion" });
-  else if (has("doğum günü", "dogum gunu")) tags.push({ label: "Doğum Günü", icon: "🎂", tone: "occasion" });
-  else if (has("yeni ev", "ev hediye")) tags.push({ label: "Yeni Ev Hediyesi", icon: "🏡", tone: "occasion" });
-  else if (has("anneler", "anneye")) tags.push({ label: "Anneye Hediye", icon: "👩", tone: "occasion" });
-  else if (has("geçmiş olsun", "gecmis olsun")) tags.push({ label: "Geçmiş Olsun", icon: "💐", tone: "occasion" });
-  else if (has("başsağlığı", "taziye", "cenaze")) tags.push({ label: "Başsağlığı", icon: "🙏", tone: "occasion" });
-  else if (has("açılış", "acilis")) tags.push({ label: "Açılış Töreni", icon: "🎈", tone: "occasion" });
-  else if (has("kurumsal")) tags.push({ label: "Kurumsal Hediye", icon: "🏢", tone: "occasion" });
+  else if (has("sevgili", "romantik", "aşk")) tags.push({ label: t("card.tag.occ.love"), icon: "🌹", tone: "occasion" });
+  else if (has("doğum günü", "dogum gunu")) tags.push({ label: t("card.tag.occ.birthday"), icon: "🎂", tone: "occasion" });
+  else if (has("yeni ev", "ev hediye")) tags.push({ label: t("card.tag.occ.newHome"), icon: "🏡", tone: "occasion" });
+  else if (has("anneler", "anneye")) tags.push({ label: t("card.tag.occ.mother"), icon: "👩", tone: "occasion" });
+  else if (has("geçmiş olsun", "gecmis olsun")) tags.push({ label: t("card.tag.occ.getWell"), icon: "💐", tone: "occasion" });
+  else if (has("başsağlığı", "taziye", "cenaze")) tags.push({ label: t("card.tag.occ.sympathy"), icon: "🙏", tone: "occasion" });
+  else if (has("açılış", "acilis")) tags.push({ label: t("card.tag.occ.opening"), icon: "🎈", tone: "occasion" });
+  else if (has("kurumsal")) tags.push({ label: t("card.tag.occ.corporate"), icon: "🏢", tone: "occasion" });
 
-  // 2) KATEGORİ
+  // 2) KATEGORİ (locale kartlarında ad çevrilmiş olabilir → "orchid"/"rose" de tanınır)
   if (ctx && !ctx.isOccasion && tags.length < 3) {
     tags.push({ label: ctx.label, icon: "🌿", tone: "category" });
   } else if (tags.length < 3) {
-    if (has("orkide")) tags.push({ label: "Orkide", icon: "🌸", tone: "category" });
-    else if (has("gül", "gul")) tags.push({ label: "Güller", icon: "🌹", tone: "category" });
-    else if (p.productType === "plant") tags.push({ label: "Saksı Bitkisi", icon: "🪴", tone: "category" });
-    else if (p.productType === "artificial") tags.push({ label: "Solmayan Çiçek", icon: "🌼", tone: "category" });
-    else if (p.productType === "wreath") tags.push({ label: "Çelenk", icon: "🎗️", tone: "category" });
-    else tags.push({ label: "Taze Çiçek", icon: "🌼", tone: "category" });
+    if (has("orkide", "orchid")) tags.push({ label: t("card.tag.orchid"), icon: "🌸", tone: "category" });
+    else if (has("gül", "gul", "rose")) tags.push({ label: t("card.tag.roses"), icon: "🌹", tone: "category" });
+    else if (p.productType === "plant") tags.push({ label: t("card.tag.plant"), icon: "🪴", tone: "category" });
+    else if (p.productType === "artificial") tags.push({ label: t("card.tag.artificial"), icon: "🌼", tone: "category" });
+    else if (p.productType === "wreath") tags.push({ label: t("card.tag.wreath"), icon: "🎗️", tone: "category" });
+    else tags.push({ label: t("card.tag.fresh"), icon: "🌼", tone: "category" });
   }
 
   // 3) TESLİMAT
-  if (tags.length < 3 && p.sameDay) tags.push({ label: "Aynı Gün Teslim", icon: "🚀", tone: "delivery" });
-  else if (tags.length < 3 && p.scope === "istanbul") tags.push({ label: "İstanbul İçi Teslimat", icon: "📍", tone: "delivery" });
+  if (tags.length < 3 && p.sameDay) tags.push({ label: t("card.tag.sameDay"), icon: "🚀", tone: "delivery" });
+  else if (tags.length < 3 && p.scope === "istanbul") tags.push({ label: t("card.tag.istanbul"), icon: "📍", tone: "delivery" });
 
   // 4) PREMIUM / KAMPANYA
-  if (tags.length < 3 && has("premium", "lüks", "luks", "deluxe")) tags.push({ label: "Premium Koleksiyon", icon: "💎", tone: "promo" });
-  else if (tags.length < 3 && p.hasSale) tags.push({ label: "Kampanyalı", icon: "🎉", tone: "promo" });
+  if (tags.length < 3 && has("premium", "lüks", "luks", "deluxe")) tags.push({ label: t("card.tag.premium"), icon: "💎", tone: "promo" });
+  else if (tags.length < 3 && p.hasSale) tags.push({ label: t("card.tag.sale"), icon: "🎉", tone: "promo" });
 
   return tags.slice(0, 3);
 }
@@ -110,7 +114,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
   const [hoverImage, setHoverImage] = useState<string | null>(null);
   const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
   const hoverRequested = useRef(false);
-  const tags = deriveTags(product, contextTag);
+  const tags = deriveTags(product, contextTag, tr);
 
   const requestHoverImage = () => {
     setHovered(true);
@@ -206,7 +210,7 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
               e.preventDefault();
               setWish(!wish);
             }}
-            aria-label="Favorilere ekle"
+            aria-label={tr("card.wishlist")}
             className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200"
             style={{
               background: "rgba(255,255,255,0.9)",

@@ -46,6 +46,14 @@ function buildRows(source: DeliveryZoneCity[]) {
   const ist = source.find((c) => c.city_slug === "istanbul");
   const others = source.filter((c) => c.city_slug !== "istanbul");
   const rows: { key: string; name: string; href: string; badge: string }[] = [];
+  // 23 Eyl 2026 — İl hub'ı listenin başına eklendi.
+  // Müşteri "İstanbul'a çiçek göndereceğim" diye geliyor ama hangi ilçe
+  // olduğunu her zaman bilmiyor; ilçe satırları ona bir adım ileride.
+  // /istanbul sayfası 39 ilçenin tamamını listeliyor, doğru giriş kapısı orası.
+  // Rozet BİLEREK teslimat vaadi taşımıyor ("39 İlçe"), çünkü İstanbul'un
+  // tamamı için tek bir teslimat sözü verilemez — söz adres girilince
+  // Delivery Motor'dan gelir.
+  if (ist) rows.push({ key: "istanbul-hub", name: "İstanbul", href: "/istanbul", badge: "39 İlçe" });
   for (const d of (ist?.districts ?? []).slice(0, 6)) {
     rows.push({ key: `istanbul-${d.slug}`, name: d.name, href: `/istanbul/${d.slug}`, badge: "Aynı Gün Teslimat" });
   }
@@ -71,13 +79,19 @@ export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
           <div>
             <SectionLabel>Teslimat Bölgeleri</SectionLabel>
             <SectionTitle>
-              Türkiye&apos;nin Her
+              Nereye Çiçek
               <br />
-              Köşesine Teslimat
+              Göndermek İstiyorsunuz?
             </SectionTitle>
+            {/* 23 Eyl 2026 — metin "nereye teslim ediyoruz" yerine "nasıl
+                seçersiniz" anlatıyor. Teslimat SÖZÜ değişmedi: İstanbul içi
+                aynı gün kurye, diğer iller 1–3 iş günü kargo — kesin gün ve
+                saat yine adres girilince Delivery Motor'dan geliyor. */}
             <p className="text-[#6B7280] text-[16px] leading-relaxed mt-6 mb-10">
-              İstanbul içi siparişlerde aynı gün, hızlı ve acil çiçek teslimatı;
-              İstanbul dışındaki illere 1–3 iş günü içinde özenli kargo ile teslim.
+              Bölgeyi seçin, o adrese gerçekten gönderebileceğimiz çiçekleri birlikte
+              görelim. İstanbul içinde aynı gün kuryeyle, Türkiye&apos;nin geri kalanında
+              1–3 iş günü kargoyla çalışıyoruz. Teslimat günü ve saat aralığı, adresi
+              girdiğiniz anda sipariş adımında karşınıza çıkar.
             </p>
             <div className="grid grid-cols-1 gap-2.5">
               {rows.map((d, idx) => (

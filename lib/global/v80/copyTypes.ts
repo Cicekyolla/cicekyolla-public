@@ -60,5 +60,7 @@ export interface V80Copy {
     journey: string; tagline1: string; tagline2: string; since: string;
     shop: string; all: string; help: string; how: string; areas: string; whatsapp: string; faq: string;
     deliver: string; follow: string; contact: string; country: string; cta: string; rights: string; cookies: string;
+    /** Release 1: çalışma saati satırı; `{opens}` `{closes}` taşır. */
+    hours: string;
   };
 }

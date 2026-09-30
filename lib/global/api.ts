@@ -4,6 +4,7 @@
 // API erişilemezse null/boş döner — locale sayfası 404'e düşer, TR etkilenmez.
 // ============================================================================
 import type { GlobalLocale } from "./config";
+import type { GlobalCatalogResponse } from "./globalCatalog";
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
@@ -29,6 +30,32 @@ export interface ProductLocaleCluster {
 export interface LocaleInventory {
   products: { slug: string; updated_at: string }[];
   categories: { slug: string; updated_at: string }[];
+}
+
+/** RELEASE 3 — ilçe erişimi + kesme saati (API /reach: katalog ucuyla aynı motor kararı, ürün listesi yok). 5 dk tazeleme. */
+export interface DistrictReach {
+  city: string; district: string; reach: "in" | "mixed" | "out" | "far" | "unknown" | string;
+  same_day: boolean | null; band: string | null; distance_km: number | null; cutoff_time: string | null;
+}
+const reachMemo = new Map<string, { at: number; v: DistrictReach | null }>();
+const REACH_MEMO_MS = 5 * 60_000;
+export async function fetchDistrictReach(locale: GlobalLocale, city: string, district: string): Promise<DistrictReach | null> {
+  // Motor kararı ilçe başına 10 dk API'de önbellekli; burada süreç içi 5 dk memo (Data Cache YOK — dosya kuralı no-store).
+  const key = `${city}/${district}`;
+  const hit = reachMemo.get(key);
+  if (hit && Date.now() - hit.at < REACH_MEMO_MS) return hit.v;
+  let v: DistrictReach | null = null;
+  try {
+    const resp = await fetch(`${API_ORIGIN}/api/public/global/reach?locale=${locale}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`, { cache: "no-store" });
+    if (resp.ok) {
+      const json = (await resp.json()) as { data?: DistrictReach };
+      v = json?.data ?? null;
+    }
+  } catch {
+    v = null;
+  }
+  if (v) reachMemo.set(key, { at: Date.now(), v });
+  return v;
 }
 
 async function getJson<T>(path: string): Promise<T | null> {
@@ -80,13 +107,21 @@ export interface CategorySurface {
   meta_description: string | null;
   indexable: boolean;
   updated_at: string;
-  products: { slug: string; name: string; tr_slug: string; price_minor?: string | null; sale_price_minor?: string | null; image_url?: string | null }[];
+  /** Additive (16 Eyl 2026): Category Center görseli. */
+  image?: string | null;
+  /** Ürünler: katalog ∩ gerçek kategori bağı, Global Merkezi sırası. Kart alanları yeni API'de satırda. */
+  products: CategorySurfaceProduct[];
   locales: { locale: string; slug: string; indexable: boolean }[];
+}
+export interface CategorySurfaceProduct {
+  slug: string; name: string; tr_slug: string; price_minor?: string | null; sale_price_minor?: string | null; image_url?: string | null;
+  id?: number; image?: string | null; blurhash?: string | null; derivatives?: { webp?: string; avif?: string; responsive?: Record<string, string> } | null;
+  product_type?: string | null; delivery_scope?: string | null; same_day_available?: boolean; is_new?: boolean; is_bestseller?: boolean; delivery_model_code?: string | null;
 }
 
 export interface LocaleCatalog {
-  // live_products / product_slugs: API additive alanları (Global Merkezi ile aynı formül).
-  categories: { slug: string; name: string; live_products?: number; product_slugs?: string[] }[];
+  // live_products / product_slugs: katalog ∩ gerçek kategori bağı (Global Merkezi ile aynı sorgu).
+  categories: { id?: number; slug: string; name: string; image?: string | null; live_products?: number; product_slugs?: string[] }[];
   products: { slug: string; name: string; tr_slug: string }[];
 }
 
@@ -100,6 +135,24 @@ export function fetchGlobalPage(locale: GlobalLocale, key: string): Promise<Glob
 export interface LiveDestination { slug: string; districts: number; live: boolean }
 export function fetchLiveDestinations(locale: GlobalLocale): Promise<LiveDestination[] | null> {
   return getJson<LiveDestination[]>(`/api/public/global/destinations?locale=${locale}`);
+}
+
+/**
+ * GLOBAL KATALOG (lokasyon yüzeyleri): o dilde canlı tüm ürünler, gerçek kategori bağı + ortak sıra,
+ * öne çıkanlar; lokasyon verilirse teslimat uygunluğuyla süzülmüş. Sayfa başına TEK istek.
+ * Hata/uç yok → null; karar lib/global/globalCatalog.ts catalogDecision'da (null = bugünkü davranış).
+ */
+export function fetchGlobalCatalog(
+  locale: GlobalLocale,
+  location?: { city: string; district?: string; neighborhood?: string } | null
+): Promise<GlobalCatalogResponse | null> {
+  const q = new URLSearchParams({ locale });
+  if (location) {
+    q.set("city", location.city);
+    if (location.district) q.set("district", location.district);
+    if (location.district && location.neighborhood) q.set("neighborhood", location.neighborhood);
+  }
+  return getJson<GlobalCatalogResponse>(`/api/public/global/catalog?${q.toString()}`);
 }
 
 export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string }[] | null> {

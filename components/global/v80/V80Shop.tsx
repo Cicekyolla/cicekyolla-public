@@ -7,6 +7,7 @@ import { useState } from "react";
 import { interp } from "@/lib/global/v80/text";
 import { applyFilters } from "@/lib/global/v80/filters";
 import type { V80View } from "@/lib/global/v80/view";
+import { v80ImageUnoptimized } from "@/lib/global/v80/schema";
 import { useV80Filter } from "./V80FilterContext";
 import { V80ProductCard } from "./V80ProductCard";
 
@@ -71,7 +72,7 @@ export function V80Shop({ view }: { view: V80View }) {
             {view.shop.promo && visible.length >= Math.min(8, limit) ? (
               <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", borderRadius: "var(--v80-radius-sm)", overflow: "hidden", border: "1px solid var(--v80-border)", marginTop: 8, marginBottom: 8 }} className="v80-promo">
                 <div style={{ background: "var(--v80-warm)", aspectRatio: "3/1", overflow: "hidden", position: "relative", width: "100%", minWidth: 0 }}>
-                  {view.shop.promo.image ? <Image src={view.shop.promo.image} alt="" fill sizes="(max-width:768px) 100vw, 50vw" className="v80-img" style={{ objectFit: "cover" }} unoptimized={!view.shop.promo.image.startsWith("/")} /> : null}
+                  {view.shop.promo.image ? <Image src={view.shop.promo.image} alt="" fill sizes="(max-width:768px) 100vw, 50vw" className="v80-img" style={{ objectFit: "cover" }} unoptimized={v80ImageUnoptimized(view.shop.promo.image)} /> : null}
                 </div>
                 <div style={{ background: "var(--v80-warm)", display: "flex", flexDirection: "column", justifyContent: "center", padding: "32px 40px" }}>
                   <p className="v80-serif" style={{ fontStyle: "italic", fontWeight: 200, fontSize: "clamp(1.1rem, 1.8vw, 1.75rem)", letterSpacing: "-0.03em", color: "var(--v80-ink)", marginBottom: 12, lineHeight: 1.15 }}>{t["shop.promoTitle"]}</p>

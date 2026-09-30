@@ -29,9 +29,11 @@ type Props = {
   onComplete?: () => void;
   /** Teslimat checkout içinde düzenlenince sepete geri yazar (tek kaynak sepettir). */
   onDeliveryChange?: (delivery: PendingDelivery) => void;
+  /** Kart ödemesi başladı (PayTR init başarılı) — sepet sahibine iletilir. */
+  onCardPaymentStarted?: (info: { merchantOid: string; draftKey: string }) => void;
 };
 
-export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete, onDeliveryChange }: Props) {
+export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete, onDeliveryChange, onCardPaymentStarted }: Props) {
   const [phase, setPhase] = useState<"gate" | "form">("gate");
   // Hesap adımındaki "Düzenle" ile gelindiyse sihirbaz teslimat panelini açık başlatır.
   const [openDeliveryEditor, setOpenDeliveryEditor] = useState(false);
@@ -55,5 +57,5 @@ export default function CheckoutFlow({ productName, productId, variantId, priceM
   }
 
   // Premium sipariş hazırlama deneyimi (Alıcı → Kart → Gönderen → Özet).
-  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} onDeliveryChange={onDeliveryChange} initialEditDelivery={openDeliveryEditor} />;
+  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} onDeliveryChange={onDeliveryChange} initialEditDelivery={openDeliveryEditor} onCardPaymentStarted={onCardPaymentStarted} />;
 }

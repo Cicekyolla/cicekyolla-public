@@ -53,6 +53,8 @@ export interface ProductSchemaInput {
   ratingAvg?: number | string | null;
   /** products.rating_count — onaylı yorum sayısı. */
   ratingCount?: number | string | null;
+  /** ADDITIVE (24 Eyl 2026): sayfa yolu — locale PDP'de /<locale>/<segment>/<slug>; yoksa TR /urun/<slug>. */
+  path?: string | null;
 }
 
 /** Kapak görseli önce, sonra galeri; hepsi MUTLAK URL, tekrarsız.
@@ -102,7 +104,7 @@ export function buildAggregateRating(
 
 /** Ürün sayfasının Product JSON-LD nesnesi. */
 export function buildProductJsonLd(input: ProductSchemaInput, deps: SchemaDeps): Record<string, unknown> {
-  const productUrl = deps.absolute(`/urun/${input.slug}`);
+  const productUrl = deps.absolute(input.path || `/urun/${input.slug}`);
   const images = buildImageList(input.images ?? [], deps.absolute);
   // Açıklama: kısa → uzun → ad. Düz metne indirgenir (schema HTML beklemez).
   const description =

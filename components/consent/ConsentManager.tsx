@@ -42,6 +42,8 @@ import { loadMetaPixel } from "@/lib/metaPixel";
      /siparis       -> /siparis-takibi + /siparis-takip
      /hizli-siparis -> hızlı sipariş hunisi
      /odeme         -> ileride açılabilecek ödeme rotası için koruma
+     /e-posta-tercihleri -> kampanya e-postasından ÇIKAN kişiye pazarlama
+                       popup'ı gösterilmez (DESIGN §3.G.2)
    TEK KAYNAK: NewMemberPopup da bunu import eder. */
 export const MARKETING_BLOCKED_PATHS = [
   "/checkout",
@@ -49,6 +51,7 @@ export const MARKETING_BLOCKED_PATHS = [
   "/odeme",
   "/siparis",
   "/hizli-siparis",
+  "/e-posta-tercihleri",
 ];
 
 /** Bulunulan yol kritik alışveriş/ödeme akışı mı? */
@@ -146,12 +149,20 @@ const OVERLAY_EXIT_MS = 500;
 let activeOverlay: string | null = null;
 let freeAt = 0;
 const waiters = new Set<() => void>();
+/** Kilit el değiştirdiğinde (alındı VEYA bırakıldı) haber verilecek dinleyiciler. */
+const changeWatchers = new Set<() => void>();
+
+function notifyOverlayChange() {
+  changeWatchers.forEach((fn) => fn());
+}
 
 /** Kilidi almayı dener. false dönerse çağıran tetikleyicisini harcamamalı. */
 export function acquireOverlay(id: string): boolean {
   if (activeOverlay !== null && activeOverlay !== id) return false;
   if (activeOverlay === null && Date.now() < freeAt) return false;
+  const yeni = activeOverlay !== id;
   activeOverlay = id;
+  if (yeni) notifyOverlayChange();
   return true;
 }
 
@@ -159,9 +170,29 @@ export function releaseOverlay(id: string) {
   if (activeOverlay !== id) return;
   activeOverlay = null;
   freeAt = Date.now() + OVERLAY_GAP_MS;
+  notifyOverlayChange();
   setTimeout(() => {
     waiters.forEach((fn) => fn());
+    notifyOverlayChange();
   }, OVERLAY_GAP_MS);
+}
+
+/**
+ * Şu anda BAŞKA bir popup açık mı? (ör. teslimat adresi penceresi)
+ * Teklif alanı bunu okuyup kendini gizler; müşterinin açık pencereyle işi
+ * bitmeden üstüne ikinci bir panel açılmaz.
+ */
+export function overlayBusy(exceptId?: string): boolean {
+  if (activeOverlay === null) return false;
+  return activeOverlay !== exceptId;
+}
+
+/** Kilit durumu her değiştiğinde (alındı/bırakıldı) haber verir. */
+export function onOverlayChange(fn: () => void) {
+  changeWatchers.add(fn);
+  return () => {
+    changeWatchers.delete(fn);
+  };
 }
 
 /**

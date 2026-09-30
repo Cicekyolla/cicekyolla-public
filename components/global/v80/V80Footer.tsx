@@ -51,6 +51,7 @@ export function V80Footer({ model: m }: { model: V80FooterModel }) {
               </li>
               <li><a href={m.contact.emailHref} dir="ltr">{m.contact.email}</a></li>
               <li><span className="v80-footer-address">{m.contact.address}</span></li>
+              {m.contact.hours ? <li><span className="v80-footer-address" dir="ltr">{m.contact.hours}</span></li> : null}
             </ul>
           </div>
         </div>

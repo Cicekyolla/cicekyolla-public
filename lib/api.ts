@@ -584,7 +584,13 @@ export async function fetchDistrictNeighborhoods(
 export interface LocationProductsPage {
   items: PublicProductListItem[];
   pagination: { page: number; page_size: number; total: number; total_pages: number };
-  meta: { source: string; coverage_products: number };
+  meta: {
+    source: string; coverage_products: number;
+    /** ADDITIVE (API 108): motorun ilçe kararı — 'in' | 'out' | 'mixed' | 'unknown' | 'far' | 'city_rule'; eski API'de yok. */
+    reach?: string; same_day?: boolean | null; band?: string | null;
+    /** 'far' için bandın ürün fiyat eşiği (kuruş); public bunu yalnız metinde gösterir, karar vermez. */
+    min_product_price_minor?: number | null;
+  };
 }
 export interface LocationProductsQuery {
   neighborhood?: string;

@@ -7,10 +7,13 @@ import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 import { ProductImage } from "@/components/product/ProductImage";
 import { ExpiredDeliveryNotice } from "@/components/checkout/ExpiredDeliveryNotice";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n, Num } from "@/lib/i18n";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import { useCurrency } from "@/lib/currency";
+import { buildCouponRequestBody, cartFingerprint, readCouponPreview, unanimousRegionIds } from "@/lib/couponState";
+import { clearPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
+import { cartDeliveryFeeMinor, cartTotalMinor, deliveryMethodLabel, cartDeliveriesMatch } from "@/lib/deliveryFee";
 
 // NOT: yerel `money` KALDIRILDI. Sepet artık seçili para birimini kullanır
 // (useCurrency().approx) — kalem, ara toplam, indirim ve GENEL TOPLAM aynı para
@@ -36,12 +39,44 @@ export default function CartPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [couponError, setCouponError] = useState(false);
-  const [discountMinor, setDiscountMinor] = useState(0);
-  const totalMinor = Math.max(0, subtotalMinor - discountMinor);
+  /** Uygulanan kupon — kod + SUNUCUNUN yazdığı indirim. İstemci hesap yapmaz. */
+  const [applied, setApplied] = useState<{ code: string; discountMinor: number } | null>(null);
+  const discountMinor = applied?.discountMinor ?? 0;
+  // TESLİMAT ÜCRETİ — motorun seçimle yazdığı ücret (PDP /check); sunucu sipariş anında yeniden hesaplar.
+  const deliveryFeeMinor = cartDeliveryFeeMinor(items.map((item) => item.delivery));
+  const deliveryLabel = deliveryMethodLabel(items[0]?.delivery, { sameDay: t("cart.deliverySameDay"), cargo: t("common.cargo"), none: t("common.cargo") });
+  const totalMinor = cartTotalMinor(subtotalMinor, discountMinor, deliveryFeeMinor);
+
+  // Sepet (ürün/varyant/adet/FİYAT) değişince uygulanan kupon geçersiz sayılır:
+  // aksi halde müşteri bayat bir indirim görür ve sipariş adımında sunucu
+  // "fiyat değişti" diye reddeder. Kupon kodu alanda kalır, tek tıkla yeniden
+  // uygulanır.
+  const fingerprint = useMemo(() => cartFingerprint(items), [items]);
+  const lastFingerprint = useRef(fingerprint);
+  useEffect(() => {
+    if (lastFingerprint.current === fingerprint) return;
+    lastFingerprint.current = fingerprint;
+    if (!applied) return;
+    setApplied(null);
+    clearPendingCoupon();
+    setCouponError(false);
+    setCouponMessage(t("cart.couponCartChanged"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fingerprint]);
   // Tek huni: her satırın teslimatı olmalı. Eski (teslimatsız) satırlar checkout kapısını
   // geçemediği için CTA burada kilitlenir; müşteri duvara çarpmak yerine yönlendirilir.
   const allHaveDelivery = items.length > 0 && items.every((item) => Boolean(item.delivery?.date && item.delivery?.address));
+  // TEK GÖNDERİM KAPISI: satırların teslimat seçimi (adres/tarih/yöntem/slot) farklıysa sessizce tek teslimata indirgenmez;
+  // ücret de tek seçimden gelir. Checkout sayfasındaki kapıyla aynı kural, burada erken ve açık mesajla.
+  const deliveriesMatch = allHaveDelivery && cartDeliveriesMatch(items.map((item) => item.delivery));
 
+  // KÖK NEDEN (E2E "Y"): burada `POST /api/public/coupon` çağrılıyordu — public
+  // uygulamada böyle bir route YOK (yalnız `/api/coupon` proxy'si var), istek
+  // catch-all SAYFA route'una düşüp canlıda 405 alıyordu. Yani sepetteki kupon
+  // alanı HİÇ çalışmıyordu. İkinci kök neden: müşteri kimliği localStorage'dan
+  // okunuyordu ve regex (`/^\\d+$/`) hiçbir rakamla eşleşmiyordu; kimlik artık
+  // yalnız oturum çerezinden (API tarafında) türetilir — gövdedeki customer_id
+  // backend tarafından okunmaz (oracle kapatıldı), bu yüzden gönderilmez.
   async function applyCoupon() {
     const code = couponCode.trim();
     if (!code || items.length === 0) return;
@@ -49,34 +84,45 @@ export default function CartPage() {
     setCouponMessage(null);
     setCouponError(false);
     try {
-      const storedCustomerId = window.localStorage.getItem("cicekyolla.customer_id");
-      const customerId = storedCustomerId && /^\\d+$/.test(storedCustomerId) ? Number(storedCustomerId) : undefined;
-      const response = await fetch("/api/public/coupon", {
+      const response = await fetch("/api/coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
-          ...(customerId ? { customer_id: customerId } : {}),
-        }),
+        // Varyant kimliği motorun fiyat tabanını siparişinkine eşitler.
+        // Bölge kimliği uydurulmaz: yalnız gerçekten biliniyorsa VE sepetteki
+        // TÜM satırlar aynı bölgeyi gösteriyorsa gider — tek satıra göre bölge
+        // kuponu açmak haksız indirim ve siparişte ret demektir.
+        body: JSON.stringify(buildCouponRequestBody(code, items, unanimousRegionIds(items.map((item) => item.delivery)))),
       });
-      const body = await response.json() as { data?: { valid?: boolean; discount_minor?: number; total_minor?: number; message?: string }; error?: string; message?: string };
-      const result = body.data;
-      if (!response.ok || !result?.valid) {
-        setDiscountMinor(0);
+      const preview = readCouponPreview(await response.json().catch(() => null), code);
+      if (!response.ok || !preview.valid) {
+        setApplied(null);
+        clearPendingCoupon();
         setCouponError(true);
-        setCouponMessage(result?.message ?? body.message ?? t("cart.couponFail"));
+        // Sunucunun Türkçe gerekçesi aynen gösterilir (sebep uydurulmaz).
+        setCouponMessage(preview.message ?? t("cart.couponFail"));
         return;
       }
-      setDiscountMinor(Number(result.discount_minor ?? 0));
-      setCouponMessage(result.message ?? t("cart.couponOk"));
+      setApplied({ code: preview.code, discountMinor: preview.discountMinor });
+      // Kod checkout'a taşınır; TUTAR taşınmaz — checkout motora yeniden sorar.
+      savePendingCoupon(preview.code);
+      setCouponCode(preview.code);
+      setCouponMessage(preview.message ?? t("cart.couponOk"));
     } catch {
-      setDiscountMinor(0);
+      setApplied(null);
+      clearPendingCoupon();
       setCouponError(true);
       setCouponMessage(t("cart.couponErr"));
     } finally {
       setCouponLoading(false);
     }
+  }
+
+  function removeCoupon() {
+    setApplied(null);
+    clearPendingCoupon();
+    setCouponCode("");
+    setCouponError(false);
+    setCouponMessage(t("cart.couponRemoved"));
   }
 
   return (
@@ -132,7 +178,7 @@ export default function CartPage() {
                                 href={`/urun/${item.productSlug}`}
                                 className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-3 py-1 text-[12px] font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]"
                               >
-                                <AlertTriangle className="h-3.5 w-3.5" /> Teslimat seçilmedi — seçmek için dokunun
+                                <AlertTriangle className="h-3.5 w-3.5" /> {t("cart.rowNeedsDelivery")}
                               </Link>
                             )}
                           </div>
@@ -164,19 +210,31 @@ export default function CartPage() {
                 </div>
                 <div className="px-8 pb-8">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "#C4B5FD" }}>{t("common.couponCode")}</p>
-                  <div className="mt-3 flex gap-2.5">
-                    <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full px-4 text-white/45" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(196,181,253,0.16)" }}>
-                      <Tag className="h-4 w-4" />
-                      <input aria-label={t("cart.couponPlaceholder")} value={couponCode} onChange={(event) => setCouponCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyCoupon(); }} placeholder={t("cart.enterCode")} className="h-12 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
-                    </label>
-                    <button type="button" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()} className="rounded-full px-6 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" }}>{couponLoading ? t("cart.checking") : t("common.apply")}</button>
-                  </div>
+                  {applied ? (
+                    /* Uygulanan kupon: kod + kaldırma. İndirim satırı aşağıda
+                       sunucunun yazdığı tutarla görünür. */
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-full px-4 py-3" style={{ background: "rgba(134,239,172,0.10)", border: "1px solid rgba(134,239,172,0.28)" }}>
+                      <span className="flex min-w-0 items-center gap-2 text-[13px] font-bold text-[#86EFAC]">
+                        <Tag className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{t("co.couponApplied", { code: applied.code })}</span>
+                      </span>
+                      <button type="button" onClick={removeCoupon} className="shrink-0 text-[12.5px] font-semibold text-white/55 transition hover:text-white">{t("common.remove")}</button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex gap-2.5">
+                      <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full px-4 text-white/45" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(196,181,253,0.16)" }}>
+                        <Tag className="h-4 w-4" />
+                        <input aria-label={t("cart.couponPlaceholder")} value={couponCode} onChange={(event) => setCouponCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyCoupon(); }} placeholder={t("cart.enterCode")} className="h-12 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
+                      </label>
+                      <button type="button" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()} className="rounded-full px-6 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" }}>{couponLoading ? t("cart.checking") : t("common.apply")}</button>
+                    </div>
+                  )}
                   {couponMessage ? <p className={`mt-3 text-[13px] font-semibold ${couponError ? "text-[#FCA5A5]" : "text-[#86EFAC]"}`}>{couponMessage}</p> : null}
 
                   <div className="mt-7 space-y-3 text-[14px]">
                     <div className="flex justify-between"><span className="text-white/45">{t("common.subtotal")}</span><Num className="font-semibold text-white/85">{money(subtotalMinor)}</Num></div>
                     {discountMinor > 0 ? <div className="flex justify-between text-[#86EFAC]"><span>{t("common.discount")}</span><Num className="font-semibold">-{money(discountMinor)}</Num></div> : null}
-                    <div className="flex justify-between"><span className="text-white/45">{t("common.cargo")}</span><span className="font-semibold text-[#86EFAC]">{t("common.free")}</span></div>
+                    <div className="flex justify-between" data-delivery-fee-row><span className="text-white/45">{deliveryLabel}</span>{deliveryFeeMinor > 0 ? <Num className="font-semibold text-white/85">{money(deliveryFeeMinor)}</Num> : <span className="font-semibold text-[#86EFAC]">{t("common.free")}</span>}</div>
                   </div>
                   <div className="my-6 h-px" style={{ background: "rgba(196,181,253,0.13)" }} />
                   <div className="flex items-baseline justify-between">
@@ -192,12 +250,12 @@ export default function CartPage() {
                   )}
                   {/* Teslimatsız satır varsa checkout kapısı zaten reddeder; müşteriyi
                       duvara göndermek yerine burada durdurup ne yapacağını söylüyoruz. */}
-                  {allHaveDelivery ? (
+                  {allHaveDelivery && deliveriesMatch ? (
                     <Link href="/checkout" className="mt-8 flex items-center justify-center gap-3 rounded-full px-8 py-5 text-[17px] font-bold text-white transition hover:brightness-110" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)", boxShadow: "0 18px 45px rgba(139,92,246,.35)" }}><ShoppingBag className="h-5 w-5" /> {t("cart.checkout")}</Link>
                   ) : (
                     <div className="mt-8">
                       <div className="flex cursor-not-allowed items-center justify-center gap-3 rounded-full px-8 py-5 text-[17px] font-bold text-white/45" style={{ background: "rgba(255,255,255,0.08)" }}><ShoppingBag className="h-5 w-5" /> {t("cart.checkout")}</div>
-                      <p className="mt-3 text-center text-[13px] font-semibold text-[#FCA5A5]">{t("cart.needDelivery")}</p>
+                      <p className="mt-3 text-center text-[13px] font-semibold text-[#FCA5A5]" data-cart-gate>{allHaveDelivery ? t("cart.deliveryMismatch") : t("cart.needDelivery")}</p>
                     </div>
                   )}
                   <p className="mt-5 text-center text-[12.5px] text-white/35">{t("cart.note")}</p>
@@ -207,7 +265,7 @@ export default function CartPage() {
                       değişmedi; panel koyu olduğu için beyaz (inverse) master kullanılır. */}
                   <div className="mt-6 flex items-center justify-center gap-2.5">
                     <FlowerGuaranteeBadge color="#ffffff" className="h-11 w-11 shrink-0 opacity-80 lg:h-12 lg:w-12" />
-                    <span className="text-[12.5px] font-semibold text-white/70">%100 ÇiçekYolla Garantisi</span>
+                    <span className="text-[12.5px] font-semibold text-white/70">{t("pdp.guaranteeTitle")}</span>
                   </div>
 
                   {/* Güven şeridi — checkout paneliyle aynı */}

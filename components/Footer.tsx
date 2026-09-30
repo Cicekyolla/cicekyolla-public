@@ -9,6 +9,7 @@ import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
 import { BrandWordmark } from "./BrandWordmark";
 import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
 import { yonelme } from "@/lib/turkish";
+import { resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -16,9 +17,18 @@ export interface FooterBrand {
   logoTagline?: string;
   contactPhone?: string;
   contactEmail?: string;
+  /** TEK DAMAR (25 Eyl 2026): Admin hero.config'ten çözülen işletme kimliği (adres, WhatsApp, saat, harita). */
+  identity?: SiteIdentity;
 }
 
 const FOOTER_DELIVERY_LINKS = [
+  // 23 Eyl 2026 — İL HUB'I YETİMDİ.
+  // Ölçüm: ana sayfa, /teslimat-bolgeleri, /site-haritasi, /kurumsal ve /blog'un
+  // HİÇBİRİNDE href="/istanbul" yok; /istanbul yalnız kendi 39 ilçesinden link
+  // alıyordu (GSC 90g: 57 gösterim, 0 tıklama). Footer sitedeki her sayfada
+  // olduğu için hub'a kalıcı bir üst-seviye bağlantı veren en ucuz yüzey.
+  // Teslimat vaadi TAŞIMAZ — yalnız bağlantı. Diğer satırlar aynen korundu.
+  { label: "İstanbul", href: "/istanbul" },
   { label: "Kadıköy", href: "/istanbul/kadikoy" },
   { label: "Beşiktaş", href: "/istanbul/besiktas" },
   { label: "Şişli", href: "/istanbul/sisli" },
@@ -36,7 +46,10 @@ function teslimatLinkleri(pathname: string | null) {
   const m = /^\/([a-z]{2})(?:\/|$)/.exec(pathname ?? "");
   const locale = m && (GLOBAL_LOCALES as readonly string[]).includes(m[1]) ? m[1] : null;
   if (!locale) return FOOTER_DELIVERY_LINKS;
-  return FOOTER_DELIVERY_LINKS.filter((l) => l.href.startsWith("/istanbul/")).map((l) => ({
+  // 23 Eyl 2026: süzgeç "/istanbul/" idi, il hub'ı "/istanbul" bu testten
+  // geçemiyordu. /en/istanbul, /ru/istanbul canlıda 200 döndüğü ölçüldü —
+  // hub locale yolunda da gösterilebilir. Diğer iller aynen gizli kalır.
+  return FOOTER_DELIVERY_LINKS.filter((l) => l.href === "/istanbul" || l.href.startsWith("/istanbul/")).map((l) => ({
     ...l,
     href: `/${locale}${l.href}`,
   }));
@@ -66,8 +79,10 @@ export function Footer({
   const pathname = usePathname();
   const catTx = useCategoryTranslations();
   const cn = (name: string, href?: string | null) => catTx.bySlug[slugFromHref(href)]?.name ?? name;
-  const contactPhone = brand?.contactPhone?.trim() || "0507 441 34 74";
-  const contactEmail = brand?.contactEmail?.trim() || "info@cicekyolla.com.tr";
+  // TEK DAMAR (25 Eyl 2026): kimlik (adres, WhatsApp, saat) Admin hero.config'ten; brand.identity yoksa GBP yedeği.
+  const identity = brand?.identity ?? resolveSiteIdentity(null);
+  const contactPhone = brand?.contactPhone?.trim() || identity.phoneDisplay;
+  const contactEmail = brand?.contactEmail?.trim() || identity.email;
   const phoneDigits = contactPhone.replace(/\D/g, "");
   const contactPhoneHref = phoneDigits.startsWith("0")
     ? `+90${phoneDigits.slice(1)}`
@@ -196,7 +211,7 @@ export function Footer({
                 </div>
                 <div>
                   <a href={`tel:${contactPhoneHref}`} className="text-sm text-white font-semibold hover:text-[#C4B5FD] transition-colors">{contactPhone}</a>
-                  <p className="text-xs text-[#6B7280] mt-0.5">Her gün 08:00 – 22:00</p>
+                  <p className="text-xs text-[#6B7280] mt-0.5" data-footer-hours>{identity.hoursLabel}</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -209,7 +224,8 @@ export function Footer({
                 <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)" }}>
                   <MapPin className="w-3.5 h-3.5 text-[#A855F7]" />
                 </div>
-                <span className="text-sm text-[#6B7280] mt-1.5">İstanbul, Türkiye</span>
+                {/* TEK DAMAR (25 Eyl 2026): görünür adres Admin hero.config'ten (iletişim sayfası + Google şeması ile aynı kaynak). */}
+                <span className="text-sm text-[#6B7280] mt-1.5" data-footer-address>{identity.addressLine}</span>
               </li>
             </ul>
 

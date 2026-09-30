@@ -1,21 +1,30 @@
-import { NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/apiProxyHeaders";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+/**
+ * "Bu bağlantı hâlâ geçerli mi?" kontrolü.
+ *
+ * POST BİRİNCİL YOLDUR (DESIGN §3.A.9): bağlantı `#token=` fragment biçimine
+ * geçtiğinde istemci token'ı tekrar bir sorgu dizesine yazmak zorunda kalmaz —
+ * yazsaydı fragment'in tüm kazancı (sunucu erişim kayıtları, Referer, GTM
+ * `page_location`) geri kaybedilirdi.
+ *
+ * GET yalnız geriye dönük uyum için KALIR (eski `?token=` bağlantısına tıklamış
+ * ve sayfası önbellekten gelen kullanıcı). Yeni kod POST kullanır.
+ */
+export async function POST(request: Request) {
+  return forwardToApi(request, {
+    path: "/api/auth/sifre-sifirla/gecerli",
+    method: "POST",
+    body: await request.text(),
+  });
+}
 
 export async function GET(request: Request) {
-  try {
-    // Yalnız `token` iletilir; gelen sorgu dizesi olduğu gibi geçirilmez.
-    const token = new URL(request.url).searchParams.get("token") ?? "";
-    const upstream = await fetch(
-      `${API_ORIGIN}/api/auth/sifre-sifirla/gecerli?token=${encodeURIComponent(token)}`,
-      { method: "GET", cache: "no-store" }
-    );
-    const data = await upstream.text();
-    return new NextResponse(data, {
-      status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
-    });
-  } catch {
-    return NextResponse.json({ error: "proxy_error" }, { status: 502 });
-  }
+  // Yalnız `token` iletilir; gelen sorgu dizesi olduğu gibi geçirilmez.
+  const token = new URL(request.url).searchParams.get("token") ?? "";
+  return forwardToApi(request, {
+    path: "/api/auth/sifre-sifirla/gecerli",
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
 }

@@ -16,12 +16,15 @@ declare global {
 export function pushEcommerceEvent(
   event: string,
   ecommerce: Record<string, unknown>,
+  extra?: Record<string, unknown>,
 ): void {
   if (typeof window === "undefined") return;
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ ecommerce: null });
-  window.dataLayer.push({ event, ecommerce });
+  // `extra` yalnız purchase'ta verilir (hash'li kullanıcı verisi); diğer
+  // olayların gövdesi birebir aynı kalır.
+  window.dataLayer.push(extra ? { event, ecommerce, ...extra } : { event, ecommerce });
 }
 
 /**

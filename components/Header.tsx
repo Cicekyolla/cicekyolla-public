@@ -14,6 +14,15 @@ import { LanguageSelector } from "./LanguageSelector";
 import { CurrencySelector } from "./CurrencySelector";
 import { useCurrency } from "@/lib/currency";
 import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
+import {
+  MEMBER_SESSION_EVENT,
+  headerAccountEntry,
+  memberStateFromStatus,
+  readSessionHint,
+  sessionHintStorage,
+  writeSessionHint,
+  type MemberSessionState,
+} from "@/lib/memberSessionHint";
 
 const fallbackGroup = (label: string, href: string): MegaGroup => ({
   href,
@@ -90,6 +99,10 @@ export function Header({ menu, nav, search, brand }: {
     : [];
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  // ÜYE OTURUMU — SSR'da DAİMA "unknown" (misafir görünümü). Statik/ISR ile
+  // önbelleğe alınan HTML bu yüzden hiçbir ziyaretçiye ait durum taşımaz;
+  // gerçek durum yalnız hidrasyondan sonra istemcide okunur.
+  const [sessionState, setSessionState] = useState<MemberSessionState>("unknown");
   const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── ARAMA PANELİ: doğal kapanma davranışı ─────────────────────────────────
@@ -146,6 +159,39 @@ export function Header({ menu, nav, search, brand }: {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // ── Hesap girişi: oturum varsa /hesabim, yoksa /giris ────────────────────
+  // Oturum çerezi HttpOnly → istemci okuyamaz. TEK dürüst kaynak mevcut
+  // `GET /api/account` ucunun DURUM KODU (401 = oturum yok). Yeni uç yok.
+  // Gövde bilinçli olarak AYRIŞTIRILMAZ: ad/e-posta/telefon header'ın state'ine
+  // hiç girmez, dolayısıyla önbellekli bir sayfaya da hiç sızamaz.
+  useEffect(() => {
+    let alive = true;
+    const apply = (next: MemberSessionState) => {
+      if (alive) setSessionState(next);
+    };
+    // Sekme ömürlü ipucu yalnız ilk boyamayı düzeltir (üyeye bir an "Giriş Yap"
+    // yazmamak için); sunucunun cevabı her zaman üstüne yazar.
+    const hinted = readSessionHint(sessionHintStorage(), Date.now());
+    if (hinted !== "unknown") apply(hinted);
+    const onSessionEvent = () => apply(readSessionHint(sessionHintStorage(), Date.now()));
+    window.addEventListener(MEMBER_SESSION_EVENT, onSessionEvent);
+    fetch("/api/account", { cache: "no-store", credentials: "include" })
+      .then((response) => {
+        const next = memberStateFromStatus(response.status);
+        // 502/500: geçici hata üyeyi çıkmış göstermez, misafiri üye yapmaz.
+        if (next === "unknown") return;
+        apply(next);
+        writeSessionHint(sessionHintStorage(), next, Date.now());
+      })
+      .catch(() => {
+        /* ağ hatası: misafir görünümü korunur (bugünkü davranış) */
+      });
+    return () => {
+      alive = false;
+      window.removeEventListener(MEMBER_SESSION_EVENT, onSessionEvent);
+    };
+  }, []);
+
   useEffect(() => {
     const term = query.trim();
     if (!searchOpen || term.length < 2) {
@@ -179,6 +225,9 @@ export function Header({ menu, nav, search, brand }: {
     [activeMenu, menuData],
   );
 
+  // Bağlantı hedefi ve etiketi tek saf eşlemeden gelir (lib/memberSessionHint).
+  const accountEntry = headerAccountEntry(sessionState);
+
   const handleMouseEnter = (key: string) => {
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
     setActiveMenu(key);
@@ -203,10 +252,10 @@ export function Header({ menu, nav, search, brand }: {
             {t("header.band")}
           </Link>
           <nav aria-label={t("header.customerOps")} className="flex items-center justify-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
-            <Link href="/giris" className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
+            <Link href={accountEntry.href} className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
               <UserRound className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t("header.login")}</span>
-              <span className="sm:hidden">{t("header.loginShort")}</span>
+              <span className="hidden sm:inline">{t(accountEntry.labelKey)}</span>
+              <span className="sm:hidden">{t(accountEntry.shortLabelKey)}</span>
             </Link>
             <span aria-hidden className="h-4 w-px bg-white/30" />
             <Link href="/sepet" className="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">

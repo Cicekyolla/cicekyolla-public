@@ -1,24 +1,17 @@
-import { NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/apiProxyHeaders";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
-
+/**
+ * Üyelik kaydı. Gövde olduğu gibi iletilir — `kvkk_onay` dâhil. API
+ * `kvkk_onay !== true` ise 400 döner (memberAuthValidation.parseRegisterInput),
+ * bu yüzden bu katman onayı ASLA kendisi doldurmaz.
+ *
+ * Kimlik başlıkları register kovaları için şarttır (IP 5/saat).
+ */
 export async function POST(request: Request) {
-  try {
-    const upstream = await fetch(`${API_ORIGIN}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": request.headers.get("content-type") ?? "application/json" },
-      body: await request.text(),
-      cache: "no-store",
-    });
-    const data = await upstream.text();
-    const response = new NextResponse(data, {
-      status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
-    });
-    const setCookie = upstream.headers.get("set-cookie");
-    if (setCookie) response.headers.set("set-cookie", setCookie);
-    return response;
-  } catch {
-    return NextResponse.json({ error: "proxy_error" }, { status: 502 });
-  }
+  return forwardToApi(request, {
+    path: "/api/auth/register",
+    method: "POST",
+    body: await request.text(),
+    passSetCookie: true,
+  });
 }

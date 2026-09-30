@@ -28,11 +28,20 @@ export interface V80FooterInput {
   allHref: string | null;
   /** O dilde APPROVED şehir kökleri (istanbul/antalya/mugla/izmir). */
   liveDestinations: readonly string[];
-  contact: { phone: string; email: string };
+  contact: V80Contact;
   whatsapp: string;
   isHome: boolean;
   hasFaq?: boolean;
   year?: number;
+}
+/** İletişim damarı (yayımlı ana sayfa hero.config → resolveSiteIdentity). Adres/saat opsiyonel (eski çağıranlar kırılmaz). */
+export interface V80Contact {
+  phone: string;
+  email: string;
+  /** Release 1: gerçek atölye adresi (TR footer/iletişim ile aynı satır). Yoksa "İstanbul, Türkiye" yedeği. */
+  addressLine?: string;
+  /** Release 1: çalışma saati (opens/closes, SS:DD) — footer.hours şablonuna girer. */
+  hours?: { opens: string; closes: string };
 }
 export interface V80FooterLink { key: string; label: string; href: string; external?: boolean }
 export interface V80FooterColumn { key: "shop" | "help" | "deliver" | "follow"; title: string; links: V80FooterLink[] }
@@ -46,7 +55,7 @@ export interface V80FooterModel {
   tagline2: string;
   since: string;
   columns: V80FooterColumn[];
-  contact: { title: string; phone: string; phoneHref: string; email: string; emailHref: string; whatsapp: string; whatsappLabel: string; address: string };
+  contact: { title: string; phone: string; phoneHref: string; email: string; emailHref: string; whatsapp: string; whatsappLabel: string; address: string; hours: string | null };
   cta: { label: string; href: string };
   rights: string;
   cookies: string;
@@ -109,7 +118,13 @@ export function buildV80Footer(input: V80FooterInput): V80FooterModel {
       emailHref: `mailto:${email}`,
       whatsapp: input.whatsapp,
       whatsappLabel: t("footer.whatsapp"),
-      address: `${CITY_NAMES[locale].istanbul}, ${t("footer.country")}`,
+      // Release 1: gerçek adres satırı (kimlik kaynağı) + ülke; kaynak boşsa eski "İstanbul, Türkiye".
+      address: input.contact.addressLine
+        ? `${input.contact.addressLine}, ${t("footer.country")}`
+        : `${CITY_NAMES[locale].istanbul}, ${t("footer.country")}`,
+      hours: input.contact.hours && t("footer.hours")
+        ? interp(t("footer.hours"), { opens: input.contact.hours.opens, closes: input.contact.hours.closes })
+        : null,
     },
     cta: { label: t("footer.cta"), href: anchor("shop") },
     rights: interp(t("footer.rights"), { year: input.year ?? new Date().getFullYear() }),

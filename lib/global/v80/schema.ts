@@ -17,13 +17,21 @@
 // (ürün id + TR slug, kategori id + locale slug haritası). Gerçek veri motordan.
 // Admin deposunda aynı sözleşmenin kopyası vardır (globalStorefrontSchema.ts);
 // alan eklerken ikisini birlikte güncelle.
+//
+// İLERİ UYUMLULUK (sürüm 2): bu sürümün bilmediği üst düzey structure anahtarları
+// (ör. locationSections, categoryOrder ya da ileride eklenecek alanlar) HAM olarak
+// korunur; ayrıştırıcı onları atmaz. Public bilinmeyen bölüm id'sini basmaz.
 // ============================================================================
 
-export const V80_SCHEMA_VERSION = 1;
+/** 2: banners bölümü + ileri uyumluluk (bilinmeyen anahtarlar korunur). Ayrıştırıcı v1 ve v2 belgeleri okur. */
+export const V80_SCHEMA_VERSION = 2;
 export const V80_PAGE_KEY = "storefront";
 
 export const V80_SECTION_IDS = [
   "hero",
+  // Sürüm 2: hero'nun hemen ardından banner şeridi. Eski kayıtlarda yoksa ayrıştırıcı hero'nun HEMEN
+  // ardına (hero yoksa başa) açık olarak ekler (DESIGN-FIX F3); aktif + görselli banner yoksa bölüm hiçbir şey basmaz.
+  "banners",
   "ticker",
   "discovery",
   "shop",
@@ -59,6 +67,18 @@ export interface V80CategoryRef {
 export interface V80ProductRef {
   id: number;
   tr_slug: string;
+  /** Vitrin satırı aktif mi (yoksa true). false → seçimde durur ama vitrinde GÖSTERİLMEZ. */
+  enabled?: boolean;
+}
+
+/** Ana sayfa banner'ı (dil-bağımsız). Metinler texts'te: x.banner.<key>.title|body|cta|alt. */
+export interface V80Banner {
+  key: string;
+  /** Göreli "/..." ya da https:// — başka değer null'a düşer (banner görünmez). */
+  image: string | null;
+  imageMobile: string | null;
+  target: V80Target;
+  enabled: boolean;
 }
 
 export type V80Target =
@@ -107,6 +127,12 @@ export interface V80Structure {
   journey: { ctaTarget: V80Target };
   cta: { target: V80Target };
   trust: { items: { key: string; icon: V80Icon; enabled: boolean }[] };
+  /** Sürüm 2: banner listesi (dizi sırası = gösterim sırası; en çok V80_MAX_BANNERS). */
+  banners: V80Banner[];
+  /** Lokasyon sayfası bölüm sırası — public vitrin ayrıştırmaz, HAM korunur (lib/global/locationSections.ts). */
+  locationSections?: unknown;
+  /** Global kategori sırası — sıralamayı API uygular; public vitrin HAM korur. */
+  categoryOrder?: unknown;
 }
 
 export interface V80Config {
@@ -188,6 +214,7 @@ export function defaultStructure(): V80Structure {
         { key: "fresh", icon: "leaf", enabled: true },
       ],
     },
+    banners: [],
   };
 }
 
@@ -206,6 +233,30 @@ const bool = (v: unknown, d: boolean): boolean => (typeof v === "boolean" ? v : 
 const strOrNull = (v: unknown): string | null => (isStr(v) && v.trim() ? v.trim() : null);
 const SAFE_KEY = /^[a-z0-9_-]{1,40}$/i;
 const SAFE_HREF = /^(\/[^\s]*|https:\/\/[^\s]+)$/;
+
+/** Banner anahtarı (texts anahtarının parçası): küçük harf, rakam, _ ve -. */
+export const V80_BANNER_KEY_RE = /^[a-z0-9_-]{1,40}$/;
+export const V80_MAX_BANNERS = 12;
+export const V80_BANNER_TEXT_FIELDS = ["title", "body", "cta", "alt"] as const;
+export type V80BannerTextField = (typeof V80_BANNER_TEXT_FIELDS)[number];
+/** Banner dil metni anahtarı: x.banner.<key>.<alan> (copy.ts mergedTexts x.* anahtarlarını kabul eder). */
+export const bannerTextKey = (key: string, field: V80BannerTextField): string => `x.banner.${key}.${field}`;
+
+// Güvenli görsel değeri: göreli "/yol" (protokolsüz "//" ve ters eğik çizgi YOK) ya da https://.
+const SAFE_IMAGE = /^(\/(?![/\\])[^\s\\]+|https:\/\/[^\s\\]+)$/;
+/** Görsel değeri güvenliyse kırpılmış hali; değilse null (javascript:, data:, http://, //host …). */
+export function safeImageOrNull(v: unknown): string | null {
+  const s = strOrNull(v);
+  return s && SAFE_IMAGE.test(s) ? s : null;
+}
+
+/** next/image optimizasyonu kapalı mı: mutlak/protokolsüz URL'ler ve /r2/ proxy yolları doğrudan servis edilir. */
+export function v80ImageUnoptimized(src: string): boolean {
+  return !src.startsWith("/") || src.startsWith("//") || src.startsWith("/r2/");
+}
+
+// Üst düzey structure anahtarlarını HAM korurken güvenli ad kuralı (__proto__ gibi adlar alınmaz).
+const PASSTHROUGH_KEY = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 
 export function parseTarget(v: unknown): V80Target {
   if (!isObj(v) || !isStr(v.kind)) return { kind: "none" };
@@ -240,7 +291,28 @@ export function parseCategoryRef(v: unknown): V80CategoryRef | null {
 
 function parseProductRef(v: unknown): V80ProductRef | null {
   if (!isObj(v) || !isNum(v.id) || !isStr(v.tr_slug)) return null;
-  return { id: v.id, tr_slug: v.tr_slug };
+  // enabled yalnız kayıtta boolean ise taşınır (yoksa true sayılır; eski belgelerin şekli değişmez).
+  return typeof v.enabled === "boolean" ? { id: v.id, tr_slug: v.tr_slug, enabled: v.enabled } : { id: v.id, tr_slug: v.tr_slug };
+}
+
+/** Banner listesi: geçerli anahtar, tekrar yok, en çok V80_MAX_BANNERS; güvensiz görsel null olur. */
+export function parseBanners(v: unknown): V80Banner[] {
+  if (!Array.isArray(v)) return [];
+  const out: V80Banner[] = [];
+  const seen = new Set<string>();
+  for (const raw of v) {
+    if (out.length >= V80_MAX_BANNERS) break;
+    if (!isObj(raw) || !isStr(raw.key) || !V80_BANNER_KEY_RE.test(raw.key) || seen.has(raw.key)) continue;
+    seen.add(raw.key);
+    out.push({
+      key: raw.key,
+      image: safeImageOrNull(raw.image),
+      imageMobile: safeImageOrNull(raw.imageMobile),
+      target: parseTarget(raw.target),
+      enabled: bool(raw.enabled, true),
+    });
+  }
+  return out;
 }
 
 function parseIcon(v: unknown, d: V80Icon): V80Icon {
@@ -261,7 +333,12 @@ function keyed<T extends { key: string }>(v: unknown, d: T[], map: (item: Record
 export function parseStructure(v: unknown): V80Structure {
   const d = defaultStructure();
   if (!isObj(v)) return d;
-  const s: V80Structure = { ...d };
+  // İleri uyumluluk: bu sürümün bilmediği üst düzey anahtarlar (locationSections, categoryOrder,
+  // gelecekteki alanlar) HAM olarak korunur; bilinen anahtarlar aşağıda varsayılanla ayrıştırılır.
+  const known = new Set(Object.keys(d));
+  const extras: Record<string, unknown> = {};
+  for (const [k, raw] of Object.entries(v)) if (!known.has(k) && PASSTHROUGH_KEY.test(k)) extras[k] = raw;
+  const s: V80Structure = Object.assign({}, d, extras);
 
   if (Array.isArray(v.sections)) {
     const seen = new Set<V80SectionId>();
@@ -273,7 +350,14 @@ export function parseStructure(v: unknown): V80Structure {
       seen.add(id);
       list.push({ id, enabled: bool(raw.enabled, true) });
     }
-    // Bilinmeyen/eksik bölümler sona eklenir (yeni bölüm eski kayıtta görünmez kalmasın).
+    // DESIGN-FIX F3: kayıtta 'banners' yoksa (sürüm 2 öncesi belge) kayıtlı hero'nun HEMEN ardına,
+    // hero yoksa başa, açık olarak girer. Kayıtta varsa operatörün sırası/görünürlüğü aynen kalır.
+    // Admin kopyası (globalStorefrontSchema.ts) birebir aynı kuralı uygular.
+    if (!seen.has("banners")) {
+      list.splice(list.findIndex((x) => x.id === "hero") + 1, 0, { id: "banners", enabled: true });
+      seen.add("banners");
+    }
+    // Diğer eksik bölümler sona eklenir (yeni bölüm eski kayıtta görünmez kalmasın).
     for (const id of V80_SECTION_IDS) if (!seen.has(id)) list.push({ id, enabled: true });
     s.sections = list;
   }
@@ -370,7 +454,30 @@ export function parseStructure(v: unknown): V80Structure {
   if (isObj(v.cta)) s.cta = { target: v.cta.target === undefined ? d.cta.target : parseTarget(v.cta.target) };
   if (isObj(v.trust)) s.trust = { items: keyed(v.trust.items, d.trust.items, (r, f) => ({ key: r.key as string, icon: parseIcon(r.icon, f?.icon ?? "star"), enabled: bool(r.enabled, true) })) };
 
+  s.banners = parseBanners(v.banners);
+
   return s;
+}
+
+/** Vitrinde gösterilecek ürün referansları (enabled === false olanlar hariç; sıra korunur). */
+export function activeProductRefs(s: V80Structure): V80ProductRef[] {
+  return s.shop.products.filter((p) => p.enabled !== false);
+}
+
+/**
+ * Yapıdaki TÜM görsel alanlarını tek dönüştürücüden geçirir (public: mediaUrlOrNull → r2.dev → /r2).
+ * Saf; girdi değişmez. Bilinmeyen (HAM korunan) anahtarlar aynen taşınır.
+ */
+export function mapStructureImages(s: V80Structure, map: (url: string | null) => string | null): V80Structure {
+  return {
+    ...s,
+    hero: { ...s.hero, image: map(s.hero.image), imageMobile: map(s.hero.imageMobile) },
+    shop: { ...s.shop, promo: { ...s.shop.promo, image: map(s.shop.promo.image) } },
+    collections: { ...s.collections, items: s.collections.items.map((it) => ({ ...it, image: map(it.image) })) },
+    mood: { ...s.mood, items: s.mood.items.map((it) => ({ ...it, image: map(it.image) })) },
+    destinations: { ...s.destinations, items: s.destinations.items.map((it) => ({ ...it, image: map(it.image) })) },
+    banners: (s.banners ?? []).map((b) => ({ ...b, image: map(b.image), imageMobile: map(b.imageMobile) })),
+  };
 }
 
 export function parseTexts(v: unknown): Record<string, string> {
@@ -384,7 +491,7 @@ export function parseTexts(v: unknown): Record<string, string> {
   return out;
 }
 
-/** DB'deki content_html metnini (JSON) yapılandırmaya çevirir; hatada null. */
+/** DB'deki content_html metnini (JSON) yapılandırmaya çevirir; hatada null. v1 ve v2 belgeleri aynı yoldan okunur. */
 export function parseStorefrontConfig(raw: unknown): V80Config | null {
   let v: unknown = raw;
   if (isStr(raw)) {

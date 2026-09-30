@@ -4,6 +4,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { V80View } from "@/lib/global/v80/view";
+import { v80ImageUnoptimized } from "@/lib/global/v80/schema";
 import { useV80Filter } from "./V80FilterContext";
 
 export function V80Mood({ view }: { view: V80View }) {
@@ -18,7 +19,7 @@ export function V80Mood({ view }: { view: V80View }) {
       <div className="v80-mood-stage" style={{ position: "relative", height: "64vh", minHeight: 420, overflow: "hidden" }}>
         {items.map((m, k) => (
           <div key={m.key} aria-hidden={k !== i} style={{ position: "absolute", inset: 0, opacity: k === i ? 1 : 0, transition: "opacity var(--v80-motion-reveal) cubic-bezier(0.25,1,0.5,1)", pointerEvents: "none" }}>
-            {m.image ? <Image src={m.image} alt="" fill sizes="100vw" priority={false} style={{ objectFit: "cover", filter: "saturate(0.72) brightness(1.07) contrast(0.91) sepia(0.09)" }} unoptimized={!m.image.startsWith("/")} /> : null}
+            {m.image ? <Image src={m.image} alt="" fill sizes="100vw" priority={false} style={{ objectFit: "cover", filter: "saturate(0.72) brightness(1.07) contrast(0.91) sepia(0.09)" }} unoptimized={v80ImageUnoptimized(m.image)} /> : null}
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(16,8,6,0.42) 0%, transparent 38%, rgba(16,8,6,0) 50%, rgba(16,8,6,0.82) 100%)" }} />
           </div>
         ))}
