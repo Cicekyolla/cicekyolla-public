@@ -1086,6 +1086,22 @@ export async function LocalePage({ locale, path, searchParams }: {
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
       <main lang={locale} dir={DIR[locale]} className="mx-auto w-full max-w-6xl px-4 py-8">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+        {/* BreadcrumbList SUNUCUDA üretilir (I18nProvider SSR'da daima TR; ProductDetail içinden
+            locale'e bağlı üretim sunucu HTML'ine girmez). TR PDP (app/urun) bu yoldan geçmez → çift liste yok.
+            "Ürünler" basamağı yok: Global'de tıklanabilir katalog hub'ı yok. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: LABELS[locale].ana, item: absoluteUrl(`/${locale}`) },
+                { "@type": "ListItem", position: 2, name: surface.name ?? product.name, item: absoluteUrl(localeProductPath(locale, surface.slug)) },
+              ],
+            }),
+          }}
+        />
         <ProductDetail
           data={data}
           sizeProducts={sizeProducts}
