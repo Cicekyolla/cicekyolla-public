@@ -11,6 +11,7 @@ import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
 import { fetchWithDeadline } from "./fetchWithDeadline";
+import { productDetailToListItem } from "./showcaseBlocks.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
@@ -65,51 +66,18 @@ export interface SeoPublicPage {
   // önüne almak için kullanılır. Eski API alanı göndermezse undefined kalır
   // ve davranış öncekiyle birebir aynıdır.
   content_source?: string | null;
-  // ADDITIVE (Maltepe pilotu): sayfanın lokasyon kimliği, mahalle sayfasının üst sayfası
-  // ve operatör vitrininin aktif satır sayısı. Eski API göndermezse undefined → davranış değişmez.
-  location?: SeoPageLocation | null;
-  parent?: { path: string; name: string } | null;
-  showcase_count?: number;
 }
 
-export interface SeoPageLocation {
-  city_slug: string | null;
-  city_name: string | null;
-  district_slug: string | null;
-  district_name: string | null;
-  neighborhood_slug: string | null;
-  neighborhood_name: string | null;
-}
-
-export interface SeoShowcasePage {
-  items: PublicProductListItem[];
-  pagination: { page: number; page_size: number; total: number; total_pages: number };
-  meta: { source: string };
-}
-
-/** Operatör vitrini (sıralı ürünler). Hata/404 → null. */
-export async function fetchSeoShowcase(path: string, page = 1, pageSize = 30): Promise<SeoShowcasePage | null> {
-  const qs = new URLSearchParams({ path, page: String(page), page_size: String(pageSize) }).toString();
+/** Operatör vitrini ürün kartı: mevcut GET /api/products/:id. Aktif değil / stok 0 / kapak yok / hata → null (ürün atlanır). */
+export async function fetchProductCardById(id: number): Promise<PublicProductListItem | null> {
   try {
-    const res = await fetchWithDeadline(`${API_ORIGIN}/api/public/seo/showcase?${qs}`, { headers: apiHeaders(), next: { revalidate: 120 } }, 8_000);
+    const res = await fetchWithDeadline(`${API_ORIGIN}/api/products/${encodeURIComponent(String(id))}`, { headers: apiHeaders(), next: { revalidate: 120 } }, 6_000);
     if (!res.ok) return null;
-    const json = (await res.json()) as { data?: SeoShowcasePage };
-    if (!json?.data || !Array.isArray(json.data.items) || !json.data.pagination) return null;
-    return json.data;
+    const item = productDetailToListItem((await res.json()) as PublicProductDetail);
+    if (!item) return null;
+    return { ...item, cover_image_url: mediaUrlOrNull(item.cover_image_url), cover_derivatives: mediaDerivatives(item.cover_derivatives) };
   } catch {
     return null;
-  }
-}
-
-/** Yayındaki pillar (category_location) yolları. Hata → boş dizi. */
-export async function fetchPillarPaths(): Promise<string[]> {
-  try {
-    const res = await fetchWithDeadline(`${API_ORIGIN}/api/public/seo/pillar-paths`, { next: { revalidate: 60 } }, 4_000);
-    if (!res.ok) return [];
-    const json = (await res.json()) as { paths?: unknown };
-    return Array.isArray(json?.paths) ? json.paths.filter((p): p is string => typeof p === "string") : [];
-  } catch {
-    return [];
   }
 }
 
@@ -215,6 +183,14 @@ async function inventoryForCrossLinks(): Promise<SeoInventoryItem[]> {
       .finally(() => { inventoryInflight = null; });
   }
   return inventoryInflight;
+}
+
+/** Mahalle → pillar üst sayfa: envanterde yayınlı /{ilçe}-cicek-siparisi (category_location) varsa yolu, yoksa null. */
+export async function findPillarPath(districtSlug: string): Promise<string | null> {
+  if (!/^[a-z0-9-]+$/.test(districtSlug)) return null;
+  const want = `/${districtSlug}-cicek-siparisi`;
+  const inventory = await inventoryForCrossLinks();
+  return inventory.some((i) => i.page_type === "category_location" && i.url_path === want) ? want : null;
 }
 
 /** Bir ilin (citySlug) TÜM ilçelerini gerçek SEO envanterinden döner —

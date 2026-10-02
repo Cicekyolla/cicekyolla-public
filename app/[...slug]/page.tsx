@@ -3,9 +3,10 @@ import { Price } from "@/components/Price";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, fetchSeoShowcase, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, fetchProductCardById, findPillarPath, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
-import { SHOWCASE_PAGE_SIZE, descriptionWithPage, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
+import { descriptionWithPage, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
+import { getLocationBlock, getShowcaseItems, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
 import { hasOperatorLinks } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
 import { NightOrderStrip } from "@/components/home/NightOrderStrip";
@@ -158,17 +159,18 @@ function fallbackLocationParts(page: SeoPublicPage, path: string): DynDelivery |
   };
 }
 
-/** Maltepe pilotu: pillar (category_location, tek segment) sayfasının lokasyonu API'nin `location` alanından gelir. */
+/** Maltepe pilotu: pillar (category_location, tek segment) sayfasının lokasyonu body_blocks'taki "location" bloğundan gelir. Blok yoksa/geçersizse null → bugünkü genel render. */
 function pillarDeliveryParts(page: SeoPublicPage, path: string): DynDelivery | null {
   if (page.page_type !== "category_location") return null;
   if (path.split("/").filter(Boolean).length !== 1) return null;
-  const loc = page.location;
-  if (!loc?.city_slug || !loc.district_slug) return null;
+  const loc = getLocationBlock(page);
+  if (!loc) return null;
   return {
-    parts: [loc.city_slug, loc.district_slug],
-    cityName: loc.city_name || prettySlug(loc.city_slug),
-    districtName: loc.district_name || prettySlug(loc.district_slug),
-    sameDay: loc.city_slug === "istanbul",
+    parts: [loc.city, loc.district],
+    cityName: prettySlug(loc.city),
+    // Slug diyakritik taşımaz: ad H1'den ("Kadıköy Çiçek Siparişi" → "Kadıköy"), yoksa slug'dan.
+    districtName: locationLabel(page, prettySlug(loc.district)),
+    sameDay: loc.city === "istanbul",
   };
 }
 
@@ -178,25 +180,35 @@ type Resolved =
   | { kind: "redirect"; to: string }
   | { kind: "notfound" };
 
-/** Vitrin sayfalaması dahil çözümleme. Sayfalama yoksa resolvePage ile BİREBİR aynı akış. */
+/** Vitrin ürün kartları: yalnız GÖSTERİLEN sayfanın en çok 30 ürünü; çözülemeyen ürün atlanır, sıra korunur. */
+async function loadShowcaseCards(ids: number[]): Promise<CardProduct[]> {
+  const rows = await Promise.all(ids.map((id) => fetchProductCardById(id).catch(() => null)));
+  return rows.filter((r): r is NonNullable<typeof r> => r != null).map(toCardProduct);
+}
+
+/** Vitrin sayfalaması dahil çözümleme. Sayfalama/vitrin yoksa resolvePage ile BİREBİR aynı akış. */
 async function resolveRequest(requestedPath: string): Promise<Resolved> {
   const parsed = parseShowcasePath(requestedPath);
   if (parsed.page !== null) {
-    // Sonsuz URL uzayı açma: taban yol published SEO sayfası + vitrin dolu + N<=total_pages olmalı.
+    // Sonsuz URL uzayı açma: taban yol published SEO sayfası + aktif vitrin öğesi>0 + N<=toplam sayfa.
     if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath };
     const base = await fetchSeoPage(parsed.basePath);
-    if (!base || !(base.showcase_count && base.showcase_count > 0)) return { kind: "notfound" };
-    const sc = await fetchSeoShowcase(parsed.basePath, parsed.page, SHOWCASE_PAGE_SIZE);
-    if (!sc || parsed.page > sc.pagination.total_pages || sc.items.length === 0) return { kind: "notfound" };
-    return { kind: "ok", path: parsed.basePath, pageNumber: parsed.page, page: base, showcase: { items: sc.items.map(toCardProduct), total: sc.pagination.total, totalPages: sc.pagination.total_pages } };
+    const ids = getShowcaseItems(base);
+    if (!base || ids.length === 0) return { kind: "notfound" };
+    const totalPg = showcaseTotalPages(ids.length);
+    if (parsed.page > totalPg) return { kind: "notfound" };
+    const items = await loadShowcaseCards(showcasePageIds(ids, parsed.page));
+    if (items.length === 0) return { kind: "notfound" };
+    return { kind: "ok", path: parsed.basePath, pageNumber: parsed.page, page: base, showcase: { items, total: ids.length, totalPages: totalPg } };
   }
   const page = await resolvePage(requestedPath);
   if (!page) return { kind: "notfound" };
   let showcase: ShowcaseView | null = null;
-  if (page.showcase_count && page.showcase_count > 0) {
-    const sc = await fetchSeoShowcase(requestedPath, 1, SHOWCASE_PAGE_SIZE);
-    // API hatası / boş vitrin → showcase yok: bugünkü akış (fallback).
-    if (sc && sc.items.length > 0) showcase = { items: sc.items.map(toCardProduct), total: sc.pagination.total, totalPages: sc.pagination.total_pages };
+  const ids = getShowcaseItems(page);
+  if (ids.length > 0) {
+    const items = await loadShowcaseCards(showcasePageIds(ids, 1));
+    // Hiç ürün çözülemezse vitrin yok sayılır: bugünkü akış (fallback).
+    if (items.length > 0) showcase = { items, total: ids.length, totalPages: showcaseTotalPages(ids.length) };
   }
   return { kind: "ok", path: requestedPath, pageNumber: 1, page, showcase };
 }
@@ -288,7 +300,8 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
 }) {
   const ownPath = selfPath ?? page.url_path;
   const isPillar = page.page_type === "category_location";
-  const parentRef = page.parent && page.parent.path ? page.parent : null;
+  // Mahalle → pillar üst sayfa (envanterde yayınlı pillar varsa); yoksa bugünkü ilçe linki.
+  let parentRef: { path: string; name: string } | null = null;
   const parts = dyn?.parts ?? deliveryParts(path)!;
   const { city, district } = dyn ? { city: undefined, district: undefined } : getDeliveryInfo(parts);
   const pageLabel = locationLabel(page, prettySlug(parts.at(-1) || parts[0]));
@@ -296,6 +309,10 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   const districtName = dyn?.districtName || district?.label || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
+  if (parts.length === 3) {
+    const pillarPath = await findPillarPath(parts[1]).catch(() => null);
+    if (pillarPath) parentRef = { path: pillarPath, name: `${districtName} Çiçek Siparişi` };
+  }
   // Lokasyon SEO Merkezi: operatör-onaylı H1 varsa sabit şablonun önüne geçer
   // (kapı mantığı lib/managedSeoContent.ts — onaysız sayfalarda null).
   const adminH1 = managedH1(page);

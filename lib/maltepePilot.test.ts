@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import {
   parseShowcasePath, totalPages, visiblePages, prevNext, showcasePageHref, titleWithPage, descriptionWithPage,
 } from "./showcasePagination.ts";
-import { isPillarPathname } from "./pillar-paths.ts";
+import { pillarBasePath, isPillarPageData } from "./pillar-paths.ts";
+import { getShowcaseItems, getLocationBlock, showcaseTotalPages, showcasePageIds, productDetailToListItem } from "./showcaseBlocks.ts";
+import type { PublicProductDetail } from "./api.ts";
 import { hasOperatorLinks } from "./operatorLinks.ts";
 import { locationBreadcrumbJsonLd } from "./locationBreadcrumb.ts";
 
@@ -44,14 +46,60 @@ test("sayfa ≥2 başlık/açıklama son eki", () => {
   assert.equal(descriptionWithPage("D", 3), "D (Sayfa 3)");
 });
 
-test("middleware pillar muafiyeti (saf)", () => {
-  const set = new Set(["/maltepe-cicek-siparisi"]);
-  assert.equal(isPillarPathname("/maltepe-cicek-siparisi", set), true);
-  assert.equal(isPillarPathname("/maltepe-cicek-siparisi/", set), true);
-  assert.equal(isPillarPathname("/maltepe-cicek-siparisi/sayfa/2", set), true);
-  assert.equal(isPillarPathname("/maltepe-cicek-siparisi/sayfa/x", set), false);
-  assert.equal(isPillarPathname("/kadikoy-cicek-siparisi", set), false);
-  assert.equal(isPillarPathname("/maltepe-cicek-siparisi", new Set()), false); // fail-safe
+test("middleware pillar ön kontrol regex'i", () => {
+  assert.equal(pillarBasePath("/maltepe-cicek-siparisi"), "/maltepe-cicek-siparisi");
+  assert.equal(pillarBasePath("/maltepe-cicek-siparisi/"), "/maltepe-cicek-siparisi");
+  assert.equal(pillarBasePath("/maltepe-cicek-siparisi/sayfa/2"), "/maltepe-cicek-siparisi");
+  for (const bad of ["/istanbul/maltepe", "/maltepe-cicek-siparisi/sayfa/x", "/maltepe-cicek-siparisi/foo", "/Maltepe-cicek-siparisi", "/a/b-cicek-siparisi", "/cicek-siparisi", "/"]) {
+    assert.equal(pillarBasePath(bad), null, bad);
+  }
+  assert.equal(isPillarPageData({ page_type: "category_location" }), true);
+  assert.equal(isPillarPageData({ page_type: "city" }), false);
+  assert.equal(isPillarPageData(null), false);
+});
+
+test("vitrin bloğu ayrıştırma", () => {
+  const page = { body_blocks: [
+    { type: "keywords", items: ["a"] },
+    { type: "showcase", items: [{ product_id: 5, active: true }, { product_id: 3 }, { product_id: 5 }, { product_id: 9, active: false }, { product_id: "x" }, { product_id: -1 }, null, { product_id: "7", active: true }] },
+    { type: "location", city: "istanbul", district: "maltepe" },
+  ] };
+  assert.deepEqual(getShowcaseItems(page), [5, 3, 7]);
+  assert.deepEqual(getShowcaseItems({ body_blocks: [] }), []);
+  assert.deepEqual(getShowcaseItems(null), []);
+  assert.deepEqual(getShowcaseItems({ body_blocks: [{ type: "showcase" }] }), []);
+  assert.deepEqual(getLocationBlock(page), { city: "istanbul", district: "maltepe" });
+  assert.equal(getLocationBlock({ body_blocks: [{ type: "location", city: "Istanbul!", district: "x" }] }), null);
+  assert.equal(getLocationBlock({ body_blocks: [] }), null);
+  const many = { body_blocks: [{ type: "showcase", items: Array.from({ length: 600 }, (_, i) => ({ product_id: i + 1 })) }] };
+  assert.equal(getShowcaseItems(many).length, 500);
+});
+
+test("sayfa hesabı: aktif öğe sayısına göre", () => {
+  assert.equal(showcaseTotalPages(0), 0);
+  assert.equal(showcaseTotalPages(30), 1);
+  assert.equal(showcaseTotalPages(61), 3);
+  const ids = Array.from({ length: 65 }, (_, i) => i + 1);
+  assert.equal(showcasePageIds(ids, 1).length, 30);
+  assert.deepEqual(showcasePageIds(ids, 3), [61, 62, 63, 64, 65]);
+  assert.deepEqual(showcasePageIds(ids, 4), []);
+});
+
+test("ürün detayından kart eşleme", () => {
+  const detail = {
+    product: { id: 1, name: "Buket", slug: "buket", price_minor: 100000, sale_price_minor: null, currency: "TRY", status: "active", product_type: "flower", is_featured: false, is_bestseller: true, is_new: false, stock_quantity: 4, same_day_available: true, delivery_scope: "istanbul" },
+    images: [{ id: 2, url: "/b.jpg", alt: null, role: "gallery", sort_order: 0 }, { id: 1, url: "/a.jpg", alt: null, role: "cover", sort_order: 0 }],
+    categories: [{ category_id: 9, is_primary: true }], variants: [], seo: null,
+  } as unknown as PublicProductDetail;
+  const item = productDetailToListItem(detail)!;
+  assert.equal(item.cover_image_url, "/a.jpg");
+  assert.equal(item.primary_category_id, 9);
+  assert.equal(item.slug, "buket");
+  const mod = (patch: Record<string, unknown>) => ({ ...detail, product: { ...detail.product, ...patch } }) as unknown as PublicProductDetail;
+  assert.equal(productDetailToListItem(mod({ status: "draft" })), null);
+  assert.equal(productDetailToListItem(mod({ stock_quantity: 0 })), null);
+  assert.equal(productDetailToListItem({ ...detail, images: [] } as PublicProductDetail), null);
+  assert.equal(productDetailToListItem(null), null);
 });
 
 test("hasOperatorLinks", () => {
