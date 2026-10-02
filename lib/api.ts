@@ -11,7 +11,7 @@ import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
 import { fetchWithDeadline } from "./fetchWithDeadline";
-import { productDetailToListItem } from "./showcaseBlocks.ts";
+import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
@@ -185,12 +185,13 @@ async function inventoryForCrossLinks(): Promise<SeoInventoryItem[]> {
   return inventoryInflight;
 }
 
-/** Mahalle → pillar üst sayfa: envanterde yayınlı /{ilçe}-cicek-siparisi (category_location) varsa yolu, yoksa null. */
+/** Mahalle → pillar üst sayfa: yayınlı /{ilçe}-cicek-siparisi (category_location) varsa yolu, yoksa null.
+ *  Küçük mevcut uç (fetchSeoPage, revalidate 300); envanter ÇEKİLMEZ. Aynı ilçenin mahalleleri aynı URL'yi ister → fetch önbelleği paylaşılır. */
 export async function findPillarPath(districtSlug: string): Promise<string | null> {
   if (!/^[a-z0-9-]+$/.test(districtSlug)) return null;
   const want = `/${districtSlug}-cicek-siparisi`;
-  const inventory = await inventoryForCrossLinks();
-  return inventory.some((i) => i.page_type === "category_location" && i.url_path === want) ? want : null;
+  const page = await fetchSeoPage(want);
+  return isPillarPage(page, want) ? want : null;
 }
 
 /** Bir ilin (citySlug) TÜM ilçelerini gerçek SEO envanterinden döner —

@@ -5,7 +5,7 @@ import {
   parseShowcasePath, totalPages, visiblePages, prevNext, showcasePageHref, titleWithPage, descriptionWithPage,
 } from "./showcasePagination.ts";
 import { pillarBasePath, isPillarPageData } from "./pillar-paths.ts";
-import { getShowcaseItems, getLocationBlock, showcaseTotalPages, showcasePageIds, productDetailToListItem } from "./showcaseBlocks.ts";
+import { getShowcaseItems, getLocationBlock, showcaseTotalPages, showcasePageIds, productDetailToListItem, isPillarPage } from "./showcaseBlocks.ts";
 import type { PublicProductDetail } from "./api.ts";
 import { hasOperatorLinks } from "./operatorLinks.ts";
 import { locationBreadcrumbJsonLd } from "./locationBreadcrumb.ts";
@@ -120,4 +120,12 @@ test("breadcrumb: districtStep opsiyonel; yoksa bugünkü çıktı", () => {
   assert.equal(pillar.itemListElement.at(-1).name, "Maltepe Çiçek Siparişi");
   const hood = JSON.parse(locationBreadcrumbJsonLd(["istanbul", "maltepe", "x-mah"], ["İstanbul", "Maltepe", "X"], abs, { ad: "Maltepe Çiçek Siparişi", yol: "/maltepe-cicek-siparisi" })!);
   assert.deepEqual(hood.itemListElement.map((i: { item: string }) => i.item), ["https://x/", "https://x/istanbul", "https://x/maltepe-cicek-siparisi", "https://x/istanbul/maltepe/x-mah"]);
+});
+
+test("mahalle üst sayfa: yalnız published category_location ve beklenen yol", () => {
+  const want = "/maltepe-cicek-siparisi";
+  assert.equal(isPillarPage({ page_type: "category_location", url_path: want }, want), true);
+  assert.equal(isPillarPage({ page_type: "district", url_path: want }, want), false);
+  assert.equal(isPillarPage({ page_type: "category_location", url_path: "/baska-cicek-siparisi" }, want), false);
+  assert.equal(isPillarPage(null, want), false);
 });

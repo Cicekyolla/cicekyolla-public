@@ -71,3 +71,8 @@ export function productDetailToListItem(d: PublicProductDetail | null | undefine
     cover_blurhash: cover.blurhash ?? null, cover_derivatives: cover.derivatives ?? null,
   };
 }
+
+/** Saf: sayfa yanıtı beklenen yoldaki pillar (category_location) mı? (Yanıt yalnız published döner.) */
+export function isPillarPage(page: { page_type?: string; url_path?: string } | null | undefined, wantPath: string): boolean {
+  return !!page && page.page_type === "category_location" && page.url_path === wantPath;
+}
