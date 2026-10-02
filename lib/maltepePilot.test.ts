@@ -7,7 +7,7 @@ import {
 import { pillarBasePath, isPillarPageData } from "./pillar-paths.ts";
 import { getShowcaseItems, getLocationBlock, showcaseTotalPages, showcasePageIds, productDetailToListItem, isPillarPage } from "./showcaseBlocks.ts";
 import type { PublicProductDetail } from "./api.ts";
-import { hasOperatorLinks, skipAutoLinkInjection } from "./operatorLinks.ts";
+import { hasOperatorLinks, skipAutoLinkInjection, introWrapperClass } from "./operatorLinks.ts";
 import { locationBreadcrumbJsonLd } from "./locationBreadcrumb.ts";
 
 test("parseShowcasePath: sayfa ayrıştırma", () => {
@@ -146,4 +146,13 @@ test("skipAutoLinkInjection: yalnız pilot sayfada + elle link varsa", () => {
   assert.equal(skipAutoLinkInjection({ page_type: "category_location", intro_html: plain }), false);
   assert.equal(skipAutoLinkInjection({ page_type: "district", intro_html: plain, body_blocks: showcase }), false);
   assert.equal(skipAutoLinkInjection(null), false);
+});
+
+test("introWrapperClass: cy-intro yalnız pilot sayfada", () => {
+  const live = [{ type: "showcase", items: [{ product_id: 5 }] }];
+  assert.equal(introWrapperClass({ page_type: "category_location" }), "cy-intro space-y-6 text-lg leading-8");
+  assert.equal(introWrapperClass({ page_type: "district", body_blocks: live }), "cy-intro space-y-6 text-lg leading-8");
+  assert.equal(introWrapperClass({ page_type: "district", body_blocks: [] }), "space-y-6 text-lg leading-8");
+  assert.equal(introWrapperClass({ page_type: "neighborhood", body_blocks: [{ type: "paragraph", text: "x" }] }), "space-y-6 text-lg leading-8");
+  assert.equal(introWrapperClass(null), "space-y-6 text-lg leading-8");
 });
