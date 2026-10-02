@@ -12,6 +12,7 @@ import {
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveManagedRedirect, isManagedRedirectTarget } from "@/lib/managed-redirects";
+import { isPillarPath } from "@/lib/pillar-paths";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
@@ -36,7 +37,10 @@ export async function middleware(req: NextRequest) {
      "/il → /il-cicekci" ile legacy "/il-cicekci → /il" birbirini kovalar
      (ERR_TOO_MANY_REDIRECTS). Legacy listelerden hiçbir şey silinmedi.
      FAIL-SAFE: API erişilemezse false → bugünkü davranış birebir sürer. */
-  const legacyMuaf = await isManagedRedirectTarget(req.nextUrl.pathname);
+  /* EK (MALTEPE PİLOTU): yayındaki pillar sayfa (/maltepe-cicek-siparisi) ve
+     sayfalaması (/sayfa/N) da canlı sayfadır; legacy kurallar yutmamalı.
+     FAIL-SAFE: API erişilemezse boş küme → false → bugünkü davranış. */
+  const legacyMuaf = (await isManagedRedirectTarget(req.nextUrl.pathname)) || (await isPillarPath(req.nextUrl.pathname));
   /* EK (ÖZEL GÜN "-cicekleri") — next.config.js'ten TAŞINDI (bkz.
      legacy-recovery.ts::resolveCicekleriLegacy). Config katmanı middleware'den
      ÖNCE çalıştığı ve statik olduğu için operatör onaylı yönetilen 301'i

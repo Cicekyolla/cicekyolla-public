@@ -65,6 +65,52 @@ export interface SeoPublicPage {
   // önüne almak için kullanılır. Eski API alanı göndermezse undefined kalır
   // ve davranış öncekiyle birebir aynıdır.
   content_source?: string | null;
+  // ADDITIVE (Maltepe pilotu): sayfanın lokasyon kimliği, mahalle sayfasının üst sayfası
+  // ve operatör vitrininin aktif satır sayısı. Eski API göndermezse undefined → davranış değişmez.
+  location?: SeoPageLocation | null;
+  parent?: { path: string; name: string } | null;
+  showcase_count?: number;
+}
+
+export interface SeoPageLocation {
+  city_slug: string | null;
+  city_name: string | null;
+  district_slug: string | null;
+  district_name: string | null;
+  neighborhood_slug: string | null;
+  neighborhood_name: string | null;
+}
+
+export interface SeoShowcasePage {
+  items: PublicProductListItem[];
+  pagination: { page: number; page_size: number; total: number; total_pages: number };
+  meta: { source: string };
+}
+
+/** Operatör vitrini (sıralı ürünler). Hata/404 → null. */
+export async function fetchSeoShowcase(path: string, page = 1, pageSize = 30): Promise<SeoShowcasePage | null> {
+  const qs = new URLSearchParams({ path, page: String(page), page_size: String(pageSize) }).toString();
+  try {
+    const res = await fetchWithDeadline(`${API_ORIGIN}/api/public/seo/showcase?${qs}`, { headers: apiHeaders(), next: { revalidate: 120 } }, 8_000);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: SeoShowcasePage };
+    if (!json?.data || !Array.isArray(json.data.items) || !json.data.pagination) return null;
+    return json.data;
+  } catch {
+    return null;
+  }
+}
+
+/** Yayındaki pillar (category_location) yolları. Hata → boş dizi. */
+export async function fetchPillarPaths(): Promise<string[]> {
+  try {
+    const res = await fetchWithDeadline(`${API_ORIGIN}/api/public/seo/pillar-paths`, { next: { revalidate: 60 } }, 4_000);
+    if (!res.ok) return [];
+    const json = (await res.json()) as { paths?: unknown };
+    return Array.isArray(json?.paths) ? json.paths.filter((p): p is string => typeof p === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 // Tek sayfa çeker. published değilse backend not_found döndürür → null.

@@ -155,3 +155,12 @@ html[dir="rtl"] input[inputmode="numeric"], html[dir="rtl"] input[inputmode="dec
   direction: ltr; text-align: start; unicode-bidi: isolate;
 }
 html[dir="rtl"] img, html[dir="rtl"] video, html[dir="rtl"] svg.cy-no-mirror { transform: none; }
+
+/* Lokasyon intro_html (operatör içeriği): Tailwind preflight h2/h3/ul/li/a stilini sıfırlıyor.
+   Yalnız .cy-intro içinde; yalnız <p> içeren mevcut intro'lar etkilenmez. */
+.cy-intro h2 { font-family: var(--font-serif, serif); font-size: 1.875rem; line-height: 1.2; font-weight: 600; color: #140b20; margin-top: 2rem; }
+.cy-intro h3 { font-size: 1.25rem; line-height: 1.4; font-weight: 600; color: #140b20; margin-top: 1.5rem; }
+.cy-intro ul { list-style: disc; padding-inline-start: 1.5rem; }
+.cy-intro ol { list-style: decimal; padding-inline-start: 1.5rem; }
+.cy-intro li { margin-top: .375rem; }
+.cy-intro a:not([class]) { color: #6d28d9; text-decoration: underline; text-underline-offset: 3px; }

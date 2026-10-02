@@ -19,6 +19,8 @@ type NeighborhoodCardsProps = {
   variant?: "district" | "neighborhood";
   /** ADDITIVE (108): kart alt etiketi — motor kararıyla gelir; yoksa bugünkü "Aynı gün teslimat". */
   deliveryLabel?: string;
+  /** ADDITIVE (Maltepe pilotu): mahalle varyantındaki "ilçeye dön" linki — verilmezse /{il}/{ilçe}. */
+  districtHref?: string;
 };
 
 function displayName(name: string): string {
@@ -33,6 +35,7 @@ export function NeighborhoodCards({
   currentSlug,
   variant = "district",
   deliveryLabel,
+  districtHref,
 }: NeighborhoodCardsProps) {
   const items = neighborhoods.filter((n) => n.slug !== currentSlug);
   if (items.length === 0) return null;
@@ -56,7 +59,7 @@ export function NeighborhoodCards({
           </div>
           {variant === "neighborhood" ? (
             <Link
-              href={`/${citySlug}/${districtSlug}`}
+              href={districtHref ?? `/${citySlug}/${districtSlug}`}
               className="inline-flex items-center gap-2 rounded-full border border-[#e2dbf2] bg-white px-6 py-3 text-sm font-bold text-[#6d28d9] transition-colors hover:border-[#c4b5fd] hover:bg-[#f5f0ff]"
             >
               {districtName} çiçek siparişi <ArrowRight className="h-4 w-4" />

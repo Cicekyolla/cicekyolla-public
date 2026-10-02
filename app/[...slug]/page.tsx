@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Price } from "@/components/Price";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, toCardProduct, type BodyBlock, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, fetchSeoShowcase, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
+import { SHOWCASE_PAGE_SIZE, descriptionWithPage, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
+import { hasOperatorLinks } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
 import { NightOrderStrip } from "@/components/home/NightOrderStrip";
 import { CrossLinkBlock } from "@/components/location/CrossLinkBlock";
@@ -155,6 +158,49 @@ function fallbackLocationParts(page: SeoPublicPage, path: string): DynDelivery |
   };
 }
 
+/** Maltepe pilotu: pillar (category_location, tek segment) sayfasının lokasyonu API'nin `location` alanından gelir. */
+function pillarDeliveryParts(page: SeoPublicPage, path: string): DynDelivery | null {
+  if (page.page_type !== "category_location") return null;
+  if (path.split("/").filter(Boolean).length !== 1) return null;
+  const loc = page.location;
+  if (!loc?.city_slug || !loc.district_slug) return null;
+  return {
+    parts: [loc.city_slug, loc.district_slug],
+    cityName: loc.city_name || prettySlug(loc.city_slug),
+    districtName: loc.district_name || prettySlug(loc.district_slug),
+    sameDay: loc.city_slug === "istanbul",
+  };
+}
+
+type ShowcaseView = { items: CardProduct[]; total: number; totalPages: number };
+type Resolved =
+  | { kind: "ok"; path: string; pageNumber: number; page: SeoPublicPage; showcase: ShowcaseView | null }
+  | { kind: "redirect"; to: string }
+  | { kind: "notfound" };
+
+/** Vitrin sayfalaması dahil çözümleme. Sayfalama yoksa resolvePage ile BİREBİR aynı akış. */
+async function resolveRequest(requestedPath: string): Promise<Resolved> {
+  const parsed = parseShowcasePath(requestedPath);
+  if (parsed.page !== null) {
+    // Sonsuz URL uzayı açma: taban yol published SEO sayfası + vitrin dolu + N<=total_pages olmalı.
+    if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath };
+    const base = await fetchSeoPage(parsed.basePath);
+    if (!base || !(base.showcase_count && base.showcase_count > 0)) return { kind: "notfound" };
+    const sc = await fetchSeoShowcase(parsed.basePath, parsed.page, SHOWCASE_PAGE_SIZE);
+    if (!sc || parsed.page > sc.pagination.total_pages || sc.items.length === 0) return { kind: "notfound" };
+    return { kind: "ok", path: parsed.basePath, pageNumber: parsed.page, page: base, showcase: { items: sc.items.map(toCardProduct), total: sc.pagination.total, totalPages: sc.pagination.total_pages } };
+  }
+  const page = await resolvePage(requestedPath);
+  if (!page) return { kind: "notfound" };
+  let showcase: ShowcaseView | null = null;
+  if (page.showcase_count && page.showcase_count > 0) {
+    const sc = await fetchSeoShowcase(requestedPath, 1, SHOWCASE_PAGE_SIZE);
+    // API hatası / boş vitrin → showcase yok: bugünkü akış (fallback).
+    if (sc && sc.items.length > 0) showcase = { items: sc.items.map(toCardProduct), total: sc.pagination.total, totalPages: sc.pagination.total_pages };
+  }
+  return { kind: "ok", path: requestedPath, pageNumber: 1, page, showcase };
+}
+
 async function dynamicDeliveryParts(path: string): Promise<DynDelivery | null> {
   const parts = path.split("/").filter(Boolean);
   if (parts.length < 1 || parts.length > 3) return null;
@@ -232,7 +278,17 @@ async function resolvePage(path: string): Promise<SeoPublicPage | null> {
   return null;
 }
 
-async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path: string; dyn?: DynDelivery }) {
+async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, selfPath }: {
+  page: SeoPublicPage; path: string; dyn?: DynDelivery;
+  /** Maltepe pilotu: operatör vitrini (yoksa bugünkü ürün akışı). */
+  showcase?: ShowcaseView | null;
+  pageNumber?: number;
+  /** Sayfanın KENDİ taban yolu (pillar'da /maltepe-cicek-siparisi); parts şehir/ilçe kalır. */
+  selfPath?: string;
+}) {
+  const ownPath = selfPath ?? page.url_path;
+  const isPillar = page.page_type === "category_location";
+  const parentRef = page.parent && page.parent.path ? page.parent : null;
   const parts = dyn?.parts ?? deliveryParts(path)!;
   const { city, district } = dyn ? { city: undefined, district: undefined } : getDeliveryInfo(parts);
   const pageLabel = locationLabel(page, prettySlug(parts.at(-1) || parts[0]));
@@ -286,19 +342,20 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
   } satisfies Parameters<typeof fetchProducts>[0];
   // Vitrin ürünleri yalnız ilçe kapsamı DIŞINDA kesin gerekli → hemen başlar;
   // ilçe kapsamındaki nadir fallback (coverage boş) aşağıda seri kalır.
-  const productsPromise = isDistrictScope ? null : fetchProducts(productsQuery);
+  const productsPromise = isDistrictScope || showcase ? null : fetchProducts(productsQuery);
   // Erken başlayan bir söz, beklenmeden önce reddedilirse "unhandledRejection"
   // olmasın: işaretle (await noktasında hata yine aynı şekilde fırlar).
   for (const p of [linkDataPromise, locationDataPromise, dbHoodPromise, cityDistrictsPromise, productsPromise]) p?.catch(() => {});
 
   try {
     const linkData = await linkDataPromise;
-    if (linkData.length > 0) {
+    // Operatör intro'ya elle <a> yazdıysa otomatik sözlük enjeksiyonu HİÇ çalışmaz.
+    if (linkData.length > 0 && !hasOperatorLinks(page.intro_html)) {
       if (page.intro_html) {
         injectedIntroHtml = injectLinksIntoHtml(
           page.intro_html,
           linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
-          page.url_path
+          ownPath
         );
       } else if (page.body_blocks && page.body_blocks.length > 0) {
         injectedBodyBlocks = page.body_blocks
@@ -308,7 +365,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
             text: injectLinksIntoHtml(
               block.text || '',
               linkData.map(w => ({ text: w.text, url: w.url, type: w.type })),
-              page.url_path
+              ownPath
             ),
           }));
       }
@@ -376,7 +433,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
   // Daralan erişimde (out/far) motorun süzdüğü liste boşsa genel ürün listesine DÜŞÜLMEZ (kuryeli ucuz ürünler
   // uzak ilçede yeniden açılmasın); diğer durumlarda bugünkü fallback aynen.
-  const productItems = useLocationGrid || (locationData != null && (reachOut || reach === "far"))
+  const productItems = showcase || useLocationGrid || (locationData != null && (reachOut || reach === "far"))
     ? []
     : await (productsPromise ?? fetchProducts(productsQuery));
   const products = productItems
@@ -392,6 +449,10 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
     parts,
     [cityName, districtName, neighborhood],
     absoluteUrl,
+    // Pillar: son öğe pillar'ın kendi yolu; mahalle: ara öğe üst (pillar) sayfa. Yoksa bugünkü zincir.
+    isPillar
+      ? { ad: `${districtName} Çiçek Siparişi`, yol: ownPath }
+      : parts.length === 3 && parentRef ? { ad: parentRef.name || districtName, yol: parentRef.path } : null,
   );
 
   return <main className="bg-[#fcfbfd] text-[#111827]">
@@ -421,6 +482,7 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
         currentSlug={parts[2]}
         variant={parts[2] ? "neighborhood" : "district"}
         deliveryLabel={hoodDeliveryLabel}
+        districtHref={parts[2] && parentRef ? parentRef.path : undefined}
       />
     ) : neighborhoods.length > 0 ? <section className="border-y border-[#eee9f6] bg-[#f7f5fc] px-6 py-16 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-10 flex items-center gap-4"><span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#8b5cf6]"><MapPin className="h-5 w-5" /></span><p className="text-xs font-bold uppercase tracking-[.32em] text-[#8b5cf6]">Teslimat yapılan mahalleler</p></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{neighborhoods.map((item) => <Link key={item} href={`/${parts[0]}/${parts[1]}/${slugifyTR(item)}-mah`} className="flex items-center gap-4 rounded-[20px] border border-[#ece7f4] bg-white px-5 py-5 text-lg font-medium text-[#1f2937] shadow-[0_12px_34px_rgba(45,22,72,.04)]"><span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full bg-[#f5f0ff]"><Check className="h-4 w-4 text-[#8b5cf6]" /></span>{item}</Link>)}</div></div></section> : null}
 
@@ -452,7 +514,9 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
 
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
-    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{useLocationGrid && locationData ? (
+    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{showcase ? (
+      <ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} />
+    ) : useLocationGrid && locationData ? (
       // Coverage Engine ürünleri: 12 SSR + "Daha Fazla Göster" (24/36/48) + gerçek filtreler.
       <LocationProducts
         citySlug={parts[0]}
@@ -464,11 +528,11 @@ async function DeliveryLanding({ page, path, dyn }: { page: SeoPublicPage; path:
       />
     ) : products.length ? <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">{products.map((p) => <Link key={p.id} href={`/urun/${p.slug}`} className="group overflow-hidden rounded-[18px] bg-white"><div className="aspect-square overflow-hidden rounded-[18px] bg-[#f7f5fa]">{p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="grid h-full place-items-center text-[#8b5cf6]">ÇiçekYolla</div>}</div><div className="pt-5"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">{cargoMode ? "Türkiye Geneli Kargo" : "Premium Aranjman"}</p><h3 className="mt-3 text-lg font-semibold text-[#171020]">{p.name}</h3><p className="mt-3 text-xl font-bold"><Price minor={p.priceMinor} /></p></div></Link>)}</div> : <div className="mt-10 rounded-[24px] border border-[#ede9fe] bg-white p-8"><p className="text-[#746c80]">{cargoMode ? "Şu anda Türkiye geneli kargoya açık ürün bulunmuyor." : "Bu bölgeye gönderilebilen güncel ürünler çiçek koleksiyonunda listeleniyor."}</p><Link href={cargoMode ? "/kategori/turkiye-geneli-kargo" : "/kategori/cicekler"} className="mt-5 inline-flex rounded-full bg-[#8b5cf6] px-6 py-3 font-bold text-white">{cargoMode ? "Tüm Kargolu Ürünleri Gör" : "Çiçekleri İncele"}</Link></div>}</section>
 
-    {injectedIntroHtml ? <section className="bg-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px] prose prose-sm max-w-none text-[#4b5563]"><div className="space-y-6 text-lg leading-8" dangerouslySetInnerHTML={{ __html: injectedIntroHtml }} /></div></section> : null}
+    {pageNumber === 1 && injectedIntroHtml ? <section className="bg-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px] prose prose-sm max-w-none text-[#4b5563]"><div className="cy-intro space-y-6 text-lg leading-8" dangerouslySetInnerHTML={{ __html: injectedIntroHtml }} /></div></section> : null}
 
-    {injectedBodyBlocks && injectedBodyBlocks.length > 0 ? <section className="bg-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px] prose prose-sm max-w-none text-[#4b5563]"><div className="space-y-6 text-lg leading-8">{injectedBodyBlocks.map((block, i) => block.type === 'paragraph' ? <p key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} /> : block.type === 'heading' ? <h2 key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} /> : <p key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} />)}</div></div></section> : null}
+    {pageNumber === 1 && injectedBodyBlocks && injectedBodyBlocks.length > 0 ?<section className="bg-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px] prose prose-sm max-w-none text-[#4b5563]"><div className="space-y-6 text-lg leading-8">{injectedBodyBlocks.map((block, i) => block.type === 'paragraph' ? <p key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} /> : block.type === 'heading' ? <h2 key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} /> : <p key={i} dangerouslySetInnerHTML={{ __html: block.text || '' }} />)}</div></div></section> : null}
 
-    {page.faq && page.faq.length > 0 ? <section className="bg-gradient-to-b from-[#f7f5fc] to-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-14 text-center"><h2 className="font-serif text-5xl font-semibold text-[#140b20]">Sıkça Sorulan Sorular</h2><p className="mt-4 text-lg text-[#667085]">{place} bölgesinde çiçek gönderimiyle ilgili merak edilen konular</p></div><div className="grid gap-6 md:grid-cols-2">{page.faq.map((item, i) => item.q && item.a ? <div key={i} className="rounded-[20px] border border-[#ebe7f2] bg-white p-8 shadow-sm"><h3 className="font-semibold text-[#140b20]">{item.q}</h3><p className="mt-4 text-[#667085]">{item.a}</p></div> : null)}</div></div></section> : null}
+    {pageNumber === 1 && page.faq && page.faq.length > 0 ? <section className="bg-gradient-to-b from-[#f7f5fc] to-white px-6 py-20 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-14 text-center"><h2 className="font-serif text-5xl font-semibold text-[#140b20]">Sıkça Sorulan Sorular</h2><p className="mt-4 text-lg text-[#667085]">{place} bölgesinde çiçek gönderimiyle ilgili merak edilen konular</p></div><div className="grid gap-6 md:grid-cols-2">{page.faq.map((item, i) => item.q && item.a ? <div key={i} className="rounded-[20px] border border-[#ebe7f2] bg-white p-8 shadow-sm"><h3 className="font-semibold text-[#140b20]">{item.q}</h3><p className="mt-4 text-[#667085]">{item.a}</p></div> : null)}</div></div></section> : null}
 
     {/* Gece Çiçek Siparişi — yalnız İstanbul içi (aynı gün) sayfalarında; kargo sayfalarında yok. */}
     {cargoMode || reachOut ? null : <NightOrderStrip />}
@@ -516,18 +580,23 @@ type PageProps = { params: { slug?: string[] } };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const requestedPath = slugToPath(params.slug);
-  const path = LEGACY_CATEGORY_REDIRECTS[requestedPath] || requestedPath;
-  const page = await resolvePage(path);
-  if (!page) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
+  const legacyPath = LEGACY_CATEGORY_REDIRECTS[requestedPath] || requestedPath;
+  // Maltepe pilotu: /…/sayfa/N yolları taban sayfaya çözülür (sayfalama yoksa birebir resolvePage).
+  const resolved = await resolveRequest(legacyPath);
+  if (resolved.kind !== "ok") return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
+  const { page, path, pageNumber } = resolved;
   const locationMetadata = await getLocationMetadata(page, path);
   // Lokasyon SEO Merkezi entegrasyonu: OPERATÖR-ONAYLI içerik (content_source
   // kapısı, bkz. lib/managedSeoContent.ts) konum şablonunun ÖNÜNE geçer.
   // Kaynak NULL/otomatik ise (bugün yayındaki tüm sayfalar) davranış birebir eski.
-  const title = managedTitle(page) || locationMetadata?.title || page.title_tag;
-  const description = managedDescription(page) || locationMetadata?.description || page.meta_description;
+  const baseTitle = managedTitle(page) || locationMetadata?.title || page.title_tag;
+  const baseDescription = managedDescription(page) || locationMetadata?.description || page.meta_description;
+  const title = typeof baseTitle === "string" ? titleWithPage(baseTitle, pageNumber) : baseTitle;
+  const description = typeof baseDescription === "string" ? descriptionWithPage(baseDescription, pageNumber) : baseDescription;
   // Category pages are served from /kategori/{slug}; stale catalog canonicals
   // may still point at retired /cicekler/* paths that now return 404.
-  const canonicalPath = path.startsWith("/kategori/") ? path : (page.canonical_url || path);
+  // Sayfa ≥2: canonical o sayfanın KENDİ yolu.
+  const canonicalPath = pageNumber >= 2 ? requestedPath : path.startsWith("/kategori/") ? path : (page.canonical_url || path);
   return { title, description, alternates: { canonical: absoluteUrl(canonicalPath) }, robots: indexRobots(page.index_state), openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
 }
 
@@ -579,11 +648,13 @@ export default async function Page({ params }: PageProps) {
   const requestedPath = slugToPath(params.slug);
   const redirectTarget = LEGACY_CATEGORY_REDIRECTS[requestedPath];
   if (redirectTarget) redirect(redirectTarget);
-  const path = requestedPath;
-  const page = await resolvePage(path);
-  if (!page) notFound();
-  const faqLd = faqJsonLd(page);
-  const rawSchema = page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
+  const resolved = await resolveRequest(requestedPath);
+  if (resolved.kind === "redirect") permanentRedirect(resolved.to);
+  if (resolved.kind !== "ok") notFound();
+  const { page, path, pageNumber, showcase } = resolved;
+  // Sayfa ≥2: tekrar metin/şema yok (FAQ/ham şema yalnız sayfa 1'de).
+  const faqLd = pageNumber === 1 ? faqJsonLd(page) : null;
+  const rawSchema = pageNumber === 1 && page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
   const staticParts = deliveryParts(path);
   if (staticParts) {
@@ -595,10 +666,21 @@ export default async function Page({ params }: PageProps) {
       const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
       localLd = istanbulDistrictJsonLd(identity, { path, areaName: locationLabel(page, prettySlug(staticParts[1])), pageName: page.h1 ?? "" });
     }
-    return <><DeliveryLanding page={page} path={path} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
+    return <><DeliveryLanding page={page} path={path} showcase={showcase} pageNumber={pageNumber} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
   }
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
-  const dyn = (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
-  if (dyn) return <><DeliveryLanding page={page} path={path} dyn={dyn} />{jsonLd}</>;
+  const pillarDyn = pillarDeliveryParts(page, path);
+  const dyn = pillarDyn || (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
+  if (dyn) {
+    // TEK DAMAR: pillar (İstanbul ilçesi) aynı işletme + ilçe hizmet düğümünü kendi yoluyla taşır (yalnız sayfa 1).
+    let pillarLd: string | null = null;
+    if (pillarDyn && pageNumber === 1 && pillarDyn.parts[0] === "istanbul") {
+      const homepage = await getPublishedHomepage().catch(() => null);
+      const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
+      pillarLd = istanbulDistrictJsonLd(identity, { path, areaName: pillarDyn.districtName, pageName: page.h1 ?? "" });
+    }
+    return <><DeliveryLanding page={page} path={path} dyn={dyn} showcase={showcase} pageNumber={pageNumber} selfPath={path} />{jsonLd}{pillarLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: pillarLd }} /> : null}</>;
+  }
+  if (pageNumber > 1) notFound();
   return <main><h1>{page.h1}</h1>{page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{page.body_blocks?.map((b, i) => renderBlock(b, i))}{page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;
 }
