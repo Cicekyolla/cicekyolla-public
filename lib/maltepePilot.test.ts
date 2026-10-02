@@ -7,7 +7,7 @@ import {
 import { pillarBasePath, isPillarPageData } from "./pillar-paths.ts";
 import { getShowcaseItems, getLocationBlock, showcaseTotalPages, showcasePageIds, productDetailToListItem, isPillarPage } from "./showcaseBlocks.ts";
 import type { PublicProductDetail } from "./api.ts";
-import { hasOperatorLinks } from "./operatorLinks.ts";
+import { hasOperatorLinks, skipAutoLinkInjection } from "./operatorLinks.ts";
 import { locationBreadcrumbJsonLd } from "./locationBreadcrumb.ts";
 
 test("parseShowcasePath: sayfa ayrıştırma", () => {
@@ -128,4 +128,22 @@ test("mahalle üst sayfa: yalnız published category_location ve beklenen yol", 
   assert.equal(isPillarPage({ page_type: "district", url_path: want }, want), false);
   assert.equal(isPillarPage({ page_type: "category_location", url_path: "/baska-cicek-siparisi" }, want), false);
   assert.equal(isPillarPage(null, want), false);
+});
+
+test("skipAutoLinkInjection: yalnız pilot sayfada + elle link varsa", () => {
+  const withLink = "<p>Bak <a href=\"/x\">x</a></p>";
+  const plain = "<p>İstanbul çiçek</p>";
+  const showcase = [{ type: "showcase", items: [{ product_id: 5, active: true }] }];
+  // pilot + elle link → true
+  assert.equal(skipAutoLinkInjection({ page_type: "category_location", intro_html: withLink }), true);
+  assert.equal(skipAutoLinkInjection({ page_type: "district", intro_html: withLink, body_blocks: showcase }), true);
+  // pilot dışı + elle link → false (mevcut sayfalar bugünkü gibi enjekte edilir)
+  assert.equal(skipAutoLinkInjection({ page_type: "district", intro_html: withLink, body_blocks: [] }), false);
+  assert.equal(skipAutoLinkInjection({ page_type: "district", intro_html: withLink }), false);
+  // boş/pasif vitrin pilot sayılmaz
+  assert.equal(skipAutoLinkInjection({ page_type: "district", intro_html: withLink, body_blocks: [{ type: "showcase", items: [{ product_id: 5, active: false }] }] }), false);
+  // pilot + elle link yok → false
+  assert.equal(skipAutoLinkInjection({ page_type: "category_location", intro_html: plain }), false);
+  assert.equal(skipAutoLinkInjection({ page_type: "district", intro_html: plain, body_blocks: showcase }), false);
+  assert.equal(skipAutoLinkInjection(null), false);
 });

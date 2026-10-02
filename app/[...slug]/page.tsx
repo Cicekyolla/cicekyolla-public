@@ -7,7 +7,7 @@ import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fet
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { descriptionWithPage, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
 import { getLocationBlock, getShowcaseItems, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
-import { hasOperatorLinks } from "@/lib/operatorLinks";
+import { skipAutoLinkInjection } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
 import { NightOrderStrip } from "@/components/home/NightOrderStrip";
 import { CrossLinkBlock } from "@/components/location/CrossLinkBlock";
@@ -366,8 +366,8 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
 
   try {
     const linkData = await linkDataPromise;
-    // Operatör intro'ya elle <a> yazdıysa otomatik sözlük enjeksiyonu HİÇ çalışmaz.
-    if (linkData.length > 0 && !hasOperatorLinks(page.intro_html)) {
+    // Pilot sayfada (pillar ya da vitrin) operatör intro'ya elle <a> yazdıysa otomatik sözlük enjeksiyonu çalışmaz; diğer sayfalar bugünkü gibi.
+    if (linkData.length > 0 && !skipAutoLinkInjection(page)) {
       if (page.intro_html) {
         injectedIntroHtml = injectLinksIntoHtml(
           page.intro_html,
