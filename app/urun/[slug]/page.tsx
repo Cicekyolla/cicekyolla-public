@@ -150,6 +150,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: ogImage ? [{ url: ogImage }] : undefined,
       url: absoluteUrl(canonicalPath),
       type: "website",
+      // EK: alt segment openGraph'ı kök layout'unkinin yerine geçer → dil kodu burada da yazılır.
+      locale: "tr_TR",
     },
     twitter: {
       card: "summary_large_image",

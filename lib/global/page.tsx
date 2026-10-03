@@ -27,6 +27,8 @@ import { floristLocalFields, istanbulDistrictJsonLd, resolveSiteIdentity, type S
 import { getPublishedHomepage } from "@/lib/homepage";
 import { toPlainText } from "@/lib/richText";
 import { withXDefault } from "./hreflang";
+// EK (SEO YAYIN ZİNCİRİ): locale openGraph'ı — saf modül.
+import { localeOpenGraph } from "./localeOpenGraph";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
 import { LABELS } from "./locationLabels";
 import { fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
@@ -271,6 +273,7 @@ function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, st
 
 /**
  * EK (SEO YAYIN ZİNCİRİ):
+ *  • openGraph — locale sayfası kök layout'un Türkçe openGraph'ını miras almaz: lib/global/localeOpenGraph.ts.
  *  • listing: lokasyon / niyet sayfasının isteğe bağlı sorgusu (?category, ?page). Sayfa 1 bugünkü
  *    hâliyle AYNEN; sayfa ≥ 2 kendi canonical'ını ve başlık ekini alır, hreflang kümesi basmaz
  *    (lib/global/locationPaging.ts — sorgu yalnız oradaki saf yardımcılarla okunur).
@@ -282,14 +285,17 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const row = await fetchGlobalPage(locale, "home");
     const self = absoluteUrl(`/${locale}`);
     if (!row) {
-      return { title: HOME_FALLBACK[locale].title, robots: NOINDEX, alternates: { canonical: self } };
+      const title = HOME_FALLBACK[locale].title;
+      return { title, robots: NOINDEX, alternates: { canonical: self }, openGraph: localeOpenGraph(locale, { url: self, title }) };
     }
     const languages = pageLanguages(locale, row);
+    const title = row.seo_title ?? row.h1 ?? HOME_FALLBACK[locale].title;
     return {
-      title: row.seo_title ?? row.h1 ?? HOME_FALLBACK[locale].title,
+      title,
       description: row.meta_description ?? undefined,
       robots: row.indexable ? undefined : NOINDEX,
       alternates: languages ? { canonical: self, languages } : { canonical: self },
+      openGraph: localeOpenGraph(locale, { url: self, title, description: row.meta_description }),
     };
   }
 
@@ -307,6 +313,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       description: row.meta_description ?? undefined,
       robots: row.indexable ? undefined : NOINDEX,
       alternates: languages ? { canonical: self, languages } : { canonical: self },
+      openGraph: localeOpenGraph(locale, { url: self, title, description: row.meta_description }),
     };
   }
 
@@ -314,11 +321,13 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const surface = await fetchCategorySurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`);
+    const title = surface.seo_title ?? surface.name ?? undefined;
     const meta: Metadata = {
-      title: surface.seo_title ?? surface.name ?? undefined,
+      title,
       description: surface.meta_description ?? undefined,
       robots: surface.indexable ? undefined : NOINDEX,
       alternates: { canonical: self },
+      openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description }),
     };
     if (surface.indexable) {
       const languages: Record<string, string> = {};
@@ -336,11 +345,16 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const surface = await fetchProductSurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(localeProductPath(locale, surface.slug));
+    // Paylaşım görseli = ürün kapağı (sayfanın da okuduğu aynı ürün isteği).
+    const detail = await fetchProductBySlug(surface.tr_slug);
+    const cover = detail?.images.find((i) => i.role === "cover")?.url || detail?.images[0]?.url;
+    const title = surface.seo_title ?? surface.name ?? undefined;
     const meta: Metadata = {
-      title: surface.seo_title ?? surface.name ?? undefined,
+      title,
       description: surface.meta_description ?? undefined,
       robots: surface.indexable ? undefined : NOINDEX,
       alternates: { canonical: self },
+      openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description, image: cover }),
     };
     if (surface.indexable) {
       const cluster = await fetchProductLocaleCluster(surface.product_id);
