@@ -125,7 +125,7 @@ export function ProductDetail({
   breadcrumbCategory?: { name: string; slug: string } | null;
 }) {
   // Fiyat yazımı seçili para biriminde. Taban DAİMA TRY kuruş; gerçek tahsilat TRY.
-  const { money } = useCurrency();
+  const { money, moneyTRY, isForeign } = useCurrency();
   const { product, images, variants } = data;
   const { t, locale } = useI18n();
   // Faz 2: onaylı çeviri varsa ad/açıklama SUNUMDA değişir; id/slug/fiyat/varyant/sepet TR kaynak kayıttır.
@@ -319,6 +319,15 @@ export function ProductDetail({
               <Num className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{money(basePrice)}</Num>
             )}
           </div>
+          {/* EK (SEO YAYIN ZİNCİRİ — fiyat tutarlılığı): gösterilen para TRY değilken tahsil edilecek
+              TRY tutarı fiyatın yanında AÇIKÇA yazılır → Product JSON-LD'deki fiyat (TRY, tahsil edilen
+              para) sayfada da görünür. Metin mevcut sözlükten (13 dil), tutar daima TRY biçiminde.
+              isForeign yalnız istemcide ve yalnız döviz seçiliyken true: sunucu HTML'i ve Türkçe sayfa aynen. */}
+          {isForeign && (
+            <p className="mt-2 text-[11.5px] leading-relaxed text-[#9CA3AF]" data-charged-notice>
+              {t("currency.chargedNotice", { amount: moneyTRY(shown) })}
+            </p>
+          )}
 
           {/* Otomatik boyut önerileri — üç ayrı gerçek ürün; sahte varyant ve sahte fiyat YOK */}
           {sizeProducts.length >= 3 && (

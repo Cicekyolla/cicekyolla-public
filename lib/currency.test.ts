@@ -430,3 +430,27 @@ test("TR'ye benzeyen ama global OLMAYAN önekler bağlamı açmaz", () => {
     assert.equal(isForeignLocaleContext(p, null), false, p);
   }
 });
+
+// ═══ PDP: TAHSİL EDİLEN TRY TUTARI GÖRÜNÜR (SEO yayın zinciri) ═════════════
+// Product JSON-LD fiyatı TRY'dir (tahsil edilen para). Döviz seçiliyken görünen
+// fiyat EUR/USD'ye geçer; yapılandırılmış veri sayfada görünenle eşleşsin diye
+// tahsil edilecek TRY tutarı fiyatın yanında yazılır.
+
+test("PDP: döviz seçiliyken tahsil edilecek TRY tutarı fiyatın altında yazılır (sözlükten, daima TRY)", () => {
+  const src = read("components/product/ProductDetail.tsx");
+  assert.ok(src.includes("const { money, moneyTRY, isForeign } = useCurrency();"));
+  const fiyat = src.slice(src.indexOf("{/* Fiyat */}"), src.indexOf("{/* Otomatik boyut önerileri"));
+  assert.match(fiyat, /\{isForeign && \(\s*<p className="[^"]*" data-charged-notice>\s*\{t\("currency\.chargedNotice", \{ amount: moneyTRY\(shown\) \}\)\}\s*<\/p>\s*\)\}/);
+  assert.equal(src.split('t("currency.chargedNotice"').length - 1, 1, "tek yerde");
+  // Görünen fiyat ile bildirim AYNI tutardan (seçili varyant / indirimli fiyat) üretilir.
+  assert.ok(fiyat.includes("{money(shown)}"));
+});
+
+test("PDP bildirimi TRY seçiliyken ve Türkçe sayfada HİÇ çıkmaz: isForeign yalnız döviz etkinken true", () => {
+  const src = read("lib/currency/index.tsx");
+  assert.ok(src.includes("isForeign: active !== BASE_CURRENCY,"));
+  assert.ok(src.includes('const trContext = locale === "tr";'), "Türkçe bağlamda para birimi TRY'ye sabit");
+  assert.ok(src.includes('moneyTRY: (m) => formatMoney(m, BASE_CURRENCY, "tr-TR"),'), "bildirim tutarı daima TRY");
+  // Provider dışı / sunucu varsayılanı: yabancı para yok → sunucu HTML'inde bildirim yok.
+  assert.match(src, /isForeign: false,/);
+});
