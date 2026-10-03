@@ -11,7 +11,7 @@ import {
   queryValue, locationTotalPages, parseLocationPage, parseLocationCategory, sliceLocationPage,
   locationPageHref, compactPageList, locationPagination, resolveLocationCatalog,
   isLocationContinuationPage, locationPageLabel,
-  parseListingPageParam, listingCategoryParam, locationCanonicalPath, locationPageTitle, isLocationListingNotFound,
+  parseListingPageParam, listingCategoryParam, locationCanonicalPath, locationListingSeo, locationPageTitle, isLocationListingNotFound,
 } from "./global/locationPaging.ts";
 
 const oku = (yol: string) => readFileSync(new URL(yol, import.meta.url), "utf8");
@@ -383,6 +383,67 @@ test("SEO 404 ↔ görünüm tutarlılığı: 200 dönen her sayfa ≥ 2 isteği
   assert.equal(nf({ category: "yok", page: "2" }), true);
 });
 
+// ── EK: canonical ÇÖZÜLMÜŞ listeden (ana seri / filtreli seri / bilinmeyen liste) ─────────────
+
+test("SEO (çözülmüş liste): ana serinin sayfa ≥ 2'si kendine canonical; filtreli seri ve okunamayan katalog filtresiz yola (tek kural)", () => {
+  const B = "/en/istanbul";
+  const BARE = { canonicalPath: B, titlePage: 1 };
+  // Sayfa 1: her koşulda sorgusuz yol, başlık aynen — DEĞİŞMEDİ.
+  assert.deepEqual(locationListingSeo(B, undefined, { category: null }), BARE);
+  assert.deepEqual(locationListingSeo(B, { page: "1" }, { category: null }), BARE);
+  assert.deepEqual(locationListingSeo(B, { category: "roses" }, { category: "roses" }), BARE);
+  // Ana seri ("Tümü"): her sayfa kendi canonical'ı + başlık eki.
+  assert.deepEqual(locationListingSeo(B, { page: "2" }, { category: null }), { canonicalPath: `${B}?page=2`, titlePage: 2 });
+  assert.deepEqual(locationListingSeo(B, { page: "7", utm_source: "x" }, { category: null }), { canonicalPath: `${B}?page=7`, titlePage: 7 });
+  // Filtreli seri: 1. sayfası gibi 2+ sayfaları da filtresiz yola canonical verir, başlık eki almaz →
+  // "/en/istanbul?category=roses&page=2" artık "/en/istanbul?page=2" ile aynı başlığı taşıyan ikinci bir
+  // kendine-canonical sayfa DEĞİLDİR.
+  assert.deepEqual(locationListingSeo(B, { category: "roses", page: "2" }, { category: "roses" }), BARE);
+  assert.deepEqual(locationListingSeo(B, { category: "roses", page: "9" }, { category: "roses" }), BARE);
+  assert.notDeepEqual(
+    locationListingSeo(B, { category: "roses", page: "2" }, { category: "roses" }),
+    locationListingSeo(B, { page: "2" }, { category: null }),
+  );
+  // Liste bilinmiyor (katalog okunamadı → sayfa 1. sayfa gibi çizilir): önceki hâl — çıplak canonical, düz başlık.
+  assert.deepEqual(locationListingSeo(B, { page: "7" }, null), BARE);
+  assert.deepEqual(locationListingSeo(B, { category: "roses", page: "3" }, undefined), BARE);
+  // Geçersiz sayfa (zaten 404).
+  assert.deepEqual(locationListingSeo(B, { page: "abc" }, { category: null }), BARE);
+  assert.deepEqual(locationListingSeo(B, { page: "0" }, { category: null }), BARE);
+});
+
+test("SEO (niyet sayfası): '?page=2' ile '?category=<varsayılan>&page=2' AYNI canonical'da birleşir; başka kategori filtreli seridir", () => {
+  const H = "/en/hotel-delivery";
+  // Varsayılan kategori eklendikten SONRAKİ etkin kategori iki URL biçiminde de aynıdır.
+  const yalin = locationListingSeo(H, { page: "2" }, { category: "orchids" }, "orchids");
+  const acik = locationListingSeo(H, { category: "orchids", page: "2" }, { category: "orchids" }, "orchids");
+  assert.deepEqual(yalin, acik);
+  assert.deepEqual(yalin, { canonicalPath: `${H}?category=orchids&page=2`, titlePage: 2 });
+  // Canonical = niyet sayfasının bastığı sayfalama linkinin kendisi (görünüm etkin kategoriyi taşır).
+  const link = locationPagination(H, "orchids", 2, 3)?.items.find((it) => it.kind === "page" && it.current);
+  assert.equal(link?.kind === "page" ? link.href : null, yalin.canonicalPath);
+  // Varsayılan kategori o dilde yoksa ana seri "Tümü"dür.
+  assert.deepEqual(locationListingSeo(H, { page: "2" }, { category: null }, "orchids"), { canonicalPath: `${H}?page=2`, titlePage: 2 });
+  // Başka kategori: filtreli seri → filtresiz yol.
+  assert.deepEqual(locationListingSeo(H, { category: "roses", page: "2" }, { category: "roses" }, "orchids"), { canonicalPath: H, titlePage: 1 });
+  // Varsayılan kategorisi olmayan niyet sayfası (mainCategory null) lokasyon sayfası gibi davranır.
+  assert.deepEqual(locationListingSeo(H, { page: "3" }, { category: null }, null), { canonicalPath: `${H}?page=3`, titlePage: 3 });
+});
+
+test("SEO (çözülmüş liste) ↔ görünüm: 200 dönen ana seri sayfasında canonical, görünümün etkin sayfa linkinin kendisidir", () => {
+  const ids = range(1, 60);
+  const plan = { allOrder: ids, categories: [{ slug: "roses", name: "Roses", ids: ids.slice(0, 30) }] };
+  for (const [sp, main] of [[{ page: "2" }, null], [{ page: "3" }, null], [{ category: "roses", page: "2" }, "roses"]] as const) {
+    const view = resolveLocationCatalog(plan, sp, BASE, "All");
+    assert.equal(isLocationListingNotFound(sp, view, true), false, JSON.stringify(sp));
+    const link = view.pagination?.items.find((it) => it.kind === "page" && it.current);
+    assert.ok(link && link.kind === "page");
+    assert.equal(locationListingSeo(BASE, sp, { category: view.category }, main).canonicalPath, link.href, JSON.stringify(sp));
+  }
+  // Aynı filtre ana seri DEĞİLKEN (lokasyon sayfası): filtresiz yol.
+  assert.equal(locationListingSeo(BASE, { category: "roses", page: "2" }, { category: "roses" }, null).canonicalPath, BASE);
+});
+
 // ── Kaynak korumaları (JSX çalışma zamanı Next + DB ister) ────────────────────
 
 const page = oku("./global/page.tsx");
@@ -443,9 +504,21 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(!/[?&]page=|category=/.test(meta));
   assert.ok(meta.includes("const listingPage = parseListingPageParam(listing?.page);"));
   assert.ok(meta.includes("if (listingPage === null) return { robots: NOINDEX };"));
-  assert.ok(meta.includes("const self = absoluteUrl(locationCanonicalPath(`/${locale}/${row.page_key}`, listing));"));
+  // EK: sayfa ≥ 2'de canonical + başlık eki ÇÖZÜLMÜŞ listeden (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola).
+  assert.ok(meta.includes("const basePath = `/${locale}/${row.page_key}`;"));
+  assert.ok(meta.includes("const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };"));
+  assert.ok(meta.includes("const self = absoluteUrl(seo.canonicalPath);"));
   assert.ok(meta.includes("const languages = listingPage > 1 ? null : pageLanguages(locale, row);"));
-  assert.ok(meta.includes("const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, listingPage);"));
+  assert.ok(meta.includes("const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, seo.titlePage);"));
+  // Karar yardımcısı planı / görünümü YENİDEN kurmaz (tek plan kuralı); okumaları LocalePage'inkilerle aynı çağrılardır
+  // ve niyet sayfasında GlobalPageBody ile aynı varsayılan kategori eklemesini kullanır.
+  const seoFn = page.slice(page.indexOf("async function listingSeoFor("), page.indexOf("export async function localeMetadata"));
+  assert.ok(seoFn.length > 0 && !seoFn.includes("planLocationPage(") && !seoFn.includes("resolveLocationCatalog("));
+  assert.deepEqual([...new Set(seoFn.match(/\bfetch\w+\(/g) ?? [])].sort(), ["fetchGlobalCatalog(", "fetchLocaleCatalog("]);
+  assert.ok(seoFn.includes("fetchGlobalCatalog(locale, { city: DESTINATION_ROOT })"));
+  assert.ok(seoFn.includes('catalogDecision(catalogResp, true).mode === "catalog"'), "katalog okunamadıysa liste bilinmiyor");
+  assert.ok(seoFn.includes("withIntentCategory(listing, await fetchLocaleCatalog(locale), mainCategory)"));
+  assert.ok(seoFn.includes("return locationListingSeo(basePath, listing, readable ? { category: listingCategoryParam(effective?.category) } : null, mainCategory);"));
   const pageMeta = meta.slice(meta.indexOf('if (parsed.kind === "page")'), meta.indexOf('if (parsed.kind === "category")'));
   assert.equal(meta.split(/\blisting\b/).length - 1, pageMeta.split(/\blisting\b/).length - 1 + 1, "sorgu yalnız lokasyon / niyet dalında okunur (imza + o dal)");
   // 404: son sayfanın ötesi / çözülmeyen ?category / kapalı ürün alanı — görünümün kurulduğu yerde, HAM sorguyla.

@@ -3,10 +3,11 @@
 // Çalıştırma: node --test lib/hreflangFamily.test.ts   (npm run test:unit)
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { GLOBAL_LOCALES, localeProductPath, SEGMENTS } from "./global/config.ts";
 import { withXDefault, X_DEFAULT_KEY } from "./global/hreflang.ts";
 import {
+  TR_CATEGORY_DEDICATED_ROUTES,
   TR_HREFLANG,
   categoryHreflangFamily,
   homeHreflangFamily,
@@ -164,10 +165,13 @@ test("kategori: Türkçe sayfa indexlenebilir değil / bilinmiyor → tr EKLENME
 });
 
 test("kategori: 'tr kesin indexlenebilir' kararı yalnız TÜM girdiler okunmuşken ve index iken evet", () => {
-  const tam = { seoRead: true, treeRead: true, hidden: false, indexState: "index" };
+  const tam = { seoRead: true, treeRead: true, nodeFound: true, hidden: false, indexState: "index" };
   assert.equal(trCategoryConfirmedIndexable(tam), true);
   assert.equal(trCategoryConfirmedIndexable({ ...tam, seoRead: false }), false, "SEO kaydı okunamadı → bilinmiyor");
   assert.equal(trCategoryConfirmedIndexable({ ...tam, treeRead: false }), false, "canlı ağaç okunamadı (statik yedek) → bilinmiyor");
+  // EK: Türkçe sayfa kümeyi yalnız ağaç düğümünü bulduğunda basar → düğüm yoksa (yalnız SEO kaydından çizilen
+  // sayfa / başka kategori kimliği) locale sayfası tr eklerse bağ tek yönlü kalırdı.
+  assert.equal(trCategoryConfirmedIndexable({ ...tam, nodeFound: false }), false, "kategori canlı ağaçta yok / kimlik uyuşmuyor");
   assert.equal(trCategoryConfirmedIndexable({ ...tam, hidden: true }), false, "pasif / arşiv kategori");
   assert.equal(trCategoryConfirmedIndexable({ ...tam, indexState: "noindex" }), false);
   assert.equal(trCategoryConfirmedIndexable({ ...tam, indexState: null }), false, "Türkçe sayfa yok (404)");
@@ -228,11 +232,15 @@ test("KAYNAK: locale ana sayfa / kategori / ürün kümeleri aile kurucusundan g
   assert.ok(home.includes("const languages = row.indexable ? homeHreflangFamily(row.locales, absoluteUrl) : null;"));
   const category = dal("category", 'if (parsed.kind === "product")');
   assert.ok(category.includes("if (surface.indexable) {"));
-  // tr yalnız karşılığı kesinken: Türkçe sayfa kesin indexlenebilir VE Türkçe sayfanın küme kaynağı bu sayfayı listeliyor.
-  assert.ok(category.includes("isCategoryPageConfirmedIndexable(surface.tr_slug),"));
-  assert.ok(category.includes("fetchCategoryLocaleVersions(surface.category_id),"));
-  assert.ok(category.includes("const trListsThis = trIndexable && listsLocaleVersion(trSide?.locales, locale);"));
-  assert.ok(category.includes("categoryHreflangFamily(trListsThis ? trCategoryPath(surface.tr_slug) : null, surface.locales, absoluteUrl)"));
+  // tr yalnız karşılığı kesinken: Türkçe sayfanın küme kaynağı bu sayfayı listeliyor VE Türkçe sayfa kesin indexlenebilir.
+  // EK — SIRA: önce küme kaynağı; bu sayfayı listelemiyorsa (uç yayınlanana kadar her istekte) Türkçe sayfa
+  // okumaları HİÇ yapılmaz (Promise.all yok → sonucu atılacak ek upstream okuması / bekleme yok).
+  assert.ok(category.includes("const trSide = await fetchCategoryLocaleVersions(surface.category_id);"));
+  assert.match(category, /const trListsThis = listsLocaleVersion\(trSide\?\.locales, locale\)\s*&& \(await isCategoryPageConfirmedIndexable\(surface\.tr_slug, surface\.category_id\)\);/);
+  assert.ok(!category.includes("Promise.all("), "iki okuma paralel başlatılmaz");
+  assert.ok(category.indexOf("fetchCategoryLocaleVersions(") < category.indexOf("isCategoryPageConfirmedIndexable("));
+  // EK — tr kümedeyken küme, Türkçe sayfanın kullandığı AYNI kaynaktan kurulur (iki tarafın kümesi birebir eşit).
+  assert.match(category, /categoryHreflangFamily\(\s*trListsThis \? trCategoryPath\(surface\.tr_slug\) : null,\s*trListsThis \? trSide\?\.locales : surface\.locales,\s*absoluteUrl,\s*\)/);
   const product = dal("product", "return { robots: NOINDEX };\n}");
   assert.ok(product.includes("surface.indexable ? fetchProductLocaleCluster(surface.product_id) : Promise.resolve(null)"), "noindex ürün küme okumaz");
   assert.ok(product.includes("if (surface.indexable && cluster) {"));
@@ -270,4 +278,71 @@ test("KAYNAK: 'tr kesin indexlenebilir' okuması Türkçe sayfanın kendi çöz�
   assert.ok(fn.includes("Promise.all([fetchSeoPageChecked(path), fetchCategoryTree(), resolveCategoryPage(path)])"));
   assert.ok(fn.includes("indexState: page?.index_state"));
   assert.match(fn, /catch \{\s*return false;\s*\}/);
+  // EK: düğüm bulunmalı (ve locale yüzeyinin kategori kimliğini taşımalı); kendi statik rotasından sunulan kategori hariç.
+  assert.ok(fn.includes("nodeFound: !!node && (categoryId == null || String(node.id) === String(categoryId)),"));
+  assert.ok(fn.includes("if (TR_CATEGORY_DEDICATED_ROUTES.includes(slug)) return false;"));
+  assert.ok(fn.indexOf("TR_CATEGORY_DEDICATED_ROUTES.includes(slug)") < fn.indexOf("Promise.all("), "statik rota için hiçbir okuma yapılmaz");
+});
+
+// ---------------------------------------------------------------------------
+// 7) EK (inceleme düzeltmeleri): biçim hatasına dayanıklılık, tek küme kaynağı, statik rota
+// ---------------------------------------------------------------------------
+
+test("biçim hatası FIRLATMAZ: `locales` liste değilse / içinde null satır varsa küme basılmaz ya da satır atlanır (sayfa 500 vermez)", () => {
+  const bozuklar: unknown[] = [{}, { de: { slug: "x", indexable: true } }, "metin", 7, true, null, undefined];
+  for (const bozuk of bozuklar) {
+    const locales = bozuk as LocaleVersion[];
+    assert.equal(productHreflangFamily("/urun/x", locales, mutlak), null, JSON.stringify(bozuk));
+    assert.equal(categoryHreflangFamily("/kategori/x", locales, mutlak), null, JSON.stringify(bozuk));
+    assert.equal(homeHreflangFamily(locales, mutlak), null, JSON.stringify(bozuk));
+    assert.equal(listsLocaleVersion(locales, "de"), false, JSON.stringify(bozuk));
+  }
+  // Liste içindeki bozuk satırlar atlanır; geçerli satırlar kümeyi kurar.
+  const karisik = [null, undefined, "de", 5, { locale: "de", slug: "rosen", indexable: true }] as unknown as LocaleVersion[];
+  assert.deepEqual(productHreflangFamily("/urun/gul", karisik, mutlak), {
+    tr: `${SITE}/urun/gul`,
+    de: `${SITE}/de/produkt/rosen`,
+    "x-default": `${SITE}/de/produkt/rosen`,
+  });
+  assert.deepEqual(categoryHreflangFamily("/kategori/guller", karisik, mutlak), {
+    tr: `${SITE}/kategori/guller`,
+    de: `${SITE}/de/${SEGMENTS.de.category}/rosen`,
+    "x-default": `${SITE}/de/${SEGMENTS.de.category}/rosen`,
+  });
+  assert.equal(listsLocaleVersion(karisik, "de"), true);
+  assert.deepEqual(homeHreflangFamily([null, { locale: "en", indexable: true }] as unknown as LocaleVersion[], mutlak), {
+    tr: `${SITE}/`, en: `${SITE}/en`, "x-default": `${SITE}/en`,
+  });
+});
+
+test("kategori: iki API yanıtı AYRIŞSA da tr kümedeyken Türkçe ve locale sayfası AYNI kümeyi basar (tek kaynak: category-locales)", () => {
+  // category-locales (Türkçe sayfanın kaynağı): de + en. Kategori yüzeyi (locale sayfasının eski kaynağı): de + en + it.
+  const kaynak: LocaleVersion[] = [{ locale: "de", slug: "rosen", indexable: true }, { locale: "en", slug: "roses", indexable: true }];
+  const yuzey: LocaleVersion[] = [...kaynak, { locale: "it", slug: "rose", indexable: true }];
+  const trSet = categoryHreflangFamily(trCategoryPath("guller"), kaynak, mutlak);
+  // page.tsx kuralı: trListsThis ? (tr yolu, KAYNAK) : (null, yüzey).
+  const localeSet = (locale: string) => {
+    const trListsThis = listsLocaleVersion(kaynak, locale);
+    return categoryHreflangFamily(trListsThis ? trCategoryPath("guller") : null, trListsThis ? kaynak : yuzey, mutlak);
+  };
+  assert.deepEqual(localeSet("de"), trSet, "de: Türkçe sayfayla birebir aynı küme");
+  assert.deepEqual(localeSet("en"), trSet, "en: Türkçe sayfayla birebir aynı küme");
+  assert.equal("it" in (trSet ?? {}), false);
+  // Kaynakta olmayan dil (it) tr EKLEMEZ ve bugünkü gibi yüzey kümesini basar (tr'ye tek yönlü bağ yok).
+  assert.equal("tr" in (localeSet("it") ?? {}), false);
+  // Önceki kural (tr yolu + YÜZEY) aynı girdide ayrışıyordu — nöbet:
+  assert.notDeepEqual(categoryHreflangFamily(trCategoryPath("guller"), yuzey, mutlak), trSet);
+});
+
+test("KAYNAK: kendi statik rotasından sunulan Türkçe kategori listesi app/kategori klasörleriyle eşleşir", () => {
+  const klasorler = readdirSync(new URL("../app/kategori/", import.meta.url), { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !d.name.startsWith("["))
+    .map((d) => d.name)
+    .sort();
+  assert.deepEqual([...TR_CATEGORY_DEDICATED_ROUTES].sort(), klasorler, "yeni statik kategori rotası eklenirse liste de güncellenmeli");
+  assert.ok(TR_CATEGORY_DEDICATED_ROUTES.includes("turkiye-geneli-kargo"));
+  // O rota hreflang kümesi basmaz (locale sayfası ona tr bağı vermemeli).
+  for (const slug of TR_CATEGORY_DEDICATED_ROUTES) {
+    assert.ok(!/alternates[\s\S]{0,200}languages/.test(oku(`../app/kategori/${slug}/page.tsx`)), slug);
+  }
 });

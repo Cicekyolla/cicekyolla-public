@@ -187,9 +187,10 @@ export function resolveLocationCatalog(
 //
 //  • Sayfa 1 (ya da `page` yok): canonical sorgusuz yol, başlık ve hreflang kümesi aynen — DEĞİŞMEDİ
 //    (?category tek başına canonical'a girmez; bilinmeyen kategori "Tümü" sayılır).
-//  • Sayfa N ≥ 2: canonical = aynı yol + istekte BULUNAN liste parametreleri, sabit sırayla
-//    category → page (GlobalPagination linkleriyle aynı biçim); başlık "– Sayfa N" ekiyle (o dilde);
-//    hreflang kümesi BASILMAZ (kardeş dilin N. sayfası aynı ürün dilimini taşımaz).
+//  • Sayfa N ≥ 2 (ANA SERİ): canonical = aynı yol + ÇÖZÜLMÜŞ görünümün liste parametreleri, sabit
+//    sırayla category → page (GlobalPagination linkleriyle aynı biçim); başlık "– Sayfa N" ekiyle
+//    (o dilde); hreflang kümesi BASILMAZ (kardeş dilin N. sayfası aynı ürün dilimini taşımaz).
+//    Filtreli seri ve okunamayan katalog filtresiz yola canonical verir (locationListingSeo).
 //  • Pozitif tam sayı olmayan `page` → 404. Sayfa ≥ 2 iken: son sayfanın ötesi, çözülmeyen
 //    ?category ya da ürün alanı kapalı sayfa → 404 (1. sayfanın kopyası 200 ile sunulmaz).
 //    Katalog okunamadıysa (görünüm yok) karar VERİLMEZ → API kesintisi geçerli ?page=N'i 404'e çevirmez.
@@ -215,7 +216,11 @@ export function listingCategoryParam(raw: unknown): string | null {
   return v !== undefined && LISTING_CATEGORY_RE.test(v) ? v : null;
 }
 
-/** Canonical yolu: sayfa 1 → sorgusuz yol (bugünkü hâl); N ≥ 2 → yol + mevcut liste parametreleri (category → page). */
+/**
+ * Canonical yolu: sayfa 1 → sorgusuz yol (bugünkü hâl); N ≥ 2 → yol + mevcut liste parametreleri (category → page).
+ * HAM sorgudan çalışır (sayfalama linki biçiminin tek tanımı). Sayfa metadata'sı canonical'ı buradan DEĞİL,
+ * çözülmüş listeden alır: aşağıdaki locationListingSeo (ana seri / filtreli seri / bilinmeyen liste ayrımı).
+ */
 export function locationCanonicalPath(basePath: string, searchParams: LocationSearchParams | null | undefined): string {
   const page = parseListingPageParam(searchParams?.page);
   if (page === null || page < 2) return basePath;
@@ -226,6 +231,39 @@ export function locationCanonicalPath(basePath: string, searchParams: LocationSe
 export function locationPageTitle(locale: GlobalLocale, title: string | undefined, page: number): string | undefined {
   const n = Math.trunc(Number(page)) || 1;
   return title && n > 1 ? `${title} – ${locationPageLabel(locale, n)}` : title;
+}
+
+/**
+ * EK — sayfa ≥ 2 isteğinin canonical yolu + başlıkta kullanılacak sayfa numarası, HAM sorgudan
+ * değil ÇÖZÜLMÜŞ görünümden (tek kural; önceki hâlde ham ?category kullanıldığı için filtreli
+ * serinin 1. sayfası filtresiz yola, 2+ sayfaları kendine canonical veriyordu):
+ *
+ *  • ANA SERİ = filtresiz liste ("Tümü"); niyet sayfasında varsayılan kategorinin listesi
+ *    (`mainCategory`: ?category yokken eklenen kategori). Ana serinin N ≥ 2 sayfası kendi
+ *    canonical'ını (yol + etkin kategori + page — sayfalama linkleriyle aynı biçim) ve başlık
+ *    ekini taşır. Niyet sayfasında "?page=2" ile "?category=<varsayılan>&page=2" aynı dilimi
+ *    basar → ikisi de AYNI canonical'da birleşir.
+ *  • FİLTRELİ SERİ (başka bir ?category): hangi sayfa olursa olsun filtresiz yola canonical
+ *    verir ve başlık eki almaz — 1. sayfanın bugünkü kuralının aynısı (filtreli liste dizine
+ *    ayrı bir seri olarak önerilmez; ürünlerin hepsi ana seride zaten var).
+ *  • LİSTE BİLİNMİYOR (`resolved` null: katalog okunamadı → sayfa 1. sayfa gibi çizilir):
+ *    filtresiz yol + düz başlık (önceki hâl) → kopya içerik kendi adresiyle index'e önerilmez.
+ *  • Sayfa 1: sorgusuz yol, başlık aynen — DEĞİŞMEDİ.
+ * `resolved.category`: bu isteğin ETKİN kategorisi (null = "Tümü"; niyet sayfasında varsayılan
+ * eklendikten sonraki değer). 404'e gidecek istekleri (son sayfanın ötesi, çözülmeyen kategori)
+ * ayırmak gerekmez: o yanıtın canonical'ı kullanılmaz.
+ */
+export function locationListingSeo(
+  basePath: string,
+  searchParams: LocationSearchParams | null | undefined,
+  resolved: { category: string | null } | null | undefined,
+  mainCategory: string | null = null,
+): { canonicalPath: string; titlePage: number } {
+  const page = parseListingPageParam(searchParams?.page);
+  const bare = { canonicalPath: basePath, titlePage: 1 };
+  if (page === null || page < 2 || !resolved) return bare;
+  if (resolved.category !== null && resolved.category !== mainCategory) return bare;
+  return { canonicalPath: locationPageHref(basePath, { category: resolved.category, page }), titlePage: page };
 }
 
 /**

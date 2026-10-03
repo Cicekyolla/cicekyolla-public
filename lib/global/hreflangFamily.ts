@@ -38,6 +38,17 @@ export interface LocaleVersion {
 
 type Absolute = (path: string) => string;
 
+/**
+ * EK — API yanıtı beklenen biçimde olmayabilir (200 + `locales` bir nesne / içinde null satır …).
+ * Aile kurucuları Türkçe ürün / kategori sayfalarının generateMetadata'sında da çalışır; biçim hatası
+ * orada fırlarsa sayfa 500 verirdi. Liste değilse boş, nesne olmayan satırlar atılır → fail-open
+ * (küme basılmaz, sayfa çizilir).
+ */
+function versionRows(locales: unknown): LocaleVersion[] {
+  if (!Array.isArray(locales)) return [];
+  return locales.filter((alt): alt is LocaleVersion => !!alt && typeof alt === "object");
+}
+
 /** Türkçe ürün sayfası yolu (kanonik: kayıtlı slug). */
 export function trProductPath(slug: string): string {
   return `/urun/${slug}`;
@@ -74,7 +85,7 @@ export function productHreflangFamily(
   absolute: Absolute,
 ): Record<string, string> | null {
   const urls: Record<string, string> = {};
-  for (const alt of locales ?? []) {
+  for (const alt of versionRows(locales)) {
     if (alt.indexable && isGlobalLocale(alt.locale) && alt.slug) {
       urls[alt.locale] = absolute(localeProductPath(alt.locale, alt.slug));
     }
@@ -92,7 +103,7 @@ export function categoryHreflangFamily(
   absolute: Absolute,
 ): Record<string, string> | null {
   const urls: Record<string, string> = {};
-  for (const alt of locales ?? []) {
+  for (const alt of versionRows(locales)) {
     if (alt.indexable && isGlobalLocale(alt.locale) && alt.slug) {
       urls[alt.locale] = absolute(`/${alt.locale}/${SEGMENTS[alt.locale].category}/${alt.slug}`);
     }
@@ -106,7 +117,7 @@ export function homeHreflangFamily(
   absolute: Absolute,
 ): Record<string, string> | null {
   const urls: Record<string, string> = {};
-  for (const alt of locales ?? []) {
+  for (const alt of versionRows(locales)) {
     if (alt.indexable && isGlobalLocale(alt.locale)) urls[alt.locale] = absolute(`/${alt.locale}`);
   }
   return hreflangFamily(absolute("/"), urls);
@@ -121,20 +132,30 @@ export function listsLocaleVersion(
   locales: readonly LocaleVersion[] | null | undefined,
   locale: string,
 ): boolean {
-  return (locales ?? []).some((alt) => alt.locale === locale && !!alt.indexable && !!alt.slug);
+  return versionRows(locales).some((alt) => alt.locale === locale && !!alt.indexable && !!alt.slug);
 }
+
+/**
+ * Kendi statik rotasından sunulan Türkçe kategori slug'ları (app/kategori/<slug>/page.tsx). Bu sayfalar
+ * genel kategori rotasından geçmez ve hreflang kümesi BASMAZ → locale kategori sayfası onlara `tr` bağı
+ * veremez (karşılığı olmazdı). Liste app/kategori altındaki klasörlerle eşleşir (nöbet testi).
+ */
+export const TR_CATEGORY_DEDICATED_ROUTES: readonly string[] = ["turkiye-geneli-kargo"];
 
 /**
  * Locale kategori sayfası TR'yi kümeye alabilir mi? Yalnız KESİN bilgiyle "evet":
  * SEO kaydı okuması yanıt verdi (seoRead), canlı kategori ağacı okundu (treeRead), kategori
- * ağaçta gizli (pasif/arşiv) değil ve Türkçe sayfanın basacağı index durumu "index".
+ * ağaçta BULUNDU (nodeFound — Türkçe sayfa kümeyi yalnız düğümü bulduğunda basar; locale yüzeyinin
+ * kategori kimliği verildiyse düğüm o kimliği taşımalı: iki taraf AYNI category-locales kaydını okur),
+ * gizli (pasif/arşiv) değil ve Türkçe sayfanın basacağı index durumu "index".
  * Okunamayan / bilinmeyen her durum → false (tr eklenmez; tek yönlü bağ üretilmez).
  */
 export function trCategoryConfirmedIndexable(input: {
   seoRead: boolean;
   treeRead: boolean;
+  nodeFound: boolean;
   hidden: boolean;
   indexState: string | null | undefined;
 }): boolean {
-  return input.seoRead && input.treeRead && !input.hidden && input.indexState === "index";
+  return input.seoRead && input.treeRead && input.nodeFound && !input.hidden && input.indexState === "index";
 }

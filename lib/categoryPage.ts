@@ -22,7 +22,7 @@ import { fetchSeoPage, fetchSeoPageChecked, fetchCategoryById, fetchCategoryTree
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
 import { needsCategorySeoFields, isLightCategoryNode, mergeCategoryNode } from "@/lib/categoryNodeEnrich";
-import { trCategoryConfirmedIndexable } from "@/lib/global/hreflangFamily";
+import { TR_CATEGORY_DEDICATED_ROUTES, trCategoryConfirmedIndexable } from "@/lib/global/hreflangFamily";
 
 // `app/[...slug]/page.tsx` içindeki prettySlug ile AYNI davranış. Oradaki kopya
 // lokasyon yollarında (il/ilçe/-mah) kullanılmayı sürdürdüğü için bilinçli olarak
@@ -125,8 +125,13 @@ export async function resolveCategoryPage(path: string): Promise<SeoPublicPage |
  * bilinmeyen her durum → false. Okumalar sayfanınkilerle aynı isteklerdir (revalidate 300).
  * Karar kuralı saf modülde: lib/global/hreflangFamily.ts trCategoryConfirmedIndexable.
  */
-export async function isCategoryPageConfirmedIndexable(slug: string | null | undefined): Promise<boolean> {
+export async function isCategoryPageConfirmedIndexable(
+  slug: string | null | undefined,
+  categoryId?: number | string | null,
+): Promise<boolean> {
   if (!slug) return false;
+  // EK: kendi statik rotasından sunulan kategori (ör. turkiye-geneli-kargo) hreflang kümesi basmaz.
+  if (TR_CATEGORY_DEDICATED_ROUTES.includes(slug)) return false;
   const path = `/kategori/${slug}`;
   try {
     const [seo, liveTree, page] = await Promise.all([fetchSeoPageChecked(path), fetchCategoryTree(), resolveCategoryPage(path)]);
@@ -134,6 +139,10 @@ export async function isCategoryPageConfirmedIndexable(slug: string | null | und
     return trCategoryConfirmedIndexable({
       seoRead: seo.ok,
       treeRead: liveTree !== null,
+      // EK: Türkçe sayfa kümeyi yalnız ağaç düğümünü bulduğunda basar (kimliği oradan okur). `categoryId`
+      // (locale yüzeyinin kategori kimliği) verildiyse düğüm AYNI kategori olmalı — aksi hâlde iki taraf
+      // farklı category-locales kaydı okurdu.
+      nodeFound: !!node && (categoryId == null || String(node.id) === String(categoryId)),
       hidden: !!node && !isCategoryVisible(node),
       indexState: page?.index_state,
     });

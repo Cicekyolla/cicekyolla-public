@@ -10,11 +10,19 @@
 //
 // FAIL-OPEN: her okuma süre sınırlıdır; uç yok (404) / yavaş / hata → null → çağıran
 // hreflang BASMAZ (bugünkü davranış). Vitrin API'den önce de sonra da yayınlanabilir.
+//  • Süre sınırı 2,5 sn ve süre dolunca TEKRAR DENENMEZ (en kötü bekleme 2,5 sn; kopan
+//    soket gibi hızlı hatalar bir kez tekrar denenir — lib/fetchWithDeadline.ts).
 //  • 404 "yok" notu (5 dk, süreç içi): Next Data Cache yalnız 200 yanıtı saklar; uç henüz
 //    yayında değilken her sayfa görüntülemesi aynı 404'ü yeniden sormasın.
-//  • Devre kesici (60 sn, süreç içi, uç ailesi başına): bir okuma zaman aşımına / ağ
-//    hatasına / 5xx'e düşerse aynı aile kısa süre sorulmaz → API yavaşken her sayfa
-//    görüntülemesi süre sınırı kadar beklemez.
+//  • Devre kesici (süreç içi), iki ayrı kapsam:
+//      – YOL başına 60 sn: 404 dışı hata durumu (5xx …) YALNIZ o yolu duraklatır. Tek bir
+//        ürünün hatası başka ürünlerin hreflang'ini kesmez.
+//      – AİLE başına 10 sn: zaman aşımı / ağ hatası "API yanıt vermiyor" demektir → aynı
+//        ailenin hiçbir yolu kısa süre sorulmaz; API yavaşken her sayfa görüntülemesi süre
+//        sınırı kadar beklemez.
+//    Duraklama süresince Türkçe sayfa hreflang basmaz; locale sayfası aynı ucu süre sınırı
+//    olmadan okuduğu için o pencerede `tr`yi listelemeyi sürdürebilir (tek yönlü bağ Google
+//    tarafından yok sayılır, bir sonraki taramada düzelir). Pencere bilinçli olarak kısadır.
 // ============================================================================
 import { fetchWithDeadline } from "./fetchWithDeadline.ts";
 import { GLOBAL_LOCALES } from "./global/config.ts";
@@ -27,7 +35,10 @@ const API_ORIGIN =
 export const HREFLANG_REVALIDATE_S = 300;
 export const HREFLANG_DEADLINE_MS = 2_500;
 export const HREFLANG_MISSING_MEMO_MS = 5 * 60_000;
+/** 404 dışı hata durumu (5xx …): YALNIZ o yol bu kadar süre sorulmaz. */
 export const HREFLANG_PAUSE_MS = 60_000;
+/** Zaman aşımı / ağ hatası: uç AİLESİ bu kadar süre sorulmaz (API yanıt vermiyor). */
+export const HREFLANG_FAMILY_PAUSE_MS = 10_000;
 const MEMO_CAP = 2_000;
 
 /** Ürün / kategori locale sürümleri yanıtı (product-locales/:id, category-locales/:id). */
@@ -36,9 +47,17 @@ export interface LocaleVersionsPayload {
   locales?: LocaleVersion[] | null;
 }
 
+/** ok=false → OKUNAMADI (duraklatılmış / 5xx / zaman aşımı / ağ / bozuk gövde); ok=true + data=null → yanıt geldi, veri yok (404 dahil). */
+export interface HreflangRead<T> {
+  ok: boolean;
+  data: T | null;
+}
+
 export interface HreflangReader {
   /** `family`: devre kesici anahtarı (uç ailesi); `path`: API yolu. Hiçbir koşulda fırlatmaz. */
   read<T>(family: string, path: string): Promise<T | null>;
+  /** read() ile aynı okuma; "veri yok" ile "okunamadı" ayrımını da taşır. Hiçbir koşulda fırlatmaz. */
+  readChecked<T>(family: string, path: string): Promise<HreflangRead<T>>;
 }
 
 /**
@@ -51,34 +70,51 @@ export function createHreflangReader(
   origin: string = API_ORIGIN,
 ): HreflangReader {
   const missingUntil = new Map<string, number>();
-  const pausedUntil = new Map<string, number>();
+  const pathPausedUntil = new Map<string, number>();
+  const familyPausedUntil = new Map<string, number>();
+  const failed = { ok: false, data: null } as const;
+  async function readChecked<T>(family: string, path: string): Promise<HreflangRead<T>> {
+    const t = now();
+    if ((familyPausedUntil.get(family) ?? 0) > t) return failed;
+    if ((pathPausedUntil.get(path) ?? 0) > t) return failed;
+    if ((missingUntil.get(path) ?? 0) > t) return { ok: true, data: null };
+    // Hata DURUMU / bozuk gövde bu yola özgü olabilir (tek bir kaydın hatası) → yalnız bu yol duraklar.
+    const pausePath = (): HreflangRead<T> => {
+      if (pathPausedUntil.size >= MEMO_CAP) pathPausedUntil.clear();
+      pathPausedUntil.set(path, now() + HREFLANG_PAUSE_MS);
+      return failed;
+    };
+    let res: Response;
+    try {
+      res = await fetchWithDeadline(
+        `${origin}${path}`,
+        { next: { revalidate: HREFLANG_REVALIDATE_S } },
+        HREFLANG_DEADLINE_MS,
+        fetchFn ?? fetch,
+        false,
+      );
+    } catch {
+      // Zaman aşımı / ağ hatası: API yanıt vermiyor → aile kısa süre sorulmaz.
+      familyPausedUntil.set(family, now() + HREFLANG_FAMILY_PAUSE_MS);
+      return failed;
+    }
+    if (res.status === 404) {
+      if (missingUntil.size >= MEMO_CAP) missingUntil.clear();
+      missingUntil.set(path, now() + HREFLANG_MISSING_MEMO_MS);
+      return { ok: true, data: null };
+    }
+    if (!res.ok) return pausePath();
+    try {
+      const body = (await res.json()) as { data?: T } | null;
+      return { ok: true, data: body?.data ?? null };
+    } catch {
+      return pausePath();
+    }
+  }
   return {
+    readChecked,
     async read<T>(family: string, path: string): Promise<T | null> {
-      const t = now();
-      if ((pausedUntil.get(family) ?? 0) > t) return null;
-      if ((missingUntil.get(path) ?? 0) > t) return null;
-      try {
-        const res = await fetchWithDeadline(
-          `${origin}${path}`,
-          { next: { revalidate: HREFLANG_REVALIDATE_S } },
-          HREFLANG_DEADLINE_MS,
-          fetchFn ?? fetch,
-        );
-        if (res.status === 404) {
-          if (missingUntil.size >= MEMO_CAP) missingUntil.clear();
-          missingUntil.set(path, now() + HREFLANG_MISSING_MEMO_MS);
-          return null;
-        }
-        if (!res.ok) {
-          pausedUntil.set(family, now() + HREFLANG_PAUSE_MS);
-          return null;
-        }
-        const body = (await res.json()) as { data?: T } | null;
-        return body?.data ?? null;
-      } catch {
-        pausedUntil.set(family, now() + HREFLANG_PAUSE_MS);
-        return null;
-      }
+      return (await readChecked<T>(family, path)).data;
     },
   };
 }
@@ -116,12 +152,15 @@ export async function fetchCategoryLocaleVersions(
  * diğer dillerin satırlarına paralel bakılır ve ilk onaylı satır kullanılır → Türkçe ana
  * sayfa, EN olmasa da indexlenebilir her locale ana sayfasıyla karşılıklı kalır. Hiç satır
  * yok / okuma hatası → null → Türkçe ana sayfa hreflang basmaz (fail-open).
+ * Çapa OKUNAMADIYSA (5xx / zaman aşımı / ağ) diğer dillere SORULMAZ: API arızalıyken 13 istek
+ * atılmaz (karar okumanın `ok` alanından; devre kesicinin yan etkisine bağlı değildir).
  */
 export async function readHomeLocaleVersions(r: HreflangReader): Promise<LocaleVersion[] | null> {
-  const ask = (locale: string) =>
-    r.read<{ locales?: LocaleVersion[] | null }>("global-home", `/api/public/global/page?locale=${locale}&key=home`);
-  const anchor = await ask(X_DEFAULT_LOCALE);
-  if (anchor) return Array.isArray(anchor.locales) ? anchor.locales : null;
+  const path = (locale: string) => `/api/public/global/page?locale=${locale}&key=home`;
+  const ask = (locale: string) => r.read<{ locales?: LocaleVersion[] | null }>("global-home", path(locale));
+  const anchor = await r.readChecked<{ locales?: LocaleVersion[] | null }>("global-home", path(X_DEFAULT_LOCALE));
+  if (!anchor.ok) return null;
+  if (anchor.data) return Array.isArray(anchor.data.locales) ? anchor.data.locales : null;
   const rows = await Promise.all(GLOBAL_LOCALES.filter((l) => l !== X_DEFAULT_LOCALE).map(ask));
   return rows.find((row) => Array.isArray(row?.locales))?.locales ?? null;
 }

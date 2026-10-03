@@ -85,7 +85,7 @@ import {
 } from "./locationSections";
 import {
   resolveLocationCatalog, isLocationContinuationPage,
-  parseListingPageParam, locationCanonicalPath, locationPageTitle, isLocationListingNotFound,
+  parseListingPageParam, listingCategoryParam, locationListingSeo, locationPageTitle, isLocationListingNotFound,
   type LocationCatalogView, type LocationSearchParams,
 } from "./locationPaging";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
@@ -277,14 +277,43 @@ function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, st
 }
 
 /**
+ * EK (SEO YAYIN ZİNCİRİ): sayfa ≥ 2 isteğinin canonical yolu + başlık sayfası (yalnız sayfa ≥ 2 isteğinde
+ * çalışır). Okumalar LocalePage'in yaptıklarının AYNISIDIR (aynı URL'ler → istek içi tekilleştirme); plan /
+ * görünüm burada YENİDEN kurulmaz — karar için iki bilgi yeter: katalog okunabildi mi ve etkin kategori ne
+ * (niyet sayfasında GlobalPageBody ile aynı varsayılan kategori eklemesi). Katalog okunamadıysa liste
+ * bilinmiyor → locationListingSeo filtresiz yola canonical verir (kopya içerik kendi adresiyle önerilmez).
+ */
+async function listingSeoFor(
+  locale: GlobalLocale, pageKey: string, basePath: string, listing: LocationSearchParams | undefined,
+): Promise<{ canonicalPath: string; titlePage: number }> {
+  const locKey = parseLocationKey(pageKey);
+  const intent = isIntentPageKey(pageKey) ? pageKey : null;
+  const catalogResp = locKey
+    ? await fetchGlobalCatalog(locale, {
+        city: locKey.city,
+        district: locKey.kind === "city" ? undefined : locKey.district,
+        neighborhood: locKey.kind === "neighborhood" ? locKey.neighborhood : undefined,
+      })
+    : intent
+      ? await fetchGlobalCatalog(locale, { city: DESTINATION_ROOT })
+      : null;
+  const readable = (locKey || intent) ? catalogDecision(catalogResp, true).mode === "catalog" : false;
+  // Niyet sayfasının ana serisi = varsayılan kategori (o dilde canlı ürünü varsa; yoksa "Tümü").
+  const mainCategory = intent ? INTENT_PAGE_CATEGORY[intent] : null;
+  const effective = readable && intent ? withIntentCategory(listing, await fetchLocaleCatalog(locale), mainCategory) : listing;
+  return locationListingSeo(basePath, listing, readable ? { category: listingCategoryParam(effective?.category) } : null, mainCategory);
+}
+
+/**
  * EK (SEO YAYIN ZİNCİRİ):
  *  • hreflang AİLESİ — ürün, ana sayfa ve kategoride Türkçe sürüm kümeye girer (karşılığını Türkçe
  *    sayfa da basar): lib/global/hreflangFamily.ts. Lokasyon / niyet sayfaları pageLanguages ile
  *    bugünkü gibi yalnız locale kümesini basar (TR eklenmez).
  *  • openGraph — locale sayfası kök layout'un Türkçe openGraph'ını miras almaz: lib/global/localeOpenGraph.ts.
  *  • listing: lokasyon / niyet sayfasının isteğe bağlı sorgusu (?category, ?page). Sayfa 1 bugünkü
- *    hâliyle AYNEN; sayfa ≥ 2 kendi canonical'ını ve başlık ekini alır, hreflang kümesi basmaz
- *    (lib/global/locationPaging.ts — sorgu yalnız oradaki saf yardımcılarla okunur).
+ *    hâliyle AYNEN; ANA SERİNİN sayfa ≥ 2'si kendi canonical'ını ve başlık ekini alır, hreflang kümesi
+ *    basmaz; filtreli seri ve okunamayan katalog filtresiz yola canonical verir
+ *    (lib/global/locationPaging.ts locationListingSeo — sorgu yalnız oradaki saf yardımcılarla okunur).
  */
 export async function localeMetadata(locale: GlobalLocale, path: string[], listing?: LocationSearchParams): Promise<Metadata> {
   const parsed = parseLocalePath(locale, path);
@@ -314,9 +343,13 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     if (listingPage === null) return { robots: NOINDEX };
     const row = await fetchGlobalPage(locale, parsed.key);
     if (!row) return { robots: NOINDEX };
-    const self = absoluteUrl(locationCanonicalPath(`/${locale}/${row.page_key}`, listing));
+    // EK: sayfa ≥ 2'de canonical + başlık eki HAM sorgudan değil ÇÖZÜLMÜŞ katalog görünümünden gelir
+    // (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola — locationListingSeo). Sayfa 1 aynen.
+    const basePath = `/${locale}/${row.page_key}`;
+    const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };
+    const self = absoluteUrl(seo.canonicalPath);
     const languages = listingPage > 1 ? null : pageLanguages(locale, row);
-    const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, listingPage);
+    const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, seo.titlePage);
     return {
       title,
       description: row.meta_description ?? undefined,
@@ -339,15 +372,21 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description }),
     };
     if (surface.indexable) {
-      // tr yalnız KARŞILIĞI KESİNKEN eklenir: (1) Türkçe kategori sayfası kesin indexlenebilir ve (2) Türkçe
-      // sayfanın kümesini kurduğu kaynak (category-locales) bu sayfayı listeliyor. Uç henüz yayında değilse /
+      // tr yalnız KARŞILIĞI KESİNKEN eklenir: (1) Türkçe sayfanın kümesini kurduğu kaynak (category-locales)
+      // bu sayfayı listeliyor ve (2) Türkçe kategori sayfası kesin indexlenebilir. Uç henüz yayında değilse /
       // okunamadıysa / durum bilinmiyorsa tr eklenmez → küme bugünkü gibi (tek yönlü bağ üretilmez).
-      const [trIndexable, trSide] = await Promise.all([
-        isCategoryPageConfirmedIndexable(surface.tr_slug),
-        fetchCategoryLocaleVersions(surface.category_id),
-      ]);
-      const trListsThis = trIndexable && listsLocaleVersion(trSide?.locales, locale);
-      const languages = categoryHreflangFamily(trListsThis ? trCategoryPath(surface.tr_slug) : null, surface.locales, absoluteUrl);
+      // SIRA: önce (1). Kaynak bu sayfayı listelemiyorsa (uç yayınlanana kadar HER istekte durum bu) Türkçe
+      // sayfa okumaları (2) hiç yapılmaz → sonucu atılacak ek upstream okuması / bekleme yok.
+      const trSide = await fetchCategoryLocaleVersions(surface.category_id);
+      const trListsThis = listsLocaleVersion(trSide?.locales, locale)
+        && (await isCategoryPageConfirmedIndexable(surface.tr_slug, surface.category_id));
+      // tr kümedeyken küme, Türkçe sayfanın kullandığı AYNI kaynaktan (category-locales) kurulur → iki tarafın
+      // kümesi birebir eşit (yüzey yanıtıyla kaynak ayrışsa da). tr kümede değilken bugünkü gibi yüzeyden.
+      const languages = categoryHreflangFamily(
+        trListsThis ? trCategoryPath(surface.tr_slug) : null,
+        trListsThis ? trSide?.locales : surface.locales,
+        absoluteUrl,
+      );
       if (languages) meta.alternates = { canonical: self, languages };
     }
     return meta;
@@ -413,7 +452,8 @@ const S = {
  * SAYFALAMA (lib/global/locationPaging.ts, TR ?page standardı): ?category=<slug> + ?page=<N>, sayfa başına 24.
  * Önce son sıralı liste, sonra dilim; SSR yalnız dilimi basar. ?page ≥ 2 → hero (kırıntı + H1) + ürün alanı.
  * 1. sayfada canonical/hreflang/robots sorgusuz yoldan (localeMetadata) — DEĞİŞMEZ. EK (SEO yayın zinciri):
- * ?page ≥ 2 kendi canonical'ını (yol + mevcut ?category + ?page) ve başlık ekini taşır, hreflang kümesi basmaz.
+ * ana serinin ?page ≥ 2'si kendi canonical'ını (yol + etkin kategori + ?page) ve başlık ekini taşır, hreflang kümesi
+ * basmaz; filtreli seri (başka ?category) her sayfada filtresiz yola canonical verir (locationListingSeo).
  */
 
 /**

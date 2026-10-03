@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   HREFLANG_DEADLINE_MS,
+  HREFLANG_FAMILY_PAUSE_MS,
   HREFLANG_MISSING_MEMO_MS,
   HREFLANG_PAUSE_MS,
   HREFLANG_REVALIDATE_S,
@@ -67,30 +68,84 @@ test("404 (uç henüz yayında değil) → null; aynı yol 5 dk yeniden sorulmaz
   assert.equal(calls.length, 3, "not süresi dolunca yeniden sorulur");
 });
 
-test("5xx → null ve aile 60 sn sorulmaz (devre kesici); başka aile etkilenmez; süre dolunca yeniden sorulur", async () => {
+test("5xx → null ve YALNIZ o yol 60 sn sorulmaz; aynı ailenin BAŞKA yolu (başka ürün) etkilenmez; süre dolunca yeniden sorulur", async () => {
   let saat = 0;
   let durum = 503;
   const { fn, calls } = sahte(() => json(durum, { data: { ok: true } }));
   const reader = createHreflangReader(fn, () => saat, ORIGIN);
   assert.equal(await reader.read("product-locales", "/p/1"), null);
   assert.equal(calls.length, 1);
-  assert.equal(await reader.read("product-locales", "/p/2"), null);
-  assert.equal(calls.length, 1, "aynı aile duraklatıldı → istek yok");
+  assert.equal(await reader.read("product-locales", "/p/1"), null);
+  assert.equal(calls.length, 1, "aynı yol duraklatıldı → istek yok");
   durum = 200;
-  assert.deepEqual(await reader.read("global-home", "/h"), { ok: true });
-  assert.equal(calls.length, 2, "başka aile sorulur");
-  saat += HREFLANG_PAUSE_MS + 1;
-  assert.deepEqual(await reader.read("product-locales", "/p/2"), { ok: true });
+  // İnceleme bulgusu: tek bir ürünün 5xx'i o instance'taki TÜM ürünlerin hreflang'ini 60 sn kesiyordu.
+  assert.deepEqual(await reader.read("product-locales", "/p/2"), { ok: true }, "başka ürün sorulur ve küme basılır");
+  assert.deepEqual(await reader.read("product-locales", "/p/3"), { ok: true });
   assert.equal(calls.length, 3);
+  assert.equal(await reader.read("product-locales", "/p/1"), null, "hatalı yol hâlâ duraklı");
+  assert.equal(calls.length, 3);
+  saat += HREFLANG_PAUSE_MS + 1;
+  assert.deepEqual(await reader.read("product-locales", "/p/1"), { ok: true });
+  assert.equal(calls.length, 4);
+  assert.equal(HREFLANG_PAUSE_MS, 60_000);
 });
 
-test("ağ hatası / zaman aşımı → null (fırlatmaz), tek tekrar, sonra aile duraklar", async () => {
-  const { fn, calls } = sahte(() => { throw new Error("other side closed"); });
-  const reader = createHreflangReader(fn, () => 0, ORIGIN);
+test("ağ hatası → null (fırlatmaz), hızlı hata bir kez tekrar denenir; AİLE kısa süre (10 sn) duraklar, başka aile etkilenmez", async () => {
+  let saat = 0;
+  let bozuk = true;
+  const { fn, calls } = sahte(() => { if (bozuk) throw new Error("other side closed"); return json(200, { data: { ok: true } }); });
+  const reader = createHreflangReader(fn, () => saat, ORIGIN);
   assert.equal(await reader.read("product-locales", "/p/1"), null);
-  assert.equal(calls.length, 2, "fetchWithDeadline: ilk deneme + tek tekrar");
+  assert.equal(calls.length, 2, "fetchWithDeadline: ilk deneme + tek tekrar (kopan soket)");
+  bozuk = false;
+  assert.equal(await reader.read("product-locales", "/p/2"), null);
+  assert.equal(calls.length, 2, "API yanıt vermiyor → aynı ailenin hiçbir yolu sorulmaz");
+  assert.deepEqual(await reader.read("global-home", "/h"), { ok: true }, "başka aile sorulur");
+  assert.equal(calls.length, 3);
+  saat += HREFLANG_FAMILY_PAUSE_MS - 1;
+  assert.equal(await reader.read("product-locales", "/p/2"), null);
+  assert.equal(calls.length, 3);
+  saat += 2;
+  assert.deepEqual(await reader.read("product-locales", "/p/2"), { ok: true }, "kısa duraklama dolunca yeniden sorulur");
+  assert.equal(calls.length, 4);
+  assert.equal(HREFLANG_FAMILY_PAUSE_MS, 10_000, "aile duraklaması kısa: Türkçe sayfanın hreflang'siz kaldığı pencere dar");
+});
+
+test("ZAMAN AŞIMI: yanıt vermeyen uç bir kez beklenir (2 × süre sınırı DEĞİL), sonra aile duraklar → sonraki okuma beklemez", async () => {
+  let calls = 0;
+  const asili = (async (_url: unknown, init?: RequestInit) => {
+    calls++;
+    await new Promise<void>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    });
+    return new Response("{}");
+  }) as typeof fetch;
+  const reader = createHreflangReader(asili, Date.now, ORIGIN);
+  const t0 = Date.now();
   assert.equal(await reader.read("product-locales", "/p/1"), null);
-  assert.equal(calls.length, 2, "duraklatılan aile yeniden sorulmaz");
+  const sure = Date.now() - t0;
+  assert.equal(calls, 1, "süre dolunca tekrar denenmez");
+  assert.ok(sure >= HREFLANG_DEADLINE_MS - 50 && sure < HREFLANG_DEADLINE_MS * 2 - 500, `tek süre sınırı kadar beklendi (${sure} ms)`);
+  const t1 = Date.now();
+  assert.equal(await reader.read("product-locales", "/p/2"), null);
+  assert.equal(calls, 1, "aile duraklı → istek yok");
+  assert.ok(Date.now() - t1 < 100, "ikinci okuma beklemez");
+});
+
+test("readChecked: 'veri yok' (404 / data yok) ile 'okunamadı' (5xx / ağ / bozuk gövde / duraklı) ayrışır", async () => {
+  const tek = (answer: (url: string) => Response) => createHreflangReader(sahte(answer).fn, () => 0, ORIGIN);
+  assert.deepEqual(await tek(() => json(200, { data: { a: 1 } })).readChecked("f", "/a"), { ok: true, data: { a: 1 } });
+  assert.deepEqual(await tek(() => json(404, {})).readChecked("f", "/a"), { ok: true, data: null });
+  assert.deepEqual(await tek(() => json(200, { error: "x" })).readChecked("f", "/a"), { ok: true, data: null });
+  assert.deepEqual(await tek(() => json(500, {})).readChecked("f", "/a"), { ok: false, data: null });
+  assert.deepEqual(await tek(() => { throw new Error("ağ"); }).readChecked("f", "/a"), { ok: false, data: null });
+  // Bozuk gövde (200 + JSON değil): okunamadı; YALNIZ o yol duraklar (ailenin başka yolu sorulur).
+  let n = 0;
+  const bozuk = createHreflangReader(sahte((url) => { n++; return url.endsWith("/a") ? new Response("<html>", { status: 200 }) : json(200, { data: 1 }); }).fn, () => 0, ORIGIN);
+  assert.deepEqual(await bozuk.readChecked("f", "/a"), { ok: false, data: null });
+  assert.deepEqual(await bozuk.readChecked("f", "/a"), { ok: false, data: null });
+  assert.equal(n, 1, "duraklı yol yeniden sorulmaz");
+  assert.deepEqual(await bozuk.readChecked("f", "/b"), { ok: true, data: 1 });
 });
 
 test("dışa açık okuyucular: geçersiz kimlik ağ isteği yapmaz; hata hiçbir zaman dışarı sızmaz", async () => {
