@@ -12,7 +12,9 @@
 //  - URL locale = SEO source of truth; self-canonical; TR canonical koduna dokunulmaz.
 //  - robots: yalnız approved + indexable yüzeyler index; geri kalan noindex.
 //  - hreflang: yalnız GERÇEK yayınlanmış (approved+indexable) karşılıklar arasında,
-//    en az 2 üye varsa; TR return-link'i TR sayfalarına eklenene kadar TR cluster'a girmez.
+//    en az 2 üye varsa. EK (SEO yayın zinciri): ürün, ana sayfa ve kategoride Türkçe sürüm
+//    ailenin üyesidir (Türkçe sayfa aynı kümeyi karşılıklı basar — lib/global/hreflangFamily.ts);
+//    lokasyon / niyet sayfalarında TR küme dışında kalır.
 //  - İç bağlantı zinciri locale ailesi İÇİNDE kalır (DE sayfadan TR yüzeyine düşme yok).
 // ============================================================================
 import type { Metadata } from "next";
@@ -27,8 +29,11 @@ import { floristLocalFields, istanbulDistrictJsonLd, resolveSiteIdentity, type S
 import { getPublishedHomepage } from "@/lib/homepage";
 import { toPlainText } from "@/lib/richText";
 import { withXDefault } from "./hreflang";
-// EK (SEO YAYIN ZİNCİRİ): locale openGraph'ı — saf modül.
+// EK (SEO YAYIN ZİNCİRİ): hreflang ailesi (TR + locale sürümleri) ve locale openGraph'ı — saf modüller.
+import { categoryHreflangFamily, homeHreflangFamily, listsLocaleVersion, productHreflangFamily, trCategoryPath, trProductPath } from "./hreflangFamily";
 import { localeOpenGraph } from "./localeOpenGraph";
+import { isCategoryPageConfirmedIndexable } from "@/lib/categoryPage";
+import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
 import { LABELS } from "./locationLabels";
 import { fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
@@ -273,6 +278,9 @@ function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, st
 
 /**
  * EK (SEO YAYIN ZİNCİRİ):
+ *  • hreflang AİLESİ — ürün, ana sayfa ve kategoride Türkçe sürüm kümeye girer (karşılığını Türkçe
+ *    sayfa da basar): lib/global/hreflangFamily.ts. Lokasyon / niyet sayfaları pageLanguages ile
+ *    bugünkü gibi yalnız locale kümesini basar (TR eklenmez).
  *  • openGraph — locale sayfası kök layout'un Türkçe openGraph'ını miras almaz: lib/global/localeOpenGraph.ts.
  *  • listing: lokasyon / niyet sayfasının isteğe bağlı sorgusu (?category, ?page). Sayfa 1 bugünkü
  *    hâliyle AYNEN; sayfa ≥ 2 kendi canonical'ını ve başlık ekini alır, hreflang kümesi basmaz
@@ -288,7 +296,8 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       const title = HOME_FALLBACK[locale].title;
       return { title, robots: NOINDEX, alternates: { canonical: self }, openGraph: localeOpenGraph(locale, { url: self, title }) };
     }
-    const languages = pageLanguages(locale, row);
+    // Ana sayfa ailesi: tr (site kökü) + indexlenebilir locale ana sayfaları; noindex satır küme basmaz.
+    const languages = row.indexable ? homeHreflangFamily(row.locales, absoluteUrl) : null;
     const title = row.seo_title ?? row.h1 ?? HOME_FALLBACK[locale].title;
     return {
       title,
@@ -330,13 +339,16 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description }),
     };
     if (surface.indexable) {
-      const languages: Record<string, string> = {};
-      for (const alt of surface.locales ?? []) {
-        if (alt.indexable && isGlobalLocale(alt.locale)) {
-          languages[alt.locale] = absoluteUrl(`/${alt.locale}/${SEGMENTS[alt.locale].category}/${alt.slug}`);
-        }
-      }
-      if (Object.keys(languages).length > 1) meta.alternates = { canonical: self, languages: withXDefault(languages) };
+      // tr yalnız KARŞILIĞI KESİNKEN eklenir: (1) Türkçe kategori sayfası kesin indexlenebilir ve (2) Türkçe
+      // sayfanın kümesini kurduğu kaynak (category-locales) bu sayfayı listeliyor. Uç henüz yayında değilse /
+      // okunamadıysa / durum bilinmiyorsa tr eklenmez → küme bugünkü gibi (tek yönlü bağ üretilmez).
+      const [trIndexable, trSide] = await Promise.all([
+        isCategoryPageConfirmedIndexable(surface.tr_slug),
+        fetchCategoryLocaleVersions(surface.category_id),
+      ]);
+      const trListsThis = trIndexable && listsLocaleVersion(trSide?.locales, locale);
+      const languages = categoryHreflangFamily(trListsThis ? trCategoryPath(surface.tr_slug) : null, surface.locales, absoluteUrl);
+      if (languages) meta.alternates = { canonical: self, languages };
     }
     return meta;
   }
@@ -345,8 +357,11 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const surface = await fetchProductSurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(localeProductPath(locale, surface.slug));
-    // Paylaşım görseli = ürün kapağı (sayfanın da okuduğu aynı ürün isteği).
-    const detail = await fetchProductBySlug(surface.tr_slug);
+    // Paylaşım görseli = ürün kapağı (sayfanın da okuduğu aynı ürün isteği); küme okumasıyla paralel.
+    const [detail, cluster] = await Promise.all([
+      fetchProductBySlug(surface.tr_slug),
+      surface.indexable ? fetchProductLocaleCluster(surface.product_id) : Promise.resolve(null),
+    ]);
     const cover = detail?.images.find((i) => i.role === "cover")?.url || detail?.images[0]?.url;
     const title = surface.seo_title ?? surface.name ?? undefined;
     const meta: Metadata = {
@@ -356,15 +371,11 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       alternates: { canonical: self },
       openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description, image: cover }),
     };
-    if (surface.indexable) {
-      const cluster = await fetchProductLocaleCluster(surface.product_id);
-      const languages: Record<string, string> = {};
-      for (const alt of cluster?.locales ?? []) {
-        if (alt.indexable && isGlobalLocale(alt.locale)) {
-          languages[alt.locale] = absoluteUrl(localeProductPath(alt.locale, alt.slug));
-        }
-      }
-      if (Object.keys(languages).length > 1) meta.alternates = { canonical: self, languages: withXDefault(languages) };
+    if (surface.indexable && cluster) {
+      // Ürün ailesi: tr (/urun/<kayıtlı slug>) + indexlenebilir locale PDP'leri. Küme okunamadıysa basılmaz.
+      const trSlug = cluster.tr_slug ?? surface.tr_slug;
+      const languages = productHreflangFamily(trSlug ? trProductPath(trSlug) : null, cluster.locales, absoluteUrl);
+      if (languages) meta.alternates = { canonical: self, languages };
     }
     return meta;
   }

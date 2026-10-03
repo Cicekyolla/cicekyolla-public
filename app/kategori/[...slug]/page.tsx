@@ -22,6 +22,10 @@ import { categoryCanonicalPath, categoryPageTitle, parseCategoryPageParam } from
 import { managedTitle, managedDescription } from "@/lib/managedSeoContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import type { SeoPublicPage } from "@/lib/api";
+import { getCategoryTree } from "@/lib/categories";
+import { findCategoryNodeBySlug } from "@/lib/catalog";
+import { categoryHreflangFamily } from "@/lib/global/hreflangFamily";
+import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 
 export const revalidate = 300;
 export const dynamicParams = true;
@@ -67,13 +71,26 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // "?page=N": ilk sayfa diğer sayfaların canonical'ı olamaz (Google sayfalama
   // rehberi); sort/filtre parametreleri canonical'a girmez.
   const canonicalPath = categoryCanonicalPath(path, pageNo);
-  return {
+  // EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): YALNIZ 1. sayfa ve YALNIZ sayfa indexlenebilirken
+  // tr (kendi canonical'ı) + indexlenebilir locale kategori sayfaları + locale kardeşleriyle
+  // aynı x-default. Locale kategori sayfaları `tr`yi yalnız bu sayfa kesin indexlenebilirken
+  // ekler → bağ karşılıklı. Kategori kimliği layout'un zaten okuduğu ağaçtan (ek istek yok);
+  // locale sürümleri yeni category-locales ucundan (önbellekli, süre sınırlı; uç yok / hata →
+  // null → hreflang basılmaz). Kural: lib/global/hreflangFamily.ts.
+  let languages: Record<string, string> | null = null;
+  if (pageNo === 1 && page.index_state === "index") {
+    const tree = await getCategoryTree();
+    const node = tree ? findCategoryNodeBySlug(tree, path.replace(/^\/kategori\//, "")) : null;
+    if (node) languages = categoryHreflangFamily(path, (await fetchCategoryLocaleVersions(node.id))?.locales, absoluteUrl);
+  }
+  const meta: Metadata = {
     title,
     description,
     alternates: { canonical: absoluteUrl(canonicalPath) },
     robots: indexRobots(page.index_state),
     openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" },
   };
+  return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;
 }
 
 export default async function Page({ params, searchParams }: PageProps) {

@@ -120,6 +120,31 @@ export async function fetchSeoPage(
   return data;
 }
 
+/** fetchSeoPage()'in hatayı bildiren hâli: ok=false → kayıt OKUNAMADI ("kayıt yok" demek değildir). */
+export interface SeoPageResult {
+  ok: boolean;
+  page: SeoPublicPage | null;
+}
+
+/**
+ * EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): fetchSeoPage() ile AYNI istek (aynı önbellek
+ * kaydı); fark yalnız sonucun "yanıt geldi, kayıt yok" (ok=true, page=null) ile "okunamadı"
+ * (ok=false: ağ / zaman aşımı / 404 dışı hata / bozuk gövde) ayrımını taşımasıdır.
+ * fetchSeoPage() DEĞİŞMEDİ.
+ */
+export async function fetchSeoPageChecked(path: string): Promise<SeoPageResult> {
+  const url = `${API_ORIGIN}/api/public/seo/page?path=${encodeURIComponent(path)}`;
+  try {
+    const res = await fetchWithDeadline(url, { headers: apiHeaders(), next: { revalidate: 300 } }, 6_000);
+    if (res.status === 404) return { ok: true, page: null };
+    if (!res.ok) return { ok: false, page: null };
+    const data = ((await res.json()) as { data?: SeoPublicPage } | null)?.data;
+    return { ok: true, page: data && typeof data.url_path === "string" ? data : null };
+  } catch {
+    return { ok: false, page: null };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // PUBLIC HTML SITE MAP — yalnız yayındaki gerçek SEO envanteri.
 // ---------------------------------------------------------------------------

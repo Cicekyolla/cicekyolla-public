@@ -23,6 +23,8 @@ const RELATED_SIZES = "(max-width:640px) 50vw, 25vw";
 const RELATED_AVIF_MEDIA = avifMediaFromSizes(RELATED_SIZES);
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { toPlainText } from "@/lib/richText";
+import { productHreflangFamily } from "@/lib/global/hreflangFamily";
+import { fetchProductLocaleVersions } from "@/lib/hreflangSources";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -139,7 +141,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // slug'tan üretilir (API araması büyük/küçük harf duyarsız → /urun/Kirmizi-Gul
   // kendi yazımıyla canonical veriyordu). Kayıtlı slug boşsa istek slug'ı kalır.
   const canonicalPath = `/urun/${product.slug || params.slug}`;
-  return {
+  // EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): ürünün en az bir indexlenebilir locale sürümü
+  // varsa Türkçe sayfa da kümeyi basar: tr (kendi canonical'ı) + o sürümler + locale
+  // kardeşleriyle AYNI x-default. Locale PDP'ler aynı kümeyi basar → bağ karşılıklı
+  // (tek yönlü bağ yok sayılır). Okuma önbellekli ve süre sınırlı; uç yok / yavaş / hata →
+  // null → hreflang basılmaz (bugünkü davranış). Kural: lib/global/hreflangFamily.ts.
+  const languages = productHreflangFamily(canonicalPath, (await fetchProductLocaleVersions(product.id))?.locales, absoluteUrl);
+  const meta: Metadata = {
     title,
     description,
     alternates: { canonical: absoluteUrl(canonicalPath) },
@@ -160,6 +168,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: ogImage ? [ogImage] : [absoluteUrl("/twitter-image")],
     },
   };
+  return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;
 }
 
 export default async function ProductPage({ params }: PageProps) {

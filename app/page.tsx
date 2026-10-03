@@ -33,8 +33,10 @@ import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
 import { BlogRail } from "../components/home/BlogRail";
-import { indexRobots, SITE_URL } from "@/lib/site-config";
+import { absoluteUrl, indexRobots, SITE_URL } from "@/lib/site-config";
 import { isLegacyPleskMedia } from "@/lib/media";
+import { homeHreflangFamily } from "@/lib/global/hreflangFamily";
+import { fetchHomeLocaleVersions } from "@/lib/hreflangSources";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -52,7 +54,7 @@ import { isLegacyPleskMedia } from "@/lib/media";
  * - Koleksiyon slider artık Hero'ya bağlı DEĞİL; kendi section'ında bağımsız akışta.
  */
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   // SEO kurtarma (15 Ağu 2026, operatör onaylı): eski güçlü dönemin Wayback-kanıtlı
   // title'ı geri getirildi — "çiçek yolla" poz ~2 dönemi bu head ile kazanılmıştı.
@@ -92,6 +94,19 @@ export const metadata: Metadata = {
   },
   robots: indexRobots(),
 };
+
+// EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): ana sayfa metadata'sı yukarıdaki nesnenin AYNISI;
+// tek ek, onaylı + indexlenebilir locale ana sayfası varsa `alternates.languages`:
+// tr (site kökü) + o locale ana sayfaları + locale kardeşleriyle AYNI x-default. Locale ana
+// sayfaları da `tr → site kökü` basar → bağ karşılıklı. Okuma önbellekli (revalidate 300;
+// no-store değil → rotanın render türü değişmez) ve süre sınırlı; satır yok / yavaş / hata →
+// null → nesne aynen döner.
+// (Next aynı segmentte `metadata` ile `generateMetadata`yı birlikte kabul etmez; nesne bu
+// yüzden artık dışa aktarılmıyor.) Kural: lib/global/hreflangFamily.ts.
+export async function generateMetadata(): Promise<Metadata> {
+  const languages = homeHreflangFamily(await fetchHomeLocaleVersions(), absoluteUrl);
+  return languages ? { ...metadata, alternates: { ...metadata.alternates, languages } } : metadata;
+}
 
 /** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir.
  *  V65 fix: logo artık kırık /logo.png yerine GERÇEK logo URL'sine bağlanır
