@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
 import { resolveCategoryPage } from "@/lib/categoryPage";
+import { categoryCanonicalPath, categoryPageTitle, parseCategoryPageParam } from "@/lib/categoryPagination";
 import { managedTitle, managedDescription } from "@/lib/managedSeoContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import type { SeoPublicPage } from "@/lib/api";
@@ -43,10 +44,12 @@ function faqJsonLd(page: SeoPublicPage): string | null {
   return JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: entities });
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const path = categoryPath(params.slug);
   const page = await resolveCategoryPage(path);
-  if (!page) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
+  // EK (SEO YAYIN ZİNCİRİ): `?page` pozitif tam sayı değilse sayfa 404 verir (aşağıda Page).
+  const pageNo = parseCategoryPageParam(searchParams?.page);
+  if (!page || pageNo === null) return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
   // Lokasyon SEO Merkezi entegrasyonu: OPERATÖR-ONAYLI içerik (content_source
   // kapısı, bkz. lib/managedSeoContent.ts) şablonun ÖNÜNE geçer.
   // NOT: eski akıştaki getLocationMetadata() çağrısı buraya TAŞINMADI — o
@@ -54,11 +57,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // (deliveryParts → null, dynamicDeliveryParts → null, fallbackLocationParts
   // zaten `path.startsWith("/kategori/")` ile korumalı). Sonuç birebir aynı,
   // gereksiz bir fetchDeliveryZones() çağrısı ortadan kalktı.
-  const title = managedTitle(page) || page.title_tag;
+  // EK (SEO YAYIN ZİNCİRİ): sayfalı seride her sayfa KENDİ başlığını taşır
+  // (sayfa 1 aynen; N ≥ 2 → " – Sayfa N").
+  const title = categoryPageTitle(managedTitle(page) || page.title_tag, pageNo);
   const description = managedDescription(page) || page.meta_description;
   // Kategori sayfaları her zaman kendi yolunu canonical alır; kataloğdaki bayat
   // canonical'lar artık 404 veren /cicekler/* yollarını gösterebiliyordu.
-  const canonicalPath = path;
+  // EK (SEO YAYIN ZİNCİRİ): sayfa 1 çıplak yol (bugünkü hâl). N ≥ 2 → yol + YALNIZ
+  // "?page=N": ilk sayfa diğer sayfaların canonical'ı olamaz (Google sayfalama
+  // rehberi); sort/filtre parametreleri canonical'a girmez.
+  const canonicalPath = categoryCanonicalPath(path, pageNo);
   return {
     title,
     description,
@@ -72,6 +80,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   const path = categoryPath(params.slug);
   const page = await resolveCategoryPage(path);
   if (!page) notFound();
+  // EK (SEO YAYIN ZİNCİRİ): `?page` pozitif tam sayı değilse (0, -1, abc, 1.5 …)
+  // sayfa 1'in kopyası 200 ile sunulmaz → 404. "?page=1" geçerlidir (çıplak yola
+  // eşit). Son sayfanın ötesi kontrolü ürün sayısı bilinen yerde: CategoryLanding.
+  if (parseCategoryPageParam(searchParams?.page) === null) notFound();
   const faqLd = faqJsonLd(page);
   const rawSchema = page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
