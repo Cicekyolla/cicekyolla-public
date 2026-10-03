@@ -44,6 +44,20 @@ const nextConfig = {
         ],
       },
       {
+        // EK (RANGE) — yukarıdaki kuraldan SONRA durmalı (aynı anahtarda son eşleşen
+        // kazanır). `Range` başlıklı isteğe köken 206 (kısmi içerik) döner; kısmi
+        // yanıt uzun ömürlü önbelleğe girmemelidir. Range taşıyan isteğin yanıtı ne
+        // CDN'de ne tarayıcıda saklanır; Range'siz normal istekler yukarıdaki
+        // kuralla aynen önbelleklenir. Nöbet testi: lib/r2RangeHeaders.test.ts.
+        source: "/r2/:path*",
+        has: [{ type: "header", key: "range" }],
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+          { key: "CDN-Cache-Control", value: "no-store" },
+          { key: "Vercel-CDN-Cache-Control", value: "no-store" },
+        ],
+      },
+      {
         // ŞİFRE BELİRLEME — tek kullanımlık hesap devralma anahtarı taşır
         // (DESIGN §3.A.9). Bu sayfa:
         //   • hiçbir yere Referer SIZDIRMAZ ("?token=" biçimi hâlâ canlıyken
