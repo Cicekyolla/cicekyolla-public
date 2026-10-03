@@ -8,6 +8,7 @@ import {
   buildProductBreadcrumbJsonLd,
   findCategoryNodeById,
   productSlugRedirectPath,
+  withRequestQuery,
 } from "./productBreadcrumb.ts";
 import { serializeJsonLd } from "./productSchema.ts";
 
@@ -128,6 +129,30 @@ test("serializeJsonLd ile gömülünce '<' kaçırılır (ürün/kategori adı s
 });
 
 // ---------------------------------------------------------------------------
+// 3b) EK — yönlendirme sorgu dizesini taşır (tıklama ilişkilendirmesi kaybolmaz)
+// ---------------------------------------------------------------------------
+
+test("withRequestQuery: sorgu yoksa yol aynen; gclid / utm_* hedefe taşınır", () => {
+  assert.equal(withRequestQuery("/urun/kirmizi-gul", undefined), "/urun/kirmizi-gul");
+  assert.equal(withRequestQuery("/urun/kirmizi-gul", null), "/urun/kirmizi-gul");
+  assert.equal(withRequestQuery("/urun/kirmizi-gul", {}), "/urun/kirmizi-gul");
+  // İnceleme senaryosu: /urun/Kirmizi-Gul?gclid=abc → 308 /urun/kirmizi-gul?gclid=abc
+  const hedef = productSlugRedirectPath("Kirmizi-Gul", "kirmizi-gul");
+  assert.equal(withRequestQuery(hedef!, { gclid: "abc" }), "/urun/kirmizi-gul?gclid=abc");
+  assert.equal(
+    withRequestQuery("/urun/kirmizi-gul", { gclid: "abc", utm_source: "google", utm_campaign: "s 03 & marka" }),
+    "/urun/kirmizi-gul?gclid=abc&utm_source=google&utm_campaign=s+03+%26+marka",
+  );
+});
+
+test("withRequestQuery: yinelenen anahtar sırasıyla korunur; değersiz (undefined) anahtar yazılmaz; boş değer korunur", () => {
+  assert.equal(withRequestQuery("/urun/x", { a: ["1", "2"], b: undefined, c: "" }), "/urun/x?a=1&a=2&c=");
+  assert.equal(withRequestQuery("/urun/x", { a: [] }), "/urun/x");
+  // Hedefe varıldığında yönlendirme yeniden tetiklenmez (sorgu slug karşılaştırmasına girmez) → döngü yok.
+  assert.equal(productSlugRedirectPath("kirmizi-gul", "kirmizi-gul"), null);
+});
+
+// ---------------------------------------------------------------------------
 // 4) Kaynak nöbeti — sayfada TAM BİR BreadcrumbList, canonical kayıtlı slug'tan
 // ---------------------------------------------------------------------------
 
@@ -139,7 +164,10 @@ test("kaynak nöbeti: /urun sayfası canonical/og:url/JSON-LD'yi kayıtlı slug'
   assert.match(src, /alternates: \{ canonical: absoluteUrl\(canonicalPath\) \}/);
   assert.match(src, /url: absoluteUrl\(canonicalPath\)/);
   assert.match(src, /productSlugRedirectPath\(params\.slug, data\.product\.slug\)/);
-  assert.match(src, /if \(slugRedirect\) permanentRedirect\(slugRedirect\);/);
+  // EK: yönlendirme isteğin sorgu dizesini (gclid, utm_*) taşır.
+  assert.match(src, /if \(slugRedirect\) permanentRedirect\(withRequestQuery\(slugRedirect, searchParams\)\);/);
+  assert.ok(src.includes("export default async function ProductPage({ params, searchParams }: PageProps) {"));
+  assert.ok(!/generateStaticParams|export const revalidate|force-static/.test(src), "rota istek başına çizilir (searchParams render türünü değiştirmez)");
   assert.match(src, /serializeJsonLd\(breadcrumbJsonLd\)/, "BreadcrumbList sunucuda basılır");
   assert.match(src, /<ProductDetail data=\{data\} sizeProducts=\{sizeProducts\} breadcrumbCategory=\{breadcrumbCategory\} \/>/);
 });
@@ -155,7 +183,8 @@ test("kaynak nöbeti: istemci izleyici /urun/ sayfasına BreadcrumbList enjekte 
 test("kaynak nöbeti: görünür kırıntının orta basamağı kategori varken GERÇEK bağlantı, yokken bugünkü etiket", () => {
   const src = oku("../components/product/ProductDetail.tsx");
   assert.match(src, /breadcrumbCategory\?: \{ name: string; slug: string \} \| null;/);
-  assert.match(src, /<Link href=\{`\/kategori\/\$\{breadcrumbCategory\.slug\}`\} className="text-\[#6B7280\] hover:text-\[#7C3AED\] transition-colors">/);
+  // EK: prefetch kapalı — hedef istek başına çizilen kategori rotası; her PDP görüntülemesi ek bir RSC isteği üretmesin.
+  assert.match(src, /<Link href=\{`\/kategori\/\$\{breadcrumbCategory\.slug\}`\} prefetch=\{false\} className="text-\[#6B7280\] hover:text-\[#7C3AED\] transition-colors">/);
   assert.ok(
     src.includes('<span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>'),
     "kategori verilmezse bugünkü düz etiket aynen",

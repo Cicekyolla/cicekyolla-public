@@ -36,6 +36,26 @@ export function productSlugRedirectPath(requestSlug: string, storedSlug: string 
   return `/urun/${encodeURIComponent(stored)}`;
 }
 
+/**
+ * EK — yönlendirme hedefine isteğin SORGU DİZESİNİ taşır (gclid, utm_* …): büyük/küçük harf
+ * farkıyla gelen bir reklam / kampanya bağlantısı kanonik adrese giderken tıklama ilişkilendirmesini
+ * kaybetmesin. Next `searchParams` biçimi (string | string[] | undefined) aynen kodlanır; yinelenen
+ * anahtarlar sırasıyla korunur, değeri olmayan (undefined) anahtar yazılmaz. Sorgu yoksa yol aynen döner.
+ */
+export function withRequestQuery(
+  path: string,
+  searchParams: { [key: string]: string | string[] | undefined } | null | undefined,
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams ?? {})) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      if (typeof item === "string") query.append(key, item);
+    }
+  }
+  const qs = query.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 /** Kategori ağacı düğümünün bu modülün okuduğu yüzü (lib/api.ts → CategoryNode ile uyumlu). */
 export interface CategoryTreeNodeLike {
   name?: unknown;

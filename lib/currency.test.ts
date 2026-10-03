@@ -440,7 +440,15 @@ test("PDP: döviz seçiliyken tahsil edilecek TRY tutarı fiyatın altında yaz�
   const src = read("components/product/ProductDetail.tsx");
   assert.ok(src.includes("const { money, moneyTRY, isForeign } = useCurrency();"));
   const fiyat = src.slice(src.indexOf("{/* Fiyat */}"), src.indexOf("{/* Otomatik boyut önerileri"));
-  assert.match(fiyat, /\{isForeign && \(\s*<p className="[^"]*" data-charged-notice>\s*\{t\("currency\.chargedNotice", \{ amount: moneyTRY\(shown\) \}\)\}\s*<\/p>\s*\)\}/);
+  // Metin YALNIZ döviz seçiliyken (isForeign) basılır.
+  assert.match(fiyat, /\{isForeign \? t\("currency\.chargedNotice", \{ amount: moneyTRY\(shown\) \}\) : null\}\s*<\/p>/);
+  assert.ok(fiyat.includes('data-charged-notice={isForeign ? "" : undefined}'), "işaretçi yalnız bildirim görünürken");
+  // EK (yerleşim kayması): locale PDP'de (`presentation` verilir) satırın yeri sunucu HTML'inde boş ayrılır →
+  // bildirim hidrasyondan sonra gelince fiyatın altı aşağı kaymaz. Türkçe PDP'de (presentation yok, isForeign
+  // false) satır HİÇ basılmaz → Türkçe sayfanın çıktısı aynen.
+  assert.ok(fiyat.includes("{(isForeign || presentation) && ("));
+  assert.ok(fiyat.includes('${presentation ? " min-h-[19px]" : ""}'), "yer yalnız locale PDP'de ayrılır");
+  assert.ok(fiyat.includes("aria-hidden={isForeign ? undefined : true}"), "boş satır erişilebilirlik ağacına girmez");
   assert.equal(src.split('t("currency.chargedNotice"').length - 1, 1, "tek yerde");
   // Görünen fiyat ile bildirim AYNI tutardan (seçili varyant / indirimli fiyat) üretilir.
   assert.ok(fiyat.includes("{money(shown)}"));

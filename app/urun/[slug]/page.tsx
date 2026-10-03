@@ -10,6 +10,7 @@ import {
   buildProductBreadcrumbJsonLd,
   findCategoryNodeById,
   productSlugRedirectPath,
+  withRequestQuery,
 } from "@/lib/productBreadcrumb";
 import { Price } from "@/components/Price";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
@@ -34,7 +35,7 @@ import { fetchProductLocaleVersions } from "@/lib/hreflangSources";
    Yalnız 'active' ürün gösterilir (fetchProductBySlug gate eder → null → 404).
    ============================================================================ */
 
-type PageProps = { params: { slug: string } };
+type PageProps = { params: { slug: string }; searchParams?: { [key: string]: string | string[] | undefined } };
 
 type ProductFaq = { question: string; answer: string };
 
@@ -171,15 +172,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;
 }
 
-export default async function ProductPage({ params }: PageProps) {
+export default async function ProductPage({ params, searchParams }: PageProps) {
   const data = await fetchProductBySlug(params.slug);
   if (!data) notFound();
 
   // EK (SEO YAYIN ZİNCİRİ): istek slug'ı kayıtlı slug'tan farklıysa (büyük/küçük
   // harf ya da başka bir normalizasyon farkı) aynı ürün ikinci bir adreste 200
   // dönmez → kanonik adrese kalıcı yönlendirme (lib/productBreadcrumb.ts).
+  // EK: isteğin sorgu dizesi (gclid, utm_* …) hedefe taşınır → tıklama ilişkilendirmesi
+  // yönlendirmede kaybolmaz. (Rota zaten istek başına çizilir; `searchParams` bunu değiştirmez.)
   const slugRedirect = productSlugRedirectPath(params.slug, data.product.slug);
-  if (slugRedirect) permanentRedirect(slugRedirect);
+  if (slugRedirect) permanentRedirect(withRequestQuery(slugRedirect, searchParams));
 
   const { product, images } = data;
   const canonicalSlug = product.slug || params.slug;

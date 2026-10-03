@@ -210,7 +210,7 @@ export function ProductDetail({
           <Link href="/" className="hover:text-[#7C3AED] transition-colors">{t("common.homePage")}</Link>
           <ChevronRight className="w-3 h-3" />
           {breadcrumbCategory ? (
-            <Link href={`/kategori/${breadcrumbCategory.slug}`} className="text-[#6B7280] hover:text-[#7C3AED] transition-colors">
+            <Link href={`/kategori/${breadcrumbCategory.slug}`} prefetch={false} className="text-[#6B7280] hover:text-[#7C3AED] transition-colors">
               <CategoryHeadingText slug={breadcrumbCategory.slug} fallback={breadcrumbCategory.name} />
             </Link>
           ) : (
@@ -322,10 +322,13 @@ export function ProductDetail({
           {/* EK (SEO YAYIN ZİNCİRİ — fiyat tutarlılığı): gösterilen para TRY değilken tahsil edilecek
               TRY tutarı fiyatın yanında AÇIKÇA yazılır → Product JSON-LD'deki fiyat (TRY, tahsil edilen
               para) sayfada da görünür. Metin mevcut sözlükten (13 dil), tutar daima TRY biçiminde.
-              isForeign yalnız istemcide ve yalnız döviz seçiliyken true: sunucu HTML'i ve Türkçe sayfa aynen. */}
-          {isForeign && (
-            <p className="mt-2 text-[11.5px] leading-relaxed text-[#9CA3AF]" data-charged-notice>
-              {t("currency.chargedNotice", { amount: moneyTRY(shown) })}
+              isForeign yalnız istemcide ve yalnız döviz seçiliyken true: Türkçe sayfa aynen.
+              EK (yerleşim kayması): locale PDP'de (`presentation` verilir) satırın yeri SUNUCU HTML'inde
+              boş olarak ayrılır (tek satır yüksekliği) → döviz kurları yüklenip bildirim geldiğinde fiyatın
+              altındaki satın alma kutusu aşağı kaymaz. Türkçe PDP'de yer ayrılmaz (bildirim orada çıkmaz). */}
+          {(isForeign || presentation) && (
+            <p className={`mt-2 text-[11.5px] leading-relaxed text-[#9CA3AF]${presentation ? " min-h-[19px]" : ""}`} data-charged-notice={isForeign ? "" : undefined} aria-hidden={isForeign ? undefined : true}>
+              {isForeign ? t("currency.chargedNotice", { amount: moneyTRY(shown) }) : null}
             </p>
           )}
 
