@@ -11,7 +11,7 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-import { resolveManagedRedirect, isManagedRedirectTarget } from "@/lib/managed-redirects";
+import { resolveManagedRedirect, isManagedRedirectTarget, managedLocaleTarget } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
@@ -29,6 +29,25 @@ export async function middleware(req: NextRequest) {
   // GLOBAL Faz 1: /de ve /en locale yüzeyleri legacy redirect/location
   // resolver'larına GİRMEZ (kanun: locale path'leri yutulmamalı).
   if (isGlobalLocalePath(req.nextUrl.pathname)) {
+    /* EK (GLOBAL LOCALE 301) — ADDITIVE: locale ürün/kategori slug'ı değişince eski
+       adres (/de/produkt/<eski-slug>) 404'e düşüyordu. Yönetilen yönlendirme haritası
+       (GET /api/public/redirects) artık locale yollarını da taşır; burada YALNIZ tam
+       yol eşleşmesine bakılır — legacy kurallar locale yollarına hâlâ GİRMEZ ve kayıt
+       yoksa istek bugünkü gibi hemen devam eder. Hedef istek yoluyla aynıysa, site
+       dışına çıkıyorsa ya da bu yola geri dönüyorsa (çevrim) yönlendirilmez
+       (lib/managed-redirects.ts::managedLocaleTarget). Kod kayıttan gelir (varsayılan
+       301 = kalıcı); sorgu dizesi (gclid, ?category, ?page) korunur.
+       FAIL-OPEN: harita süreç içinde 5 dk önbelleklidir (TR yollarıyla aynı harita);
+       API erişilemezse/yavaşsa null döner → yönlendirme atlanır, sayfa çizilir. */
+    const localeHit = await resolveManagedRedirect(req.nextUrl.pathname);
+    const localeManaged = localeHit
+      ? managedLocaleTarget(req.nextUrl.pathname, localeHit, await resolveManagedRedirect(localeHit.to))
+      : null;
+    if (localeManaged) {
+      const target = new URL(localeManaged.to, req.nextUrl.origin);
+      target.search = req.nextUrl.search;
+      return NextResponse.redirect(target, localeManaged.code);
+    }
     return NextResponse.next();
   }
   /* EK (DÖNGÜ GUARD) — ADDITIVE: gelen yol, onaylı bir yönetilen 301'in HEDEFİ

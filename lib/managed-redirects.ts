@@ -12,7 +12,7 @@
 // Veri kanalı yeni değil: link-dictionary ile aynı desen (public uç + TTL cache).
 // ============================================================================
 
-import { parseShowcasePath } from './showcasePagination.ts';
+import { parseShowcasePath, isSafeInternalPath } from './showcasePagination.ts';
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.onrender.com';
@@ -150,4 +150,45 @@ export async function managedRedirectTargets(): Promise<ReadonlySet<string>> {
 /** Bu yol yönetilen bir 301'in hedefi mi? Evetse legacy kurallar atlanır. */
 export async function isManagedRedirectTarget(pathname: string): Promise<boolean> {
   return isManagedTargetPath(pathname, await managedRedirectTargets());
+}
+
+// ============================================================================
+// EK (GLOBAL LOCALE 301) — ADDITIVE. Mevcut hiçbir fonksiyon değiştirilmedi.
+//
+// SORUN: middleware Global locale yollarında (/de/…, /en/… — 13 dil) hiçbir
+// kurala bakmadan devam ediyordu. Locale ürün/kategori slug'ı değişince eski
+// adres (/de/produkt/<eski-slug>) 404'e düşüyor, birikmiş sinyal taşınmıyordu.
+// GET /api/public/redirects artık locale yollarını da taşıyor
+// (/<locale>/<bölüm>/<eski-slug> → yeni adres).
+//
+// ÇÖZÜM: locale yolu için YALNIZ tam yol eşleşmesine bakılır (legacy konum/
+// kategori kuralları locale yollarına hâlâ GİRMEZ). Aşağıdaki saf yardımcı
+// kaydın uygulanıp uygulanmayacağına karar verir.
+//
+// FAIL-SAFE: harita boşsa / API erişilemezse resolveManagedRedirect null döner
+// → istek bugünkü gibi doğrudan devam eder.
+// ============================================================================
+
+/**
+ * Saf yardımcı (test edilebilir): locale yolu için uygulanacak yönlendirme.
+ *   hit  — bu yolun kaydı (resolveManagedRedirect sonucu); yoksa null.
+ *   back — hedefin kendi kaydı (varsa); çevrim tespiti için.
+ * null dönerse istek olduğu gibi devam eder:
+ *   • kayıt yok,
+ *   • hedef istek yoluyla aynı (kendine yönlendirme),
+ *   • hedef site içi güvenli bir yol değil ("//dış-site" → açık yönlendirme),
+ *   • hedef bu yola geri dönüyor (A→B, B→A → ERR_TOO_MANY_REDIRECTS).
+ */
+export function managedLocaleTarget(
+  pathname: string,
+  hit: { to: string; code: number } | null,
+  back: { to: string; code: number } | null = null,
+): { to: string; code: number } | null {
+  if (!hit) return null;
+  const from = normalize(pathname);
+  const to = normalize(hit.to);
+  if (to === from) return null;
+  if (!isSafeInternalPath(to)) return null;
+  if (back && normalize(back.to) === from) return null;
+  return { to, code: hit.code };
 }
