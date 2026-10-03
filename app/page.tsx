@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { floristLocalFields, resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchDeliveryZones, fetchProducts, fetchSeoPage, toCardProduct } from "@/lib/api";
+import { fetchDeliveryZones, fetchProducts, fetchRedirectMap, fetchSeoPage, toCardProduct, withMovedDistrictHrefs } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
@@ -192,7 +192,7 @@ export default async function HomePage() {
 
   // Teslimat Bölgeleri: admin Delivery Motor'daki aktif bölgeler (additive).
   // API erişilemezse [] döner → DistrictDelivery kendi fallback'iyle çalışır.
-  const deliveryZones = await fetchDeliveryZones();
+  const deliveryZones = withMovedDistrictHrefs(await fetchDeliveryZones(), await fetchRedirectMap());
 
   // Kurumsal referanslar ana sayfada Instagram'ın hemen altında gösterilir ve
   // admin > Mağaza Ön Yüzü > Kurumsal kaydından okunur.

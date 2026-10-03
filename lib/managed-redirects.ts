@@ -12,6 +12,8 @@
 // Veri kanalı yeni değil: link-dictionary ile aynı desen (public uç + TTL cache).
 // ============================================================================
 
+import { parseShowcasePath } from './showcasePagination.ts';
+
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.onrender.com';
 
@@ -21,6 +23,12 @@ const TTL_MS = 5 * 60_000;
 const TIMEOUT_MS = 1500;
 
 type Entry = { to: string; code: number };
+
+/** EK (MALTEPE AİLESİ): geçici hata (zaman aşımı / 5xx) sonucu elde edilen harita 5 dk DEĞİL kısa süre saklanır.
+ *  Aksi halde soğuk açılışta tek bir yavaş yanıt boş haritayı 5 dk sabitler ve taşınmış sayfalar (ör. /maltepe-cicek-siparisi)
+ *  bu sürede eski legacy kurala takılırdı. Başarılı yanıtta davranış BİREBİR aynı (TTL_MS). */
+const ERROR_TTL_MS = 10_000;
+let lastFetchFailed = false;
 
 let cache: { map: Map<string, Entry>; expiresAt: number } | null = null;
 /** Aynı anda birden fazla yenileme isteği gitmesin. */
@@ -42,7 +50,8 @@ async function fetchMap(): Promise<Map<string, Entry>> {
       // Edge önbelleği bizim TTL'imizle çakışmasın.
       cache: 'no-store',
     });
-    if (!res.ok) return cache?.map ?? new Map();
+    if (!res.ok) { lastFetchFailed = true; return cache?.map ?? new Map(); }
+    lastFetchFailed = false;
     const json = (await res.json()) as {
       redirects?: Array<{ from: string; to: string; code: number }>;
     };
@@ -57,6 +66,7 @@ async function fetchMap(): Promise<Map<string, Entry>> {
     return map;
   } catch {
     // Zaman aşımı / ağ hatası: elde varsa eski haritayı kullan, yoksa boş.
+    lastFetchFailed = true;
     return cache?.map ?? new Map();
   } finally {
     clearTimeout(timer);
@@ -68,7 +78,7 @@ async function getMap(): Promise<Map<string, Entry>> {
   if (inflight) return inflight;
   inflight = fetchMap()
     .then((map) => {
-      cache = { map, expiresAt: Date.now() + TTL_MS };
+      cache = { map, expiresAt: Date.now() + (lastFetchFailed ? ERROR_TTL_MS : TTL_MS) };
       return map;
     })
     .finally(() => { inflight = null; });
@@ -118,7 +128,11 @@ export function isManagedTargetPath(
   pathname: string,
   targets: ReadonlySet<string>,
 ): boolean {
-  return targets.has(normalize(pathname));
+  const p = normalize(pathname);
+  if (targets.has(p)) return true;
+  // EK (MALTEPE AİLESİ): hedef sayfanın yol-tabanlı vitrin sayfalaması (/…/sayfa/N) da canlı sayfadır; legacy kurallar yutmamalı.
+  const paged = parseShowcasePath(p);
+  return paged.page !== null && targets.has(paged.basePath);
 }
 
 /** Onaylı yönetilen 301'lerin hedef kümesi (önbellekten; ek ağ isteği yok). */

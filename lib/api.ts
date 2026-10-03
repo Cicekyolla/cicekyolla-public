@@ -11,6 +11,9 @@ import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
 import { fetchWithDeadline } from "./fetchWithDeadline";
+import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
+import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
+export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type RedirectMap } from "./internalHref.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
@@ -67,6 +70,19 @@ export interface SeoPublicPage {
   content_source?: string | null;
 }
 
+/** Operatör vitrini ürün kartı: mevcut GET /api/products/:id. Aktif değil / stok 0 / kapak yok / hata → null (ürün atlanır). */
+export async function fetchProductCardById(id: number): Promise<PublicProductListItem | null> {
+  try {
+    const res = await fetchWithDeadline(`${API_ORIGIN}/api/products/${encodeURIComponent(String(id))}`, { headers: apiHeaders(), next: { revalidate: 120 } }, 6_000);
+    if (!res.ok) return null;
+    const item = productDetailToListItem((await res.json()) as PublicProductDetail);
+    if (!item) return null;
+    return { ...item, cover_image_url: mediaUrlOrNull(item.cover_image_url), cover_derivatives: mediaDerivatives(item.cover_derivatives) };
+  } catch {
+    return null;
+  }
+}
+
 // Tek sayfa çeker. published değilse backend not_found döndürür → null.
 export async function fetchSeoPage(
   path: string
@@ -121,7 +137,40 @@ export interface SeoInventoryItem {
 // ADDITIVE — lokasyon şablonu çapraz bağlantı bloğu (HATA 3): sabit 5 linkli
 // blok yerine, bir ilin GERÇEK ilçe envanterinden türetilen isim/slug listesi.
 // Yeni bir uç İCAT EDİLMEDİ — mevcut fetchSeoInventory()'nin filtrelenmiş hali.
-export interface CityDistrictSummary { slug: string; name: string }
+export interface CityDistrictSummary {
+  slug: string;
+  name: string;
+  /** ADDITIVE (Maltepe ailesi): sayfanın GERÇEK (taşınmış) adresi; yoksa /{il}/{slug}. */
+  href?: string;
+}
+
+// ── EK (MALTEPE AİLESİ) — iç bağları yönetilen 301'in SON hedefine çözme ────
+// Bir ilçe/mahalle satırı "URL değiştir" ile taşındığında (ör. /istanbul/maltepe →
+// /maltepe-cicek-siparisi) hiyerarşik adres üreten listeler eski adresi basmaya
+// devam eder (301'e bağ). Burada MEVCUT public uçtan (GET /api/public/redirects,
+// middleware'in kullandığı aynı harita) yalnız aktif kaynak→hedef çiftleri okunur;
+// hata/boş → boş harita = bugünkü davranış birebir.
+const EMPTY_REDIRECTS: RedirectMap = new Map();
+
+
+export async function fetchRedirectMap(): Promise<RedirectMap> {
+  try {
+    const res = await fetchWithDeadline(`${API_ORIGIN}/api/public/redirects`, { next: { revalidate: 300 } }, 3_000);
+    if (!res.ok) return EMPTY_REDIRECTS;
+    const json = (await res.json()) as { redirects?: Array<{ from?: string; to?: string }> };
+    const map = new Map<string, string>();
+    for (const r of json.redirects ?? []) {
+      if (!r?.from || !r?.to) continue;
+      const from = normalizeInternalPath(r.from);
+      const to = normalizeInternalPath(r.to);
+      if (from !== to) map.set(from, to);
+    }
+    return map;
+  } catch {
+    return EMPTY_REDIRECTS;
+  }
+}
+
 
 /** SEO envanterindeki başlık kalıplarından ("{Ad} Çiçek Gönder",
  * "{Ad} Çiçekçi ve Çiçek Siparişi", "{Ad} Çiçekçi — {Ad} Çiçek Siparişi | ÇiçekYolla")
@@ -171,11 +220,20 @@ async function inventoryForCrossLinks(): Promise<SeoInventoryItem[]> {
   return inventoryInflight;
 }
 
+/** Mahalle → pillar üst sayfa: yayınlı /{ilçe}-cicek-siparisi (category_location) varsa yolu, yoksa null.
+ *  Küçük mevcut uç (fetchSeoPage, revalidate 300); envanter ÇEKİLMEZ. Aynı ilçenin mahalleleri aynı URL'yi ister → fetch önbelleği paylaşılır. */
+export async function findPillarPath(districtSlug: string): Promise<string | null> {
+  if (!/^[a-z0-9-]+$/.test(districtSlug)) return null;
+  const want = `/${districtSlug}-cicek-siparisi`;
+  const page = await fetchSeoPage(want);
+  return isPillarPage(page, want) ? want : null;
+}
+
 /** Bir ilin (citySlug) TÜM ilçelerini gerçek SEO envanterinden döner —
  * hardcoded liste YOK, veri büyüdükçe/değiştikçe otomatik güncel kalır. */
 export async function fetchCityDistricts(citySlug: string): Promise<CityDistrictSummary[]> {
   // PERF: tam envanter yerine süreç içi anlık görüntü (yukarı bkz.). Türetme aynı.
-  const inventory = await inventoryForCrossLinks();
+  const [inventory, redirects] = await Promise.all([inventoryForCrossLinks(), fetchRedirectMap()]);
   const prefix = `/${citySlug}/`;
   const seen = new Set<string>();
   const out: CityDistrictSummary[] = [];
@@ -186,7 +244,22 @@ export async function fetchCityDistricts(citySlug: string): Promise<CityDistrict
     if (rest.includes("/") || rest.length === 0) continue; // yalnız il/ilçe derinliği
     if (seen.has(rest)) continue;
     seen.add(rest);
-    out.push({ slug: rest, name: placeNameFromTitle(item.title, rest) });
+    const moved = redirects.get(item.url_path);
+    out.push(moved ? { slug: rest, name: placeNameFromTitle(item.title, rest), href: moved } : { slug: rest, name: placeNameFromTitle(item.title, rest) });
+  }
+  // EK (MALTEPE AİLESİ): "URL değiştir" ile hiyerarşik olmayan adrese taşınmış ilçe (ör. /maltepe-cicek-siparisi) listeden DÜŞMEZ:
+  // kaynak /{il}/{ilçe} olan yönetilen 301'in hedefi envanterde yayınlı ilçe ise, hedef adresiyle listelenir.
+  if (redirects.size > 0) {
+    const byPath = new Map(inventory.map((i) => [i.url_path, i]));
+    for (const [from, to] of redirects) {
+      if (!from.startsWith(prefix)) continue;
+      const slug = from.slice(prefix.length);
+      if (!slug || slug.includes("/") || seen.has(slug)) continue;
+      const item = byPath.get(to);
+      if (!item || item.page_type !== "district" || item.index_state !== "index") continue;
+      seen.add(slug);
+      out.push({ slug, name: placeNameFromTitle(item.title, slug), href: to });
+    }
   }
   return out.sort((a, b) => a.name.localeCompare(b.name, "tr"));
 }
@@ -242,6 +315,8 @@ export interface DeliveryZoneDistrict {
   name: string;
   slug: string;
   same_day: boolean;
+  /** ADDITIVE (Maltepe ailesi): taşınmış ilçenin GERÇEK adresi (yönetilen 301 hedefi); yoksa /{il}/{slug}. */
+  href?: string;
 }
 export interface DeliveryZoneCity {
   city: string;
@@ -249,6 +324,7 @@ export interface DeliveryZoneCity {
   same_day: boolean;
   districts: DeliveryZoneDistrict[];
 }
+
 
 export async function fetchDeliveryZones(): Promise<DeliveryZoneCity[]> {
   const url = `${API_ORIGIN}/api/public/delivery/zones`;

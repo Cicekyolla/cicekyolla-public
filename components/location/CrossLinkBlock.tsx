@@ -71,7 +71,7 @@ export function CrossLinkBlock(props: CrossLinkBlockProps) {
           {items.map((d) => (
             <Link
               key={d.slug}
-              href={`/${props.citySlug}/${d.slug}`}
+              href={d.href ?? `/${props.citySlug}/${d.slug}`}
               className="group flex items-center justify-between gap-3 rounded-[20px] border border-[#ece7f4] bg-[#fbfafd] px-5 py-5 shadow-[0_12px_34px_rgba(45,22,72,.04)] transition-all hover:border-[#c4b5fd] hover:bg-white hover:shadow-[0_16px_40px_rgba(139,92,246,.12)]"
             >
               <span className="block truncate text-base font-semibold text-[#1f2937] group-hover:text-[#6d28d9]">
