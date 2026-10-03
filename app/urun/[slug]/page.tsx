@@ -2,8 +2,15 @@ import type { Metadata } from "next";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct } from "@/lib/api";
+import { notFound, permanentRedirect } from "next/navigation";
+import { fetchProductBySlug, fetchProductSeoById, fetchProducts, isCategoryVisible, toCardProduct } from "@/lib/api";
+import { getCategoryTree } from "@/lib/categories";
+import {
+  breadcrumbCategoryOf,
+  buildProductBreadcrumbJsonLd,
+  findCategoryNodeById,
+  productSlugRedirectPath,
+} from "@/lib/productBreadcrumb";
 import { Price } from "@/components/Price";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { MetaViewContentTracker } from "@/components/analytics/MetaViewContentTracker";
@@ -128,16 +135,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     product.short_description ||
     `${product.name} — aynı gün teslimat ve güvenli ödeme ile Cicekyolla'da.`;
   const ogImage = seo?.og_image || data.images.find((i) => i.role === "cover")?.url || data.images[0]?.url;
+  // EK (SEO YAYIN ZİNCİRİ): canonical ve og:url istekteki yazımdan DEĞİL, KAYITLI
+  // slug'tan üretilir (API araması büyük/küçük harf duyarsız → /urun/Kirmizi-Gul
+  // kendi yazımıyla canonical veriyordu). Kayıtlı slug boşsa istek slug'ı kalır.
+  const canonicalPath = `/urun/${product.slug || params.slug}`;
   return {
     title,
     description,
-    alternates: { canonical: absoluteUrl(`/urun/${params.slug}`) },
+    alternates: { canonical: absoluteUrl(canonicalPath) },
     robots: indexRobots(),
     openGraph: {
       title: seo?.og_title || title,
       description: seo?.og_description || description,
       images: ogImage ? [{ url: ogImage }] : undefined,
-      url: absoluteUrl(`/urun/${params.slug}`),
+      url: absoluteUrl(canonicalPath),
       type: "website",
     },
     twitter: {
@@ -153,7 +164,14 @@ export default async function ProductPage({ params }: PageProps) {
   const data = await fetchProductBySlug(params.slug);
   if (!data) notFound();
 
+  // EK (SEO YAYIN ZİNCİRİ): istek slug'ı kayıtlı slug'tan farklıysa (büyük/küçük
+  // harf ya da başka bir normalizasyon farkı) aynı ürün ikinci bir adreste 200
+  // dönmez → kanonik adrese kalıcı yönlendirme (lib/productBreadcrumb.ts).
+  const slugRedirect = productSlugRedirectPath(params.slug, data.product.slug);
+  if (slugRedirect) permanentRedirect(slugRedirect);
+
   const { product, images } = data;
+  const canonicalSlug = product.slug || params.slug;
   const cover = images.find((i) => i.role === "cover")?.url || images[0]?.url;
   const price = data.product.sale_price_minor && Number(data.product.sale_price_minor) > 0
     ? data.product.sale_price_minor
@@ -206,7 +224,7 @@ export default async function ProductPage({ params }: PageProps) {
   const rating = product as { rating_avg?: number | string | null; rating_count?: number | string | null };
   const jsonLd = buildProductJsonLd({
     name: product.name,
-    slug: params.slug,
+    slug: canonicalSlug,
     productId: product.id,
     priceMinor: Number(price),
     currency: product.currency,
@@ -219,14 +237,27 @@ export default async function ProductPage({ params }: PageProps) {
     ratingCount: rating.rating_count,
   }, { absolute: absoluteUrl, plainText: toPlainText });
 
+  // EK (SEO YAYIN ZİNCİRİ) — BreadcrumbList SUNUCUDA: Ana Sayfa → birincil kategori
+  // (varsa) → ürün. Kategori adı/slug'ı layout'un zaten okuduğu ağaçtan gelir
+  // (getCategoryTree React cache → ek istek yok); pasif/arşiv kategori ya da ağaçta
+  // bulunamayan id için orta basamak yazılmaz. Görünür kırıntı aynı kaynağı kullanır.
+  const categoryTree = primaryCat ? await getCategoryTree() : null;
+  const primaryNode = primaryCat ? findCategoryNodeById(categoryTree, primaryCat.category_id) : null;
+  const breadcrumbCategory = primaryNode && isCategoryVisible(primaryNode) ? breadcrumbCategoryOf(primaryNode) : null;
+  const breadcrumbJsonLd = buildProductBreadcrumbJsonLd(
+    { name: product.name, path: `/urun/${canonicalSlug}`, category: breadcrumbCategory },
+    absoluteUrl,
+  );
+
   return (
     <>
       {/* `<` kaçırılır: ürün açıklaması HTML içerir, içindeki bir `</script>`
           dizisi etiketi erken kapatıp sayfayı bozardı. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }} />
       <MetaViewContentTracker productId={product.id} priceTRY={Number(price) / 100} />
-      <ProductDetail data={data} sizeProducts={sizeProducts} />
+      <ProductDetail data={data} sizeProducts={sizeProducts} breadcrumbCategory={breadcrumbCategory} />
       {(() => {
         const fn = (product as { florist_note?: string | null; florist_note_status?: string | null });
         if (!fn.florist_note || fn.florist_note_status !== "approved") return null;

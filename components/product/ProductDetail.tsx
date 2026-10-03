@@ -39,7 +39,7 @@ import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery, clearPendingSelection, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 import { useI18n, Num } from "@/lib/i18n";
-import { useProductTranslation } from "@/lib/i18n/content";
+import { useProductTranslation, CategoryHeadingText } from "@/lib/i18n/content";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 
 const WHATSAPP = "905458813450";
@@ -108,6 +108,7 @@ export function ProductDetail({
   sizeProducts = [],
   presentation,
   canonicalPath,
+  breadcrumbCategory,
 }: {
   data: PublicProductDetail;
   sizeProducts?: AutoSizeProduct[];
@@ -118,6 +119,10 @@ export function ProductDetail({
       locale vitrinleri kendi PDP yollarını geçer. WhatsApp hazır mesajındaki
       bağlantı bundan üretilir (bkz. waText). */
   canonicalPath?: string;
+  /** EK (SEO yayın zinciri): ürünün birincil kategorisi. Verilirse kırıntının orta
+      basamağı o kategoriye GERÇEK bağlantıdır (sunucudaki BreadcrumbList ile aynı
+      ad/adres); verilmezse bugünkü düz etiket (ürün tipi) aynen kalır. */
+  breadcrumbCategory?: { name: string; slug: string } | null;
 }) {
   // Fiyat yazımı seçili para biriminde. Taban DAİMA TRY kuruş; gerçek tahsilat TRY.
   const { money } = useCurrency();
@@ -204,7 +209,13 @@ export function ProductDetail({
         <nav className="flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
           <Link href="/" className="hover:text-[#7C3AED] transition-colors">{t("common.homePage")}</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>
+          {breadcrumbCategory ? (
+            <Link href={`/kategori/${breadcrumbCategory.slug}`} className="text-[#6B7280] hover:text-[#7C3AED] transition-colors">
+              <CategoryHeadingText slug={breadcrumbCategory.slug} fallback={breadcrumbCategory.name} />
+            </Link>
+          ) : (
+            <span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>
+          )}
           <ChevronRight className="w-3 h-3" />
           <span className="text-[#111827] font-medium truncate max-w-[220px]">{displayName}</span>
         </nav>

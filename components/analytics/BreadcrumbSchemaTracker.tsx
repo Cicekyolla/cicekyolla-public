@@ -6,6 +6,14 @@ import { usePathname } from "next/navigation";
 const SCRIPT_ID = "cicekyolla-breadcrumb-schema";
 const SITE_URL = "https://www.cicekyolla.com.tr";
 
+// EK (SEO YAYIN ZİNCİRİ): /urun/ sayfasının BreadcrumbList'i artık SUNUCUDA
+// basılıyor (app/urun/[slug]/page.tsx → lib/productBreadcrumb.ts: Ana Sayfa →
+// birincil kategori → ürün). Buradaki istemci enjeksiyonu var olmayan "/urunler"
+// basamağını taşıyordu ve sunucudakiyle birlikte sayfada İKİNCİ bir BreadcrumbList
+// üretirdi → kapatıldı; sayfada tam olarak BİR liste kalır. Bileşen ve layout
+// bağlantısı yerinde: eski enjeksiyonun bıraktığı script hâlâ temizlenir.
+const CLIENT_BREADCRUMB_ENABLED: boolean = false;
+
 type ProductJsonLd = {
   "@type"?: string | string[];
   name?: string;
@@ -43,7 +51,7 @@ export function BreadcrumbSchemaTracker() {
 
   useEffect(() => {
     document.getElementById(SCRIPT_ID)?.remove();
-    if (!pathname.startsWith("/urun/")) return;
+    if (!CLIENT_BREADCRUMB_ENABLED || !pathname.startsWith("/urun/")) return;
 
     const timer = window.setTimeout(() => {
       const productName = productNameFromJsonLd();
