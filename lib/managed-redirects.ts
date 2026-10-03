@@ -12,6 +12,8 @@
 // Veri kanalı yeni değil: link-dictionary ile aynı desen (public uç + TTL cache).
 // ============================================================================
 
+import { parseShowcasePath } from './showcasePagination.ts';
+
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.onrender.com';
 
@@ -118,7 +120,11 @@ export function isManagedTargetPath(
   pathname: string,
   targets: ReadonlySet<string>,
 ): boolean {
-  return targets.has(normalize(pathname));
+  const p = normalize(pathname);
+  if (targets.has(p)) return true;
+  // EK (MALTEPE AİLESİ): hedef sayfanın yol-tabanlı vitrin sayfalaması (/…/sayfa/N) da canlı sayfadır; legacy kurallar yutmamalı.
+  const paged = parseShowcasePath(p);
+  return paged.page !== null && targets.has(paged.basePath);
 }
 
 /** Onaylı yönetilen 301'lerin hedef kümesi (önbellekten; ek ağ isteği yok). */

@@ -40,10 +40,15 @@ export function locationBreadcrumbJsonLd(
   /** ADDITIVE (Maltepe pilotu): ilçe basamağını (indeks 1) başka bir sayfayla değiştirir —
       pillar sayfada kendi yolu, mahalle sayfasında üst (pillar) sayfa. Verilmezse bugünkü çıktı. */
   districtStep?: KirintiBasamak | null,
+  /** ADDITIVE (Maltepe ailesi): sayfanın KENDİ (hiyerarşik olmayan) yolu — son basamağın yolunu değiştirir. */
+  selfPath?: string | null,
 ): string | null {
   const basamaklar = kirintiBasamaklari(parts, adlar);
   if (districtStep && basamaklar.length >= 2 && districtStep.ad.trim() && districtStep.yol) {
     basamaklar[1] = { ad: districtStep.ad.trim(), yol: districtStep.yol };
+  }
+  if (selfPath && basamaklar.length === parts.length && basamaklar.length >= 2) {
+    basamaklar[basamaklar.length - 1] = { ad: basamaklar[basamaklar.length - 1].ad, yol: selfPath };
   }
   if (basamaklar.length === 0) return null;
   const items = [{ ad: "Ana Sayfa", yol: "/" }, ...basamaklar].map((b, i) => ({

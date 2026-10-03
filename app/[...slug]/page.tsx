@@ -3,10 +3,10 @@ import { Price } from "@/components/Price";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchSeoPage, fetchProductCardById, findPillarPath, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, findPillarPath, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { descriptionWithPage, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
-import { getLocationBlock, getShowcaseItems, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
+import { getLocationBlock, getShowcaseItems, hierarchicalPathOf, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
 import { introWrapperClass, skipAutoLinkInjection } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
 import { NightOrderStrip } from "@/components/home/NightOrderStrip";
@@ -159,17 +159,24 @@ function fallbackLocationParts(page: SeoPublicPage, path: string): DynDelivery |
   };
 }
 
-/** Maltepe pilotu: pillar (category_location, tek segment) sayfasının lokasyonu body_blocks'taki "location" bloğundan gelir. Blok yoksa/geçersizse null → bugünkü genel render. */
-function pillarDeliveryParts(page: SeoPublicPage, path: string): DynDelivery | null {
-  if (page.page_type !== "category_location") return null;
-  if (path.split("/").filter(Boolean).length !== 1) return null;
+/** Maltepe ailesi: HİYERARŞİK OLMAYAN adreste yaşayan ilçe/mahalle sayfasının (ör. /maltepe-cicek-siparisi, /maltepe/aydinevler-cicek-siparisi)
+ *  lokasyonu body_blocks'taki "location" bloğundan gelir (il/ilçe[/mahalle] slug'ları). Blok yoksa/geçersizse ya da adres zaten hiyerarşikse null
+ *  → bugünkü akış birebir. Adlar Delivery Motor bölgelerinden (önbellekli); bulunamazsa H1/slug'dan. */
+async function locationBlockParts(page: SeoPublicPage, path: string): Promise<DynDelivery | null> {
+  const t = page.page_type;
+  if (t !== "category_location" && t !== "district" && t !== "neighborhood") return null;
   const loc = getLocationBlock(page);
   if (!loc) return null;
+  if (path === hierarchicalPathOf(loc)) return null; // hiyerarşik adres: mevcut akış
+  const zones = await fetchDeliveryZones().catch(() => [] as Awaited<ReturnType<typeof fetchDeliveryZones>>);
+  const zc = zones.find((c) => c.city_slug === loc.city);
+  const zd = zc?.districts.find((d) => d.slug === loc.district);
+  // Slug diyakritik taşımaz: ilçe adı bölgelerden, yoksa (ilçe/pillar sayfası) H1'den ("Kadıköy Çiçek Siparişi" → "Kadıköy"), yoksa slug'dan.
+  const districtName = zd?.name || (loc.neighborhood ? prettySlug(loc.district) : locationLabel(page, prettySlug(loc.district)));
   return {
-    parts: [loc.city, loc.district],
-    cityName: prettySlug(loc.city),
-    // Slug diyakritik taşımaz: ad H1'den ("Kadıköy Çiçek Siparişi" → "Kadıköy"), yoksa slug'dan.
-    districtName: locationLabel(page, prettySlug(loc.district)),
+    parts: loc.neighborhood ? [loc.city, loc.district, loc.neighborhood] : [loc.city, loc.district],
+    cityName: zc?.city || prettySlug(loc.city),
+    districtName,
     sameDay: loc.city === "istanbul",
   };
 }
@@ -299,7 +306,10 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   selfPath?: string;
 }) {
   const ownPath = selfPath ?? page.url_path;
-  const isPillar = page.page_type === "category_location";
+  // selfPath yalnız hiyerarşik olmayan adreste yaşayan (location bloklu) sayfalara verilir; ilçe düzeyinde bu "ana ticari sayfa"dır.
+  const isDistrictSelf = !!selfPath && (dyn?.parts.length ?? 0) === 2;
+  // Yönetilen 301 haritası (tek, önbellekli okuma): taşınmış ilçe/mahalle sayfalarına iç bağlar son adrese çözülür.
+  const redirects = await fetchRedirectMap();
   // Mahalle → pillar üst sayfa (envanterde yayınlı pillar varsa); yoksa bugünkü ilçe linki.
   let parentRef: { path: string; name: string } | null = null;
   const parts = dyn?.parts ?? deliveryParts(path)!;
@@ -310,7 +320,8 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
   if (parts.length === 3) {
-    const pillarPath = await findPillarPath(parts[1]).catch(() => null);
+    // Üst sayfa: ilçe satırı taşındıysa (yönetilen 301 kaynağı /{il}/{ilçe}) hedefi; değilse eski pillar (category_location) kuralı.
+    const pillarPath = redirects.get(`/${parts[0]}/${parts[1]}`) ?? (await findPillarPath(parts[1]).catch(() => null));
     if (pillarPath) parentRef = { path: pillarPath, name: `${districtName} Çiçek Siparişi` };
   }
   // Lokasyon SEO Merkezi: operatör-onaylı H1 varsa sabit şablonun önüne geçer
@@ -467,9 +478,11 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
     [cityName, districtName, neighborhood],
     absoluteUrl,
     // Pillar: son öğe pillar'ın kendi yolu; mahalle: ara öğe üst (pillar) sayfa. Yoksa bugünkü zincir.
-    isPillar
+    isDistrictSelf
       ? { ad: `${districtName} Çiçek Siparişi`, yol: ownPath }
       : parts.length === 3 && parentRef ? { ad: parentRef.name || districtName, yol: parentRef.path } : null,
+    // Taşınmış mahalle sayfası: son basamak sayfanın KENDİ adresi.
+    selfPath && parts.length === 3 ? ownPath : null,
   );
 
   return <main className="bg-[#fcfbfd] text-[#111827]">
@@ -500,6 +513,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
         variant={parts[2] ? "neighborhood" : "district"}
         deliveryLabel={hoodDeliveryLabel}
         districtHref={parts[2] && parentRef ? parentRef.path : undefined}
+        hrefs={Object.fromEntries(dbHood.neighborhoods.flatMap((n) => { const to = redirects.get(`/${parts[0]}/${parts[1]}/${n.slug}`); return to ? [[n.slug, to] as const] : []; }))}
       />
     ) : neighborhoods.length > 0 ? <section className="border-y border-[#eee9f6] bg-[#f7f5fc] px-6 py-16 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="mb-10 flex items-center gap-4"><span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#8b5cf6]"><MapPin className="h-5 w-5" /></span><p className="text-xs font-bold uppercase tracking-[.32em] text-[#8b5cf6]">Teslimat yapılan mahalleler</p></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{neighborhoods.map((item) => <Link key={item} href={`/${parts[0]}/${parts[1]}/${slugifyTR(item)}-mah`} className="flex items-center gap-4 rounded-[20px] border border-[#ece7f4] bg-white px-5 py-5 text-lg font-medium text-[#1f2937] shadow-[0_12px_34px_rgba(45,22,72,.04)]"><span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full bg-[#f5f0ff]"><Check className="h-4 w-4 text-[#8b5cf6]" /></span>{item}</Link>)}</div></div></section> : null}
 
@@ -633,7 +647,7 @@ function faqJsonLd(page: SeoPublicPage): string | null {
 
 async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<Pick<Metadata, "title" | "description"> | null> {
   const fixedParts = deliveryParts(path);
-  const dyn = !fixedParts ? (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path) : null;
+  const dyn = !fixedParts ? (await locationBlockParts(page, path)) || (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path) : null;
   const parts = fixedParts || dyn?.parts;
   if (!parts) return null;
   const { city, district } = fixedParts ? getDeliveryInfo(fixedParts) : { city: undefined, district: undefined };
@@ -686,12 +700,12 @@ export default async function Page({ params }: PageProps) {
     return <><DeliveryLanding page={page} path={path} showcase={showcase} pageNumber={pageNumber} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
   }
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
-  const pillarDyn = pillarDeliveryParts(page, path);
+  const pillarDyn = await locationBlockParts(page, path);
   const dyn = pillarDyn || (await dynamicDeliveryParts(path)) || fallbackLocationParts(page, path);
   if (dyn) {
     // TEK DAMAR: pillar (İstanbul ilçesi) aynı işletme + ilçe hizmet düğümünü kendi yoluyla taşır (yalnız sayfa 1).
     let pillarLd: string | null = null;
-    if (pillarDyn && pageNumber === 1 && pillarDyn.parts[0] === "istanbul") {
+    if (pillarDyn && pageNumber === 1 && pillarDyn.parts[0] === "istanbul" && pillarDyn.parts.length === 2) {
       const homepage = await getPublishedHomepage().catch(() => null);
       const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
       pillarLd = istanbulDistrictJsonLd(identity, { path, areaName: pillarDyn.districtName, pageName: page.h1 ?? "" });

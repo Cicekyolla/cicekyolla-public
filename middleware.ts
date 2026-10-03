@@ -54,13 +54,13 @@ export async function middleware(req: NextRequest) {
   }
 const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname);
   if (sayfaTarget) {
-    return NextResponse.redirect(new URL(sayfaTarget, req.nextUrl.origin), 301);
+    return NextResponse.redirect(new URL(await flattenManagedTarget(sayfaTarget), req.nextUrl.origin), 301);
   }
   // EK (KATEGORİ KONUM KURTARMA): /kategori/{il}-{ilce}-cicek-yolla → /il/ilce 301.
   // Yalnızca konum çözülürse yönlendirir; gerçek kategori sayfaları etkilenmez.
   const kategoriTarget = legacyMuaf ? null : resolveKategoriLegacy(req.nextUrl.pathname);
   if (kategoriTarget) {
-    return NextResponse.redirect(new URL(kategoriTarget, req.nextUrl.origin), 301);
+    return NextResponse.redirect(new URL(await flattenManagedTarget(kategoriTarget), req.nextUrl.origin), 301);
   }
   /* EK (LEGACY MAHALLE TAŞINMASI) — ADDITIVE, tek hop 301.
      10 Mayıs 2026 migration'ında eksik kalan EXACT mahalle taşınması: 70.132
@@ -79,14 +79,15 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
     ? null
     : await resolveLegacyNeighborhoodRedirect(req.nextUrl.pathname);
   if (legacyMahalle) {
-    return NextResponse.redirect(new URL(legacyMahalle, req.nextUrl.origin), 301);
+    return NextResponse.redirect(new URL(await flattenManagedTarget(legacyMahalle), req.nextUrl.origin), 301);
   }
   const legacyLocation: LegacyLocationResult = legacyMuaf
     ? { matched: false }
     : resolveLegacyLocation(req.nextUrl.pathname);
   if (legacyLocation.matched && legacyLocation.destination) {
+    // EK (MALTEPE AİLESİ): hedef yönetilen bir 301'in kaynağıysa (ör. /istanbul/maltepe) tek adımda nihai adrese gider (301→301 zinciri YOK).
     return NextResponse.redirect(
-      new URL(legacyLocation.destination, req.nextUrl.origin),
+      new URL(await flattenManagedTarget(legacyLocation.destination), req.nextUrl.origin),
       301,
     );
   }
@@ -120,7 +121,7 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
   // soneki sonda aradığı için bunu kaçırır; burada güvenli konuma çözülür.
   const midCicek = legacyMuaf ? null : resolveMidCicek(req.nextUrl.pathname);
   if (midCicek) {
-    return NextResponse.redirect(new URL(midCicek, req.nextUrl.origin), 301);
+    return NextResponse.redirect(new URL(await flattenManagedTarget(midCicek), req.nextUrl.origin), 301);
   }
   // Konum kalıbına girmeyen eski "/kategori-slug-123" adreslerini korur.
   // GUARD: hedef kategori gerçekten yoksa var olmayan kategoriye 301 verilmez

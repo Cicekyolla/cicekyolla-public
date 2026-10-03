@@ -21,6 +21,8 @@ type NeighborhoodCardsProps = {
   deliveryLabel?: string;
   /** ADDITIVE (Maltepe pilotu): mahalle varyantındaki "ilçeye dön" linki — verilmezse /{il}/{ilçe}. */
   districtHref?: string;
+  /** ADDITIVE (Maltepe ailesi): taşınmış mahalle sayfalarının GERÇEK adresi (slug → yol); yoksa /{il}/{ilçe}/{slug}. */
+  hrefs?: Record<string, string>;
 };
 
 function displayName(name: string): string {
@@ -36,6 +38,7 @@ export function NeighborhoodCards({
   variant = "district",
   deliveryLabel,
   districtHref,
+  hrefs,
 }: NeighborhoodCardsProps) {
   const items = neighborhoods.filter((n) => n.slug !== currentSlug);
   if (items.length === 0) return null;
@@ -70,7 +73,7 @@ export function NeighborhoodCards({
           {items.map((n) => (
             <Link
               key={n.slug}
-              href={`/${citySlug}/${districtSlug}/${n.slug}`}
+              href={hrefs?.[n.slug] ?? `/${citySlug}/${districtSlug}/${n.slug}`}
               className="group flex items-center justify-between gap-3 rounded-[20px] border border-[#ece7f4] bg-white px-5 py-5 shadow-[0_12px_34px_rgba(45,22,72,.04)] transition-all hover:border-[#c4b5fd] hover:shadow-[0_16px_40px_rgba(139,92,246,.12)]"
             >
               <span className="min-w-0">

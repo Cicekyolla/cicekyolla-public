@@ -55,14 +55,14 @@ function buildRows(source: DeliveryZoneCity[]) {
   // Delivery Motor'dan gelir.
   if (ist) rows.push({ key: "istanbul-hub", name: "İstanbul", href: "/istanbul", badge: "39 İlçe" });
   for (const d of (ist?.districts ?? []).slice(0, 6)) {
-    rows.push({ key: `istanbul-${d.slug}`, name: d.name, href: `/istanbul/${d.slug}`, badge: "Aynı Gün Teslimat" });
+    rows.push({ key: `istanbul-${d.slug}`, name: d.name, href: d.href ?? `/istanbul/${d.slug}`, badge: "Aynı Gün Teslimat" });
   }
   for (const c of others) {
     if (rows.length >= 8) break;
     rows.push({
       key: c.city_slug,
       name: c.city,
-      href: c.districts[0] ? `/${c.city_slug}/${c.districts[0].slug}` : "/teslimat-bolgeleri",
+      href: c.districts[0] ? (c.districts[0].href ?? `/${c.city_slug}/${c.districts[0].slug}`) : "/teslimat-bolgeleri",
       badge: "1–3 İş Günü Kargo",
     });
   }
@@ -166,7 +166,7 @@ export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
                     {c.districts.map((d) => (
                       <Link
                         key={d.slug}
-                        href={`/${c.city_slug}/${d.slug}`}
+                        href={d.href ?? `/${c.city_slug}/${d.slug}`}
                         className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-[#374151] transition-colors hover:text-[#8B5CF6]"
                         style={{ background: "#F5F3FF", border: "1px solid rgba(139,92,246,0.1)" }}
                       >

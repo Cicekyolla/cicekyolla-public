@@ -32,13 +32,22 @@ export function getShowcaseItems(page: WithBlocks): number[] {
 }
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-/** Pillar konum bloğu; geçersizse null. */
-export function getLocationBlock(page: WithBlocks): { city: string; district: string } | null {
+/** Konum bloğu (hiyerarşik olmayan adreste yaşayan ilçe/mahalle sayfası); geçersizse null.
+ *  neighborhood yalnız mahalle sayfasında vardır (ör. "aydinevler-mah"); varsa geçerli slug olmalı. */
+export function getLocationBlock(page: WithBlocks): { city: string; district: string; neighborhood?: string } | null {
   const block = blocks(page).find((x) => x.type === "location");
   if (!block) return null;
   const city = typeof block.city === "string" ? block.city.trim() : "";
   const district = typeof block.district === "string" ? block.district.trim() : "";
-  return SLUG.test(city) && SLUG.test(district) ? { city, district } : null;
+  if (!SLUG.test(city) || !SLUG.test(district)) return null;
+  if (block.neighborhood === undefined || block.neighborhood === null || block.neighborhood === "") return { city, district };
+  const neighborhood = typeof block.neighborhood === "string" ? block.neighborhood.trim() : "";
+  return SLUG.test(neighborhood) ? { city, district, neighborhood } : null;
+}
+
+/** Konum bloğunun HİYERARŞİK yolu: /istanbul/maltepe veya /istanbul/maltepe/aydinevler-mah. */
+export function hierarchicalPathOf(loc: { city: string; district: string; neighborhood?: string }): string {
+  return "/" + [loc.city, loc.district, loc.neighborhood].filter(Boolean).join("/");
 }
 
 /** Toplam sayfa = aktif öğe sayısına göre (ürün çözümlemesinden bağımsız). */

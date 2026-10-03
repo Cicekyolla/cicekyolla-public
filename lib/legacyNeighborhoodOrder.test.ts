@@ -57,7 +57,8 @@ test("tek hop: legacy mahalle yönlendirmesi 301 ve tek adım", () => {
     yer("const legacyMahalle"),
     yer("const legacyLocation: LegacyLocationResult"),
   );
-  assert.match(blok, /NextResponse\.redirect\(new URL\(legacyMahalle, req\.nextUrl\.origin\), 301\)/);
+  // Maltepe ailesi: hedef yönetilen bir 301'in kaynağıysa (taşınmış sayfa) tek adımda nihai adrese düzleştirilir; yoksa aynı hedef.
+  assert.match(blok, /NextResponse\.redirect\(new URL\((await flattenManagedTarget\(legacyMahalle\)|legacyMahalle), req\.nextUrl\.origin\), 301\)/);
   assert.ok(!/30[278]\s*\)/.test(blok), "301 dışında bir kod kullanılmamalı");
 });
 
