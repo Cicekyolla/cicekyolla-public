@@ -1,12 +1,11 @@
-import { renderSitemapIndex } from "@/lib/sitemap";
+import { renderSitemapIndexOrNull } from "@/lib/sitemap";
+import { sitemapResponse } from "@/lib/sitemapSources";
 
 export const revalidate = 300;
 
+// EK (SEO YAYIN ZİNCİRİ): mahalle shard sayısı okunamadıysa (null) eksik index
+// 200 ile verilmez → 503 + Retry-After: 300 + no-store (lib/sitemapSources.ts).
+// Başarılı yanıtın başlıkları bugünküyle birebir aynıdır.
 export async function GET() {
-  return new Response(await renderSitemapIndex(), {
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
-    },
-  });
+  return sitemapResponse(await renderSitemapIndexOrNull());
 }

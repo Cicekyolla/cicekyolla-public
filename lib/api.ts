@@ -13,6 +13,7 @@ import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from
 import { fetchWithDeadline } from "./fetchWithDeadline";
 import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
+import { productUrlsResultOf, type ProductUrlsResult } from "./sitemapSources.ts";
 export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type RedirectMap } from "./internalHref.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
@@ -303,6 +304,71 @@ export async function fetchSeoInventory(): Promise<SeoInventoryItem[]> {
     return Array.isArray(json?.data) ? json.data : [];
   } catch {
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// EK (SEO YAYIN ZİNCİRİ) — ADDITIVE: sitemap için "checked" okumalar.
+// Yukarıdaki fetchSeoInventory() / fetchNeighborhoodUrlPage() DEĞİŞMEDİ (hata →
+// boş değer; çapraz bağlantı ve shard sayımı aynı yolu kullanır). Buradaki
+// varyantlar hatayı BİLDİRİR: sitemap rotası upstream hatasında boş 200 yerine
+// 503 verebilsin (karar: lib/sitemapSources.ts). Hepsi süre sınırlıdır.
+// ---------------------------------------------------------------------------
+export type { ProductUrlRow, ProductUrlsResult } from "./sitemapSources.ts";
+
+/**
+ * Aktif ürünlerin sitemap satırları — GET /api/public/seo/product-urls
+ * (ürün başına tek satır; products.xml ve images.xml'in tek kaynağı).
+ * 404 = uç henüz yayında değil ("missing"); ağ/zaman aşımı/200 dışı/bozuk gövde
+ * = "failed". İki durumda da çağıran bugünkü envanter yoluna düşer.
+ */
+export async function fetchProductUrls(): Promise<ProductUrlsResult> {
+  const url = `${API_ORIGIN}/api/public/seo/product-urls`;
+  try {
+    // DAYANIKLILIK: 8 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 8_000);
+    if (res.status !== 200) return productUrlsResultOf(res.status, null);
+    return productUrlsResultOf(200, await res.json());
+  } catch {
+    return { state: "failed" };
+  }
+}
+
+/** fetchSeoInventory()'nin hatayı bildiren hâli: ok=false → envanter OKUNAMADI (boş liste "kayıt yok" demek değildir). */
+export interface SeoInventoryResult {
+  ok: boolean;
+  items: SeoInventoryItem[];
+}
+
+export async function fetchSeoInventoryChecked(): Promise<SeoInventoryResult> {
+  const url = `${API_ORIGIN}/api/public/seo/inventory`;
+  try {
+    // fetchSeoInventory() ile aynı istek (aynı önbellek anahtarı): 12 sn sınır + tek tekrar.
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 12_000);
+    if (!res.ok) return { ok: false, items: [] };
+    const json = await res.json() as { data?: SeoInventoryItem[] };
+    return Array.isArray(json?.data) ? { ok: true, items: json.data } : { ok: false, items: [] };
+  } catch {
+    return { ok: false, items: [] };
+  }
+}
+
+/** fetchNeighborhoodUrlPage()'in hatayı bildiren hâli: null = sayfa OKUNAMADI. */
+export async function fetchNeighborhoodUrlPageChecked(
+  limit: number,
+  offset: number,
+): Promise<NeighborhoodUrlPage | null> {
+  const url = `${API_ORIGIN}/api/public/seo/neighborhood-urls?limit=${limit}&offset=${offset}`;
+  try {
+    // 10.000 kayıtlık sayfa ≈ 0,62 MB; 10 sn sınır + tek tekrar.
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 10_000);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: NeighborhoodUrlPage };
+    const data = json?.data;
+    if (!data || !Array.isArray(data.items)) return null;
+    return { total: Number(data.total) || 0, items: data.items };
+  } catch {
+    return null;
   }
 }
 

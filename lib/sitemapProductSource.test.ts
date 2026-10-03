@@ -1,0 +1,377 @@
+// lib/sitemapProductSource.test.ts — sitemap kaynak zincirinin uçtan uca testleri
+// (API stub'lanır; ağ YOK). Çalıştırma: node --test lib/sitemapProductSource.test.ts
+//
+// SABİTLENEN KURALLAR
+//  1) products.xml / images.xml = AKTİF ürünler (GET /api/public/seo/product-urls).
+//  2) Uç yoksa (404) ya da hata verirse BUGÜNKÜ envanter yolu aynen çalışır
+//     (vitrin API'den önce de sonra da yayınlanabilir).
+//  3) Upstream hatası boş/eksik 200 üretmez: render*OrNull → null (rota 503).
+//     MEŞRU boşluk (yanıt geldi, kayıt yok) null DEĞİLDİR.
+//  4) Kullanımdan kalkan <image:title> hiçbir yolda basılmaz.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+const REPO_KOK = path.resolve(import.meta.dirname, "..");
+
+// SITE_INDEXABLE yalnız gerçek production ortamında true (import ÖNCESİNDE kurulmalı).
+process.env.VERCEL_ENV = "production";
+process.env.NEXT_PUBLIC_SITE_URL = "https://www.cicekyolla.com.tr";
+
+type ResolveNext = (spec: string, ctx: unknown) => unknown;
+type LoadNext = (url: string, ctx: unknown) => unknown;
+const { registerHooks } = (await import("node:module")) as unknown as {
+  registerHooks: (hooks: {
+    resolve: (spec: string, ctx: unknown, next: ResolveNext) => unknown;
+    load: (url: string, ctx: unknown, next: LoadNext) => unknown;
+  }) => void;
+};
+
+registerHooks({
+  resolve(spec: string, ctx: unknown, next: ResolveNext) {
+    // "@/lib/x" ve göreli "./x" için uzantı tamamlama (tsconfig alias'ı +
+    // uzantısız import'lar node --test tarafından tek başına çözülemez).
+    const aday = (base: string) => {
+      for (const c of [`${base}.ts`, `${base}.tsx`, `${base}.json`, base]) {
+        try {
+          readFileSync(c);
+          return { url: pathToFileURL(c).href, shortCircuit: true };
+        } catch { /* sıradaki aday */ }
+      }
+      return null;
+    };
+    if (spec.startsWith("@/")) {
+      const hit = aday(path.join(REPO_KOK, spec.slice(2)));
+      if (hit) return hit;
+    }
+    if (spec.startsWith(".")) {
+      const parent = (ctx as { parentURL?: string })?.parentURL;
+      if (parent?.startsWith("file:")) {
+        const hit = aday(path.resolve(path.dirname(fileURLToPath(parent)), spec));
+        if (hit) return hit;
+      }
+    }
+    return next(spec, ctx);
+  },
+  load(url: string, ctx: unknown, next: LoadNext) {
+    if (url.endsWith(".json")) {
+      const src = readFileSync(fileURLToPath(url), "utf8");
+      return { format: "module", source: `export default ${src};`, shortCircuit: true };
+    }
+    return next(url, ctx);
+  },
+});
+
+const {
+  renderSitemap,
+  renderSitemapOrNull,
+  renderSitemapIndex,
+  renderSitemapIndexOrNull,
+  renderNeighborhoodShard,
+  renderNeighborhoodShardOrNull,
+} = await import("./sitemap.ts");
+const { renderLocaleSitemap, renderLocaleSitemapOrNull } = await import("./global/sitemap.ts");
+
+const SITE = "https://www.cicekyolla.com.tr";
+const R2 = "https://pub-34f640508a014b148011844b087a4e48.r2.dev";
+
+// ---------------------------------------------------------------------------
+// API stub'ı: yol → yanıt. `undefined` → 404 (uç yayında değil); "throw" → ağ hatası.
+// ---------------------------------------------------------------------------
+type Stub = { status: number; body?: unknown } | "throw" | undefined;
+let routes: Record<string, Stub | ((url: URL) => Stub)> = {};
+let istekler: string[] = [];
+
+function kur(next: Record<string, Stub | ((url: URL) => Stub)>) {
+  routes = next;
+  istekler = [];
+}
+
+(globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
+  const url = new URL(String(input));
+  istekler.push(url.pathname);
+  const raw = routes[url.pathname];
+  const stub = typeof raw === "function" ? raw(url) : raw;
+  if (stub === "throw") throw new Error("other side closed");
+  const status = stub?.status ?? 404;
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => {
+      if (stub?.body === undefined) throw new Error("gövde yok");
+      return stub.body;
+    },
+  };
+};
+
+const PRODUCT_URLS = "/api/public/seo/product-urls";
+const INVENTORY = "/api/public/seo/inventory";
+const PRODUCTS = "/api/products";
+const NEIGHBORHOODS = "/api/public/seo/neighborhood-urls";
+
+const AKTIF = {
+  status: 200,
+  body: {
+    data: [
+      { url_path: "/urun/101-kirmizi-gul-buketi", updated_at: "2026-09-15T01:01:29.706Z", image: `${R2}/products/101.webp`, name: "101 Kırmızı Gül Buketi" },
+      { url_path: "/urun/yeni-urun-envanterde-yok", updated_at: "2026-10-01T08:00:00.000Z", image: "/r2/products/yeni.webp", name: "Yeni & Güzel" },
+      { url_path: "/urun/gorselsiz", updated_at: null, image: null, name: "Görselsiz" },
+      { url_path: "/urun/101-kirmizi-gul-buketi", updated_at: "2026-01-01T00:00:00.000Z", image: null, name: "kopya" },
+      { url_path: "/urun/Buyuk-Harf", updated_at: null, image: null, name: "geçersiz" },
+    ],
+    total: 5,
+  },
+};
+
+const ENVANTER = {
+  status: 200,
+  body: {
+    data: [
+      { page_type: "product", url_path: "/urun/101-kirmizi-gul-buketi", index_state: "index", updated_at: "2026-08-01T00:00:00.000Z", title: "101" },
+      { page_type: "product", url_path: "/urun/noindex-urun", index_state: "noindex", updated_at: "2026-08-01T00:00:00.000Z", title: "x" },
+      { page_type: "category", url_path: "/kategori/guller", index_state: "index", updated_at: "2026-08-02T00:00:00.000Z", title: "Güller" },
+      { page_type: "district", url_path: "/istanbul/kadikoy", index_state: "index", updated_at: "2026-08-03T00:00:00.000Z", title: "Kadıköy" },
+      { page_type: "neighborhood", url_path: "/istanbul/kadikoy/moda-mah", index_state: "index", updated_at: "2026-08-03T00:00:00.000Z", title: "Moda" },
+    ],
+  },
+};
+
+function locs(xml: string): string[] {
+  return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+}
+
+// ---------------------------------------------------------------------------
+// 1) Yeni kaynak: aktif ürünler
+// ---------------------------------------------------------------------------
+
+test("products.xml: aktif ürün ucu ok → satırlar tek kaynak (envanterde OLMAYAN ürün de girer), envanter çekilmez", async () => {
+  kur({ [PRODUCT_URLS]: AKTIF, [INVENTORY]: ENVANTER });
+  const xml = await renderSitemapOrNull("products");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [
+    `${SITE}/urun/101-kirmizi-gul-buketi`,
+    `${SITE}/urun/yeni-urun-envanterde-yok`,
+    `${SITE}/urun/gorselsiz`,
+  ]);
+  assert.match(xml!, /<lastmod>2026-09-15T01:01:29\.706Z<\/lastmod>/, "lastmod = updated_at (ISO)");
+  assert.equal((xml!.match(/<lastmod>/g) ?? []).length, 2, "updated_at null → lastmod yok");
+  assert.ok(!xml!.includes("image:"), "products.xml görsel etiketi taşımaz");
+  assert.deepEqual(istekler, [PRODUCT_URLS], "~11 MB envanter bu yolda hiç istenmez");
+});
+
+test("images.xml: aktif ürün ucu ok → yalnız görseli olan satırlar, mutlak <image:loc>, <image:title> YOK", async () => {
+  kur({ [PRODUCT_URLS]: AKTIF, [INVENTORY]: ENVANTER });
+  const xml = await renderSitemapOrNull("images");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [`${SITE}/urun/101-kirmizi-gul-buketi`, `${SITE}/urun/yeni-urun-envanterde-yok`]);
+  assert.deepEqual(
+    [...xml!.matchAll(/<image:image><image:loc>([^<]+)<\/image:loc><\/image:image>/g)].map((m) => m[1]),
+    [`${SITE}/r2/products/101.webp`, `${SITE}/r2/products/yeni.webp`],
+  );
+  assert.ok(!xml!.includes("image:title"), "kullanımdan kalkan etiket basılmaz");
+  assert.match(xml!, /xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1"/);
+  assert.deepEqual(istekler, [PRODUCT_URLS]);
+});
+
+// ---------------------------------------------------------------------------
+// 2) Uç yok (404) / hata → bugünkü envanter yolu
+// ---------------------------------------------------------------------------
+
+test("products.xml: uç 404 (API henüz yayında değil) → bugünkü envanter mantığı birebir", async () => {
+  kur({ [INVENTORY]: ENVANTER });
+  const xml = await renderSitemapOrNull("products");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [`${SITE}/urun/101-kirmizi-gul-buketi`], "yalnız index + product");
+  assert.equal(xml, await renderSitemap("products"), "eski render ile aynı çıktı");
+});
+
+test("products.xml: uç 500 / ağ hatası / boş yanıt → envanter yoluna düşer (boş yanıt sitemap'i silemez)", async () => {
+  for (const bozuk of [{ status: 500 }, "throw" as const, { status: 200, body: { data: [] } }, { status: 200, body: "çöp" }]) {
+    kur({ [PRODUCT_URLS]: bozuk, [INVENTORY]: ENVANTER });
+    const xml = await renderSitemapOrNull("products");
+    assert.ok(xml, JSON.stringify(bozuk));
+    assert.deepEqual(locs(xml!), [`${SITE}/urun/101-kirmizi-gul-buketi`], JSON.stringify(bozuk));
+  }
+});
+
+test("images.xml: uç 404 → eski sayfalı yol; çıktıdan <image:title> kalktı", async () => {
+  kur({
+    [INVENTORY]: ENVANTER,
+    [PRODUCTS]: {
+      status: 200,
+      body: {
+        items: [
+          { id: 1, slug: "101-kirmizi-gul-buketi", name: "101 Kırmızı Gül", cover_image_url: `${R2}/products/101.webp` },
+          { id: 2, slug: "envanterde-yok", name: "Yok", cover_image_url: `${R2}/products/yok.webp` },
+        ],
+        pagination: { page: 1, page_size: 100, total: 2, total_pages: 1 },
+      },
+    },
+  });
+  const xml = await renderSitemapOrNull("images");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [`${SITE}/urun/101-kirmizi-gul-buketi`]);
+  assert.match(xml!, /<image:image><image:loc>https:\/\/www\.cicekyolla\.com\.tr\/r2\/products\/101\.webp<\/image:loc><\/image:image>/);
+  assert.ok(!xml!.includes("image:title"));
+});
+
+// ---------------------------------------------------------------------------
+// 3) Upstream hatası boş 200 üretmez
+// ---------------------------------------------------------------------------
+
+test("envanter OKUNAMADI → envantere dayanan tüm TR tipleri null (rota 503); eski render boş urlset'te kalır", async () => {
+  for (const bozuk of [{ status: 502 }, "throw" as const, { status: 200, body: { hata: true } }]) {
+    for (const type of ["categories", "products", "occasions", "locations", "pages", "images"] as const) {
+      kur({ [INVENTORY]: bozuk });
+      assert.equal(await renderSitemapOrNull(type), null, `${type} ${JSON.stringify(bozuk)}`);
+    }
+  }
+  kur({ [INVENTORY]: { status: 502 } });
+  assert.match(await renderSitemap("categories"), /<urlset[^>]*><\/urlset>$/, "eski fonksiyonun davranışı değişmedi");
+});
+
+test("ürün ucu ok ise envanter kesintisi products.xml / images.xml'i ETKİLEMEZ", async () => {
+  kur({ [PRODUCT_URLS]: AKTIF, [INVENTORY]: { status: 502 } });
+  assert.equal(locs((await renderSitemapOrNull("products"))!).length, 3);
+  assert.equal(locs((await renderSitemapOrNull("images"))!).length, 2);
+});
+
+test("MEŞRU boşluk null DEĞİLDİR: envanter yanıt verdi ama o tipte kayıt yok → 200 boş urlset", async () => {
+  kur({ [INVENTORY]: { status: 200, body: { data: [] } } });
+  const xml = await renderSitemapOrNull("occasions");
+  assert.ok(xml !== null);
+  assert.match(xml!, /<urlset[^>]*><\/urlset>$/);
+});
+
+test("images.xml eski yol: ürün listesi okunamadı (envanterde ürün varken total 0) → null", async () => {
+  kur({ [INVENTORY]: ENVANTER, [PRODUCTS]: { status: 401 } });
+  assert.equal(await renderSitemapOrNull("images"), null);
+  // İkinci sayfada kesinti: eksik images.xml de 200 ile verilmez.
+  kur({
+    [INVENTORY]: ENVANTER,
+    [PRODUCTS]: (url) =>
+      url.searchParams.get("page") === null
+        ? {
+            status: 200,
+            body: {
+              items: [{ id: 1, slug: "101-kirmizi-gul-buketi", name: "101", cover_image_url: `${R2}/products/101.webp` }],
+              pagination: { page: 1, page_size: 100, total: 150, total_pages: 2 },
+            },
+          }
+        : { status: 502 },
+  });
+  assert.equal(await renderSitemapOrNull("images"), null);
+});
+
+test("blog.xml: envanter okunamasa da yazı listesi (kod güvenlik ağı dahil) tam → null değil", async () => {
+  kur({ [INVENTORY]: { status: 502 } });
+  const xml = await renderSitemapOrNull("blog");
+  assert.ok(xml);
+  assert.ok(locs(xml!).includes(`${SITE}/blog`));
+});
+
+test("sitemap index: shard sayısı okunamadı → null; okundu → tüm shard'lar listelenir", async () => {
+  kur({ [NEIGHBORHOODS]: { status: 503 } });
+  assert.equal(await renderSitemapIndexOrNull(), null);
+  assert.match(await renderSitemapIndex(), /neighborhoods-1\.xml/, "eski fonksiyon tek shard'a düşmeye devam eder");
+
+  kur({ [NEIGHBORHOODS]: { status: 200, body: { data: { total: 71_406, items: [] } } } });
+  const xml = await renderSitemapIndexOrNull();
+  assert.ok(xml);
+  for (const n of [1, 2, 3, 4]) assert.ok(xml!.includes(`${SITE}/sitemaps/neighborhoods-${n}.xml`), `shard ${n}`);
+  assert.ok(!xml!.includes("neighborhoods-5.xml"));
+  assert.equal(xml, await renderSitemapIndex(), "başarılı yolda iki render aynı çıktıyı verir");
+});
+
+test("mahalle shard'ı: sayfa okunamadı → null (eksik shard 200 ile verilmez); aralık dışı shard meşru boş", async () => {
+  kur({ [NEIGHBORHOODS]: { status: 502 } });
+  assert.equal(await renderNeighborhoodShardOrNull(1), null);
+  assert.match(await renderNeighborhoodShard(1), /<urlset[^>]*><\/urlset>$/);
+
+  // İlk sayfa geldi, ikinci sayfa kesildi → eksik shard.
+  const dolu: Array<[string, string]> = Array.from({ length: 10_000 }, (_, i) => [`/il/ilce/mah-${i}`, "2026-08-29T20:45:00.000Z"]);
+  kur({
+    [NEIGHBORHOODS]: (url) =>
+      url.searchParams.get("offset") === "0" ? { status: 200, body: { data: { total: 15_000, items: dolu } } } : "throw",
+  });
+  assert.equal(await renderNeighborhoodShardOrNull(1), null);
+
+  kur({ [NEIGHBORHOODS]: { status: 200, body: { data: { total: 71_406, items: [] } } } });
+  const bos = await renderNeighborhoodShardOrNull(9);
+  assert.ok(bos !== null);
+  assert.match(bos!, /<urlset[^>]*><\/urlset>$/);
+});
+
+// ---------------------------------------------------------------------------
+// 4) Locale sitemap'leri
+// ---------------------------------------------------------------------------
+
+const LOCALE_INV = "/api/public/translations/surface/inventory";
+const LOCALE_PAGES = "/api/public/global/pages-inventory";
+const SAYFALAR = { status: 200, body: { data: [{ page_key: "home", updated_at: "2026-09-03T11:27:15.143Z" }, { page_key: "istanbul", updated_at: "2026-09-03T11:27:15.143Z" }] } };
+
+test("locale sitemap: `image` alanı yokken (eski API) çıktı bugünküyle bayt bayt aynı", async () => {
+  kur({
+    [LOCALE_INV]: { status: 200, body: { data: { products: [{ slug: "101-red-rose-bouquet", updated_at: "2026-09-15T00:58:31.861Z" }], categories: [{ slug: "roses", updated_at: "2026-09-29T21:27:53.959Z" }] } } },
+    [LOCALE_PAGES]: SAYFALAR,
+  });
+  const xml = await renderLocaleSitemapOrNull("en");
+  assert.equal(
+    xml,
+    '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+      `<url><loc>${SITE}/en</loc><lastmod>2026-09-03T11:27:15.143Z</lastmod></url>` +
+      `<url><loc>${SITE}/en/istanbul</loc><lastmod>2026-09-03T11:27:15.143Z</lastmod></url>` +
+      `<url><loc>${SITE}/en/product/101-red-rose-bouquet</loc><lastmod>2026-09-15T00:58:31.861Z</lastmod></url>` +
+      `<url><loc>${SITE}/en/category/roses</loc><lastmod>2026-09-29T21:27:53.959Z</lastmod></url>` +
+      "</urlset>",
+  );
+  assert.equal(xml, await renderLocaleSitemap("en"), "eski render ile aynı çıktı");
+});
+
+test("locale sitemap: `image` taşıyan ürün satırı <image:image><image:loc> alır; ad alanı bildirilir", async () => {
+  kur({
+    [LOCALE_INV]: {
+      status: 200,
+      body: {
+        data: {
+          products: [
+            { slug: "101-rote-rosen", updated_at: "2026-09-15T00:58:31.861Z", image: `${R2}/products/101.webp`, tr_slug: "101-kirmizi-gul-buketi" },
+            { slug: "ohne-bild", updated_at: "2026-09-15T00:58:31.861Z", image: null, tr_slug: "gorselsiz" },
+          ],
+          categories: [{ slug: "rosen", updated_at: "2026-09-29T21:27:53.959Z" }],
+        },
+      },
+    },
+    [LOCALE_PAGES]: SAYFALAR,
+  });
+  const xml = await renderLocaleSitemapOrNull("de");
+  assert.ok(xml);
+  assert.match(xml!, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9" xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1">/);
+  assert.ok(
+    xml!.includes(
+      `<url><loc>${SITE}/de/produkt/101-rote-rosen</loc><lastmod>2026-09-15T00:58:31.861Z</lastmod><image:image><image:loc>${SITE}/r2/products/101.webp</image:loc></image:image></url>`,
+    ),
+  );
+  assert.ok(xml!.includes(`<url><loc>${SITE}/de/produkt/ohne-bild</loc><lastmod>2026-09-15T00:58:31.861Z</lastmod></url>`), "görselsiz satır bugünkü gibi");
+  assert.equal((xml!.match(/<image:image>/g) ?? []).length, 1);
+  assert.ok(!xml!.includes("image:title"));
+});
+
+test("locale sitemap: iki kaynaktan biri okunamadı → null; yanıt geldi ama liste boş → meşru boş urlset", async () => {
+  const INV_OK = { status: 200, body: { data: { products: [], categories: [] } } };
+  kur({ [LOCALE_INV]: { status: 502 }, [LOCALE_PAGES]: SAYFALAR });
+  assert.equal(await renderLocaleSitemapOrNull("en"), null);
+  kur({ [LOCALE_INV]: INV_OK, [LOCALE_PAGES]: "throw" });
+  assert.equal(await renderLocaleSitemapOrNull("en"), null);
+  kur({ [LOCALE_INV]: { status: 200, body: {} }, [LOCALE_PAGES]: SAYFALAR });
+  assert.equal(await renderLocaleSitemapOrNull("en"), null, "200 ama zarf bozuk");
+  kur({});
+  assert.equal(await renderLocaleSitemapOrNull("en"), null, "iki uç da 404");
+
+  kur({ [LOCALE_INV]: INV_OK, [LOCALE_PAGES]: { status: 200, body: { data: [] } } });
+  const bos = await renderLocaleSitemapOrNull("ko");
+  assert.ok(bos !== null);
+  assert.match(bos!, /<urlset[^>]*><\/urlset>$/);
+});
