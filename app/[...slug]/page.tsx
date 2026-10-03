@@ -3,9 +3,9 @@ import { Price } from "@/components/Price";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, findPillarPath, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
-import { descriptionWithPage, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
+import { descriptionWithPage, isSafeInternalPath, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
 import { getLocationBlock, getShowcaseItems, hierarchicalPathOf, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
 import { introWrapperClass, skipAutoLinkInjection } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
@@ -198,10 +198,11 @@ async function resolveRequest(requestedPath: string): Promise<Resolved> {
   const parsed = parseShowcasePath(requestedPath);
   if (parsed.page !== null) {
     // Sonsuz URL uzayı açma: taban yol published SEO sayfası + aktif vitrin öğesi>0 + N<=toplam sayfa.
-    if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath };
+    if (!isSafeInternalPath(parsed.basePath)) return { kind: "notfound" }; // "//evil.com/sayfa/1" açık yönlendirme olmasın
     const base = await fetchSeoPage(parsed.basePath);
     const ids = getShowcaseItems(base);
     if (!base || ids.length === 0) return { kind: "notfound" };
+    if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath }; // yalnız vitrinli, yayındaki taban sayfaya
     const totalPg = showcaseTotalPages(ids.length);
     if (parsed.page > totalPg) return { kind: "notfound" };
     const items = await loadShowcaseCards(showcasePageIds(ids, parsed.page));
@@ -321,7 +322,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   const place = neighborhood || districtName || cityName;
   if (parts.length === 3) {
     // Üst sayfa: ilçe satırı taşındıysa (yönetilen 301 kaynağı /{il}/{ilçe}) hedefi; değilse eski pillar (category_location) kuralı.
-    const pillarPath = redirects.get(`/${parts[0]}/${parts[1]}`) ?? (await findPillarPath(parts[1]).catch(() => null));
+    const pillarPath = redirects.get(`/${parts[0]}/${parts[1]}`);
     if (pillarPath) parentRef = { path: pillarPath, name: `${districtName} Çiçek Siparişi` };
   }
   // Lokasyon SEO Merkezi: operatör-onaylı H1 varsa sabit şablonun önüne geçer
@@ -710,7 +711,7 @@ export default async function Page({ params }: PageProps) {
       const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
       pillarLd = istanbulDistrictJsonLd(identity, { path, areaName: pillarDyn.districtName, pageName: page.h1 ?? "" });
     }
-    return <><DeliveryLanding page={page} path={path} dyn={dyn} showcase={showcase} pageNumber={pageNumber} selfPath={path} />{jsonLd}{pillarLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: pillarLd }} /> : null}</>;
+    return <><DeliveryLanding page={page} path={path} dyn={dyn} showcase={showcase} pageNumber={pageNumber} selfPath={pillarDyn ? path : undefined} />{jsonLd}{pillarLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: pillarLd }} /> : null}</>;
   }
   if (pageNumber > 1) notFound();
   return <main><h1>{page.h1}</h1>{page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{page.body_blocks?.map((b, i) => renderBlock(b, i))}{page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;

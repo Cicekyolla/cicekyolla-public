@@ -79,3 +79,36 @@ test("managed-redirects: hata sonucu kısa TTL ile saklanır, başarılı yanıt
   assert.match(src, /if \(!res\.ok\) \{ lastFetchFailed = true;/);
   assert.match(src, /lastFetchFailed = false;/);
 });
+
+// ---- açık yönlendirme (/sayfa/1) + gerileme korumaları (ön-dağıtım kontrolü bulguları) ----
+import { isSafeInternalPath, parseShowcasePath } from "./showcasePagination.ts";
+test("isSafeInternalPath: yalnız site içi mutlak yol; protokol-göreli/ters eğik çizgi/kontrol karakteri reddedilir", () => {
+  for (const ok of ["/", "/maltepe-cicek-siparisi", "/maltepe/aydinevler-cicek-siparisi", "/istanbul/maltepe/aydinevler-mah", "/a/b:c"]) {
+    assert.equal(isSafeInternalPath(ok), true, ok);
+  }
+  for (const bad of ["", "//evil.com", "///evil.com", "/\\evil.com", "\\evil.com", "evil.com", "https://evil.com", "http:/evil.com", "/a\\b", "/a\nb", "/a\tb", "/a\u0000b", "/" + "x".repeat(2100)]) {
+    assert.equal(isSafeInternalPath(bad), false, JSON.stringify(bad));
+  }
+});
+
+test("/sayfa/1 taban yolu: tehlikeli tabanlar parse'tan sonra da reddedilir", () => {
+  for (const evil of ["//evil.com/sayfa/1", "///evil.com/sayfa/1", "/\\evil.com/sayfa/1"]) {
+    const parsed = parseShowcasePath(evil);
+    assert.equal(parsed.page, 1, evil);
+    assert.equal(isSafeInternalPath(parsed.basePath), false, `${evil} → ${parsed.basePath}`);
+  }
+  const good = parseShowcasePath("/maltepe-cicek-siparisi/sayfa/1");
+  assert.equal(isSafeInternalPath(good.basePath), true);
+});
+
+test("kaynak deseni: /sayfa/1 yönlendirmesi güvenlik + taban-sayfa doğrulamasından SONRA; selfPath yalnız konum bloklu sayfada; eski pillar sorguları yok", () => {
+  const page = readFileSync(new URL("../app/[...slug]/page.tsx", import.meta.url), "utf8");
+  const iSafe = page.indexOf("isSafeInternalPath(parsed.basePath)");
+  const iFetch = page.indexOf("const base = await fetchSeoPage(parsed.basePath)");
+  const iRedirect = page.indexOf('if (parsed.page === 1) return { kind: "redirect"');
+  assert.ok(iSafe > 0 && iFetch > iSafe && iRedirect > iFetch, "sıra: güvenli yol → taban sayfa → yönlendirme");
+  assert.match(page, /selfPath=\{pillarDyn \? path : undefined\}/);
+  assert.doesNotMatch(page, /findPillarPath/);
+  const mw = readFileSync(new URL("../middleware.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(mw, /isPillarPath|pillar-paths/);
+});

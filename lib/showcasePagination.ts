@@ -13,6 +13,14 @@ export function parseShowcasePath(path: string): ShowcasePathInfo {
   return { basePath: m[1], page: Number(m[2]) };
 }
 
+/** Yönlendirme hedefi olarak güvenli, SİTE İÇİ mutlak yol mu? Tek "/" ile başlar; ters eğik çizgi ve kontrol karakteri içermez.
+ *  Protokol-göreli ("//evil.com") ve ters eğik çizgili ("/\evil.com") hedefler tarayıcıda dış siteye çözülür → açık yönlendirme. */
+export function isSafeInternalPath(path: string): boolean {
+  if (typeof path !== "string" || path.length === 0 || path.length > 2048) return false;
+  if (path[0] !== "/" || path[1] === "/" || path[1] === "\\") return false;
+  return !/[\\\u0000-\u001f\u007f]/.test(path);
+}
+
 export function totalPages(total: number, pageSize: number = SHOWCASE_PAGE_SIZE): number {
   if (!Number.isFinite(total) || total <= 0 || pageSize <= 0) return 0;
   return Math.ceil(total / pageSize);
