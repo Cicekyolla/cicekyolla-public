@@ -192,3 +192,93 @@ export function managedLocaleTarget(
   if (back && normalize(back.to) === from) return null;
   return { to, code: hit.code };
 }
+
+// ============================================================================
+// EK (GLOBAL LOCALE 301 — ZİNCİR + UCUZ HARİTA) — ADDITIVE. Yukarıdaki hiçbir
+// fonksiyon değiştirilmedi.
+//
+// 1) ZİNCİR / ÇEVRİM. managedLocaleTarget yalnız İKİ adımlı çevrimi (A→B, B→A)
+//    görüyordu: A→B, B→C, C→A kayıtları her adımda yönlendirip sonsuz döngü
+//    üretir; A→B→C ise iki ayrı 301 demektir. managedLocaleFinalTarget haritayı
+//    ziyaret kümesiyle izler: zincir TEK adımda nihai hedefe düzleşir, HER
+//    uzunlukta çevrimde yönlendirme yapılmaz (sayfa çizilir).
+//
+// 2) UCUZ HARİTA. Locale yolları daha önce middleware'de hiç beklemiyordu.
+//    Haritanın süresi dolduğunda ELDEKİ (bayat) harita hemen kullanılır, yenileme
+//    arka planda yapılır → API yavaşken locale istekleri 1,5 sn beklemez. Yalnız
+//    süreçte hiç harita yokken (soğuk açılış) beklenir: aksi hâlde soğuk açılışta
+//    eski adres 301 yerine 404 görürdü. TR yollarının harita okuması AYNEN.
+// ============================================================================
+
+/** Locale zincirinde izlenecek en çok adım; aşılırsa yönlendirme yapılmaz (tahmin yok). */
+export const MANAGED_LOCALE_MAX_HOPS = 5;
+
+/**
+ * Saf yardımcı (test edilebilir): locale yolunun NİHAİ yönlendirme hedefi.
+ *   lookup — normalize edilmiş yol → kayıt (haritadan); yoksa null/undefined.
+ * null dönerse istek olduğu gibi devam eder:
+ *   • kayıt yok,
+ *   • zincirin herhangi bir yerinde çevrim (başlangıca ya da ara adıma geri dönüş),
+ *   • İLK hedef site içi güvenli bir yol değil ("//dış-site" → açık yönlendirme),
+ *   • zincir MANAGED_LOCALE_MAX_HOPS adımdan uzun.
+ * Zincirin İLERİKİ bir adımı güvenli değilse o adım izlenmez; son güvenli hedefte durulur.
+ * Kod ilk kayıttan gelir; zincirde geçici (302/307) bir adım varsa sonuç da geçicidir
+ * (geçici bir taşınma, düzleştirilince kalıcıya dönüşmez).
+ */
+export function managedLocaleFinalTarget(
+  pathname: string,
+  lookup: (path: string) => { to: string; code: number } | null | undefined,
+  maxHops: number = MANAGED_LOCALE_MAX_HOPS,
+): { to: string; code: number } | null {
+  const from = normalize(pathname);
+  let hit = lookup(from) ?? null;
+  if (!hit) return null;
+  const seen = new Set<string>([from]);
+  let to = from;
+  let code = hit.code;
+  for (let hop = 0; hit; hop++) {
+    if (hop >= maxHops) return null;
+    const next = normalize(hit.to);
+    if (!isSafeInternalPath(next)) {
+      if (hop === 0) return null;
+      break;
+    }
+    if (seen.has(next)) return null;
+    seen.add(next);
+    if (hit.code === 302 || hit.code === 307) code = hit.code;
+    to = next;
+    hit = lookup(next) ?? null;
+  }
+  return { to, code };
+}
+
+/**
+ * Locale yolu için harita: taze ise o; süresi dolmuşsa eldeki harita HEMEN döner ve yenileme
+ * arka planda başlar (`defer` verilirse yenileme ona teslim edilir — Edge'de waitUntil).
+ * Süreçte hiç harita yoksa beklenir (en çok TIMEOUT_MS).
+ */
+async function getMapForLocale(defer?: (refresh: Promise<unknown>) => void): Promise<Map<string, Entry>> {
+  if (cache && cache.expiresAt > Date.now()) return cache.map;
+  if (!cache) return getMap();
+  const stale = cache.map;
+  const refresh = getMap().catch(() => stale);
+  if (defer) defer(refresh);
+  return stale;
+}
+
+/**
+ * Locale yolu için uygulanacak yönlendirme (zincir düzleştirilmiş, çevrimsiz); yoksa null.
+ * FAIL-OPEN: harita boşsa / okunamadıysa null → istek bugünkü gibi doğrudan devam eder.
+ */
+export async function resolveManagedLocaleRedirect(
+  pathname: string,
+  defer?: (refresh: Promise<unknown>) => void,
+): Promise<{ to: string; code: number } | null> {
+  try {
+    const map = await getMapForLocale(defer);
+    if (map.size === 0) return null;
+    return managedLocaleFinalTarget(pathname, (path) => map.get(path));
+  } catch {
+    return null;
+  }
+}

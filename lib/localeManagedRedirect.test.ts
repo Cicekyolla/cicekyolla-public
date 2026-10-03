@@ -18,7 +18,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { managedLocaleTarget } from "./managed-redirects.ts";
+import { MANAGED_LOCALE_MAX_HOPS, managedLocaleFinalTarget, managedLocaleTarget } from "./managed-redirects.ts";
 import { GLOBAL_LOCALES, SEGMENTS } from "./global/config.ts";
 
 const REPO_KOK = path.resolve(import.meta.dirname, "..");
@@ -105,6 +105,55 @@ test("managedLocaleTarget: çevrim (A→B, B→A) yönlendirilmez; zincirin deva
   assert.deepEqual(managedLocaleTarget("/de/produkt/a", hit, null), hit);
 });
 
+// EK — zincir / çevrim: harita ziyaret kümesiyle izlenir (managedLocaleFinalTarget).
+const harita = (kayitlar: Record<string, { to: string; code?: number }>) =>
+  (path: string) => (kayitlar[path] ? { to: kayitlar[path].to, code: kayitlar[path].code ?? 301 } : undefined);
+
+test("managedLocaleFinalTarget: tek kayıt aynen; zincir (A→B→C) TEK adımda nihai hedefe düzleşir", () => {
+  assert.deepEqual(managedLocaleFinalTarget("/de/produkt/a", harita({ "/de/produkt/a": { to: "/de/produkt/b" } })), { to: "/de/produkt/b", code: 301 });
+  const zincir = harita({ "/de/produkt/a": { to: "/de/produkt/b" }, "/de/produkt/b": { to: "/de/produkt/c" }, "/de/produkt/c": { to: "/de/produkt/d", code: 308 } });
+  assert.deepEqual(managedLocaleFinalTarget("/de/produkt/a", zincir), { to: "/de/produkt/d", code: 301 }, "kod ilk kayıttan");
+  assert.deepEqual(managedLocaleFinalTarget("/de/produkt/b/", zincir), { to: "/de/produkt/d", code: 301 }, "sondaki / yok sayılır");
+  assert.equal(managedLocaleFinalTarget("/de/produkt/d", zincir), null, "nihai hedef yönlendirilmez");
+  assert.equal(managedLocaleFinalTarget("/de/produkt/yok", zincir), null);
+});
+
+test("managedLocaleFinalTarget: HER uzunlukta çevrim yönlendirilmez (A→B→C→A sonsuz döngü üretmez)", () => {
+  const uclu = harita({ "/de/a": { to: "/de/b" }, "/de/b": { to: "/de/c" }, "/de/c": { to: "/de/a" } });
+  for (const yol of ["/de/a", "/de/b", "/de/c"]) assert.equal(managedLocaleFinalTarget(yol, uclu), null, yol);
+  // Önceki kural yalnız iki adımlı çevrimi görüyordu: aynı kayıtlarda her adım yönlendiriyordu.
+  assert.deepEqual(managedLocaleTarget("/de/a", { to: "/de/b", code: 301 }, { to: "/de/c", code: 301 }), { to: "/de/b", code: 301 });
+  const ikili = harita({ "/de/a": { to: "/de/b" }, "/de/b": { to: "/de/a" } });
+  assert.equal(managedLocaleFinalTarget("/de/a", ikili), null);
+  assert.equal(managedLocaleFinalTarget("/de/a", harita({ "/de/a": { to: "/de/a" } })), null, "kendine yönlendirme");
+  // Çevrime GİREN zincir (x → a → b → a) de yönlendirilmez.
+  assert.equal(managedLocaleFinalTarget("/de/x", harita({ "/de/x": { to: "/de/a" }, "/de/a": { to: "/de/b" }, "/de/b": { to: "/de/a" } })), null);
+});
+
+test("managedLocaleFinalTarget: site dışı ilk hedef → null; ilerideki güvensiz adım izlenmez (son güvenli hedef); çok uzun zincir → null", () => {
+  assert.equal(managedLocaleFinalTarget("/es/producto/x", harita({ "/es/producto/x": { to: "//evil.example/x" } })), null);
+  assert.deepEqual(
+    managedLocaleFinalTarget("/es/a", harita({ "/es/a": { to: "/es/b" }, "/es/b": { to: "//evil.example/x" } })),
+    { to: "/es/b", code: 301 },
+  );
+  const uzun: Record<string, { to: string }> = {};
+  for (let i = 0; i < MANAGED_LOCALE_MAX_HOPS + 2; i++) uzun[`/de/z${i}`] = { to: `/de/z${i + 1}` };
+  assert.equal(managedLocaleFinalTarget("/de/z0", harita(uzun)), null, "sınırdan uzun zincir: tahmin yok → yönlendirme yok");
+  assert.deepEqual(managedLocaleFinalTarget("/de/z2", harita(uzun)), { to: `/de/z${MANAGED_LOCALE_MAX_HOPS + 2}`, code: 301 }, "sınır içindeki zincir düzleşir");
+});
+
+test("managedLocaleFinalTarget: zincirde geçici (302/307) adım varsa sonuç da geçicidir", () => {
+  assert.deepEqual(
+    managedLocaleFinalTarget("/fr/a", harita({ "/fr/a": { to: "/fr/b", code: 301 }, "/fr/b": { to: "/fr/c", code: 302 } })),
+    { to: "/fr/c", code: 302 },
+  );
+  assert.deepEqual(managedLocaleFinalTarget("/fr/a", harita({ "/fr/a": { to: "/fr/b", code: 307 } })), { to: "/fr/b", code: 307 });
+  assert.deepEqual(
+    managedLocaleFinalTarget("/fr/a", harita({ "/fr/a": { to: "/fr/b", code: 308 }, "/fr/b": { to: "/fr/c", code: 301 } })),
+    { to: "/fr/c", code: 308 },
+  );
+});
+
 // ---------------------------------------------------------------------------
 // 2) middleware.ts — gerçek çalıştırma (API stub)
 // ---------------------------------------------------------------------------
@@ -118,13 +167,16 @@ const onbellekEskit = () => { saatKaymasi += 10 * 60_000; };
 type RedirectStub = { status: number; redirects?: Array<{ from: string; to: string; code?: number }> } | "throw";
 let redirectStub: RedirectStub = { status: 200, redirects: [] };
 let redirectIstekSayisi = 0;
+/** Harita ucunun yanıt gecikmesi (ms) — "API yavaş" senaryosu. */
+let redirectGecikmeMs = 0;
 
 (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
   const url = new URL(String(input));
   if (url.pathname === "/api/public/redirects") {
     redirectIstekSayisi++;
-    if (redirectStub === "throw") throw new Error("other side closed");
     const stub = redirectStub;
+    if (redirectGecikmeMs > 0) await new Promise((resolve) => setTimeout(resolve, redirectGecikmeMs));
+    if (stub === "throw") throw new Error("other side closed");
     return { ok: stub.status === 200, status: stub.status, json: async () => ({ redirects: stub.redirects ?? [] }) };
   }
   // Diğer uçlar (legacy mahalle sözlüğü vb.): yok say → mevcut fail-safe yolları.
@@ -136,6 +188,17 @@ const { middleware } = await import("../middleware.ts");
 
 const SITE = "https://www.cicekyolla.com.tr";
 const istek = (yol: string) => new NextRequest(`${SITE}${yol}`);
+// Edge'in `event.waitUntil` karşılığı: locale dalı süresi dolmuş haritayı ARKA PLANDA yeniler; testte o
+// yenileme `yenilemeyiBekle()` ile beklenir (deterministik). Middleware'in kendisi yenilemeyi BEKLEMEZ.
+const bekleyen: Promise<unknown>[] = [];
+const olay = { waitUntil: (p: Promise<unknown>) => { bekleyen.push(p); } } as unknown as Parameters<typeof middleware>[1];
+const yenilemeyiBekle = async () => { await Promise.all(bekleyen.splice(0)); };
+/** Locale isteği + (varsa) arka plan yenilemesinin bitmesi. Yanıt, yenilemeden ÖNCEKİ haritayla verilmiştir. */
+async function localeIstek(yol: string): Promise<Response> {
+  const res = await middleware(istek(yol), olay);
+  await yenilemeyiBekle();
+  return res;
+}
 /** NextResponse.next() → "x-middleware-next: 1"; yönlendirme → 3xx + location. */
 const devamMi = (res: Response) => res.headers.get("x-middleware-next") === "1";
 
@@ -155,16 +218,65 @@ test("FAIL-OPEN (soğuk açılış): API erişilemez / 5xx / 404 → harita boş
     onbellekEskit();
     redirectStub = bozuk;
     const once = redirectIstekSayisi;
-    const res = await middleware(istek("/de/produkt/alte-rosen"));
+    const res = await localeIstek("/de/produkt/alte-rosen");
     assert.equal(devamMi(res), true, JSON.stringify(bozuk));
     assert.equal(res.headers.get("location"), null, JSON.stringify(bozuk));
     assert.ok(redirectIstekSayisi > once, "harita yeniden istenir (kısa hata TTL'i)");
   }
 });
 
+test("UCUZ HARİTA: süresi dolmuş haritada locale isteği API'yi BEKLEMEZ — eldeki haritayla karar verir, yenileme arka planda", async () => {
+  // Elde (önceki testten) boş bir harita var ve süresi doldu; API yavaş (300 ms) ama sağlıklı.
+  onbellekEskit();
+  redirectStub = { status: 200, redirects: KAYITLAR };
+  redirectGecikmeMs = 300;
+  try {
+    const once = redirectIstekSayisi;
+    const t0 = gercekNow();
+    const res = await middleware(istek("/de/produkt/alte-rosen"), olay);
+    const sure = gercekNow() - t0;
+    assert.ok(sure < 150, `istek yenilemeyi beklemedi (${sure} ms)`);
+    assert.equal(devamMi(res), true, "eldeki (bayat) haritada kayıt yok → bugünkü gibi devam");
+    assert.equal(redirectIstekSayisi, once + 1, "yenileme başlatıldı");
+    assert.equal(bekleyen.length, 1, "yenileme waitUntil'e teslim edildi (Edge isteği kesmez)");
+    // Yenileme sürerken gelen diğer locale istekleri de beklemez ve İKİNCİ bir istek atmaz.
+    const t1 = gercekNow();
+    await middleware(istek("/en/category/old-roses"), olay);
+    assert.ok(gercekNow() - t1 < 150);
+    assert.equal(redirectIstekSayisi, once + 1, "aynı anda tek yenileme");
+    await yenilemeyiBekle();
+    // Yenileme bitti: sonraki istek yeni haritayla yönlendirilir.
+    const sonra = await localeIstek("/de/produkt/alte-rosen");
+    assert.equal(sonra.status, 301);
+    assert.equal(redirectIstekSayisi, once + 1, "taze harita için ek istek yok");
+  } finally {
+    redirectGecikmeMs = 0;
+  }
+});
+
+test("SOĞUK AÇILIŞ: süreçte hiç harita yokken locale isteği haritayı BEKLER (eski adres 404 değil 301 görür)", async () => {
+  // Modülün taze bir örneği = yeni Edge isolate'i (önbellek boş).
+  const tazeModul: string = "./managed-redirects.ts?soguk-acilis";
+  const taze = (await import(tazeModul)) as typeof import("./managed-redirects.ts");
+  redirectStub = { status: 200, redirects: KAYITLAR };
+  redirectGecikmeMs = 120;
+  try {
+    const ertelenen: Promise<unknown>[] = [];
+    const t0 = gercekNow();
+    const hit = await taze.resolveManagedLocaleRedirect("/de/produkt/alte-rosen", (p) => { ertelenen.push(p); });
+    assert.ok(gercekNow() - t0 >= 100, "harita beklendi");
+    assert.deepEqual(hit, { to: "/de/produkt/rote-rosen", code: 301 });
+    assert.equal(ertelenen.length, 0, "beklenen okuma arka plana atılmaz");
+  } finally {
+    redirectGecikmeMs = 0;
+  }
+});
+
 test("middleware: kaydı olan locale yolu kalıcı yönlendirilir (301), hedef aynı origin", async () => {
   onbellekEskit();
   redirectStub = { status: 200, redirects: KAYITLAR };
+  // Süresi dolmuş haritayı ilk locale isteği arka planda yeniler (yanıtı eski haritayla verir).
+  await localeIstek("/de");
   const res = await middleware(istek("/de/produkt/alte-rosen"));
   assert.equal(res.status, 301);
   assert.equal(res.headers.get("location"), `${SITE}/de/produkt/rote-rosen`);
@@ -201,6 +313,32 @@ test("middleware: çevrim (A↔B) ve site dışı hedef yönlendirilmez — sayf
   }
 });
 
+test("middleware: zincir (A→B→C) tek 301 ile nihai hedefe gider (sorgu korunur); üçlü çevrim hiçbir adımda yönlendirmez", async () => {
+  onbellekEskit();
+  redirectStub = {
+    status: 200,
+    redirects: [
+      { from: "/de/produkt/z1", to: "/de/produkt/z2", code: 301 },
+      { from: "/de/produkt/z2", to: "/de/produkt/z3", code: 301 },
+      { from: "/nl/product/c1", to: "/nl/product/c2", code: 301 },
+      { from: "/nl/product/c2", to: "/nl/product/c3", code: 301 },
+      { from: "/nl/product/c3", to: "/nl/product/c1", code: 301 },
+    ],
+  };
+  await localeIstek("/de");
+  const res = await middleware(istek("/de/produkt/z1?gclid=abc&page=2"));
+  assert.equal(res.status, 301);
+  assert.equal(res.headers.get("location"), `${SITE}/de/produkt/z3?gclid=abc&page=2`, "iki ayrı 301 yerine tek adım");
+  assert.equal((await middleware(istek("/de/produkt/z2"))).headers.get("location"), `${SITE}/de/produkt/z3`);
+  assert.equal(devamMi(await middleware(istek("/de/produkt/z3"))), true);
+  // Üçlü çevrim: önceden her adım yönlendiriyordu (ERR_TOO_MANY_REDIRECTS); artık sayfa çizilir.
+  for (const yol of ["/nl/product/c1", "/nl/product/c2", "/nl/product/c3"]) {
+    const r = await middleware(istek(yol));
+    assert.equal(devamMi(r), true, yol);
+    assert.equal(r.headers.get("location"), null, yol);
+  }
+});
+
 test("middleware: harita süreç içinde önbelleklidir — locale istekleri API'ye tekrar gitmez (ucuz)", async () => {
   const once = redirectIstekSayisi;
   for (let i = 0; i < 25; i++) await middleware(istek(`/de/produkt/urun-${i}`));
@@ -228,8 +366,18 @@ test("kaynak nöbeti: locale dalı legacy kurallardan ÖNCE döner ve yalnız ta
   assert.ok(dalBasi > 0 && dalSonu > dalBasi, "locale dalı döngü guard'ından (legacyMuaf) önce");
   assert.ok(dalSonu < src.indexOf("const legacyMuaf"));
   const dal = src.slice(dalBasi, dalSonu);
-  assert.match(dal, /await resolveManagedRedirect\(req\.nextUrl\.pathname\)/);
-  assert.match(dal, /managedLocaleTarget\(/);
+  // EK: zincir / çevrim kararı + beklemeyen harita tek çağrıda; arka plan yenilemesi Edge'in waitUntil'ine teslim edilir.
+  assert.ok(dal.includes("const localeManaged = await resolveManagedLocaleRedirect(req.nextUrl.pathname, (refresh) => event?.waitUntil(refresh));"));
+  assert.ok(!/resolveManagedRedirect\(/.test(dal.replace(/\/\*[\s\S]*?\*\//g, "")), "locale dalı haritayı BEKLEYEN okumayı kullanmaz");
+  assert.ok(src.includes("export async function middleware(req: NextRequest, event?: NextFetchEvent) {"));
+  assert.ok(dal.includes("target.search = req.nextUrl.search;"), "sorgu dizesi korunur");
+  // TR dalı aynen: haritayı bekleyen okuma + son sıradaki yönetilen 301.
+  assert.ok(src.includes("const legacyMuaf = await isManagedRedirectTarget(req.nextUrl.pathname);"));
+  assert.ok(src.includes("const managed = await resolveManagedRedirect(req.nextUrl.pathname);"));
+  const lib = readFileSync(path.join(REPO_KOK, "lib", "managed-redirects.ts"), "utf8");
+  const mapFn = lib.slice(lib.indexOf("async function getMapForLocale("), lib.indexOf("export async function resolveManagedLocaleRedirect("));
+  assert.ok(mapFn.includes("if (!cache) return getMap();"), "soğuk açılışta beklenir");
+  assert.ok(mapFn.includes("if (defer) defer(refresh);") && mapFn.includes("return stale;"), "süresi dolmuş harita hemen döner");
   assert.match(dal, /return NextResponse\.next\(\);\s*\}\s*$/, "kayıt yoksa hemen devam; dal burada kapanır");
   for (const legacy of ["resolveLegacyLocation", "resolveKategoriLegacy", "resolveSayfaLegacy", "resolveCicekleriLegacy", "resolveLegacyNeighborhoodRedirect", "isManagedRedirectTarget"]) {
     assert.ok(!dal.includes(legacy), `locale dalı ${legacy} çağırmaz`);
