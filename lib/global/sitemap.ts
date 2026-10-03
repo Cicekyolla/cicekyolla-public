@@ -14,7 +14,7 @@ import {
   fetchGlobalPagesInventoryChecked,
   type LocaleInventory,
 } from "./api";
-import { mediaUrl } from "@/lib/media";
+import { isLegacyPleskMedia, mediaUrl } from "@/lib/media";
 import { sitemapImageLoc } from "@/lib/sitemapSources";
 
 export const LOCALE_SITEMAP_TYPES = GLOBAL_LOCALES.map((l) => `locale-${l}`);
@@ -50,7 +50,7 @@ function node(path: string, updatedAt: string | null): string {
 const IMAGE_NAMESPACE = ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"';
 
 function productNode(path: string, updatedAt: string | null, image: string | null | undefined): string {
-  const imageLoc = sitemapImageLoc(image, { mediaUrl, absoluteUrl });
+  const imageLoc = sitemapImageLoc(image, { mediaUrl, absoluteUrl, isLegacyMedia: isLegacyPleskMedia });
   const base = node(path, updatedAt);
   if (!imageLoc) return base;
   // Görsel etiketi kapanış </url>'den hemen önce eklenir (dilimleme: URL'deki "$" güvenli).

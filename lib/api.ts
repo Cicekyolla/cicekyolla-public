@@ -346,14 +346,19 @@ export type { ProductUrlRow, ProductUrlsResult } from "./sitemapSources.ts";
  * (ürün başına tek satır; products.xml ve images.xml'in tek kaynağı).
  * 404 = uç henüz yayında değil ("missing"); ağ/zaman aşımı/200 dışı/bozuk gövde
  * = "failed". İki durumda da çağıran bugünkü envanter yoluna düşer.
+ * EK: 200 gelip kullanılamayan ya da EKSİK yanıt (geçersiz yollu satır, `total` > satır
+ * sayısı, 50.000 sınırı) günlüğe yazılır — sessiz kayıp olmaz (karar: lib/sitemapSources.ts).
  */
 export async function fetchProductUrls(): Promise<ProductUrlsResult> {
   const url = `${API_ORIGIN}/api/public/seo/product-urls`;
   try {
-    // DAYANIKLILIK: 8 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
-    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 8_000);
-    if (res.status !== 200) return productUrlsResultOf(res.status, null);
-    return productUrlsResultOf(200, await res.json());
+    // DAYANIKLILIK: 8 sn süre sınırı. Süre dolarsa TEKRAR DENENMEZ (çağıran envanter yoluna
+    // düşer; o okumanın kendi sınırı var → en kötü toplam bekleme 16 sn değil 8 sn artar).
+    // Kopan soket gibi hızlı hatalar bir kez tekrar denenir (bkz. fetchWithDeadline).
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 8_000, fetch, false);
+    const result = res.status !== 200 ? productUrlsResultOf(res.status, null) : productUrlsResultOf(200, await res.json());
+    if (result.state !== "missing" && result.warning) console.warn(`[sitemap] product-urls: ${result.warning}`);
+    return result;
   } catch {
     return { state: "failed" };
   }

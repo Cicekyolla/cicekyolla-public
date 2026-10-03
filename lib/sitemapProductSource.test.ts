@@ -87,6 +87,7 @@ let istekler: string[] = [];
 function kur(next: Record<string, Stub | ((url: URL) => Stub)>) {
   routes = next;
   istekler = [];
+  uyarilar = [];
 }
 
 (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
@@ -119,11 +120,23 @@ const AKTIF = {
       { url_path: "/urun/yeni-urun-envanterde-yok", updated_at: "2026-10-01T08:00:00.000Z", image: "/r2/products/yeni.webp", name: "Yeni & Güzel" },
       { url_path: "/urun/gorselsiz", updated_at: null, image: null, name: "Görselsiz" },
       { url_path: "/urun/101-kirmizi-gul-buketi", updated_at: "2026-01-01T00:00:00.000Z", image: null, name: "kopya" },
-      { url_path: "/urun/Buyuk-Harf", updated_at: null, image: null, name: "geçersiz" },
     ],
+    total: 4,
+  },
+};
+
+// EKSİK yanıt: bir aktif ürünün yolu /urun/<küçük-harf-slug> biçiminde değil → satır sitemap'e giremez.
+const AKTIF_EKSIK = {
+  status: 200,
+  body: {
+    data: [...AKTIF.body.data, { url_path: "/urun/Buyuk-Harf", updated_at: null, image: null, name: "geçersiz yol" }],
     total: 5,
   },
 };
+
+// console.warn yakalanır: eksik / kullanılamayan yanıt GÜNLÜĞE yazılmalı (sessiz kayıp yok) ve test çıktısı kirlenmez.
+let uyarilar: string[] = [];
+console.warn = (...args: unknown[]) => { uyarilar.push(args.map(String).join(" ")); };
 
 const ENVANTER = {
   status: 200,
@@ -173,6 +186,121 @@ test("images.xml: aktif ürün ucu ok → yalnız görseli olan satırlar, mutla
   assert.ok(!xml!.includes("image:title"), "kullanımdan kalkan etiket basılmaz");
   assert.match(xml!, /xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1"/);
   assert.deepEqual(istekler, [PRODUCT_URLS]);
+});
+
+test("temiz yanıt (yinelenen satır dahil) günlüğe yazılmaz; yinelenen satır kayıp sayılmaz", async () => {
+  kur({ [PRODUCT_URLS]: AKTIF, [INVENTORY]: ENVANTER });
+  await renderSitemapOrNull("products");
+  assert.deepEqual(uyarilar, []);
+  assert.deepEqual(istekler, [PRODUCT_URLS]);
+});
+
+// ---------------------------------------------------------------------------
+// 1b) EKSİK yanıt: aktif ürün sessizce kaybolmaz
+// ---------------------------------------------------------------------------
+
+test("products.xml: ürün ucu EKSİK (geçersiz yollu satır) → günlüğe yazılır ve eksikler envanterle tamamlanır (birleşim)", async () => {
+  // Envanterde: uçta da olan ürün (yinelenmez), ucun atamadığı/atladığı iki ürün ve bir product_location satırı.
+  const envanter = {
+    status: 200,
+    body: {
+      data: [
+        ...ENVANTER.body.data,
+        { page_type: "product", url_path: "/urun/Buyuk-Harf", index_state: "index", updated_at: "2026-08-05T00:00:00.000Z", title: "B" },
+        { page_type: "product", url_path: "/urun/yalniz-envanterde", index_state: "index", updated_at: "2026-08-06T00:00:00.000Z", title: "Y" },
+        { page_type: "product_location", url_path: "/urun/101-kirmizi-gul-buketi/kadikoy", index_state: "index", updated_at: "2026-08-07T00:00:00.000Z", title: "PL" },
+      ],
+    },
+  };
+  kur({ [PRODUCT_URLS]: AKTIF_EKSIK, [INVENTORY]: envanter });
+  const xml = await renderSitemapOrNull("products");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [
+    `${SITE}/urun/101-kirmizi-gul-buketi`,
+    `${SITE}/urun/yeni-urun-envanterde-yok`,
+    `${SITE}/urun/gorselsiz`,
+    `${SITE}/urun/Buyuk-Harf`,
+    `${SITE}/urun/yalniz-envanterde`,
+    `${SITE}/urun/101-kirmizi-gul-buketi/kadikoy`,
+  ], "aktif satırlar + envanterin KAPSANMAYAN ürün satırları; hiçbir URL iki kez yok");
+  assert.deepEqual(istekler, [PRODUCT_URLS, INVENTORY], "envanter yalnız eksik yanıtta okunur");
+  assert.equal(uyarilar.length, 1);
+  assert.match(uyarilar[0], /^\[sitemap\] product-urls: yanıt eksik — 1 satırın yolu geçersiz \(örnek: \/urun\/Buyuk-Harf\)/);
+});
+
+test("products.xml: ürün ucu EKSİK + envanter okunamadı → eldeki aktif satırlar 200 ile verilir (uç yanıt verdi; 503 değil)", async () => {
+  kur({ [PRODUCT_URLS]: AKTIF_EKSIK, [INVENTORY]: { status: 502 } });
+  const xml = await renderSitemapOrNull("products");
+  assert.ok(xml);
+  assert.equal(locs(xml!).length, 3);
+  assert.equal(uyarilar.length, 1, "eksik yine günlükte");
+});
+
+test("images.xml: ürün ucu EKSİK → aktif satırların görselleri + kapsanmayan ürünler eski sayfalı yoldan", async () => {
+  kur({
+    [PRODUCT_URLS]: {
+      status: 200,
+      // `total` gelen satır sayısından büyük: kırpılmış yanıt.
+      body: { data: AKTIF.body.data, total: 9 },
+    },
+    [INVENTORY]: {
+      status: 200,
+      body: {
+        data: [
+          ...ENVANTER.body.data,
+          { page_type: "product", url_path: "/urun/yalniz-envanterde", index_state: "index", updated_at: "2026-08-06T00:00:00.000Z", title: "Y" },
+        ],
+      },
+    },
+    [PRODUCTS]: {
+      status: 200,
+      body: {
+        items: [
+          { id: 1, slug: "101-kirmizi-gul-buketi", name: "101", cover_image_url: `${R2}/products/eski-101.webp` },
+          { id: 9, slug: "yalniz-envanterde", name: "Y", cover_image_url: `${R2}/products/y.webp` },
+        ],
+        pagination: { page: 1, page_size: 100, total: 2, total_pages: 1 },
+      },
+    },
+  });
+  const xml = await renderSitemapOrNull("images");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [
+    `${SITE}/urun/101-kirmizi-gul-buketi`,
+    `${SITE}/urun/yeni-urun-envanterde-yok`,
+    `${SITE}/urun/yalniz-envanterde`,
+  ]);
+  assert.ok(xml!.includes(`${SITE}/r2/products/101.webp`) && !xml!.includes("eski-101.webp"), "uçta olan ürünün görseli uçtan gelir (yinelenmez)");
+  assert.ok(xml!.includes(`${SITE}/r2/products/y.webp`));
+  assert.match(uyarilar[0], /total=9 ama 4 satır geldi/);
+});
+
+test("images.xml: basılamayan görsel (data:, eski Plesk yolu) satırı images.xml'e girmez; products.xml'de URL kalır", async () => {
+  const govde = {
+    status: 200,
+    body: {
+      data: [
+        { url_path: "/urun/iyi", updated_at: null, image: "/r2/products/iyi.webp", name: "İyi" },
+        { url_path: "/urun/data-uri", updated_at: null, image: "data:image/svg+xml;base64,PHN2Zy8+", name: "Data" },
+        { url_path: "/urun/eski-medya", updated_at: null, image: "https://www.cicekyolla.com.tr/storage/products/1.webp", name: "Eski" },
+      ],
+      total: 3,
+    },
+  };
+  kur({ [PRODUCT_URLS]: govde });
+  const images = await renderSitemapOrNull("images");
+  assert.deepEqual(locs(images!), [`${SITE}/urun/iyi`]);
+  assert.ok(!images!.includes("data:") && !images!.includes("/storage/products/"));
+  kur({ [PRODUCT_URLS]: govde });
+  assert.equal(locs((await renderSitemapOrNull("products"))!).length, 3);
+});
+
+test("ürün ucu 50.000 satırı aşarsa kullanılmaz: envanter yoluna düşülür ve günlüğe yazılır", async () => {
+  const cok = { status: 200, body: { data: Array.from({ length: 50_001 }, (_, i) => ({ url_path: `/urun/u-${i}`, updated_at: null, image: null, name: "" })), total: 50_001 } };
+  kur({ [PRODUCT_URLS]: cok, [INVENTORY]: ENVANTER });
+  const xml = await renderSitemapOrNull("products");
+  assert.deepEqual(locs(xml!), [`${SITE}/urun/101-kirmizi-gul-buketi`]);
+  assert.match(uyarilar[0], /50001 satır tek sitemap dosyası sınırını \(50000\) aşıyor/);
 });
 
 // ---------------------------------------------------------------------------

@@ -47,3 +47,36 @@ test("normal yolda tek çağrı, ek başlık yok", async () => {
   assert.equal(res.status, 200);
   assert.equal(n, 1);
 });
+
+// EK (SEO yayın zinciri) — retryOnTimeout=false: yedek yolu olan okumalar (hreflang, product-urls)
+// yanıt vermeyen ucu İKİ KEZ beklemez; kopan soket gibi hızlı hatalar yine bir kez tekrar denenir.
+test("retryOnTimeout=false: süre dolunca TEKRAR DENENMEZ (en kötü bekleme 1 × süre sınırı)", async () => {
+  const { fetchFn, calls } = hangingThen(false);
+  const t0 = Date.now();
+  await assert.rejects(() => fetchWithDeadline("https://api.test/x", {}, 60, fetchFn, false));
+  const sure = Date.now() - t0;
+  assert.equal(calls.length, 1, "zaman aşımından sonra ikinci deneme yok");
+  assert.ok(sure >= 50 && sure < 115, `tek süre sınırı kadar beklendi (${sure} ms)`);
+});
+
+test("retryOnTimeout=false: hızlı hata (kopan soket) yine bir kez tekrar denenir; ikinci deneme başarırsa yanıt döner", async () => {
+  let n = 0;
+  const headers: Array<Record<string, string> | undefined> = [];
+  const fetchFn = (async (_url: unknown, init?: RequestInit) => {
+    n++;
+    headers.push(init?.headers as Record<string, string> | undefined);
+    if (n === 1) throw new Error("other side closed");
+    return new Response("ok", { status: 200 });
+  }) as typeof fetch;
+  const res = await fetchWithDeadline("https://api.test/y", {}, 1000, fetchFn, false);
+  assert.equal(res.status, 200);
+  assert.equal(n, 2);
+  assert.equal(headers[1]?.["x-cy-retry"], "1");
+});
+
+test("varsayılan (retryOnTimeout verilmez) davranış AYNEN: zaman aşımından sonra da bir kez tekrar denenir", async () => {
+  const { fetchFn, calls } = hangingThen(false);
+  await assert.rejects(() => fetchWithDeadline("https://api.test/x", {}, 30, fetchFn));
+  assert.equal(calls.length, 2);
+  await assert.rejects(() => fetchWithDeadline("https://api.test/x", {}, 30, hangingThen(false).fetchFn, true));
+});

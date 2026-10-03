@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getIndexableBlogPosts } from "@/lib/blog";
-import { mediaUrl } from "@/lib/media";
+import { isLegacyPleskMedia, mediaUrl } from "@/lib/media";
 import { isFailedProductPage, sitemapImageLoc, type ProductUrlRow } from "@/lib/sitemapSources";
 
 // ---------------------------------------------------------------------------
@@ -369,17 +369,27 @@ async function imageNodes(inventory: SeoInventoryItem[]): Promise<NodeRead> {
 // Kaynak artık GET /api/public/seo/product-urls (aktif ürün başına tek satır).
 // Uç yayında değilse (404), hata verirse ya da boş dönerse null → çağıran
 // BUGÜNKÜ envanter yoluna düşer (vitrin API'den önce de sonra da yayınlanabilir).
+// EK: yanıt EKSİKSE (`incomplete`: yolu geçersiz satır atıldı ya da `total` satır
+// sayısından büyük) satırlar yine kullanılır ama çağıran eksikleri envanterle
+// TAMAMLAR (readSitemapNodes) → çıktı iki kaynağın hiçbirinden dar olmaz.
 // ---------------------------------------------------------------------------
-async function readActiveProductRows(): Promise<ProductUrlRow[] | null> {
+type ActiveProductRows = { rows: ProductUrlRow[]; incomplete: boolean };
+
+async function readActiveProductRows(): Promise<ActiveProductRows | null> {
   if (!SITE_INDEXABLE) return null;
   const result = await fetchProductUrls();
-  return result.state === "ok" ? result.rows : null;
+  return result.state === "ok" ? { rows: result.rows, incomplete: result.incomplete === true } : null;
 }
 
-/** Aktif ürün satırından <url>; withImage ise kapak görseli <image:image><image:loc> olarak eklenir. */
+/**
+ * Aktif ürün satırından <url>; withImage ise kapak görseli <image:image><image:loc> olarak eklenir.
+ * withImage iken basılabilir görsel adresi yoksa (boş, `data:`, eski medya yolu) boş string döner →
+ * satır images.xml'e girmez.
+ */
 function productRowNode(row: ProductUrlRow, withImage: boolean): string {
   const lastmod = row.updated_at ? validDate(row.updated_at) : null;
-  const imageLoc = withImage ? sitemapImageLoc(row.image, { mediaUrl, absoluteUrl }) : null;
+  const imageLoc = withImage ? sitemapImageLoc(row.image, { mediaUrl, absoluteUrl, isLegacyMedia: isLegacyPleskMedia }) : null;
+  if (withImage && !imageLoc) return "";
   return [
     "<url>",
     `<loc>${escapeXml(absoluteUrl(row.url_path))}</loc>`,
@@ -392,15 +402,20 @@ function productRowNode(row: ProductUrlRow, withImage: boolean): string {
 /** Bir sitemap tipinin düğümleri + "kaynak okunamadı" bilgisi (tek uygulama; iki render da bunu kullanır). */
 async function readSitemapNodes(type: SitemapType): Promise<NodeRead> {
   if (type === "products" || type === "images") {
-    const rows = await readActiveProductRows();
-    if (rows) {
-      return {
-        nodes:
-          type === "images"
-            ? rows.filter((row) => row.image).map((row) => productRowNode(row, true))
-            : rows.map((row) => productRowNode(row, false)),
-        failed: false,
-      };
+    const active = await readActiveProductRows();
+    if (active) {
+      const nodes =
+        type === "images"
+          ? active.rows.map((row) => productRowNode(row, true)).filter((node) => node !== "")
+          : active.rows.map((row) => productRowNode(row, false));
+      if (!active.incomplete) return { nodes, failed: false };
+      // EK — EKSİK YANIT: ürün ucunun KAPSAMADIĞI yollar bugünkü envanter mantığıyla eklenir
+      // (birleşim). Envanter yalnız bu olağan dışı durumda okunur; okunamazsa eldeki aktif
+      // satırlarla yetinilir (kaynak ucu yanıt verdi → 503 değil; eksik zaten günlüğe yazıldı).
+      const covered = new Set(active.rows.map((row) => row.url_path));
+      const rest = (await readIndexableInventory()).items.filter((item) => !covered.has(item.url_path));
+      if (type === "images") return { nodes: [...nodes, ...(await imageNodes(rest)).nodes], failed: false };
+      return { nodes: [...nodes, ...rest.filter((item) => matchesType(item, "products")).map(urlNode)], failed: false };
     }
   }
   const { items: inventory, failed } = await readIndexableInventory();
