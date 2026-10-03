@@ -69,3 +69,13 @@ test("teslimat bölgeleri: taşınmış ilçeye href eklenir; harita boşsa gird
   assert.equal(out[0].districts[0].href, "/maltepe-cicek-siparisi");
   assert.equal(out[0].districts[1].href, undefined);
 });
+
+// ---- yönetilen 301 haritası: geçici hata uzun süre sabitlenmez (KAYNAK deseni testi; modül ağ okur) ----
+import { readFileSync } from "node:fs";
+test("managed-redirects: hata sonucu kısa TTL ile saklanır, başarılı yanıtta TTL_MS aynen", () => {
+  const src = readFileSync(new URL("./managed-redirects.ts", import.meta.url), "utf8");
+  assert.match(src, /const ERROR_TTL_MS = 10_000;/);
+  assert.match(src, /expiresAt: Date\.now\(\) \+ \(lastFetchFailed \? ERROR_TTL_MS : TTL_MS\)/);
+  assert.match(src, /if \(!res\.ok\) \{ lastFetchFailed = true;/);
+  assert.match(src, /lastFetchFailed = false;/);
+});
