@@ -11,6 +11,7 @@ import {
   queryValue, locationTotalPages, parseLocationPage, parseLocationCategory, sliceLocationPage,
   locationPageHref, compactPageList, locationPagination, resolveLocationCatalog,
   isLocationContinuationPage, locationPageLabel,
+  parseListingPageParam, listingCategoryParam, locationCanonicalPath, locationPageTitle, isLocationListingNotFound,
 } from "./global/locationPaging.ts";
 
 const oku = (yol: string) => readFileSync(new URL(yol, import.meta.url), "utf8");
@@ -274,6 +275,114 @@ test("etiketler: 13 dilde Önceki / Sonraki / Sayfa {n} / nav adı dolu ve yerel
   assert.equal(locationPageLabel("zh", 2), "第 2 页");
 });
 
+// ── SEO yayın zinciri: sayfalı listenin canonical / başlık / 404 kuralları ─────────────────────
+
+test("SEO ?page (katı): yok → 1; pozitif tam sayı → kendisi; 0 / negatif / ondalık / metin / '02' / boş → null (404)", () => {
+  assert.equal(parseListingPageParam(undefined), 1);
+  assert.equal(parseListingPageParam("1"), 1);
+  assert.equal(parseListingPageParam("2"), 2);
+  assert.equal(parseListingPageParam("999999"), 999999);
+  assert.equal(parseListingPageParam(["3", "5"]), 3, "yinelenen parametre → ilk öğe (queryValue kuralı)");
+  for (const bad of ["0", "-1", "1.5", "abc", "02", "", " 2", "+2", "2abc", "1e1", "0x2", "1000000", [], ["x"], 2, null]) {
+    assert.equal(parseListingPageParam(bad), null, JSON.stringify(bad));
+  }
+});
+
+test("SEO ?category: yalnız slug biçimli değer canonical'a girebilir", () => {
+  assert.equal(listingCategoryParam("roses"), "roses");
+  assert.equal(listingCategoryParam("potted-plants"), "potted-plants");
+  assert.equal(listingCategoryParam(["orchids", "x"]), "orchids");
+  for (const bad of [undefined, "", "Roses", "a b", "a/b", "a&page=9", "-a", "a-", "a--b", "çiçek", 5]) {
+    assert.equal(listingCategoryParam(bad), null, JSON.stringify(bad));
+  }
+});
+
+test("SEO canonical: sayfa 1 sorgusuz yol (bugünkü hâl, ?category tek başına girmez); N ≥ 2 → mevcut parametreler, sıra category → page", () => {
+  assert.equal(locationCanonicalPath(BASE, undefined), BASE);
+  assert.equal(locationCanonicalPath(BASE, {}), BASE);
+  assert.equal(locationCanonicalPath(BASE, { page: "1" }), BASE);
+  assert.equal(locationCanonicalPath(BASE, { category: "roses" }), BASE, "1. sayfa DEĞİŞMEDİ");
+  assert.equal(locationCanonicalPath(BASE, { category: "roses", page: "1" }), BASE);
+  assert.equal(locationCanonicalPath(BASE, { page: "3" }), `${BASE}?page=3`);
+  assert.equal(locationCanonicalPath(BASE, { category: "roses", page: "2" }), `${BASE}?category=roses&page=2`);
+  // İstekteki sıra ve fazlalık parametreler canonical'ı değiştirmez.
+  assert.equal(locationCanonicalPath(BASE, { page: "2", utm_source: "x", category: "roses", sort: "price" }), `${BASE}?category=roses&page=2`);
+  assert.equal(locationCanonicalPath(BASE, { category: "", page: "2" }), `${BASE}?page=2`, "boş category = Tümü");
+  assert.equal(locationCanonicalPath(BASE, { category: "Kötü Değer", page: "2" }), `${BASE}?page=2`, "biçim dışı değer canonical'a girmez");
+  assert.equal(locationCanonicalPath(BASE, { page: "abc" }), BASE, "geçersiz sayfa (zaten 404)");
+  // Sayfalama linkleriyle AYNI biçim: GlobalPagination'ın bastığı href = o sayfanın canonical yolu.
+  assert.equal(locationCanonicalPath(BASE, { category: "roses", page: "4" }), locationPageHref(BASE, { category: "roses", page: 4 }));
+  assert.equal(locationCanonicalPath(BASE, { page: "4" }), locationPageHref(BASE, { page: 4 }));
+});
+
+test("SEO başlık: sayfa 1 aynen; N ≥ 2 → o dilde sayfa eki; başlık yoksa ek de yok", () => {
+  assert.equal(locationPageTitle("en", "Flower delivery in Kadıköy", 1), "Flower delivery in Kadıköy");
+  assert.equal(locationPageTitle("en", "Flower delivery in Kadıköy", 2), "Flower delivery in Kadıköy – Page 2");
+  assert.equal(locationPageTitle("de", "Blumen nach Kadıköy", 3), "Blumen nach Kadıköy – Seite 3");
+  assert.equal(locationPageTitle("zh", "鲜花配送", 2), "鲜花配送 – 第 2 页");
+  assert.equal(locationPageTitle("en", undefined, 2), undefined);
+  for (const l of GLOBAL_LOCALES) {
+    const t = locationPageTitle(l, "T", 5)!;
+    assert.ok(t.startsWith("T – ") && t.includes("5") && !t.includes("{n}"), l);
+    assert.notEqual(t, locationPageTitle(l, "T", 6), `${l}: her sayfanın başlığı ayrışır`);
+  }
+});
+
+test("SEO 404: geçersiz ?page her zaman; sayfa ≥ 2'de son sayfanın ötesi / çözülmeyen ?category / kapalı ürün alanı; 1. sayfa hoşgörülü", () => {
+  const view = { category: null as string | null, totalPages: 6 };
+  // Pozitif tam sayı değil → katalog olsa da olmasa da 404.
+  for (const bad of ["0", "-1", "abc", "1.5", "02", ""]) {
+    assert.equal(isLocationListingNotFound({ page: bad }, view, true), true, bad);
+    assert.equal(isLocationListingNotFound({ page: bad }, null, true), true, `${bad} (katalog yok)`);
+  }
+  // 1. sayfa: bugünkü hoşgörülü davranış AYNEN (bilinmeyen kategori "Tümü" sayılır, 404 yok).
+  assert.equal(isLocationListingNotFound(undefined, view, true), false);
+  assert.equal(isLocationListingNotFound({}, view, true), false);
+  assert.equal(isLocationListingNotFound({ page: "1" }, view, true), false);
+  assert.equal(isLocationListingNotFound({ category: "bilinmeyen" }, view, true), false);
+  assert.equal(isLocationListingNotFound({ category: "bilinmeyen", page: "1" }, view, false), false);
+  // Sayfa ≥ 2: aralık içinde 200, son sayfanın ötesi 404.
+  assert.equal(isLocationListingNotFound({ page: "2" }, view, true), false);
+  assert.equal(isLocationListingNotFound({ page: "6" }, view, true), false);
+  assert.equal(isLocationListingNotFound({ page: "7" }, view, true), true);
+  assert.equal(isLocationListingNotFound({ page: "2" }, { category: null, totalPages: 1 }, true), true, "tek sayfalık listede ?page=2");
+  // Sayfa ≥ 2 + ?category: görünümün çözdüğü kategoriyle aynı olmalı.
+  const roses = { category: "roses", totalPages: 2 };
+  assert.equal(isLocationListingNotFound({ category: "roses", page: "2" }, roses, true), false);
+  assert.equal(isLocationListingNotFound({ category: "roses", page: "3" }, roses, true), true);
+  assert.equal(isLocationListingNotFound({ category: "bilinmeyen", page: "2" }, view, true), true, "çözülmeyen kategori + sayfa ≥ 2");
+  assert.equal(isLocationListingNotFound({ category: "", page: "2" }, view, true), false, "boş category = Tümü");
+  // Niyet sayfası: ham sorguda category yok, görünüm varsayılan kategoriyi taşır → 404 değil.
+  assert.equal(isLocationListingNotFound({ page: "2" }, { category: "orchids", totalPages: 3 }, true), false);
+  // Admin ürün alanını kapattıysa sayfalı liste yoktur.
+  assert.equal(isLocationListingNotFound({ page: "2" }, view, false), true);
+  // FAIL-OPEN: katalog okunamadı (görünüm yok) → karar verilmez; API kesintisi geçerli ?page=N'i 404'e çevirmez.
+  assert.equal(isLocationListingNotFound({ page: "2" }, null, true), false);
+  assert.equal(isLocationListingNotFound({ category: "roses", page: "9" }, undefined, false), false);
+});
+
+test("SEO 404 ↔ görünüm tutarlılığı: 200 dönen her sayfa ≥ 2 isteğinde görünümün sayfası istenen sayfadır ve canonical o linkin kendisidir", () => {
+  const ids = range(1, 60);
+  const plan = { allOrder: ids, categories: [{ slug: "roses", name: "Roses", ids: ids.slice(0, 30) }, { slug: "lilies", name: "Lilies", ids: [] }] };
+  for (const sp of [{ page: "2" }, { page: "3" }, { page: "4" }, { category: "roses", page: "2" }, { category: "roses", page: "3" }, { category: "lilies", page: "2" }, { category: "yok", page: "2" }]) {
+    const view = resolveLocationCatalog(plan, sp, BASE, "All");
+    const notFound = isLocationListingNotFound(sp, view, true);
+    if (notFound) continue;
+    assert.equal(view.page, Number(sp.page), JSON.stringify(sp));
+    const link = view.pagination?.items.find((it) => it.kind === "page" && it.current);
+    assert.ok(link && link.kind === "page");
+    assert.equal(locationCanonicalPath(BASE, sp), link.href, JSON.stringify(sp));
+  }
+  // Beklenen 404'ler: Tümü 3 sayfa (60/24), roses 2 sayfa (30/24), ürünsüz ve bilinmeyen kategori.
+  const nf = (sp: Record<string, string>) => isLocationListingNotFound(sp, resolveLocationCatalog(plan, sp, BASE, "All"), true);
+  assert.equal(nf({ page: "3" }), false);
+  assert.equal(nf({ page: "4" }), true);
+  assert.equal(nf({ category: "roses", page: "2" }), false);
+  assert.equal(nf({ category: "roses", page: "3" }), true);
+  assert.equal(nf({ category: "lilies", page: "2" }), true);
+  assert.equal(nf({ category: "yok", page: "2" }), true);
+});
+
 // ── Kaynak korumaları (JSX çalışma zamanı Next + DB ister) ────────────────────
 
 const page = oku("./global/page.tsx");
@@ -328,15 +437,28 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.match(body, /plan=\{plan\} view=\{view\} \/>\s*: <CatalogCommerceSection locale=\{locale\} catalog=\{catalog\} plan=\{plan\} view=\{view\} note=\{far \? FAR\[locale\]\.catalogNote\(neutralPlace, farThreshold\) : neutral \? REACH\[locale\]\.catalogNote\(neutralPlace\) : undefined\} \/>/);
   assert.ok(page.includes("tiles = fallbackCategoryCards(catalog.categories)"));
   assert.ok(browser.includes("idx={Math.min(idx, 7)}") && !/<ProductCard[^>]*idx=\{idx\}/.test(page));
-  // Metadata / canonical sorguyu okumaz (canonical sorgusuz yol DEĞİŞMEZ)
+  // SEO yayın zinciri: metadata sorguyu YALNIZ saf yardımcılarla okur (elle sorgu dizesi kurulmaz). 1. sayfada
+  // canonical sorgusuz yol DEĞİŞMEZ; sayfa ≥ 2 kendi canonical'ını ve başlık ekini taşır, hreflang kümesi basmaz.
   const meta = page.slice(page.indexOf("export async function localeMetadata"), page.indexOf("// ---- Ortak parçalar"));
-  assert.ok(!/searchParams|[?&]page=|category=/.test(meta));
-  assert.ok(meta.includes("const self = absoluteUrl(`/${locale}/${row.page_key}`);"));
+  assert.ok(!/[?&]page=|category=/.test(meta));
+  assert.ok(meta.includes("const listingPage = parseListingPageParam(listing?.page);"));
+  assert.ok(meta.includes("if (listingPage === null) return { robots: NOINDEX };"));
+  assert.ok(meta.includes("const self = absoluteUrl(locationCanonicalPath(`/${locale}/${row.page_key}`, listing));"));
+  assert.ok(meta.includes("const languages = listingPage > 1 ? null : pageLanguages(locale, row);"));
+  assert.ok(meta.includes("const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, listingPage);"));
+  const pageMeta = meta.slice(meta.indexOf('if (parsed.kind === "page")'), meta.indexOf('if (parsed.kind === "category")'));
+  assert.equal(meta.split(/\blisting\b/).length - 1, pageMeta.split(/\blisting\b/).length - 1 + 1, "sorgu yalnız lokasyon / niyet dalında okunur (imza + o dal)");
+  // 404: son sayfanın ötesi / çözülmeyen ?category / kapalı ürün alanı — görünümün kurulduğu yerde, HAM sorguyla.
+  assert.ok(body.includes('if (isLocationListingNotFound(rawSearchParams, view, order.includes("commerce"))) notFound();'));
+  assert.ok(body.indexOf("isLocationListingNotFound(") < body.indexOf("const continuation = isLocationContinuationPage(view, order);"));
   // Ek istek yok: sayfa dalı yine aynı 4 çağrı
   const localePage = page.slice(page.indexOf("export async function LocalePage"));
   const pageBranch = localePage.slice(localePage.indexOf('if (parsed.kind === "page")'), localePage.indexOf('if (parsed.kind === "category")'));
   assert.deepEqual([...new Set(pageBranch.match(/\b(fetch\w+|v80Contact)\(/g) ?? [])].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
   assert.ok(pageBranch.includes("searchParams={searchParams}"));
+  // 404: pozitif tam sayı olmayan ?page — okumalardan ÖNCE (istek atılmaz).
+  assert.ok(pageBranch.includes("if (parseListingPageParam(searchParams?.page) === null) notFound();"));
+  assert.ok(pageBranch.indexOf("parseListingPageParam(searchParams?.page)") < pageBranch.indexOf("await Promise.all(["));
 });
 
 test("KAYNAK: GlobalPagination — <nav aria-label>, gerçek href, aria-current=page, tek sayfada yok, tek satır (sarma yok), RTL ok", () => {
@@ -353,11 +475,13 @@ test("KAYNAK: GlobalPagination — <nav aria-label>, gerçek href, aria-current=
   assert.ok(!GIZLEME.test(pager.replace(/aria-hidden="true"/g, "")), "sayfa linkleri gizlenmez");
 });
 
-test("KAYNAK: 13 locale rotası searchParams'ı LocalePage'e geçirir; generateMetadata ve force-dynamic DEĞİŞMEZ", () => {
+test("KAYNAK: 13 locale rotası searchParams'ı LocalePage'e VE localeMetadata'ya geçirir; force-dynamic DEĞİŞMEZ", () => {
   for (const l of GLOBAL_LOCALES) {
     const src = oku(`../app/${l}/[[...path]]/page.tsx`);
     assert.match(src, /^export const dynamic = "force-dynamic";$/m, l);
-    assert.ok(src.includes(`export async function generateMetadata({ params }: Props): Promise<Metadata> {\n  return localeMetadata("${l}", params.path ?? []);\n}`), `${l}: generateMetadata aynen`);
+    // SEO yayın zinciri: sayfa ≥ 2 canonical'ı / başlığı için sorgu metadata'ya da geçer (1. sayfa aynen).
+    assert.ok(src.includes("export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {"), `${l}: generateMetadata sorguyu alır`);
+    assert.ok(src.includes(`  return localeMetadata("${l}", params.path ?? [], searchParams);\n}`), `${l}: sorgu localeMetadata'ya geçer`);
     assert.ok(src.includes("export default function Page({ params, searchParams }: Props) {"), l);
     assert.ok(src.includes(`<LocalePage locale="${l}" path={params.path ?? []} searchParams={searchParams} />`), l);
     assert.match(src, /searchParams\?: \{ \[key: string\]: string \| string\[\] \| undefined \}/, l);

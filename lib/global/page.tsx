@@ -78,6 +78,7 @@ import {
 } from "./locationSections";
 import {
   resolveLocationCatalog, isLocationContinuationPage,
+  parseListingPageParam, locationCanonicalPath, locationPageTitle, isLocationListingNotFound,
   type LocationCatalogView, type LocationSearchParams,
 } from "./locationPaging";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
@@ -268,7 +269,13 @@ function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, st
   return Object.keys(languages).length > 1 ? withXDefault(languages) : null;
 }
 
-export async function localeMetadata(locale: GlobalLocale, path: string[]): Promise<Metadata> {
+/**
+ * EK (SEO YAYIN ZİNCİRİ):
+ *  • listing: lokasyon / niyet sayfasının isteğe bağlı sorgusu (?category, ?page). Sayfa 1 bugünkü
+ *    hâliyle AYNEN; sayfa ≥ 2 kendi canonical'ını ve başlık ekini alır, hreflang kümesi basmaz
+ *    (lib/global/locationPaging.ts — sorgu yalnız oradaki saf yardımcılarla okunur).
+ */
+export async function localeMetadata(locale: GlobalLocale, path: string[], listing?: LocationSearchParams): Promise<Metadata> {
   const parsed = parseLocalePath(locale, path);
 
   if (parsed.kind === "home") {
@@ -287,12 +294,16 @@ export async function localeMetadata(locale: GlobalLocale, path: string[]): Prom
   }
 
   if (parsed.kind === "page") {
+    // Pozitif tam sayı olmayan sayfa numarası: sayfa 404 verir (LocalePage) → metadata da index dışı.
+    const listingPage = parseListingPageParam(listing?.page);
+    if (listingPage === null) return { robots: NOINDEX };
     const row = await fetchGlobalPage(locale, parsed.key);
     if (!row) return { robots: NOINDEX };
-    const self = absoluteUrl(`/${locale}/${row.page_key}`);
-    const languages = pageLanguages(locale, row);
+    const self = absoluteUrl(locationCanonicalPath(`/${locale}/${row.page_key}`, listing));
+    const languages = listingPage > 1 ? null : pageLanguages(locale, row);
+    const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, listingPage);
     return {
-      title: row.seo_title ?? row.h1 ?? undefined,
+      title,
       description: row.meta_description ?? undefined,
       robots: row.indexable ? undefined : NOINDEX,
       alternates: languages ? { canonical: self, languages } : { canonical: self },
@@ -376,7 +387,8 @@ const S = {
  *
  * SAYFALAMA (lib/global/locationPaging.ts, TR ?page standardı): ?category=<slug> + ?page=<N>, sayfa başına 24.
  * Önce son sıralı liste, sonra dilim; SSR yalnız dilimi basar. ?page ≥ 2 → hero (kırıntı + H1) + ürün alanı.
- * Canonical/hreflang/robots sorgusuz yoldan (localeMetadata) — DEĞİŞMEZ.
+ * 1. sayfada canonical/hreflang/robots sorgusuz yoldan (localeMetadata) — DEĞİŞMEZ. EK (SEO yayın zinciri):
+ * ?page ≥ 2 kendi canonical'ını (yol + mevcut ?category + ?page) ve başlık ekini taşır, hreflang kümesi basmaz.
  */
 
 /**
@@ -646,7 +658,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog; source?: CatalogDecision;
   /** Bölüm sırası/görünürlüğü (catalog yanıtı location_sections → parseLocationSections); yoksa varsayılan. */
   sections?: readonly Readonly<LocationSection>[];
-  /** İstek sorgusu: ?category=<slug> + ?page=<N> (lokasyon kataloğu sayfalaması). Canonical sorgusuz yol kalır. */
+  /** İstek sorgusu: ?category=<slug> + ?page=<N> (lokasyon kataloğu sayfalaması). 1. sayfanın canonical'ı sorgusuz yol; sayfa ≥ 2 → localeMetadata. */
   searchParams?: LocationSearchParams;
   /** RELEASE 3: niyet sayfası anahtarı (kırıntı ana sayfa → sayfa; FAQPage; WhatsApp ön-metni = H1). */
   intent?: IntentPageKey | null;
@@ -743,7 +755,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   // TEK plan: ürün alanı (çip + ızgara), kategori kartları ve duygu hedefleri AYNI sonucu paylaşır.
   const plan: LocationCatalogPlan | null = source?.mode === "catalog" ? planLocationPage(source.catalog) : null;
   // Bu isteğin katalog görünümü: filtre (?category) + 24'lük sayfa (?page). SON sıralı listeden (Tümü = allOrder,
-  // kategori = Admin sırası) dilim; linkler canonical sorgusuz yoldan. Geçersiz değer → 1. sayfa / Tümü (yönlendirme yok).
+  // kategori = Admin sırası) dilim; linkler canonical sorgusuz yoldan. 1. sayfada geçersiz ?category → Tümü (yönlendirme yok);
+  // geçersiz ?page ve sayfa ≥ 2'de çözülmeyen liste aşağıda 404 verir.
   const view: LocationCatalogView | null = plan
     ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all)
     : null;
@@ -752,6 +765,10 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   // Kargo destinasyonunda emotion + cta listeden düşer (aynı gün / İstanbul vaadi yok).
   // Nötr modda da kapanış CTA'sı ("bugün gönder") basılmaz — vaat çağrışımı; duygu/hikâye bölümleri (vaat taşımaz) kalır.
   const order = renderableLocationSections(sections ?? DEFAULT_LOCATION_SECTIONS, { cargo, neutral: neutral || far });
+  // EK (SEO YAYIN ZİNCİRİ): sayfa ≥ 2 iken son sayfanın ötesi / çözülmeyen ?category / kapalı ürün alanı → 404
+  // (1. sayfanın kopyası 200 ile sunulmaz). Katalog okunamadıysa (view yok) karar verilmez → API kesintisi
+  // geçerli bir ?page=N adresini 404'e çevirmez. Kural: lib/global/locationPaging.ts isLocationListingNotFound.
+  if (isLocationListingNotFound(rawSearchParams, view, order.includes("commerce"))) notFound();
   // Sayfa ≥ 2: hafif devam sayfası — hero (kırıntı + H1, giriş YOK) + YALNIZ ürün alanı; SEO içeriği 1. sayfada.
   const continuation = isLocationContinuationPage(view, order);
   const t = mergedTexts(locale, null);
@@ -850,7 +867,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
 
 export async function LocalePage({ locale, path, searchParams }: {
   locale: GlobalLocale; path: string[];
-  /** Rota sorgusu (yalnız lokasyon sayfası kataloğu kullanır: ?category, ?page). Metadata/canonical kullanmaz. */
+  /** Rota sorgusu (yalnız lokasyon sayfası kataloğu kullanır: ?category, ?page). Sayfa ≥ 2 canonical'ı aynı sorgudan: localeMetadata. */
   searchParams?: LocationSearchParams;
 }) {
   const parsed = parseLocalePath(locale, path);
@@ -881,6 +898,9 @@ export async function LocalePage({ locale, path, searchParams }: {
     // RELEASE 3: niyet sayfası (hotel-delivery / hospital-delivery / delivery-without-address) — İstanbul
     // şehir kataloğuyla (aynı gün destinasyonu) ürün alanı; varsayılan kategori süzgeci INTENT_PAGE_CATEGORY.
     const intent = isIntentPageKey(parsed.key) ? parsed.key : null;
+    // EK (SEO YAYIN ZİNCİRİ): ?page pozitif tam sayı değilse (0, -1, abc, 1.5 …) 1. sayfanın kopyası
+    // 200 ile sunulmaz → 404. Son sayfanın ötesi kontrolü katalog görünümünün kurulduğu yerde: GlobalPageBody.
+    if (parseListingPageParam(searchParams?.page) === null) notFound();
     const [row, catalog, contact, catalogResp] = await Promise.all([
       fetchGlobalPage(locale, parsed.key),
       fetchLocaleCatalog(locale),

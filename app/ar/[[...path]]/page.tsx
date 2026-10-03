@@ -7,11 +7,12 @@ export const dynamic = "force-dynamic";
 
 type Props = { params: { path?: string[] }; searchParams?: { [key: string]: string | string[] | undefined } };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return localeMetadata("ar", params.path ?? []);
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  // EK (SEO YAYIN ZİNCİRİ): lokasyon / niyet listesinde sayfa ≥ 2 kendi canonical'ını ve başlığını taşır; 1. sayfa aynen.
+  return localeMetadata("ar", params.path ?? [], searchParams);
 }
 
 export default function Page({ params, searchParams }: Props) {
-  // ?category / ?page yalnız lokasyon kataloğu sayfalaması içindir; metadata (canonical) sorgusuz kalır.
+  // ?category / ?page yalnız lokasyon kataloğu sayfalaması içindir; 1. sayfanın canonical'ı sorgusuz kalır.
   return <LocalePage locale="ar" path={params.path ?? []} searchParams={searchParams} />;
 }
