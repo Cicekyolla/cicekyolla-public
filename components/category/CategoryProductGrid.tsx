@@ -116,7 +116,12 @@ export function CategoryProductGrid({
     return () => io.disconnect();
   }, [loadMore, done]);
 
-  const shownTotal = useMemo(() => Math.max(total, items.length), [total, items.length]);
+  // EK: `?page=N` (N ≥ 2) ile açılan listede yalnız N. sayfadan sonrası yüklenir → "Tüm ürünler
+  // yüklendi" sayısı kategori toplamı değil EKRANDAKİ ürün sayısıdır. 1. sayfada bugünkü hâl.
+  const shownTotal = useMemo(
+    () => (startPage > 1 ? items.length : Math.max(total, items.length)),
+    [startPage, total, items.length],
+  );
 
   return (
     <>

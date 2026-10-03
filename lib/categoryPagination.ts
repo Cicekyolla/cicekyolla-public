@@ -1,5 +1,6 @@
 // ============================================================================
-// lib/categoryPagination.ts — ADDITIVE (10 Eyl 2026). Yaprak modül, bağımlılık yok.
+// lib/categoryPagination.ts — ADDITIVE (10 Eyl 2026). Saf modül (ağ / Next yok);
+// tek ithal: locale sayfalamasıyla ORTAK kompakt sayfa listesi (compactPageList).
 //
 // NEDEN: Kategori grid'i sonsuz kaydırma ile yükleniyor (CategoryProductGrid).
 // SSR HTML'de yalnız ilk 50 ürün bağlantısı vardı; `?page=N` sayfaları çalışıyor
@@ -12,7 +13,13 @@
 // "Önceki / Sonraki sayfa" bağlantılarının href'ini üretir. Mevcut sorgu
 // parametreleri (sort, type, same_day …) korunur; sayfa 1 için `page` yazılmaz
 // ki kategori kökü ile `?page=1` ikiz URL olmasın.
+//
+// EK (taranma derinliği): yalnız "Önceki / Sonraki" ile 20 sayfalık bir kategoride
+// son sayfa ilk sayfadan 19 adım uzaktaydı. Model artık NUMARALI kompakt listeyi de
+// taşır (1 … p-1 p p+1 … son; locale sayfalamasıyla aynı kural) → her sayfa en çok
+// birkaç adımda.
 // ============================================================================
+import { compactPageList } from "./global/locationPaging.ts";
 
 export type CategorySearchParams = { [k: string]: string | string[] | undefined } | undefined;
 
@@ -21,11 +28,18 @@ export interface CategoryPageLink {
   href: string;
 }
 
+/** Numaralı liste öğesi: gerçek sayfa bağlantısı ya da "…" boşluğu. */
+export type CategoryPageItem =
+  | { kind: "page"; page: number; href: string; current: boolean }
+  | { kind: "gap"; key: string };
+
 export interface CategoryPagination {
   current: number;
   total: number;
   prev: CategoryPageLink | null;
   next: CategoryPageLink | null;
+  /** EK: kompakt numaralı liste (tek sayfada [1]); bağlantılar prev/next ile aynı href kuralından. */
+  pages: CategoryPageItem[];
 }
 
 /** `?page=N` bağlantısı: mevcut parametreler aynen, `page` en sonda; N ≤ 1 → kök yol. */
@@ -51,11 +65,16 @@ export function buildCategoryPagination(
   const total = Math.max(1, Math.trunc(Number(totalPages)) || 1);
   const current = Math.min(total, Math.max(1, Math.trunc(Number(currentPage)) || 1));
   const link = (page: number): CategoryPageLink => ({ page, href: categoryPageHref(path, searchParams, page) });
+  let gaps = 0;
+  const pages: CategoryPageItem[] = compactPageList(current, total).map((n) =>
+    n === "gap" ? { kind: "gap", key: `gap-${++gaps}` } : { kind: "page", ...link(n), current: n === current },
+  );
   return {
     current,
     total,
     prev: current > 1 ? link(current - 1) : null,
     next: current < total ? link(current + 1) : null,
+    pages,
   };
 }
 
@@ -73,6 +92,11 @@ export function buildCategoryPagination(
 //    canonical'a GİRMEZ), başlık " – Sayfa N" ekiyle.
 //  • Pozitif tam sayı olmayan ya da son sayfanın ötesindeki `page` → 404
 //    (boş/kopya listeyi 200 ile sunmak yerine).
+//  • EK: sayfa N ≥ 2 kendi canonical'ını ve başlık ekini YALNIZ o sayfanın ana seride
+//    (sıralamasız / filtresiz liste) gerçekten VAR olduğu biliniyorsa alır. Liste durumu
+//    bilinmiyorsa (okuma başarısız, ağaç okunamadı) yanıt 200 kalır ama çıplak yola
+//    canonical verir ve başlık eki almaz (önceki hâl) → kopya içerik kendi adresiyle
+//    index'e önerilmez. Kategori CANLI ağaçta yoksa (liste yok) sayfa N ≥ 2 → 404.
 // ============================================================================
 
 /**
@@ -91,24 +115,66 @@ export function categoryCanonicalPath(path: string, page: number): string {
   return categoryPageHref(path, undefined, page);
 }
 
-/** Başlık: sayfa 1 aynen; N ≥ 2 → " – Sayfa N" eki (her sayfanın başlığı ayrışır). */
+/** Başlık: sayfa 1 aynen; N ≥ 2 → " – Sayfa N" eki (her sayfanın başlığı ayrışır). Başlık boşsa ek de yok. */
 export function categoryPageTitle(title: string, page: number): string {
   const n = Math.trunc(Number(page)) || 1;
-  return n > 1 ? `${title} – Sayfa ${n}` : title;
+  return title && n > 1 ? `${title} – Sayfa ${n}` : title;
+}
+
+/**
+ * EK — istenen sayfanın liste durumu (tek karar noktası; 404 ve canonical bundan türer):
+ *   "ok"      → API yanıt verdi ve sayfa serinin içinde.
+ *   "beyond"  → API yanıt verdi ve sayfa son sayfanın ÖTESİNDE → 404.
+ *   "unknown" → yanıtın GERÇEK olduğu bilinmiyor (liste yok / okuma başarısız) → karar
+ *               verilmez: 404 YOK, sayfa bugünkü gibi çizilir; canonical çıplak yola döner.
+ * Yanıt GERÇEK sayılır: (a) `total` > 0 ise — okuma başarısız olduğunda dönen yedek sayfa
+ * total 0 taşır, gerçek ürün sayısı taşıyamaz; (b) total 0 iken yalnız API istenen sayfa
+ * numarasını `pagination.page` ile yankıladıysa (yedek sayfa page=1 taşır).
+ * Böylece karar API'nin sayfa numarasını yankılamasına BAĞLI DEĞİLDİR: numarayı kırpan ya da
+ * hiç döndürmeyen bir API'de de son sayfanın ötesi (total > 0 iken) 404 verir.
+ */
+export type CategoryListingState = "ok" | "beyond" | "unknown";
+
+export function categoryListingState(
+  requestedPage: number,
+  pagination: { page?: unknown; page_size?: unknown; total?: unknown; total_pages?: unknown } | null | undefined,
+): CategoryListingState {
+  if (!(requestedPage > 1)) return "ok";
+  if (!pagination) return "unknown";
+  const total = Number(pagination.total);
+  if (!(total > 0) && Number(pagination.page) !== requestedPage) return "unknown";
+  let totalPages = Math.trunc(Number(pagination.total_pages));
+  if (!(totalPages >= 1)) {
+    // total_pages yok / 0: boş listede tek sayfa; dolu listede total ÷ page_size (o da yoksa karar yok).
+    const size = Number(pagination.page_size);
+    if (total > 0 && !(size > 0)) return "unknown";
+    totalPages = total > 0 ? Math.ceil(total / size) : 1;
+  }
+  return requestedPage > totalPages ? "beyond" : "ok";
 }
 
 /**
  * İstenen sayfa son sayfanın ÖTESİNDE mi? Yalnız API o sayfa için GERÇEKTEN yanıt
- * verdiyse true döner: ürün listesi ucu istenen sayfa numarasını `pagination.page`
- * ile yankılar; okuma başarısız olduğunda dönen yedek sayfa ise page=1 taşır.
- * Böylece geçici bir API kesintisi geçerli bir ?page=N adresini 404'e çevirmez
- * (o durumda sayfa bugünkü gibi çizilir).
+ * verdiyse true döner (categoryListingState === "beyond"); okuma başarısız olduğunda
+ * dönen yedek sayfa (page=1, total 0) "bilinmiyor"dur. Böylece geçici bir API kesintisi
+ * geçerli bir ?page=N adresini 404'e çevirmez (o durumda sayfa bugünkü gibi çizilir).
  */
 export function isCategoryPageBeyondLast(
   requestedPage: number,
-  pagination: { page?: unknown; total_pages?: unknown } | null | undefined,
+  pagination: { page?: unknown; page_size?: unknown; total?: unknown; total_pages?: unknown } | null | undefined,
 ): boolean {
-  if (!(requestedPage > 1) || !pagination) return false;
-  if (Number(pagination.page) !== requestedPage) return false;
-  return requestedPage > Math.max(1, Math.trunc(Number(pagination.total_pages)) || 1);
+  return categoryListingState(requestedPage, pagination) === "beyond";
+}
+
+/**
+ * EK — sayfa ≥ 2 iken kategorinin LİSTESİ YOK mu (→ 404)? Kategori CANLI ağaçta
+ * çözülemiyorsa (yalnız SEO kaydından çizilen sayfa) ürün listesi de sayfalama da yoktur:
+ * her ?page=N, 1. sayfanın kopyası olurdu. Ağaç okunamadıysa (statik yedek) karar
+ * verilmez → API kesintisi geçerli bir ?page=N adresini 404'e çevirmez.
+ */
+export function isCategoryPageWithoutListing(
+  requestedPage: number,
+  input: { liveTree: boolean; categoryId: number | null | undefined },
+): boolean {
+  return requestedPage > 1 && input.liveTree && !input.categoryId;
 }

@@ -16,7 +16,8 @@ import { CargoCategoryExperience } from "@/components/category/CargoCategoryExpe
 import { absoluteUrl } from "@/lib/site-config";
 import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
-import { buildCategoryPagination, isCategoryPageBeyondLast } from "@/lib/categoryPagination";
+import { buildCategoryPagination, isCategoryPageBeyondLast, isCategoryPageWithoutListing } from "@/lib/categoryPagination";
+import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -199,6 +200,9 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // EK (SEO YAYIN ZİNCİRİ): son sayfanın ötesindeki ?page=N boş/kopya bir listeyi
   // 200 ile sunmaz → 404. Yalnız API o sayfa için gerçekten yanıt verdiyse karar
   // verilir (lib/categoryPagination.ts); API kesintisinde sayfa bugünkü gibi çizilir.
+  // EK: kategori CANLI ağaçta yoksa (yalnız SEO kaydından çizilen sayfa) liste de yoktur →
+  // sayfa ≥ 2, 1. sayfanın kopyası olarak 200 dönmez. Ağaç statik yedekse karar verilmez.
+  if (isCategoryPageWithoutListing(pageNum, { liveTree: !!tree && tree !== CATEGORY_TREE_FALLBACK, categoryId })) notFound();
   if (isCategoryPageBeyondLast(pageNum, productPage?.pagination)) notFound();
   const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
@@ -220,6 +224,38 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
     pageNum,
     totalPages,
   );
+  // EK (crawlable sayfalama): Googlebot sonsuz kaydırmayı tetiklemez; derin ürünlerin tarama
+  // yolu bu gerçek bağlantılardır. "Önceki / Sonraki" + NUMARALI kompakt liste
+  // (1 … p-1 p p+1 … son) → 20 sayfalık kategoride son sayfa 19 değil 1 adım uzakta.
+  // Tek sayfalık kategoride hiç basılmaz (bugünkü çıktı birebir). Liste, ürün ızgarasından
+  // BAĞIMSIZ basılır (o sayfanın ürünlerinin hepsi görselsiz olsa da tarama yolu kopmaz) ve
+  // "Sayfa X / Y" yazısı taşımaz: sonsuz kaydırma tüm ürünleri yükledikten sonra da ziyaretçi
+  // için tarafsız bir sayfa dizini olarak okunur.
+  const pageNav = pagination.total > 1 ? (
+    <nav aria-label="Ürün sayfaları" className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] font-semibold text-[#7C3AED]">
+      {pagination.prev ? (
+        <Link href={pagination.prev.href} rel="prev" prefetch={false} className="hover:underline">← Önceki sayfa</Link>
+      ) : null}
+      <ol className="flex items-center gap-3">
+        {pagination.pages.map((it) =>
+          it.kind === "gap" ? (
+            <li key={it.key} aria-hidden="true" className="font-normal text-[#9CA3AF]">…</li>
+          ) : (
+            <li key={it.page}>
+              {it.current ? (
+                <span aria-current="page" className="text-[#111827]">{it.page}</span>
+              ) : (
+                <Link href={it.href} prefetch={false} aria-label={`Sayfa ${it.page}`} className="hover:underline">{it.page}</Link>
+              )}
+            </li>
+          ),
+        )}
+      </ol>
+      {pagination.next ? (
+        <Link href={pagination.next.href} rel="next" prefetch={false} className="hover:underline">Sonraki sayfa →</Link>
+      ) : null}
+    </nav>
+  ) : null;
 
   // Türkiye Geneli Kargo vitrini: yalnız canlı katalog. Kategoriye bağlı kuru
   // çiçekler + kargoya uygun plant/artificial/gift tipleri birleştirilir.
@@ -345,21 +381,9 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               contextTag={contextTag}
               startPage={pagination.current}
             />
-            {/* EK (crawlable sayfalama): Googlebot sonsuz kaydırmayı tetiklemez; derin
-                ürünlerin tarama yolu bu sıralı bağlantılardır. Tek sayfalık kategoride
-                hiç basılmaz (bugünkü çıktı birebir). Grid `key`'ine sayfa eklendi ki
-                bağlantıya tıklanınca liste o sayfadan yeniden kurulsun. */}
-            {pagination.prev || pagination.next ? (
-              <nav aria-label="Ürün sayfaları" className="mt-8 flex items-center justify-center gap-5 text-[13px] font-semibold text-[#7C3AED]">
-                {pagination.prev ? (
-                  <Link href={pagination.prev.href} rel="prev" prefetch={false} className="hover:underline">← Önceki sayfa</Link>
-                ) : null}
-                <span className="font-normal text-[#9CA3AF]">Sayfa {pagination.current} / {pagination.total}</span>
-                {pagination.next ? (
-                  <Link href={pagination.next.href} rel="next" prefetch={false} className="hover:underline">Sonraki sayfa →</Link>
-                ) : null}
-              </nav>
-            ) : null}
+            {/* EK (crawlable sayfalama): sayfa bağlantıları (yukarıda pageNav). Grid `key`'ine
+                sayfa eklendi ki bağlantıya tıklanınca liste o sayfadan yeniden kurulsun. */}
+            {pageNav}
           </section>
         ) : null}
 
@@ -370,6 +394,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
             <Link href={path} scroll={false} className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline">
               Filtreleri temizle
             </Link>
+            {/* EK: bu sayfanın ürünleri görselsiz olsa da serinin diğer sayfalarına tarama yolu kalır. */}
+            {pageNav}
           </section>
         ) : null}
 

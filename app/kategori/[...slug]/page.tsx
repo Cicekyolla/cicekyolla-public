@@ -18,12 +18,18 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
 import { resolveCategoryPage } from "@/lib/categoryPage";
-import { categoryCanonicalPath, categoryPageTitle, parseCategoryPageParam } from "@/lib/categoryPagination";
+import {
+  categoryCanonicalPath,
+  categoryListingState,
+  categoryPageTitle,
+  parseCategoryPageParam,
+  type CategoryListingState,
+} from "@/lib/categoryPagination";
 import { managedTitle, managedDescription } from "@/lib/managedSeoContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
-import type { SeoPublicPage } from "@/lib/api";
+import { fetchProductsPaged, type SeoPublicPage } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
-import { findCategoryNodeBySlug } from "@/lib/catalog";
+import { findCategoryIdBySlug, findCategoryNodeBySlug } from "@/lib/catalog";
 import { categoryHreflangFamily } from "@/lib/global/hreflangFamily";
 import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 
@@ -48,6 +54,20 @@ function faqJsonLd(page: SeoPublicPage): string | null {
   return JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: entities });
 }
 
+/**
+ * EK: ?page=N (N ≥ 2) ana seride — sıralamasız / filtresiz liste; canonical'ın gösterdiği
+ * seri — gerçekten var mı? İstek, CategoryLanding'in sıralamasız/filtresiz sayfada yaptığı
+ * istekle AYNIDIR (aynı URL → istek içi tekilleştirme; ek upstream çağrısı yok). Sıralı /
+ * filtreli istekte tek ek okuma Data Cache'lidir (revalidate 120).
+ */
+async function mainSeriesState(path: string, pageNo: number): Promise<CategoryListingState> {
+  const tree = await getCategoryTree();
+  const categoryId = tree ? findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, "")) : null;
+  if (!categoryId) return "unknown";
+  const listing = await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: "created_at_desc" });
+  return categoryListingState(pageNo, listing.pagination);
+}
+
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const path = categoryPath(params.slug);
   const page = await resolveCategoryPage(path);
@@ -61,16 +81,21 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // (deliveryParts → null, dynamicDeliveryParts → null, fallbackLocationParts
   // zaten `path.startsWith("/kategori/")` ile korumalı). Sonuç birebir aynı,
   // gereksiz bir fetchDeliveryZones() çağrısı ortadan kalktı.
+  // EK: sayfa N ≥ 2 kendi canonical'ını + başlık ekini yalnız ana seride o sayfa GERÇEKTEN
+  // varsa alır. Liste durumu bilinmiyorsa (okuma başarısız / kategori ağaçta çözülemedi) ya da
+  // sayfa son sayfanın ötesindeyse çıplak yol + düz başlık (önceki hâl) → 1. sayfanın kopyası
+  // kendi adresiyle index'e önerilmez. Kural: lib/categoryPagination.ts categoryListingState.
+  const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo)) !== "ok" ? 1 : pageNo;
   // EK (SEO YAYIN ZİNCİRİ): sayfalı seride her sayfa KENDİ başlığını taşır
   // (sayfa 1 aynen; N ≥ 2 → " – Sayfa N").
-  const title = categoryPageTitle(managedTitle(page) || page.title_tag, pageNo);
+  const title = categoryPageTitle(managedTitle(page) || page.title_tag, seoPage);
   const description = managedDescription(page) || page.meta_description;
   // Kategori sayfaları her zaman kendi yolunu canonical alır; kataloğdaki bayat
   // canonical'lar artık 404 veren /cicekler/* yollarını gösterebiliyordu.
   // EK (SEO YAYIN ZİNCİRİ): sayfa 1 çıplak yol (bugünkü hâl). N ≥ 2 → yol + YALNIZ
   // "?page=N": ilk sayfa diğer sayfaların canonical'ı olamaz (Google sayfalama
   // rehberi); sort/filtre parametreleri canonical'a girmez.
-  const canonicalPath = categoryCanonicalPath(path, pageNo);
+  const canonicalPath = categoryCanonicalPath(path, seoPage);
   // EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): YALNIZ 1. sayfa ve YALNIZ sayfa indexlenebilirken
   // tr (kendi canonical'ı) + indexlenebilir locale kategori sayfaları + locale kardeşleriyle
   // aynı x-default. Locale kategori sayfaları `tr`yi yalnız bu sayfa kesin indexlenebilirken
