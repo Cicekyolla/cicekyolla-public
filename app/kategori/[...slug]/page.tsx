@@ -22,12 +22,15 @@ import {
   categoryCanonicalPath,
   categoryListingState,
   categoryPageTitle,
+  EMPTY_CATEGORY_ROBOTS,
+  isConfirmedEmptyListing,
   parseCategoryPageParam,
   type CategoryListingState,
 } from "@/lib/categoryPagination";
 import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
+import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
 import { managedTitle, managedDescription } from "@/lib/managedSeoContent";
-import { absoluteUrl, indexRobots } from "@/lib/site-config";
+import { absoluteUrl, indexRobots, SITE_INDEXABLE } from "@/lib/site-config";
 import { fetchProductsPaged, type SeoPublicPage } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, findCategoryNodeBySlug } from "@/lib/catalog";
@@ -69,6 +72,25 @@ async function mainSeriesState(path: string, pageNo: number): Promise<CategoryLi
   return categoryListingState(pageNo, listing.pagination);
 }
 
+/**
+ * EK (KATEGORİ YASASI): kategorinin FİLTRESİZ listesi KESİN boş mu? ("Kategori sayfası yalnız en az
+ * bir aktif ürün listelediği sürece index'e değerdir.") İstek, ana serinin o sayfa için yaptığı
+ * istekle AYNIDIR (1. sayfada CategoryLanding'in, N ≥ 2'de mainSeriesState'in isteği → istek içi
+ * tekilleştirme; `total` sayfadan bağımsızdır). Yalnız sıralı / filtreli 1. sayfa isteğinde tek ek
+ * okuma olur (Data Cache'li, kategorinin çıplak sayfasıyla aynı kayıt).
+ * FAIL-OPEN: ağaç okunamadıysa (statik yedek), kategori ağaçta çözülemediyse ya da ürün okuması
+ * başarısızsa false → bugünkü robots (API kesintisi dolu bir kategoriyi index dışına itmez).
+ */
+async function isCategoryConfirmedEmpty(path: string, pageNo: number): Promise<boolean> {
+  const tree = await getCategoryTree();
+  if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;
+  const categoryId = findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, ""));
+  if (!categoryId) return false;
+  return isConfirmedEmptyListing(
+    await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),
+  );
+}
+
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const path = categoryPath(params.slug);
   const page = await resolveCategoryPage(path);
@@ -103,8 +125,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // ekler → bağ karşılıklı. Kategori kimliği layout'un zaten okuduğu ağaçtan (ek istek yok);
   // locale sürümleri yeni category-locales ucundan (önbellekli, süre sınırlı; uç yok / hata →
   // null → hreflang basılmaz). Kural: lib/global/hreflangFamily.ts.
+  // EK (KATEGORİ YASASI): sayfa bugün indexlenebilirken filtresiz liste KESİN boşsa (API başarıyla
+  // yanıt verdi, total 0) robots "noindex, follow" olur ve hreflang kümesi basılmaz (noindex sayfa aile
+  // üyesi olamaz). Zaten index dışı sayfada (önizleme / noindex kayıt) okuma yapılmaz, robots aynen.
+  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo));
   let languages: Record<string, string> | null = null;
-  if (pageNo === 1 && page.index_state === "index") {
+  if (pageNo === 1 && page.index_state === "index" && !emptyCategory) {
     const tree = await getCategoryTree();
     const node = tree ? findCategoryNodeBySlug(tree, path.replace(/^\/kategori\//, "")) : null;
     if (node) languages = categoryHreflangFamily(path, (await fetchCategoryLocaleVersions(node.id))?.locales, absoluteUrl);
@@ -113,7 +139,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     title,
     description,
     alternates: { canonical: absoluteUrl(canonicalPath) },
-    robots: indexRobots(page.index_state),
+    robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : indexRobots(page.index_state),
     openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" },
   };
   return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;

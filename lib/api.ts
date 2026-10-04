@@ -13,7 +13,7 @@ import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from
 import { fetchWithDeadline } from "./fetchWithDeadline";
 import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
-import { productUrlsResultOf, type ProductUrlsResult } from "./sitemapSources.ts";
+import { categoryUrlsResultOf, productUrlsResultOf, type CategoryUrlsResult, type ProductUrlsResult } from "./sitemapSources.ts";
 import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, createSortFallback, isSortRejectedStatus } from "./categorySort.ts";
 export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type RedirectMap } from "./internalHref.ts";
 
@@ -365,6 +365,27 @@ export async function fetchProductUrls(): Promise<ProductUrlsResult> {
   }
 }
 
+export type { CategoryUrlRow, CategoryUrlsResult } from "./sitemapSources.ts";
+
+/**
+ * EK (KATEGORİ YASASI): yayınlı + index kategorilerin sitemap satırları ve aktif ürün sayıları —
+ * GET /api/public/seo/category-urls (YENİ uç; bugünkü API'de 404 → "missing").
+ * categories.xml yalnız en az bir aktif ürün listeleyen kategoriyi taşır (karar: lib/sitemapSources.ts).
+ * FAIL-OPEN: 404 / ağ / zaman aşımı / 200 dışı / eksik ya da kullanılamayan yanıt → çağıran bugünkü
+ * envanter mantığına düşer. 8 sn süre sınırı; süre dolunca TEKRAR DENENMEZ (fetchProductUrls ile aynı).
+ */
+export async function fetchCategoryUrls(): Promise<CategoryUrlsResult> {
+  const url = `${API_ORIGIN}/api/public/seo/category-urls`;
+  try {
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 8_000, fetch, false);
+    const result = res.status !== 200 ? categoryUrlsResultOf(res.status, null) : categoryUrlsResultOf(200, await res.json());
+    if (result.state === "failed" && result.warning) console.warn(`[sitemap] category-urls: ${result.warning}`);
+    return result;
+  } catch {
+    return { state: "failed" };
+  }
+}
+
 /** fetchSeoInventory()'nin hatayı bildiren hâli: ok=false → envanter OKUNAMADI (boş liste "kayıt yok" demek değildir). */
 export interface SeoInventoryResult {
   ok: boolean;
@@ -648,6 +669,12 @@ export async function fetchProducts(params: PublicProductListParams = {}): Promi
 export interface ProductPage {
   items: PublicProductListItem[];
   pagination: { page: number; page_size: number; total: number; total_pages: number };
+  /**
+   * EK (KATEGORİ YASASI): true = API bu istek için GERÇEKTEN yanıt verdi ve `pagination` yanıttan
+   * geliyor. Okuma başarısız olduğunda dönen yedek sayfa (total 0) bu alanı TAŞIMAZ → "kategori
+   * boş" ile "okunamadı" ayrışır (karar: lib/categoryPagination.ts isConfirmedEmptyListing).
+   */
+  answered?: boolean;
 }
 
 /** Sayfalı ürün listesi (kategori grid'i sıralama + sayfalama için). */
@@ -697,7 +724,8 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
       const json = (await res.json()) as ProductPage;
       const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
       const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
-      return { items, pagination: json?.pagination ?? empty.pagination };
+      // EK (KATEGORİ YASASI): `answered` yalnız sayfalama bilgisi yanıttan geldiyse true (yedek sayfa taşımaz).
+      return json?.pagination ? { items, pagination: json.pagination, answered: true } : { items, pagination: empty.pagination };
     } catch {
       // Başarısız cevap önbelleğe alınmadan ikinci canlı okumayı dene.
     }

@@ -9,7 +9,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   auditProductUrlRows,
+  categoryUrlsResultOf,
+  isCategoryUrlPath,
   isFailedProductPage,
+  isIndexWorthyCategoryRow,
   isIncompleteProductUrls,
   isProductUrlPath,
   parseProductUrlRows,
@@ -261,4 +264,74 @@ test("KAYNAK: index rotası null'da 503 DÖNMEZ — fırlatır / derlemede bugü
   assert.ok(!index.includes("sitemapResponse(null)") && !index.includes("sitemapResponse(await renderSitemapIndexOrNull())"), "index için 503 üretilmez");
   const tip = readFileSync(new URL("../app/sitemaps/[type]/route.ts", import.meta.url), "utf8");
   assert.equal(tip.split("return sitemapResponse(await ").length - 1, 3, "tip rotasının üç dalı da null → 503 üreticisinden geçer");
+});
+
+// ---------------------------------------------------------------------------
+// EK (KATEGORİ YASASI — KURAL 4): categories.xml kaynağı GET /api/public/seo/category-urls
+// ---------------------------------------------------------------------------
+test("isCategoryUrlPath: yalnız /kategori/<yol> (iç içe yol dahil); sorgu / hash / boşluk / başka kök reddedilir", () => {
+  for (const ok of ["/kategori/guller", "/kategori/cicekler/guller", "/kategori/7-li-orkide"]) assert.equal(isCategoryUrlPath(ok), true, ok);
+  for (const bad of ["/kategori/", "/kategori", "/urun/a", "/kategori/a?page=2", "/kategori/a#b", "/kategori/a b", "kategori/a", "https://www.cicekyolla.com.tr/kategori/a", "", null, undefined, 7]) {
+    assert.equal(isCategoryUrlPath(bad), false, String(bad));
+  }
+});
+
+test("categoryUrlsResultOf: 404 missing, 5xx failed (uyarısız); 200 + eksiksiz yanıt ok — satırlar normalize, aynı yol bir kez", () => {
+  assert.deepEqual(categoryUrlsResultOf(404, null), { state: "missing" });
+  assert.deepEqual(categoryUrlsResultOf(500, null), { state: "failed" });
+  assert.deepEqual(categoryUrlsResultOf(503, { data: [{ url_path: "/kategori/a", active_products: 3 }] }), { state: "failed" });
+  const ok = categoryUrlsResultOf(200, {
+    data: [
+      { url_path: "/kategori/guller", updated_at: "2026-10-01T08:00:00.000Z", active_products: 37 },
+      { url_path: "/kategori/bos-kategori", updated_at: "2026-09-01T08:00:00.000Z", active_products: 0 },
+      { url_path: "/kategori/metin-sayim", updated_at: "", active_products: "12" },
+      { url_path: "/kategori/guller", updated_at: null, active_products: 0 },
+    ],
+    total: 4,
+  });
+  assert.deepEqual(ok, {
+    state: "ok",
+    rows: [
+      { url_path: "/kategori/guller", updated_at: "2026-10-01T08:00:00.000Z", active_products: 37 },
+      { url_path: "/kategori/bos-kategori", updated_at: "2026-09-01T08:00:00.000Z", active_products: 0 },
+      { url_path: "/kategori/metin-sayim", updated_at: null, active_products: 12 },
+    ],
+  });
+  assert.equal(ok.state === "ok" ? ok.rows.filter(isIndexWorthyCategoryRow).length : 0, 2, "yasa: yalnız active_products > 0");
+});
+
+test("categoryUrlsResultOf: EKSİK / kullanılamayan 200 yanıtı kategorileri sitemap'ten DÜŞÜREMEZ → failed + günlük satırı (envanter mantığı)", () => {
+  const bozuklar: Array<[unknown, RegExp]> = [
+    [null, /zarf bozuk/],
+    [{}, /zarf bozuk/],
+    [{ data: "x" }, /zarf bozuk/],
+    // Bozuk satır: yol geçersiz / sayım yok / sayım negatif / sayım kesirli.
+    [{ data: [{ url_path: "/kategori/a", active_products: 3 }, { url_path: "/urun/x", active_products: 1 }] }, /1 satır geçersiz/],
+    [{ data: [{ url_path: "/kategori/a", active_products: 3 }, { url_path: "/kategori/b" }] }, /1 satır geçersiz/],
+    [{ data: [{ url_path: "/kategori/a", active_products: -1 }] }, /1 satır geçersiz/],
+    [{ data: [{ url_path: "/kategori/a", active_products: 1.5 }] }, /1 satır geçersiz/],
+    [{ data: [{ url_path: "/kategori/a", active_products: 3 }, null] }, /1 satır geçersiz/],
+    // Kırpılmış yanıt.
+    [{ data: [{ url_path: "/kategori/a", active_products: 3 }], total: 243 }, /total=243 ama 1 satır geldi/],
+    // Hiçbir kategori ürün listelemiyor görünüyor (boş liste dahil): tüm kategoriler düşerdi.
+    [{ data: [] }, /ürün listeleyen kategori yok/],
+    [{ data: [{ url_path: "/kategori/a", active_products: 0 }, { url_path: "/kategori/b", active_products: 0 }] }, /ürün listeleyen kategori yok/],
+  ];
+  for (const [govde, uyari] of bozuklar) {
+    const r = categoryUrlsResultOf(200, govde);
+    assert.equal(r.state, "failed", JSON.stringify(govde));
+    assert.match(r.state === "failed" ? r.warning ?? "" : "", uyari, JSON.stringify(govde));
+  }
+  // total satır sayısına eşit / küçük / yok → eksik sayılmaz.
+  for (const total of [1, 0, undefined, "1"]) {
+    assert.equal(categoryUrlsResultOf(200, { data: [{ url_path: "/kategori/a", active_products: 3 }], total }).state, "ok", String(total));
+  }
+});
+
+test("categoryUrlsResultOf: 50.000 satır sınırı aşılırsa kaynak kullanılmaz", () => {
+  const satirlar = (n: number) => ({ data: Array.from({ length: n }, (_, i) => ({ url_path: `/kategori/k-${i}`, active_products: 1 })), total: n });
+  assert.equal(categoryUrlsResultOf(200, satirlar(50_000)).state, "ok");
+  const asan = categoryUrlsResultOf(200, satirlar(50_001));
+  assert.equal(asan.state, "failed");
+  assert.match(asan.state === "failed" ? asan.warning ?? "" : "", /50001 satır tek sitemap dosyası sınırını \(50000\) aşıyor/);
 });

@@ -12,10 +12,12 @@ import {
   categoryPageTitle,
   isCategoryPageBeyondLast,
   isCategoryPageWithoutListing,
+  isConfirmedEmptyListing,
   parseCategoryPageParam,
   CATEGORY_FULL_PAGE_LIST_MAX,
   CATEGORY_PAGE_STEP,
   CATEGORY_PAGE_WINDOW,
+  EMPTY_CATEGORY_ROBOTS,
 } from "./categoryPagination.ts";
 
 test("sayfa 1 → kök yol (?page=1 ikiz URL üretilmez)", () => {
@@ -279,6 +281,66 @@ test("KAYNAK: kategori sayfası listesiz / ötesi sayfada 404 verir, bilinmeyen 
 
   const grid = readFileSync(new URL("../components/category/CategoryProductGrid.tsx", import.meta.url), "utf8");
   assert.ok(grid.includes("startPage > 1 ? items.length : Math.max(total, items.length)"), "?page=N'de 'yüklendi' sayısı ekrandaki ürün sayısı");
+});
+
+// ---------------------------------------------------------------------------
+// EK (KATEGORİ YASASI): "kategori sayfası yalnız en az bir aktif ürün listelediği sürece
+// index'e değerdir" — boş kategori noindex,follow; bilinmeyen durumda karar yok.
+// ---------------------------------------------------------------------------
+test("isConfirmedEmptyListing: yalnız API GERÇEKTEN yanıt verdi + total 0 + satır yok → true", () => {
+  const sayfa = (total: unknown) => ({ page: 1, page_size: 50, total, total_pages: 1 });
+  assert.equal(isConfirmedEmptyListing({ answered: true, items: [], pagination: sayfa(0) }), true);
+  assert.equal(isConfirmedEmptyListing({ answered: true, items: [], pagination: sayfa("0") }), true, "sayım metin olarak gelse de");
+  assert.equal(isConfirmedEmptyListing({ answered: true, pagination: sayfa(0) }), true, "items alanı yok");
+});
+
+test("isConfirmedEmptyListing: FAIL-OPEN — okuma başarısız / bilinmeyen / dolu liste → false (bugünkü robots)", () => {
+  // fetchProductsPaged hata hâlinde tam olarak bunu döndürür (`answered` YOK).
+  const yedek = { items: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 1 } };
+  assert.equal(isConfirmedEmptyListing(yedek), false, "yedek sayfa 'kategori boş' demek değildir");
+  assert.equal(isConfirmedEmptyListing(null), false);
+  assert.equal(isConfirmedEmptyListing(undefined), false);
+  assert.equal(isConfirmedEmptyListing({ answered: true, items: [] }), false, "pagination yok");
+  assert.equal(isConfirmedEmptyListing({ answered: true, items: [], pagination: null }), false);
+  for (const total of [undefined, null, "", "abc", Number.NaN, -1, 1, 37, "12"]) {
+    assert.equal(isConfirmedEmptyListing({ answered: true, items: [], pagination: { total } }), false, String(total));
+  }
+  // total 0 dense de satır geldiyse çelişki var → karar verilmez.
+  assert.equal(isConfirmedEmptyListing({ answered: true, items: [{ id: 1 }], pagination: { total: 0 } }), false);
+  // `answered` yalnız kesin true iken sayılır.
+  for (const answered of [false, undefined, 1, "true"]) {
+    assert.equal(isConfirmedEmptyListing({ answered, items: [], pagination: { total: 0 } }), false, String(answered));
+  }
+});
+
+test("boş kategorinin robots değeri: noindex, follow", () => {
+  assert.deepEqual(EMPTY_CATEGORY_ROBOTS, { index: false, follow: true });
+});
+
+test("KAYNAK: Türkçe kategori sayfası boş kategoride noindex,follow basar ve hreflang kümesi basmaz; boş durum metni doğruyu söyler", () => {
+  const page = readFileSync(new URL("../app/kategori/[...slug]/page.tsx", import.meta.url), "utf8");
+  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo));"));
+  assert.ok(page.includes("robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : indexRobots(page.index_state),"), "karar yoksa bugünkü robots");
+  assert.ok(page.includes("if (pageNo === 1 && page.index_state === \"index\" && !emptyCategory) {"), "noindex sayfa hreflang ailesine girmez");
+  // Karar yalnız CANLI ağaç + başarılı ürün okumasıyla verilir; istek ana serinin isteğiyle aynı.
+  const fn = page.slice(page.indexOf("async function isCategoryConfirmedEmpty("), page.indexOf("export async function generateMetadata"));
+  assert.ok(fn.includes("if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;"));
+  assert.ok(fn.includes("if (!categoryId) return false;"));
+  assert.ok(fn.includes("await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),"));
+  assert.match(page, /^export const revalidate = 300;$/m, "rota ayarı değişmedi");
+
+  const landing = readFileSync(new URL("../components/category/CategoryLanding.tsx", import.meta.url), "utf8");
+  assert.ok(landing.includes("const categoryEmpty = !filterType && !sameDay && !bestseller && !isNew && isConfirmedEmptyListing(productPage);"));
+  assert.ok(landing.includes('{categoryEmpty ? "Bu koleksiyonda şu anda ürün bulunmuyor." : "Seçtiğin filtrelere uygun ürün bulunamadı."}'));
+  assert.ok(landing.includes('{categoryEmpty ? "Tüm koleksiyonlara göz at" : "Filtreleri temizle"}'));
+  assert.ok(landing.includes('<section className="max-w-[1440px] mx-auto px-6 lg:px-14 py-16 text-center">'), "boş durum işaretlemesi aynı");
+  assert.ok(landing.includes('className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline"'));
+
+  // Locale kategori sayfası: o dilde ürün listelemiyorsa noindex,follow + hreflang yok.
+  const motor = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
+  assert.ok(motor.includes("const emptyCategory = surface.indexable && Array.isArray(surface.products) && surface.products.length === 0;"));
+  assert.ok(motor.includes("robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : surface.indexable ? undefined : NOINDEX,"));
+  assert.ok(motor.includes("if (surface.indexable && !emptyCategory) {"));
 });
 
 // ---------------------------------------------------------------------------

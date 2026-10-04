@@ -91,6 +91,7 @@ import {
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
 import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
 import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
+import { EMPTY_CATEGORY_ROBOTS } from "@/lib/categoryPagination";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
 import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
 import { mergedTexts } from "./v80/copy";
@@ -366,14 +367,19 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`);
     const title = surface.seo_title ?? surface.name ?? undefined;
+    // EK (KATEGORİ YASASI): yüzey okundu ve bu dilde HİÇ ürün listelemiyorsa sayfa index'e değer
+    // değildir → "noindex, follow" ve hreflang kümesi basılmaz (Türkçe kategori sayfasıyla aynı kural;
+    // API yayınlandığında bu sayfa locale sitemap'inden de düşer). Ürün listesi alanı yoksa / biçimi
+    // beklenmedikse karar verilmez (bugünkü robots).
+    const emptyCategory = surface.indexable && Array.isArray(surface.products) && surface.products.length === 0;
     const meta: Metadata = {
       title,
       description: surface.meta_description ?? undefined,
-      robots: surface.indexable ? undefined : NOINDEX,
+      robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : surface.indexable ? undefined : NOINDEX,
       alternates: { canonical: self },
       openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description }),
     };
-    if (surface.indexable) {
+    if (surface.indexable && !emptyCategory) {
       // tr yalnız KARŞILIĞI KESİNKEN eklenir: (1) Türkçe sayfanın kümesini kurduğu kaynak (category-locales)
       // bu sayfayı listeliyor ve (2) Türkçe kategori sayfası kesin indexlenebilir. Uç henüz yayında değilse /
       // okunamadıysa / durum bilinmiyorsa tr eklenmez → küme bugünkü gibi (tek yönlü bağ üretilmez).

@@ -1,4 +1,5 @@
 import {
+  fetchCategoryUrls,
   fetchNeighborhoodUrlPage,
   fetchNeighborhoodUrlPageChecked,
   fetchProductsPaged,
@@ -9,7 +10,8 @@ import {
 } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getIndexableBlogPosts } from "@/lib/blog";
-import { isFailedProductPage, type ProductUrlRow } from "@/lib/sitemapSources";
+import { isFailedProductPage, isIndexWorthyCategoryRow, type CategoryUrlRow, type ProductUrlRow } from "@/lib/sitemapSources";
+import { TR_CATEGORY_DEDICATED_ROUTES } from "@/lib/global/hreflangFamily";
 // EK (TEK GÖRSEL KAYNAĞI): <image:loc> görünür ürün görseliyle AYNI karardan gelir.
 import { servedProductImageUrl } from "@/lib/productImageUrl";
 
@@ -404,8 +406,55 @@ function productRowNode(row: ProductUrlRow, withImage: boolean): string {
   ].join("");
 }
 
+// ---------------------------------------------------------------------------
+// EK (SEO YAYIN ZİNCİRİ — KATEGORİ YASASI) — ADDITIVE: categories.xml.
+// Yasa: "bir kategori sayfası yalnız en az bir aktif ürün listelediği sürece index'e
+// değerdir." Ürün kategorisi satırları GET /api/public/seo/category-urls yanıtından gelir ve
+// yalnız active_products > 0 olanlar listelenir (lastmod = updated_at). Uç yayında değilse
+// (404), hata verirse ya da yanıt eksik / kullanılamazsa null → BUGÜNKÜ envanter mantığı
+// aynen (karar: lib/sitemapSources.ts categoryUrlsResultOf).
+// Ucun KAPSAMADIĞI satırlar envanterden bugünkü gibi eklenir:
+//   • category_location (konum + kategori sayfaları — ürün kategorisi değildir),
+//   • kendi statik rotasından sunulan kategori (ör. /kategori/turkiye-geneli-kargo): listesi
+//     kategori bağından değil teslimat profilinden gelir; ucun saydığı "kategoriye bağlı ürün"
+//     o sayfanın listelediği ürün sayısı DEĞİLDİR → o URL için envanter kararı geçerli kalır.
+// ---------------------------------------------------------------------------
+const DEDICATED_CATEGORY_PATHS: ReadonlySet<string> = new Set(TR_CATEGORY_DEDICATED_ROUTES.map((slug) => `/kategori/${slug}`));
+
+async function readActiveCategoryRows(): Promise<CategoryUrlRow[] | null> {
+  if (!SITE_INDEXABLE) return null;
+  const result = await fetchCategoryUrls();
+  return result.state === "ok" ? result.rows : null;
+}
+
+/** Envanter satırı kategori ucunun kapsamı DIŞINDA mı? (dışındaysa bugünkü gibi envanterden listelenir) */
+function isOutsideCategoryUrls(item: SeoInventoryItem): boolean {
+  return item.page_type !== "category" || DEDICATED_CATEGORY_PATHS.has(item.url_path);
+}
+
+function categoryRowNode(row: CategoryUrlRow): string {
+  const lastmod = row.updated_at ? validDate(row.updated_at) : null;
+  return ["<url>", `<loc>${escapeXml(absoluteUrl(row.url_path))}</loc>`, lastmod ? `<lastmod>${lastmod}</lastmod>` : "", "</url>"].join("");
+}
+
 /** Bir sitemap tipinin düğümleri + "kaynak okunamadı" bilgisi (tek uygulama; iki render da bunu kullanır). */
 async function readSitemapNodes(type: SitemapType): Promise<NodeRead> {
+  if (type === "categories") {
+    // İki okuma PARALEL (ek bekleme yok); envanter iki yolda da gerekir (category_location satırları).
+    const [rows, inv] = await Promise.all([readActiveCategoryRows(), readIndexableInventory()]);
+    const fromInventory = inv.items.filter((item) => matchesType(item, type));
+    // Uç yok / kullanılamadı → bugünkü envanter mantığı birebir.
+    if (!rows) return { nodes: fromInventory.map(urlNode), failed: inv.failed };
+    // Envanter OKUNAMADIYSA ucun kapsamadığı satırlar eksik kalırdı → eksik sitemap 200 ile
+    // verilmez (`failed` → rota 503; bugünkü kuralın aynısı).
+    const outside = fromInventory.filter(isOutsideCategoryUrls);
+    const outsidePaths = new Set(outside.map((item) => item.url_path));
+    const nodes = [
+      ...rows.filter((row) => isIndexWorthyCategoryRow(row) && !outsidePaths.has(row.url_path)).map(categoryRowNode),
+      ...outside.map(urlNode),
+    ];
+    return { nodes, failed: inv.failed };
+  }
   if (type === "products" || type === "images") {
     const active = await readActiveProductRows();
     if (active) {

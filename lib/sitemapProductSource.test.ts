@@ -503,3 +503,142 @@ test("locale sitemap: iki kaynaktan biri okunamadı → null; yanıt geldi ama l
   assert.ok(bos !== null);
   assert.match(bos!, /<urlset[^>]*><\/urlset>$/);
 });
+
+// ---------------------------------------------------------------------------
+// 5) categories.xml — KATEGORİ YASASI ("kategori yalnız en az bir aktif ürün listelediği
+//    sürece index'e değerdir"). Kaynak: GET /api/public/seo/category-urls (yeni uç).
+// ---------------------------------------------------------------------------
+
+const CATEGORY_URLS = "/api/public/seo/category-urls";
+const satir = (page_type: string, url_path: string, index_state = "index") => (
+  { page_type, url_path, index_state, updated_at: "2026-08-02T00:00:00.000Z", title: url_path }
+);
+const KATEGORI_ENVANTERI = {
+  status: 200,
+  body: {
+    data: [
+      satir("category", "/kategori/guller"),
+      satir("category", "/kategori/bos-kategori"),
+      satir("category_location", "/maltepe-cicek-siparisi"),
+      satir("category", "/kategori/turkiye-geneli-kargo"),
+      satir("category", "/kategori/noindex-kategori", "noindex"),
+      satir("category", "/kategori/yalniz-envanterde"),
+      satir("product", "/urun/101-kirmizi-gul-buketi"),
+      satir("district", "/istanbul/kadikoy"),
+    ],
+  },
+};
+const KATEGORI_UCU = {
+  status: 200,
+  body: {
+    data: [
+      { url_path: "/kategori/guller", updated_at: "2026-10-01T08:00:00.000Z", active_products: 37 },
+      { url_path: "/kategori/bos-kategori", updated_at: "2026-09-01T08:00:00.000Z", active_products: 0 },
+      { url_path: "/kategori/yeni-kategori-envanterde-yok", updated_at: null, active_products: 4 },
+      { url_path: "/kategori/turkiye-geneli-kargo", updated_at: "2026-09-20T08:00:00.000Z", active_products: 0 },
+    ],
+    total: 4,
+  },
+};
+/** Bugünkü çıktı: envanterdeki index + (category | category_location) satırları, envanter sırasıyla. */
+const BUGUNKU_KATEGORILER = [
+  `${SITE}/kategori/guller`,
+  `${SITE}/kategori/bos-kategori`,
+  `${SITE}/maltepe-cicek-siparisi`,
+  `${SITE}/kategori/turkiye-geneli-kargo`,
+  `${SITE}/kategori/yalniz-envanterde`,
+];
+
+test("categories.xml: kategori ucu ok → yalnız ÜRÜN LİSTELEYEN kategoriler (lastmod = updated_at) + ucun kapsamadığı envanter satırları", async () => {
+  kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: KATEGORI_ENVANTERI });
+  const xml = await renderSitemapOrNull("categories");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), [
+    `${SITE}/kategori/guller`,
+    `${SITE}/kategori/yeni-kategori-envanterde-yok`,
+    `${SITE}/maltepe-cicek-siparisi`,
+    `${SITE}/kategori/turkiye-geneli-kargo`,
+  ]);
+  assert.ok(!xml!.includes("/kategori/bos-kategori"), "0 aktif ürünlü kategori sitemap'te yok");
+  assert.ok(!xml!.includes("/kategori/yalniz-envanterde"), "ucun listelemediği ürün kategorisi (yayınlı + index değil) girmez");
+  assert.ok(!xml!.includes("noindex-kategori"));
+  assert.ok(xml!.includes(`<loc>${SITE}/kategori/guller</loc><lastmod>2026-10-01T08:00:00.000Z</lastmod>`), "lastmod uçtan");
+  assert.ok(xml!.includes(`<url><loc>${SITE}/kategori/yeni-kategori-envanterde-yok</loc></url>`), "updated_at null → lastmod yok");
+  assert.ok(xml!.includes(`<loc>${SITE}/maltepe-cicek-siparisi</loc><lastmod>2026-08-02T00:00:00.000Z</lastmod>`), "category_location satırı envanterden AYNEN");
+  assert.deepEqual([...istekler].sort(), [INVENTORY, CATEGORY_URLS].sort(), "iki okuma (paralel)");
+  assert.deepEqual(uyarilar, []);
+  assert.equal(xml, await renderSitemap("categories"), "iki render aynı çıktı");
+});
+
+test("categories.xml: kendi statik rotasından sunulan kategori (turkiye-geneli-kargo) envanter kararında kalır; uçta da doluysa TEK kez basılır", async () => {
+  // Uç 0 sayıyor (kategoriye bağlı ürün yok) ama sayfa ürünlerini teslimat profilinden listeler → envanterden kalır (yukarıdaki test).
+  // Uç > 0 sayıyorsa da URL bir kez ve envanter satırıyla basılır.
+  const dolu = { status: 200, body: { data: [...KATEGORI_UCU.body.data.slice(0, 3), { url_path: "/kategori/turkiye-geneli-kargo", updated_at: "2026-09-20T08:00:00.000Z", active_products: 9 }], total: 4 } };
+  kur({ [CATEGORY_URLS]: dolu, [INVENTORY]: KATEGORI_ENVANTERI });
+  const xml = await renderSitemapOrNull("categories");
+  assert.equal(locs(xml!).filter((l) => l === `${SITE}/kategori/turkiye-geneli-kargo`).length, 1);
+  assert.ok(xml!.includes(`<loc>${SITE}/kategori/turkiye-geneli-kargo</loc><lastmod>2026-08-02T00:00:00.000Z</lastmod>`));
+  // Envanterde YOKSA ve uç dolu sayıyorsa uçtan gelir; uç 0 sayıyorsa hiç girmez.
+  const envantersiz = { status: 200, body: { data: KATEGORI_ENVANTERI.body.data.filter((s) => s.url_path !== "/kategori/turkiye-geneli-kargo") } };
+  kur({ [CATEGORY_URLS]: dolu, [INVENTORY]: envantersiz });
+  assert.ok(locs((await renderSitemapOrNull("categories"))!).includes(`${SITE}/kategori/turkiye-geneli-kargo`));
+  kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: envantersiz });
+  assert.ok(!locs((await renderSitemapOrNull("categories"))!).includes(`${SITE}/kategori/turkiye-geneli-kargo`));
+});
+
+test("categories.xml: uç 404 (API henüz yayında değil) → bugünkü envanter mantığı BİREBİR", async () => {
+  kur({ [INVENTORY]: KATEGORI_ENVANTERI });
+  const xml = await renderSitemapOrNull("categories");
+  assert.ok(xml);
+  assert.deepEqual(locs(xml!), BUGUNKU_KATEGORILER);
+  assert.equal(
+    xml,
+    '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+      BUGUNKU_KATEGORILER.map((loc) => `<url><loc>${loc}</loc><lastmod>2026-08-02T00:00:00.000Z</lastmod></url>`).join("") +
+      "</urlset>",
+    "çıktı bayt bayt bugünkü",
+  );
+  assert.deepEqual(uyarilar, [], "uç yayınlanmadan önce günlük kirlenmez");
+});
+
+test("categories.xml: uç 5xx / ağ hatası / eksik / hiçbir kategori dolu değil → envanter mantığı; kullanılamayan 200 günlüğe yazılır", async () => {
+  const senaryolar: Array<[Stub, RegExp | null]> = [
+    [{ status: 500 }, null],
+    ["throw", null],
+    [{ status: 200, body: "çöp" }, /zarf bozuk/],
+    [{ status: 200, body: { data: [] } }, /ürün listeleyen kategori yok/],
+    [{ status: 200, body: { data: KATEGORI_UCU.body.data.map((r) => ({ ...r, active_products: 0 })), total: 4 } }, /ürün listeleyen kategori yok/],
+    [{ status: 200, body: { data: KATEGORI_UCU.body.data, total: 243 } }, /total=243 ama 4 satır geldi/],
+    [{ status: 200, body: { data: [...KATEGORI_UCU.body.data, { url_path: "/kategori/sayimsiz" }], total: 5 } }, /1 satır geçersiz/],
+  ];
+  for (const [stub, uyari] of senaryolar) {
+    kur({ [CATEGORY_URLS]: stub, [INVENTORY]: KATEGORI_ENVANTERI });
+    const xml = await renderSitemapOrNull("categories");
+    assert.ok(xml, JSON.stringify(stub));
+    assert.deepEqual(locs(xml!), BUGUNKU_KATEGORILER, JSON.stringify(stub));
+    if (uyari) {
+      assert.equal(uyarilar.length, 1, JSON.stringify(stub));
+      assert.match(uyarilar[0], /^\[sitemap\] category-urls: /);
+      assert.match(uyarilar[0], uyari);
+    } else {
+      assert.deepEqual(uyarilar, [], JSON.stringify(stub));
+    }
+  }
+});
+
+test("categories.xml: envanter OKUNAMADI → uç ok olsa da null (rota 503): ucun kapsamadığı satırlar eksik kalırdı", async () => {
+  for (const bozuk of [{ status: 502 }, "throw" as const, { status: 200, body: { hata: true } }]) {
+    kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: bozuk });
+    assert.equal(await renderSitemapOrNull("categories"), null, JSON.stringify(bozuk));
+    kur({ [INVENTORY]: bozuk });
+    assert.equal(await renderSitemapOrNull("categories"), null, "iki kaynak da okunamadı");
+  }
+});
+
+test("kategori ucu yalnız categories.xml için okunur — diğer tipler ona istek atmaz", async () => {
+  for (const type of ["products", "images", "occasions", "locations", "pages", "blog"] as const) {
+    kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: KATEGORI_ENVANTERI, [PRODUCT_URLS]: AKTIF });
+    await renderSitemapOrNull(type);
+    assert.ok(!istekler.includes(CATEGORY_URLS), type);
+  }
+});

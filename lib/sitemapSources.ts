@@ -251,3 +251,99 @@ export const NEXT_BUILD_PHASE = "phase-production-build";
 export function sitemapIndexFailureAction(phase: string | undefined): "throw" | "legacy" {
   return phase === NEXT_BUILD_PHASE ? "legacy" : "throw";
 }
+
+// ============================================================================
+// EK (SEO YAYIN ZİNCİRİ — KATEGORİ YASASI, sitemap ayağı) — ADDITIVE.
+//
+// KURAL 4 — "Bir kategori sayfası yalnız en az bir aktif ürün listelediği sürece index'e
+//   değerdir." 4 Eki 2026 taraması: categories.xml'deki 243 kategorinin 56'sında hiç aktif
+//   ürün yok. categories.xml'in ÜRÜN KATEGORİSİ satırları GET /api/public/seo/category-urls
+//   yanıtından gelir (yayınlı + index kategoriler; satır başına `active_products`) ve yalnız
+//   active_products > 0 olanlar listelenir. Ucun KAPSAMADIĞI türler (category_location …)
+//   envanterden bugünkü gibi eklenir (lib/sitemap.ts).
+//   Uç henüz yayında değilse (404), hata verirse, yanıt EKSİKSE (bozuk satır / `total` > satır
+//   sayısı) ya da hiçbir kategori ürün listelemiyor görünüyorsa kaynak KULLANILMAZ → bugünkü
+//   envanter mantığı aynen (eksik ya da boş bir yanıt kategorileri sitemap'ten düşüremez).
+// ============================================================================
+
+/** GET /api/public/seo/category-urls satırı (yayınlı + index kategori başına bir tane). */
+export interface CategoryUrlRow {
+  url_path: string;
+  updated_at: string | null;
+  active_products: number;
+}
+
+export type CategoryUrlsResult =
+  | { state: "ok"; rows: CategoryUrlRow[] }
+  | { state: "missing" }
+  | { state: "failed"; warning?: string };
+
+/** Yalnız /kategori/<yol>: sorgu, hash, boşluk kabul edilmez. */
+const CATEGORY_URL_PATH = /^\/kategori\/[^\s?#]+$/;
+
+export function isCategoryUrlPath(path: unknown): path is string {
+  return typeof path === "string" && CATEGORY_URL_PATH.test(path);
+}
+
+/** `active_products` → negatif olmayan tam sayı (sayı ya da rakam dizisi); değilse null. */
+function activeProductCount(value: unknown): number | null {
+  if (typeof value === "number") return Number.isInteger(value) && value >= 0 ? value : null;
+  return typeof value === "string" && /^\d{1,9}$/.test(value) ? Number(value) : null;
+}
+
+/**
+ * Durum kodu + gövde → sonuç. "ok" YALNIZ yanıt eksiksiz ve kullanılabilirse:
+ *   • zarf `data` listesi taşır,
+ *   • HER satır geçerli (yol /kategori/…, `active_products` negatif olmayan tam sayı),
+ *   • `total` (varsa) gelen satır sayısını aşmaz,
+ *   • en az bir satır ürün listeler (active_products > 0),
+ *   • satır sayısı tek dosya sınırını (50.000) aşmaz.
+ * Aksi hâlde "failed" + günlük satırı → çağıran bugünkü envanter mantığına düşer. Aynı yol bir kez
+ * (ilk satır). 404 ("missing") ve 200 dışı durumlar uyarısızdır — uç yayınlanmadan önce beklenen hâl.
+ */
+export function categoryUrlsResultOf(status: number, json: unknown): CategoryUrlsResult {
+  const state = upstreamStateOf(status);
+  if (state !== "ok") return { state };
+  const body = json as { data?: unknown; total?: unknown } | null;
+  const data = body?.data;
+  if (!Array.isArray(data)) return { state: "failed", warning: "200 döndü ama zarf bozuk (data listesi yok)" };
+  const seen = new Set<string>();
+  const rows: CategoryUrlRow[] = [];
+  const samples: string[] = [];
+  let invalid = 0;
+  for (const raw of data) {
+    const row = raw as { url_path?: unknown; updated_at?: unknown; active_products?: unknown } | null;
+    const count = activeProductCount(row?.active_products);
+    if (!row || !isCategoryUrlPath(row.url_path) || count === null) {
+      invalid++;
+      if (samples.length < AUDIT_SAMPLE_LIMIT) samples.push(JSON.stringify(raw ?? null).slice(0, 80));
+      continue;
+    }
+    if (seen.has(row.url_path)) continue;
+    seen.add(row.url_path);
+    rows.push({
+      url_path: row.url_path,
+      updated_at: typeof row.updated_at === "string" && row.updated_at ? row.updated_at : null,
+      active_products: count,
+    });
+  }
+  if (invalid > 0) {
+    return { state: "failed", warning: `yanıt eksik — ${invalid} satır geçersiz (örnek: ${samples.join(", ")}); envanter mantığı kullanılır` };
+  }
+  const total = typeof body?.total === "number" && Number.isFinite(body.total) ? body.total : null;
+  if (total !== null && total > data.length) {
+    return { state: "failed", warning: `yanıt eksik — total=${total} ama ${data.length} satır geldi; envanter mantığı kullanılır` };
+  }
+  if (!rows.some((row) => row.active_products > 0)) {
+    return { state: "failed", warning: `200 döndü ama ürün listeleyen kategori yok (${data.length} satır geldi); envanter mantığı kullanılır` };
+  }
+  if (rows.length > SITEMAP_MAX_URLS) {
+    return { state: "failed", warning: `${rows.length} satır tek sitemap dosyası sınırını (${SITEMAP_MAX_URLS}) aşıyor` };
+  }
+  return { state: "ok", rows };
+}
+
+/** Kategori satırı sitemap'e girer mi? (yasa: en az bir aktif ürün) */
+export function isIndexWorthyCategoryRow(row: Pick<CategoryUrlRow, "active_products">): boolean {
+  return row.active_products > 0;
+}

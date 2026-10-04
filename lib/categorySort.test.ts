@@ -189,6 +189,7 @@ test("YENİ API: sort=category_order tek istekte 200 — elle sıra aynen gelir,
   assert.deepEqual(istekSiralari, ["category_order"]);
   assert.deepEqual(sayfa.items.map((p) => p.slug), ["elle-1", "elle-2"]);
   assert.equal(sayfa.pagination.total, 2);
+  assert.equal(sayfa.answered, true);
 });
 
 test("BUGÜNKÜ API: 422 → aynı istek created_at_desc ile BİR KEZ tekrarlanır; sonuç bugünkü isteğin sonucuyla AYNI", async () => {
@@ -241,6 +242,7 @@ test("müşterinin seçtiği sıralamalar ve sırasız istekler HİÇ tekrarlanm
   reddedilenParametre = "product_type";
   const bos = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "name_asc", product_type: "zzz" });
   assert.deepEqual(istekSiralari, ["name_asc", "name_asc"], "bugünkü iki deneme (önbellekli + no-store)");
+  assert.equal(bos.answered, undefined, "okunamayan sayfa 'yanıt verdi' sayılmaz");
   assert.deepEqual(bos, { items: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 1 } });
 });
 

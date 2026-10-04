@@ -221,3 +221,35 @@ export function isCategoryPageWithoutListing(
 ): boolean {
   return requestedPage > 1 && input.liveTree && !input.categoryId;
 }
+
+// ============================================================================
+// EK (SEO YAYIN ZİNCİRİ — KATEGORİ YASASI) — ADDITIVE.
+// "Bir kategori sayfası, yalnız en az bir aktif ürün listelediği sürece index'e değerdir."
+//
+// 4 Eki 2026 taraması: kategori sitemap'indeki 243 kategorinin 56'sında HİÇ aktif ürün yok;
+// bu sayfalar 200 + index,follow dönüyor ve filtre uygulanmamışken "Seçtiğin filtrelere uygun
+// ürün bulunamadı" yazıyordu.
+//
+//  • Kategorinin FİLTRESİZ listesi boşsa (API başarıyla yanıt verdi, total 0) robots
+//    "noindex, follow" olur ve sayfa hreflang kümesi basmaz; boş durum metni doğruyu söyler.
+//  • Okuma başarısız / durum bilinmiyorsa karar verilmez → bugünkü robots ve bugünkü metin
+//    (API kesintisi dolu bir kategoriyi index dışına İTMEZ).
+// ============================================================================
+
+/** Boş kategorinin robots değeri: index dışı, bağlantılar izlenir (menü / ilgili koleksiyonlar taranır). */
+export const EMPTY_CATEGORY_ROBOTS = { index: false, follow: true } as const;
+
+/**
+ * Liste KESİN boş mu? Yalnız API bu istek için gerçekten yanıt verdiyse (`answered` — okuma başarısız
+ * olduğunda dönen yedek sayfa taşımaz), yanıt `total` = 0 bildirdiyse ve satır da gelmediyse true.
+ * `total` yok / sayı değil / > 0, yanıt yok ya da `answered` değil → false (karar verilmez).
+ */
+export function isConfirmedEmptyListing(
+  listing: { answered?: unknown; items?: unknown; pagination?: { total?: unknown } | null } | null | undefined,
+): boolean {
+  if (!listing || listing.answered !== true) return false;
+  const total = listing.pagination?.total;
+  const numeric = typeof total === "number" || (typeof total === "string" && /^\d+$/.test(total));
+  if (!numeric || Number(total) !== 0) return false;
+  return !Array.isArray(listing.items) || listing.items.length === 0;
+}

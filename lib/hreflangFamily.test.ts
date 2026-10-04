@@ -231,7 +231,8 @@ test("KAYNAK: locale ana sayfa / kategori / ürün kümeleri aile kurucusundan g
   const home = dal("home", 'if (parsed.kind === "page")');
   assert.ok(home.includes("const languages = row.indexable ? homeHreflangFamily(row.locales, absoluteUrl) : null;"));
   const category = dal("category", 'if (parsed.kind === "product")');
-  assert.ok(category.includes("if (surface.indexable) {"));
+  // EK (KATEGORİ YASASI): o dilde ürün listelemeyen kategori noindex'tir → küme de basmaz.
+  assert.ok(category.includes("if (surface.indexable && !emptyCategory) {"));
   // tr yalnız karşılığı kesinken: Türkçe sayfanın küme kaynağı bu sayfayı listeliyor VE Türkçe sayfa kesin indexlenebilir.
   // EK — SIRA: önce küme kaynağı; bu sayfayı listelemiyorsa (uç yayınlanana kadar her istekte) Türkçe sayfa
   // okumaları HİÇ yapılmaz (Promise.all yok → sonucu atılacak ek upstream okuması / bekleme yok).
@@ -262,7 +263,8 @@ test("KAYNAK: Türkçe ürün / kategori / ana sayfa aynı kurucuyu kullanır; o
   assert.ok(urun.includes("return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;"));
 
   const kategori = oku("../app/kategori/[...slug]/page.tsx");
-  assert.ok(kategori.includes('if (pageNo === 1 && page.index_state === "index") {'), "yalnız 1. sayfa + yalnız indexlenebilir sayfa");
+  // EK (KATEGORİ YASASI): boş kategori noindex,follow olur → hreflang kümesi de basılmaz.
+  assert.ok(kategori.includes('if (pageNo === 1 && page.index_state === "index" && !emptyCategory) {'), "yalnız 1. sayfa + yalnız indexlenebilir (ve ürün listeleyen) sayfa");
   assert.ok(kategori.includes("categoryHreflangFamily(path, (await fetchCategoryLocaleVersions(node.id))?.locales, absoluteUrl)"));
   assert.ok(kategori.includes("return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;"));
 
