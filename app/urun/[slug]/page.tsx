@@ -26,6 +26,7 @@ import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { toPlainText } from "@/lib/richText";
 import { productHreflangFamily } from "@/lib/global/hreflangFamily";
 import { fetchProductLocaleVersions } from "@/lib/hreflangSources";
+import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -137,7 +138,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     seo?.meta_description ||
     product.short_description ||
     `${product.name} — aynı gün teslimat ve güvenli ödeme ile Cicekyolla'da.`;
-  const ogImage = seo?.og_image || data.images.find((i) => i.role === "cover")?.url || data.images[0]?.url;
+  // EK (TEK GÖRSEL KAYNAĞI): paylaşım görseli KAYITLI ham adres değil, vitrinin GERÇEKTEN
+  // sunduğu dosyadır (görünür <img> ile aynı karar: stüdyo kopyası → medya normalizasyonu),
+  // mutlak adresle. Aday sırası aynen (SEO görseli → kapak → ilk görsel); sunulamayan aday
+  // (ölü eski yol) atlanır, hiçbiri yoksa bugünkü yedek (og:image yok / varsayılan twitter görseli).
+  const ogImage = firstServedProductImageUrl([seo?.og_image, data.images.find((i) => i.role === "cover")?.url, data.images[0]?.url]);
   // EK (SEO YAYIN ZİNCİRİ): canonical ve og:url istekteki yazımdan DEĞİL, KAYITLI
   // slug'tan üretilir (API araması büyük/küçük harf duyarsız → /urun/Kirmizi-Gul
   // kendi yazımıyla canonical veriyordu). Kayıtlı slug boşsa istek slug'ı kalır.
@@ -249,7 +254,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     sku: product.sku,
     ratingAvg: rating.rating_avg,
     ratingCount: rating.rating_count,
-  }, { absolute: absoluteUrl, plainText: toPlainText });
+    // EK (TEK GÖRSEL KAYNAĞI): şema görselleri görünür görselle aynı karardan (lib/productImageUrl.ts).
+  }, { absolute: absoluteUrl, plainText: toPlainText, image: servedProductImageUrl });
 
   // EK (SEO YAYIN ZİNCİRİ) — BreadcrumbList SUNUCUDA: Ana Sayfa → birincil kategori
   // (varsa) → ürün. Kategori adı/slug'ı layout'un zaten okuduğu ağaçtan gelir

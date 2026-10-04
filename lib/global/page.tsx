@@ -89,6 +89,7 @@ import {
   type LocationCatalogView, type LocationSearchParams,
 } from "./locationPaging";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
+import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
 import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
 import { mergedTexts } from "./v80/copy";
@@ -401,7 +402,9 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       fetchProductBySlug(surface.tr_slug),
       surface.indexable ? fetchProductLocaleCluster(surface.product_id) : Promise.resolve(null),
     ]);
-    const cover = detail?.images.find((i) => i.role === "cover")?.url || detail?.images[0]?.url;
+    // EK (TEK GÖRSEL KAYNAĞI): kayıtlı ham adres değil, vitrinin GERÇEKTEN sunduğu dosya (görünür
+    // <img> ile aynı karar), mutlak adresle; sunulamayan aday atlanır, hiçbiri yoksa varsayılan görsel.
+    const cover = firstServedProductImageUrl([detail?.images.find((i) => i.role === "cover")?.url, detail?.images[0]?.url]);
     const title = surface.seo_title ?? surface.name ?? undefined;
     const meta: Metadata = {
       title,
@@ -1129,7 +1132,8 @@ export async function LocalePage({ locale, path, searchParams }: {
       sku: product.sku,
       ratingAvg: rating.rating_avg,
       ratingCount: rating.rating_count,
-    }, { absolute: absoluteUrl, plainText: toPlainText });
+      // EK (TEK GÖRSEL KAYNAĞI): şema görselleri görünür görselle aynı karardan (lib/productImageUrl.ts).
+    }, { absolute: absoluteUrl, plainText: toPlainText, image: servedProductImageUrl });
     const [catalog, contact] = await Promise.all([fetchLocaleCatalog(locale), v80Contact()]);
     const localizedBySlug = new Map(catalog.products.map((cp) => [cp.tr_slug, cp]));
     // Zincir kuralı (§10): beden önerileri de locale ailesi İÇİNDE kalır —

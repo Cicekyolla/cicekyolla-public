@@ -9,8 +9,9 @@ import {
 } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getIndexableBlogPosts } from "@/lib/blog";
-import { isLegacyPleskMedia, mediaUrl } from "@/lib/media";
-import { isFailedProductPage, sitemapImageLoc, type ProductUrlRow } from "@/lib/sitemapSources";
+import { isFailedProductPage, type ProductUrlRow } from "@/lib/sitemapSources";
+// EK (TEK GÖRSEL KAYNAĞI): <image:loc> görünür ürün görseliyle AYNI karardan gelir.
+import { servedProductImageUrl } from "@/lib/productImageUrl";
 
 // ---------------------------------------------------------------------------
 // ADDITIVE — pages.xml için indexlenebilir statik kurumsal rotalar.
@@ -340,9 +341,11 @@ async function imageNodes(inventory: SeoInventoryItem[]): Promise<NodeRead> {
       const lastmod = validDate(seoItem.updated_at);
       // Sitemap standardı MUTLAK URL ister; DB'deki "/r2/..." proxy yolları
       // aynen basılınca GSC "Geçersiz URL" veriyordu (1294 örnek, 3 Ağu 2026).
-      const imageLoc = product.cover_image_url.startsWith("http")
-        ? product.cover_image_url
-        : absoluteUrl(product.cover_image_url);
+      // EK (TEK GÖRSEL KAYNAĞI): adres vitrinin GERÇEKTEN sunduğu dosyadır (stüdyo kopyası →
+      // medya normalizasyonu; "/r2/…" çıktısı bugünküyle aynı). Sunulamayan kapak (stüdyo
+      // kopyası olmayan eski yol) için satır basılmaz — yeni yoldaki (productRowNode) kuralla aynı.
+      const imageLoc = servedProductImageUrl(product.cover_image_url);
+      if (!imageLoc) continue;
       nodes.push(
         [
           "<url>",
@@ -383,12 +386,14 @@ async function readActiveProductRows(): Promise<ActiveProductRows | null> {
 
 /**
  * Aktif ürün satırından <url>; withImage ise kapak görseli <image:image><image:loc> olarak eklenir.
- * withImage iken basılabilir görsel adresi yoksa (boş, `data:`, eski medya yolu) boş string döner →
- * satır images.xml'e girmez.
+ * withImage iken basılabilir görsel adresi yoksa (boş, `data:`, stüdyo kopyası olmayan eski medya yolu)
+ * boş string döner → satır images.xml'e girmez.
  */
 function productRowNode(row: ProductUrlRow, withImage: boolean): string {
   const lastmod = row.updated_at ? validDate(row.updated_at) : null;
-  const imageLoc = withImage ? sitemapImageLoc(row.image, { mediaUrl, absoluteUrl, isLegacyMedia: isLegacyPleskMedia }) : null;
+  // EK (TEK GÖRSEL KAYNAĞI): lib/productImageUrl.ts — görünür <img> ile aynı karar (stüdyo kopyası
+  // olan eski yol artık çalışan /studio/… adresiyle basılır; kopyası olmayan ölü yol basılmaz).
+  const imageLoc = withImage ? servedProductImageUrl(row.image) : null;
   if (withImage && !imageLoc) return "";
   return [
     "<url>",

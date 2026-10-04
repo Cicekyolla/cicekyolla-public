@@ -14,8 +14,8 @@ import {
   fetchGlobalPagesInventoryChecked,
   type LocaleInventory,
 } from "./api";
-import { isLegacyPleskMedia, mediaUrl } from "@/lib/media";
-import { sitemapImageLoc } from "@/lib/sitemapSources";
+// EK (TEK GÖRSEL KAYNAĞI): <image:loc> görünür ürün görseliyle AYNI karardan gelir.
+import { servedProductImageUrl } from "@/lib/productImageUrl";
 
 export const LOCALE_SITEMAP_TYPES = GLOBAL_LOCALES.map((l) => `locale-${l}`);
 
@@ -47,10 +47,12 @@ function node(path: string, updatedAt: string | null): string {
 // Yeni API envanter satırında `image` verir; alan yoksa (eski API) düğüm bugünkü
 // `node()` çıktısıyla BİREBİR aynıdır. <image:loc> mutlak URL'dir (r2.dev → /r2
 // normalizasyonu + kanonik host; TR images.xml ile aynı kural).
+// EK (TEK GÖRSEL KAYNAĞI): adres lib/productImageUrl.ts'ten — stüdyo kopyası olan görsel
+// /studio/… adresiyle basılır, kopyası olmayan ölü eski yol hiç basılmaz (PDP'nin gösterdiği dosya).
 const IMAGE_NAMESPACE = ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"';
 
 function productNode(path: string, updatedAt: string | null, image: string | null | undefined): string {
-  const imageLoc = sitemapImageLoc(image, { mediaUrl, absoluteUrl, isLegacyMedia: isLegacyPleskMedia });
+  const imageLoc = servedProductImageUrl(image);
   const base = node(path, updatedAt);
   if (!imageLoc) return base;
   // Görsel etiketi kapanış </url>'den hemen önce eklenir (dilimleme: URL'deki "$" güvenli).

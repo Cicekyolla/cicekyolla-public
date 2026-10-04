@@ -64,7 +64,8 @@ test("KAYNAK: localeMetadata'nın gerçek sayfa dönen HER dalı kendi openGraph
   const meta = motor.slice(motor.indexOf("export async function localeMetadata"), motor.indexOf("// ---- Ortak parçalar"));
   assert.equal(meta.split("openGraph: localeOpenGraph(locale, {").length - 1, 5, "ana sayfa (yedek + satır) + sayfa + kategori + ürün");
   assert.ok(meta.includes("openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description, image: cover }),"));
-  assert.ok(meta.includes('const cover = detail?.images.find((i) => i.role === "cover")?.url || detail?.images[0]?.url;'));
+  // EK (TEK GÖRSEL KAYNAĞI): kapak, vitrinin sunduğu dosyaya çözülür (lib/productImageUrl.ts); aday sırası aynı.
+  assert.ok(meta.includes('const cover = firstServedProductImageUrl([detail?.images.find((i) => i.role === "cover")?.url, detail?.images[0]?.url]);'));
   assert.ok(!meta.includes("tr_TR"));
 });
 
