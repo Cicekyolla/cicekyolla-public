@@ -53,10 +53,12 @@ test("normal yolda tek çağrı, ek başlık yok", async () => {
 test("retryOnTimeout=false: süre dolunca TEKRAR DENENMEZ (en kötü bekleme 1 × süre sınırı)", async () => {
   const { fetchFn, calls } = hangingThen(false);
   const t0 = Date.now();
-  await assert.rejects(() => fetchWithDeadline("https://api.test/x", {}, 60, fetchFn, false));
+  // Süre sınırı 200 ms: tek bekleme ≈ 200, iki bekleme ≈ 400. Üst sınır zamanlayıcı gecikmesine pay bırakır
+  // (60 ms sınır + 115 ms üst sınırla yüklü makinede 115 ms ölçülüp 1 ms ile düşüyordu — kararsız test).
+  await assert.rejects(() => fetchWithDeadline("https://api.test/x", {}, 200, fetchFn, false));
   const sure = Date.now() - t0;
   assert.equal(calls.length, 1, "zaman aşımından sonra ikinci deneme yok");
-  assert.ok(sure >= 50 && sure < 115, `tek süre sınırı kadar beklendi (${sure} ms)`);
+  assert.ok(sure >= 190 && sure < 390, `tek süre sınırı kadar beklendi (${sure} ms)`);
 });
 
 test("retryOnTimeout=false: hızlı hata (kopan soket) yine bir kez tekrar denenir; ikinci deneme başarırsa yanıt döner", async () => {
