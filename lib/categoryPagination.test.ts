@@ -12,6 +12,8 @@ import {
   categoryPageTitle,
   isCategoryPageBeyondLast,
   isCategoryPageWithoutListing,
+  isCategoryWithoutListing,
+  isConfirmedEmptyCategory,
   isConfirmedEmptyListing,
   parseCategoryPageParam,
   CATEGORY_FULL_PAGE_LIST_MAX,
@@ -317,22 +319,62 @@ test("boş kategorinin robots değeri: noindex, follow", () => {
   assert.deepEqual(EMPTY_CATEGORY_ROBOTS, { index: false, follow: true });
 });
 
+// EK: "kategori boş" kararı yalnız 1. sayfanın yanıtıyla verilir. Liste ucu `total`'ı satırlardan sayar
+// (COUNT(*) OVER()): son sayfanın ötesindeki sayfa DOLU kategoride de total 0 + satırsız döner.
+test("isConfirmedEmptyCategory: yalnız 1. sayfanın yanıtı kanıttır — son sayfanın ötesindeki 'total 0' kategoriyi boş saydırmaz", () => {
+  const bos = (page: number) => ({ answered: true, items: [], pagination: { page, page_size: 50, total: 0, total_pages: 1 } });
+  assert.equal(isConfirmedEmptyCategory(1, bos(1)), true, "1. sayfa, API yanıt verdi, total 0 → kategori boş");
+  // Dolu kategoride son sayfanın ötesi: API tam olarak bunu döndürür (sayfa yankılı ya da yankısız).
+  assert.equal(isConfirmedEmptyListing(bos(9)), true, "ön koşul: yanıtın kendisi 'boş liste' gibi görünür");
+  assert.equal(isConfirmedEmptyCategory(9, bos(9)), false, "sayfa 9'un yanıtı kategori için kanıt değil");
+  assert.equal(isConfirmedEmptyCategory(999, { answered: true, items: [], pagination: { total: 0 } }), false, "sayfa yankısı olmasa da");
+  assert.equal(isConfirmedEmptyCategory(2, bos(2)), false);
+  // 1. sayfada fail-open kuralları aynen (isConfirmedEmptyListing).
+  // fetchProductsPaged hata hâlinde tam olarak bunu döndürür (`answered` YOK).
+  const yedek = { items: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 1 } };
+  assert.equal(isConfirmedEmptyCategory(1, yedek), false, "yedek sayfa (answered yok)");
+  assert.equal(isConfirmedEmptyCategory(1, { answered: true, items: [{ id: 1 }], pagination: { total: 37 } }), false, "dolu kategori");
+  assert.equal(isConfirmedEmptyCategory(1, null), false);
+  assert.equal(isConfirmedEmptyCategory(1, undefined), false);
+});
+
+test("isCategoryWithoutListing: canlı ağaçta karşılığı olmayan ÜRÜN KATEGORİSİ sayfası ürün listelemez → index'e değmez", () => {
+  assert.equal(isCategoryWithoutListing({ liveTree: true, categoryId: null, pageType: "category" }), true);
+  assert.equal(isCategoryWithoutListing({ liveTree: true, categoryId: undefined, pageType: "category" }), true);
+  // Kategori ağaçta varsa karar ürün sayısına bakar (bu kural devreye girmez).
+  assert.equal(isCategoryWithoutListing({ liveTree: true, categoryId: 13, pageType: "category" }), false);
+  // FAIL-OPEN: ağaç okunamadı (statik yedek) → karar verilmez.
+  assert.equal(isCategoryWithoutListing({ liveTree: false, categoryId: null, pageType: "category" }), false);
+  // Konum + kategori sayfaları (ve türü bilinmeyen sayfa) ürün kategorisi değildir → dokunulmaz.
+  for (const pageType of ["category_location", "special_day", "brand", "", null, undefined]) {
+    assert.equal(isCategoryWithoutListing({ liveTree: true, categoryId: null, pageType }), false, String(pageType));
+  }
+});
+
 test("KAYNAK: Türkçe kategori sayfası boş kategoride noindex,follow basar ve hreflang kümesi basmaz; boş durum metni doğruyu söyler", () => {
   const page = readFileSync(new URL("../app/kategori/[...slug]/page.tsx", import.meta.url), "utf8");
-  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo));"));
+  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type));"));
   assert.ok(page.includes("robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : indexRobots(page.index_state),"), "karar yoksa bugünkü robots");
   assert.ok(page.includes("if (pageNo === 1 && page.index_state === \"index\" && !emptyCategory) {"), "noindex sayfa hreflang ailesine girmez");
   // Karar yalnız CANLI ağaç + başarılı ürün okumasıyla verilir; istek ana serinin isteğiyle aynı.
   const fn = page.slice(page.indexOf("async function isCategoryConfirmedEmpty("), page.indexOf("export async function generateMetadata"));
   assert.ok(fn.includes("if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;"));
-  assert.ok(fn.includes("if (!categoryId) return false;"));
+  // EK: karar yalnız 1. sayfada; okuma da ancak o zaman yapılır (sayfa ≥ 2'de ek istek yok).
+  assert.ok(fn.includes("if (pageNo !== 1) return false;"));
+  assert.ok(fn.indexOf("if (pageNo !== 1) return false;") < fn.indexOf("await getCategoryTree()"), "sayfa ≥ 2'de hiçbir okuma yapılmaz");
+  // EK: ağaçta çözülemeyen ürün kategorisi sayfası listesizdir (konum + kategori sayfaları hariç).
+  assert.ok(fn.includes("if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });"));
+  assert.ok(fn.includes("return isConfirmedEmptyCategory("));
   assert.ok(fn.includes("await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),"));
   assert.match(page, /^export const revalidate = 300;$/m, "rota ayarı değişmedi");
 
   const landing = readFileSync(new URL("../components/category/CategoryLanding.tsx", import.meta.url), "utf8");
-  assert.ok(landing.includes("const categoryEmpty = !filterType && !sameDay && !bestseller && !isNew && isConfirmedEmptyListing(productPage);"));
+  assert.ok(landing.includes("const categoryEmpty = !filterType && !sameDay && !bestseller && !isNew && isConfirmedEmptyCategory(pageNum, productPage);"));
   assert.ok(landing.includes('{categoryEmpty ? "Bu koleksiyonda şu anda ürün bulunmuyor." : "Seçtiğin filtrelere uygun ürün bulunamadı."}'));
-  assert.ok(landing.includes('{categoryEmpty ? "Tüm koleksiyonlara göz at" : "Filtreleri temizle"}'));
+  // Bağlantı metni hedefini söyler: boş kategoride hedef ana sayfadır ("/").
+  assert.ok(landing.includes('<Link href={categoryEmpty ? "/" : path} scroll={categoryEmpty}'));
+  assert.ok(landing.includes('{categoryEmpty ? "Ana sayfaya dön" : "Filtreleri temizle"}'));
+  assert.ok(!landing.includes("Tüm koleksiyonlara göz at"), "metin hedefle çelişmez");
   assert.ok(landing.includes('<section className="max-w-[1440px] mx-auto px-6 lg:px-14 py-16 text-center">'), "boş durum işaretlemesi aynı");
   assert.ok(landing.includes('className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline"'));
 

@@ -16,7 +16,7 @@ import { CargoCategoryExperience } from "@/components/category/CargoCategoryExpe
 import { absoluteUrl } from "@/lib/site-config";
 import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
-import { buildCategoryPagination, isCategoryPageBeyondLast, isCategoryPageWithoutListing, isConfirmedEmptyListing } from "@/lib/categoryPagination";
+import { buildCategoryPagination, isCategoryPageBeyondLast, isCategoryPageWithoutListing, isConfirmedEmptyCategory } from "@/lib/categoryPagination";
 import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
 import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, categorySortOf, categorySortParam } from "@/lib/categorySort";
 
@@ -209,7 +209,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // EK (KATEGORİ YASASI): filtre uygulanmamışken API "bu kategoride ürün yok" dediyse (başarılı yanıt,
   // total 0) boş durum metni doğruyu söyler — "filtrelere uygun ürün bulunamadı" DEĞİL. Filtre varsa ya da
   // okuma başarısızsa (durum bilinmiyor) bugünkü metin aynen. Karar: lib/categoryPagination.ts.
-  const categoryEmpty = !filterType && !sameDay && !bestseller && !isNew && isConfirmedEmptyListing(productPage);
+  // EK: karar yalnız 1. sayfanın yanıtıyla verilir (son sayfanın ötesi dolu kategoride de total 0 döner).
+  const categoryEmpty = !filterType && !sameDay && !bestseller && !isNew && isConfirmedEmptyCategory(pageNum, productPage);
   // EK (crawlable sayfalama): tarayıcı için gerçek sayfa bağlantıları. Sonsuz
   // kaydırma aynen; yalnız SSR'a "Önceki / Sonraki sayfa" <a href="?page=N"> eklenir.
   // Bağlantılar YALNIZ gerçekten uygulanan liste durumunu taşır (sıralama + filtreler);
@@ -401,12 +402,12 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
 
         {/* Filtre sonucu boşsa bilgilendirme */}
         {/* EK (KATEGORİ YASASI): kategorinin KENDİSİ boşsa (filtre yok, API total 0) metin bunu söyler;
-            temizlenecek filtre olmadığı için bağlantı koleksiyonlara gider. İşaretleme / sınıflar aynı. */}
+            temizlenecek filtre olmadığı için bağlantı ana sayfaya gider (metin hedefi söyler). İşaretleme / sınıflar aynı. */}
         {categoryId && products.length === 0 ? (
           <section className="max-w-[1440px] mx-auto px-6 lg:px-14 py-16 text-center">
             <p className="text-[15px] text-[#6B7280]">{categoryEmpty ? "Bu koleksiyonda şu anda ürün bulunmuyor." : "Seçtiğin filtrelere uygun ürün bulunamadı."}</p>
             <Link href={categoryEmpty ? "/" : path} scroll={categoryEmpty} className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline">
-              {categoryEmpty ? "Tüm koleksiyonlara göz at" : "Filtreleri temizle"}
+              {categoryEmpty ? "Ana sayfaya dön" : "Filtreleri temizle"}
             </Link>
             {/* EK: bu sayfanın ürünleri görselsiz olsa da serinin diğer sayfalarına tarama yolu kalır. */}
             {pageNav}

@@ -253,3 +253,32 @@ export function isConfirmedEmptyListing(
   if (!numeric || Number(total) !== 0) return false;
   return !Array.isArray(listing.items) || listing.items.length === 0;
 }
+
+/**
+ * EK — KATEGORİ boş mu? Karar YALNIZ 1. sayfanın yanıtıyla verilir. Ürün listesi ucu `total`'ı satırlardan
+ * sayar (COUNT(*) OVER()): son sayfanın ÖTESİNDEKİ bir sayfa, kategori dolu olsa da `total: 0` + satırsız
+ * döner → sayfa N ≥ 2'nin yanıtı "kategori boş" kanıtı DEĞİLDİR. (Gerçekten boş kategorinin sayfa ≥ 2
+ * adresi zaten 404 verir: isCategoryPageBeyondLast.) N ≥ 2'de karar verilmez → bugünkü robots / metin.
+ */
+export function isConfirmedEmptyCategory(
+  requestedPage: number,
+  listing: { answered?: unknown; items?: unknown; pagination?: { total?: unknown } | null } | null | undefined,
+): boolean {
+  return requestedPage === 1 && isConfirmedEmptyListing(listing);
+}
+
+/**
+ * EK — ÜRÜN KATEGORİSİ sayfasının listesi YOK mu? Kategori CANLI ağaçta çözülemiyorsa (yalnız SEO
+ * kaydından çizilen /kategori/<slug> sayfası) sayfa hiç ürün listelemez → yasa gereği index'e değmez
+ * (kategori sitemap'i de bu sayfayı ürün sayısı 0 olduğu için listelemez — iki karar aynı yöne bakar).
+ * Yalnız `page_type` = "category" için karar verilir: konum + kategori (category_location) sayfaları
+ * ürün kategorisi değildir, onlara dokunulmaz. Ağaç okunamadıysa (statik yedek) karar verilmez.
+ * Sayfa ≥ 2 için aynı koşul 404 verir (isCategoryPageWithoutListing) — bu kural 1. sayfanın robots'udur.
+ */
+export function isCategoryWithoutListing(input: {
+  liveTree: boolean;
+  categoryId: number | null | undefined;
+  pageType: string | null | undefined;
+}): boolean {
+  return input.liveTree && !input.categoryId && input.pageType === "category";
+}

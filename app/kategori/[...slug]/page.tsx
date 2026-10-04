@@ -23,7 +23,8 @@ import {
   categoryListingState,
   categoryPageTitle,
   EMPTY_CATEGORY_ROBOTS,
-  isConfirmedEmptyListing,
+  isCategoryWithoutListing,
+  isConfirmedEmptyCategory,
   parseCategoryPageParam,
   type CategoryListingState,
 } from "@/lib/categoryPagination";
@@ -74,19 +75,27 @@ async function mainSeriesState(path: string, pageNo: number): Promise<CategoryLi
 
 /**
  * EK (KATEGORİ YASASI): kategorinin FİLTRESİZ listesi KESİN boş mu? ("Kategori sayfası yalnız en az
- * bir aktif ürün listelediği sürece index'e değerdir.") İstek, ana serinin o sayfa için yaptığı
- * istekle AYNIDIR (1. sayfada CategoryLanding'in, N ≥ 2'de mainSeriesState'in isteği → istek içi
- * tekilleştirme; `total` sayfadan bağımsızdır). Yalnız sıralı / filtreli 1. sayfa isteğinde tek ek
- * okuma olur (Data Cache'li, kategorinin çıplak sayfasıyla aynı kayıt).
- * FAIL-OPEN: ağaç okunamadıysa (statik yedek), kategori ağaçta çözülemediyse ya da ürün okuması
- * başarısızsa false → bugünkü robots (API kesintisi dolu bir kategoriyi index dışına itmez).
+ * bir aktif ürün listelediği sürece index'e değerdir.") İstek, CategoryLanding'in sıralamasız /
+ * filtresiz 1. sayfa isteğiyle AYNIDIR (istek içi tekilleştirme). Yalnız sıralı / filtreli 1. sayfa
+ * isteğinde tek ek okuma olur (Data Cache'li, kategorinin çıplak sayfasıyla aynı kayıt — kategorinin
+ * en sık okunan kaydı).
+ * EK: karar YALNIZ 1. sayfada verilir. Liste ucu `total`'ı satırlardan sayar: son sayfanın ötesindeki
+ * bir sayfa dolu kategoride de total 0 döner → sayfa N ≥ 2'nin yanıtı "kategori boş" kanıtı değildir
+ * (gerçekten boş kategorinin sayfa ≥ 2 adresi zaten 404 verir). Kural: isConfirmedEmptyCategory.
+ * EK: ÜRÜN KATEGORİSİ sayfası canlı ağaçta çözülemiyorsa (yalnız SEO kaydından çizilen sayfa) hiç ürün
+ * listelemez → aynı yasa gereği index'e değmez (kural: isCategoryWithoutListing; konum + kategori
+ * sayfalarına dokunulmaz).
+ * FAIL-OPEN: ağaç okunamadıysa (statik yedek) ya da ürün okuması başarısızsa false → bugünkü robots
+ * (API kesintisi dolu bir kategoriyi index dışına itmez).
  */
-async function isCategoryConfirmedEmpty(path: string, pageNo: number): Promise<boolean> {
+async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?: string | null): Promise<boolean> {
+  if (pageNo !== 1) return false;
   const tree = await getCategoryTree();
   if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;
   const categoryId = findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, ""));
-  if (!categoryId) return false;
-  return isConfirmedEmptyListing(
+  if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });
+  return isConfirmedEmptyCategory(
+    pageNo,
     await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),
   );
 }
@@ -128,7 +137,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // EK (KATEGORİ YASASI): sayfa bugün indexlenebilirken filtresiz liste KESİN boşsa (API başarıyla
   // yanıt verdi, total 0) robots "noindex, follow" olur ve hreflang kümesi basılmaz (noindex sayfa aile
   // üyesi olamaz). Zaten index dışı sayfada (önizleme / noindex kayıt) okuma yapılmaz, robots aynen.
-  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo));
+  // Karar yalnız 1. sayfada verilir (sayfa N ≥ 2'nin yanıtı kategori için kanıt değildir).
+  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type));
   let languages: Record<string, string> | null = null;
   if (pageNo === 1 && page.index_state === "index" && !emptyCategory) {
     const tree = await getCategoryTree();
