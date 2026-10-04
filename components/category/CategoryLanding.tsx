@@ -19,6 +19,8 @@ import { isLegacyPleskMedia } from "@/lib/media";
 import { buildCategoryPagination, isCategoryPageBeyondLast, isCategoryPageWithoutListing, isConfirmedEmptyCategory } from "@/lib/categoryPagination";
 import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
 import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, categorySortOf, categorySortParam } from "@/lib/categorySort";
+// EK (TEK GÖRSEL KAYNAĞI): kategori karosuna yedek konan ürün kapağı ölü eski yolsa stüdyo kopyası kullanılır.
+import { productCoverTileUrl } from "@/lib/productImageUrl";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -111,7 +113,9 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
         try {
           const prod = await fetchProducts({ category_id: catId, page_size: 1 });
           const firstProduct = prod?.[0];
-          if (firstProduct?.cover_image_url) return { ...cat, image: firstProduct.cover_image_url };
+          // EK: ölü eski kapak karoya konmaz (stüdyo kopyası varsa o; yoksa aşağıdaki yedek).
+          const cover = productCoverTileUrl(firstProduct?.cover_image_url);
+          if (cover) return { ...cat, image: cover };
         } catch {
           // API fail
         }
@@ -176,7 +180,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
           page_size: 1,
           sort: "created_at_desc",
         });
-        const productImage = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+        // EK: ölü eski kapak karoya konmaz (stüdyo kopyası varsa o; yoksa aşağıdaki yedek).
+        const productImage = candidates.map((product) => productCoverTileUrl(product.cover_image_url)).find(Boolean);
         if (productImage) return { ...item, image: productImage };
       } catch {
         // API fail

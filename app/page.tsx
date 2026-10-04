@@ -35,6 +35,8 @@ import { FlowerJourney } from "../components/home/FlowerJourney";
 import { BlogRail } from "../components/home/BlogRail";
 import { absoluteUrl, indexRobots, SITE_URL } from "@/lib/site-config";
 import { isLegacyPleskMedia } from "@/lib/media";
+// EK (TEK GÖRSEL KAYNAĞI): koleksiyon karosuna yedek konan ürün kapağı ölü eski yolsa stüdyo kopyası kullanılır.
+import { productCoverTileUrl } from "@/lib/productImageUrl";
 import { homeHreflangFamily } from "@/lib/global/hreflangFamily";
 import { fetchHomeLocaleVersions } from "@/lib/hreflangSources";
 
@@ -173,7 +175,8 @@ export default async function HomePage() {
       const categoryId = findCategoryIdBySlug(tree ?? [], item.id);
       if (!categoryId) return { ...item, image: "" };
       const candidates = await fetchProducts({ category_id: categoryId, page_size: 1 });
-      const image = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+      // EK (TEK GÖRSEL KAYNAĞI): kapak ölü eski yoldaysa ürün kartının gösterdiği stüdyo kopyası; o da yoksa yer tutucu.
+      const image = candidates.map((product) => productCoverTileUrl(product.cover_image_url)).find(Boolean);
       return { ...item, image: image ?? "" };
     })
   );

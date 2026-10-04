@@ -8,6 +8,11 @@
 //  4) R2 / "/r2/…" adresi → bugünkü çıktı, bayt bayt.
 //  5) Product JSON-LD, image sitemap (TR yeni yol + yedek yol + locale) ve merchant feed
 //     aynı yardımcıdan geçer.
+//  6) HOST KURALI: yalnız vitrinin kendi hostu (kanonik + www'siz ikizi) kanonik adrese sabitlenir;
+//     başka her host (CDN alt alan adı, API hostu, harici) AYNEN basılır.
+//  7) Galeri videosu görsel olarak basılmaz; çıktı geçerli URL biçimindedir (boşluk / ASCII dışı
+//     yüzde-kodlu), temiz adresin baytları değişmez.
+//  8) Kategori karosuna yedek konan ürün kapağı ölü eski yolsa stüdyo kopyası kullanılır.
 //
 // NOT: lib/productImage.ts uzantısız import + JSON import kullanır; aşağıdaki hook YALNIZ
 // bu test sürecinde çalışır — üretim koduna dokunmaz (lib/sitemapProductSource.test.ts ile aynı).
@@ -67,7 +72,7 @@ registerHooks({
   },
 });
 
-const { servedProductImageUrl, firstServedProductImageUrl } = await import("./productImageUrl.ts");
+const { servedProductImageUrl, firstServedProductImageUrl, productCoverTileUrl } = await import("./productImageUrl.ts");
 const { resolveProductImage } = await import("./productImage.ts");
 const { mediaUrl, isLegacyPleskMedia } = await import("./media.ts");
 const { absoluteUrl } = await import("./site-config.ts");
@@ -136,6 +141,95 @@ test("göreli '/r2/…' ve site içi yol → MUTLAK; harici http(s) adresi aynen
   assert.equal(servedProductImageUrl("https://images.unsplash.com/photo-1"), "https://images.unsplash.com/photo-1");
   // Kendi alan adımızdaki mutlak adres kanonik hosta sabitlenir (https://www).
   assert.equal(servedProductImageUrl("https://cicekyolla.com.tr/r2/products/a.webp"), `${SITE}/r2/products/a.webp`);
+});
+
+// EK (HOST KURALI): görünür <img> mutlak adresi olduğu gibi gösterir; makineye dönük çıktı başka bir
+// hosttaki dosyayı www hostuna "taşıyıp" var olmayan bir adres bildiremez.
+test("HOST KURALI: yalnız vitrinin KENDİ hostu kanonik adrese sabitlenir; alt alan adı / benzer adlı / harici host AYNEN", () => {
+  // Kendi hostu (www'li, www'siz, http) → kanonik https://www.
+  for (const kendi of ["https://www.cicekyolla.com.tr/r2/products/a.webp", "https://cicekyolla.com.tr/r2/products/a.webp", "http://cicekyolla.com.tr/r2/products/a.webp"]) {
+    assert.equal(servedProductImageUrl(kendi), `${SITE}/r2/products/a.webp`, kendi);
+  }
+  // Başka host: görünür <img> ne gösteriyorsa o (bayt bayt).
+  for (const baska of [
+    "https://cdn.cicekyolla.com.tr/products/1784458921010-x.jpg", // planlanan R2 özel alan adı (lib/media.ts)
+    "https://api.cicekyolla.com.tr/uploads/9999.jpg",
+    "https://evilcicekyolla.com/x.jpg", // host yalnız "…cicekyolla.com" ile BİTİYOR
+    "https://notcicekyolla.com.tr/x.jpg",
+    "https://cicekyolla-public-abc123.vercel.app/studio/x.webp",
+    "https://images.unsplash.com/photo-1?w=800&q=80",
+  ]) {
+    assert.equal(servedProductImageUrl(baska), baska, baska);
+    assert.equal(servedProductImageUrl(baska), resolveProductImage(baska), "görünür <img> ile aynı adres");
+  }
+  // Operatörün girdiği og:image de aynı kuraldan geçer (firstServedProductImageUrl).
+  assert.equal(firstServedProductImageUrl(["https://cdn.cicekyolla.com.tr/og/kampanya.jpg", "/r2/products/b.webp"]), "https://cdn.cicekyolla.com.tr/og/kampanya.jpg");
+});
+
+test("VİDEO: galeri videosu görsel olarak basılmaz (PDP'nin <video> çizdiği uzantılar) — JSON-LD ve og:image adayı dahil", () => {
+  for (const video of [
+    "/r2/products/1784458921010-tanitim-video.mp4",
+    `${R2}/products/tanitim.webm`,
+    "/r2/products/tanitim.MOV",
+    "/r2/products/tanitim.m4v?v=2",
+    "https://cdn.cicekyolla.com.tr/products/tanitim.ogg",
+  ]) {
+    assert.equal(servedProductImageUrl(video), null, video);
+  }
+  // Uzantı yalnız SONDA (ya da sorgudan hemen önce) video sayılır: adında "mp4" geçen görsel görseldir.
+  assert.equal(servedProductImageUrl("/r2/products/mp4-kapak.webp"), `${SITE}/r2/products/mp4-kapak.webp`);
+  assert.equal(servedProductImageUrl("/r2/products/a.mp4.webp"), `${SITE}/r2/products/a.mp4.webp`);
+  // og:image adayı: ilk kayıt videoysa sıradaki GÖRSEL seçilir.
+  assert.equal(firstServedProductImageUrl([undefined, "/r2/products/tanitim.mp4", "/r2/products/b.webp"]), `${SITE}/r2/products/b.webp`);
+  assert.equal(firstServedProductImageUrl(["/r2/products/tanitim.mp4"]), null);
+  // Product JSON-LD `image`: kapak + galeri videosu → yalnız görsel yazılır.
+  const ld = buildProductJsonLd({
+    ...URUN,
+    images: [{ url: "/r2/products/kapak.webp", role: "cover" }, { url: "/r2/products/1784458921010-tanitim-video.mp4", role: "gallery" }],
+  }, DEPS);
+  assert.deepEqual(ld.image, [`${SITE}/r2/products/kapak.webp`]);
+  assert.ok(!JSON.stringify(ld).includes(".mp4"));
+  // Uzantı listesi PDP'nin video kararıyla AYNI (iki yerde ayrışmasın).
+  const pdp = readFileSync(path.join(REPO_KOK, "components", "product", "ProductDetail.tsx"), "utf8");
+  const yardimci = readFileSync(path.join(REPO_KOK, "lib", "productImageUrl.ts"), "utf8");
+  const desen = "/\\.(mp4|webm|mov|m4v|ogg)(\\?|$)/i";
+  assert.ok(pdp.includes(`return ${desen}.test(url);`), "ProductDetail.isVideo");
+  assert.ok(yardimci.includes(`const PRODUCT_VIDEO_URL = ${desen};`), "lib/productImageUrl.ts");
+});
+
+test("ADRES NORMALİZASYONU: boşluk / ASCII dışı karakter yüzde-kodlanır (eski merchant feed çıktısıyla aynı); temiz adres bayt bayt aynı", () => {
+  const ham = "/r2/products/9999 yeni çiçek.jpg";
+  const beklenen = `${SITE}/r2/products/9999%20yeni%20%C3%A7i%C3%A7ek.jpg`;
+  assert.equal(servedProductImageUrl(ham), beklenen);
+  // Eski merchant feed bu değeri `new URL(value, SITE_URL).toString()` ile üretiyordu → aynı sonuç.
+  assert.equal(servedProductImageUrl(ham), new URL(ham, SITE).toString());
+  // Zaten kodlu adres ikinci kez kodlanmaz.
+  assert.equal(servedProductImageUrl("/r2/products/9999%20yeni.jpg"), `${SITE}/r2/products/9999%20yeni.jpg`);
+  assert.equal(servedProductImageUrl("https://images.unsplash.com/foto 1.jpg"), "https://images.unsplash.com/foto%201.jpg");
+  // Temiz adresler: stüdyo haritasının TÜM hedefleri ve örnek R2 anahtarları değişmeden çıkar.
+  for (const hedef of new Set(Object.values(STUDIO_MAP))) {
+    assert.equal(new URL(`${SITE}${hedef}`).toString(), `${SITE}${hedef}`, hedef);
+  }
+  for (const temiz of ["/r2/products/1784458921010-mor-orkide-kakt-s-aranjman.webp", "/r2/products/a_b-c.d(1).webp?v=3&w=2", "/uploads/A/B/c.JPG"]) {
+    assert.equal(servedProductImageUrl(temiz), `${SITE}${temiz}`, temiz);
+  }
+});
+
+// EK (KATEGORİ KAROSU YEDEĞİ): kategori görseli yokken karoya ürün kapağı konur; kapak ölü eski yoldaysa
+// (404) karo kırık görsel göstermemeli — ürün kartının gösterdiği stüdyo kopyası kullanılır.
+test("productCoverTileUrl: çalışan kapak AYNEN; ölü eski yol → stüdyo kopyası; kopya da yoksa null", () => {
+  // Çalışan kapaklar: karodaki adres değişmez (stüdyo kopyası olsa bile — görünüm aynı kalır).
+  for (const calisan of ["/r2/products/yeni.webp", `/r2/products/${STUDIO_KEY_2}`, "https://images.unsplash.com/photo-1", "/uploads/a.jpg"]) {
+    assert.equal(productCoverTileUrl(calisan), calisan, calisan);
+  }
+  // Ölü eski yol: stüdyo kopyası varsa o (ürün kartı / PDP ile aynı dosya).
+  assert.equal(productCoverTileUrl(`/storage/products/${STUDIO_KEY}`), STUDIO_PATH);
+  assert.equal(productCoverTileUrl(`https://www.cicekyolla.com.tr/storage/products/${STUDIO_KEY}`), STUDIO_PATH);
+  assert.equal(productCoverTileUrl(`https://cicekyolla.com.tr/storage/products/${STUDIO_KEY}`), STUDIO_PATH);
+  // Kopyası da yoksa karoya konmaz (çağıran sıradaki adaya / yer tutucuya düşer).
+  assert.equal(productCoverTileUrl(`/storage/products/${KOPYASIZ}`), null);
+  assert.equal(productCoverTileUrl(`https://www.cicekyolla.com.tr/storage/products/${KOPYASIZ}`), null);
+  for (const bos of [null, undefined, "", "   "]) assert.equal(productCoverTileUrl(bos as string | null | undefined), null, String(bos));
 });
 
 test("istenebilir görsel adresi olmayan değer → null (boş, 'null', data:, blob:, protokol-göreli, şemasız, bozuk)", () => {
@@ -396,4 +490,21 @@ test("KAYNAK: JSON-LD, og:image, image sitemap ve merchant feed tek yardımcıy�
   assert.ok(yardimci.includes("const served = value ? resolveProductImage(value) : null;"));
   // Görünür bileşen bu yardımcıyı KULLANMAZ (render değişmedi).
   assert.ok(!oku("components/product/ProductImage.tsx").includes("productImageUrl"));
+});
+
+test("KAYNAK: kategori karosu yedeği dört yerde de aynı yardımcıdan geçer (ana sayfa, ilgili koleksiyonlar, alt kategoriler, /api/category-image)", () => {
+  const oku = (p: string) => readFileSync(path.join(REPO_KOK, p), "utf8");
+  const ana = oku("app/page.tsx");
+  assert.ok(ana.includes("const image = candidates.map((product) => productCoverTileUrl(product.cover_image_url)).find(Boolean);"));
+  const landing = oku("components/category/CategoryLanding.tsx");
+  assert.ok(landing.includes("const cover = productCoverTileUrl(firstProduct?.cover_image_url);"), "ilgili koleksiyonlar");
+  assert.ok(landing.includes("if (cover) return { ...cat, image: cover };"));
+  assert.ok(landing.includes("const productImage = candidates.map((product) => productCoverTileUrl(product.cover_image_url)).find(Boolean);"), "alt kategoriler");
+  const rota = oku("app/api/category-image/[slug]/route.ts");
+  assert.ok(rota.includes(".map((product) => productCoverTileUrl(product.cover_image_url))"));
+  // Ham kapak artık doğrudan karoya konmuyor.
+  for (const [ad, kaynak] of [["app/page.tsx", ana], ["CategoryLanding", landing], ["category-image", rota]] as const) {
+    assert.ok(!kaynak.includes("?.cover_image_url;"), ad);
+  }
+  assert.ok(!landing.includes("image: firstProduct.cover_image_url"));
 });
