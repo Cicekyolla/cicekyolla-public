@@ -18,7 +18,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { MANAGED_LOCALE_MAX_HOPS, managedLocaleFinalTarget, managedLocaleTarget } from "./managed-redirects.ts";
+import { MANAGED_LOCALE_MAX_HOPS, managedLocaleFinalTarget, managedLocaleTarget, managedRedirectSearch } from "./managed-redirects.ts";
 import { GLOBAL_LOCALES, SEGMENTS } from "./global/config.ts";
 
 const REPO_KOK = path.resolve(import.meta.dirname, "..");
@@ -152,6 +152,30 @@ test("managedLocaleFinalTarget: zincirde geçici (302/307) adım varsa sonuç da
     managedLocaleFinalTarget("/fr/a", harita({ "/fr/a": { to: "/fr/b", code: 308 }, "/fr/b": { to: "/fr/c", code: 301 } })),
     { to: "/fr/c", code: 308 },
   );
+});
+
+// EK (TR YÖNETİLEN 301 — TAŞINAN SORGU DİZESİ): saf karar.
+test("managedRedirectSearch: site içi hedefte sorgu bayt bayt taşınır; `page` düşer; site dışı hedefte hiçbir şey taşınmaz", () => {
+  // Site içi hedef: izleme parametreleri aynen (yeniden kodlama yok, sıra aynı).
+  assert.equal(managedRedirectSearch("/urun/yeni-slug", "?gclid=abc123&utm_source=google&utm_campaign=g%C3%BCl"), "?gclid=abc123&utm_source=google&utm_campaign=g%C3%BCl");
+  assert.equal(managedRedirectSearch("/", "?gclid=x"), "?gclid=x");
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?a=1+2&b=%20&c"), "?a=1+2&b=%20&c", "ham parçalar korunur");
+  // Sorgu yoksa Location'a "?" eklenmez.
+  assert.equal(managedRedirectSearch("/urun/yeni-slug", ""), "");
+  assert.equal(managedRedirectSearch("/urun/yeni-slug", "?"), "");
+  // `page` taşınmaz (hedef başka bir liste olabilir → olmayan sayfaya 301 → 404 zinciri kurulmaz).
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?page=7"), "");
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?gclid=abc&page=7"), "?gclid=abc");
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?page=7&gclid=abc&utm_source=x"), "?gclid=abc&utm_source=x");
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?sort=price_asc&page=2&page=3"), "?sort=price_asc", "yinelenen page de düşer");
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?%70age=7&gclid=abc"), "?gclid=abc", "yüzde-kodlu anahtar da page'dir");
+  // Yalnız anahtarı TAM `page` olan parametre düşer.
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?pages=2&mypage=3&Page=4"), "?pages=2&mypage=3&Page=4");
+  assert.equal(managedRedirectSearch("/kategori/yeni", "?%E0%A4%A=1&gclid=abc"), "?%E0%A4%A=1&gclid=abc", "bozuk kodlu anahtar fırlatmaz, aynen kalır");
+  // Site dışına çözülen hedef (normalize() "//host/yol" biçimini korur): tıklama kimliği / utm üçüncü hosta VERİLMEZ.
+  for (const dis of ["//evil.example/x", "/\\evil.example/x", "", "https://evil.example/x"]) {
+    assert.equal(managedRedirectSearch(dis, "?gclid=abc&utm_source=google&token=gizli"), "", JSON.stringify(dis));
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -355,7 +379,7 @@ test("REGRESYON: TR yolunda yönetilen 301 aynen çalışır (locale dalı TR'yi
 });
 
 // EK (SORGU DİZESİ KORUNUR): TR yönetilen 301 dalı da isteğin sorgu dizesini hedefe taşır.
-test("TR yönetilen 301: sorgu dizesi korunur (gclid / utm / page) — locale dalıyla aynı kural; kod kayıttan", async () => {
+test("TR yönetilen 301: sorgu dizesi korunur (gclid / utm); `page` taşınmaz; site dışı hedefe sorgu verilmez; kod kayıttan", async () => {
   onbellekEskit();
   redirectStub = {
     status: 200,
@@ -363,14 +387,23 @@ test("TR yönetilen 301: sorgu dizesi korunur (gclid / utm / page) — locale da
       ...KAYITLAR,
       { from: "/urun/eski-slug", to: "/urun/yeni-slug", code: 301 },
       { from: "/kategori/eski-kategori", to: "/kategori/yeni-kategori", code: 308 },
+      { from: "/dis", to: "//evil.example/x", code: 301 },
     ],
   };
   const urun = await middleware(istek("/urun/eski-slug?gclid=abc123&utm_source=google&utm_campaign=g%C3%BCl"));
   assert.equal(urun.status, 301);
   assert.equal(urun.headers.get("location"), `${SITE}/urun/yeni-slug?gclid=abc123&utm_source=google&utm_campaign=g%C3%BCl`, "sorgu bayt bayt taşınır");
+  // EK: `page` taşınmaz — birleştirilen kategoride hedefte olmayan sayfaya (404) değil, hedefin 1. sayfasına (200) inilir.
   const kategori = await middleware(istek("/kategori/eski-kategori?page=3"));
   assert.equal(kategori.status, 308, "kod kayıttan");
-  assert.equal(kategori.headers.get("location"), `${SITE}/kategori/yeni-kategori?page=3`);
+  assert.equal(kategori.headers.get("location"), `${SITE}/kategori/yeni-kategori`);
+  const kategoriReklam = await middleware(istek("/kategori/eski-kategori?gclid=abc&page=7&utm_source=google"));
+  assert.equal(kategoriReklam.headers.get("location"), `${SITE}/kategori/yeni-kategori?gclid=abc&utm_source=google`, "izleme parametreleri kalır");
+  // EK: hedef site dışına çözülüyorsa yönlendirme önceki hâliyle aynıdır (sorgusuz) — tıklama kimliği dış hosta gitmez.
+  const dis = await middleware(istek("/dis?gclid=abc&utm_source=google"));
+  assert.equal(dis.status, 301);
+  assert.equal(dis.headers.get("location"), "https://evil.example/x");
+  assert.equal((await middleware(istek("/dis"))).headers.get("location"), "https://evil.example/x", "sorgusuz istekte Location aynı");
   const kok = await middleware(istek("/cicek-gonder?gclid=x"));
   assert.equal(kok.headers.get("location"), `${SITE}/?gclid=x`);
   // Sorgusuz istekte Location bugünküyle aynı (sonda "?" yok).
@@ -380,13 +413,14 @@ test("TR yönetilen 301: sorgu dizesi korunur (gclid / utm / page) — locale da
   assert.equal(devamMi(await middleware(istek("/urun/yeni-slug?gclid=abc123"))), true);
 });
 
-test("kaynak nöbeti: TR yönetilen 301 dalı hedefe isteğin sorgu dizesini kopyalar (iki dal aynı satırı taşır)", () => {
+test("kaynak nöbeti: TR yönetilen 301 dalı sorguyu saf karardan (managedRedirectSearch) geçirerek taşır; locale dalı aynen", () => {
   const src = readFileSync(path.join(REPO_KOK, "middleware.ts"), "utf8");
   const trDal = src.slice(src.indexOf("const managed = await resolveManagedRedirect(req.nextUrl.pathname);"), src.indexOf("const res = NextResponse.next();"));
   assert.ok(trDal.includes("const target = new URL(managed.to, req.nextUrl.origin);"));
-  assert.ok(trDal.includes("target.search = req.nextUrl.search;"));
+  assert.ok(trDal.includes("target.search = managedRedirectSearch(managed.to, req.nextUrl.search);"));
+  assert.ok(!trDal.includes("target.search = req.nextUrl.search;"), "TR dalı sorguyu süzmeden kopyalamaz");
   assert.ok(trDal.includes("return NextResponse.redirect(target, managed.code);"));
-  assert.equal(src.split("target.search = req.nextUrl.search;").length - 1, 2, "locale dalı + TR dalı");
+  assert.equal(src.split("target.search = req.nextUrl.search;").length - 1, 1, "yalnız locale dalı (hedefi zaten site içi doğrulanmış; yalnız slug değişimi)");
 });
 
 // ---------------------------------------------------------------------------

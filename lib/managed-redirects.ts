@@ -282,3 +282,43 @@ export async function resolveManagedLocaleRedirect(
     return null;
   }
 }
+
+// ============================================================================
+// EK (TR YÖNETİLEN 301 — TAŞINAN SORGU DİZESİ) — ADDITIVE. Yukarıdaki hiçbir
+// fonksiyon değiştirilmedi.
+//
+// TR yönetilen 301 dalı isteğin sorgu dizesini hedefe taşır (gclid / utm_* kaybolmasın).
+// İki sınır:
+//   1) Hedef site içi güvenli bir yol DEĞİLSE ("//dış-site/yol" — normalize() bu biçimi
+//      korur, tarayıcı dış siteye çözer) sorgu TAŞINMAZ: ziyaretçinin tıklama kimliği / utm
+//      değerleri üçüncü bir hosta verilmez. Yönlendirmenin kendisi önceki hâliyle aynıdır
+//      (kayıt operatör onaylıdır; sorgusuz Location — bu eklemeden önceki davranış).
+//   2) `page` parametresi TAŞINMAZ: hedef başka bir liste olabilir (kategori birleştirme —
+//      9 sayfalık kategori 3 sayfalık kategoriye taşındıysa "?page=7" hedefte 404 verir).
+//      Sayfa numarası düşünce yönlendirme hedefin 1. sayfasına iner (200) — sorgu dizesi
+//      taşınmadan önceki davranışla aynı. Diğer parametreler bayt bayt aynen kalır.
+// ============================================================================
+
+/**
+ * Saf yardımcı (test edilebilir): TR yönetilen yönlendirmede hedefe yazılacak sorgu dizesi.
+ *   to     — kaydın hedef yolu (normalize edilmiş).
+ *   search — isteğin sorgu dizesi ("?a=1&b=2" ya da "").
+ * Dönen değer "" ya da "?…" biçimindedir. Kalan parametreler yeniden kodlanmaz (ham parçalar korunur).
+ */
+export function managedRedirectSearch(to: string, search: string): string {
+  if (!isSafeInternalPath(to)) return '';
+  const raw = typeof search === 'string' ? search.replace(/^\?/, '') : '';
+  if (!raw) return '';
+  const kept = raw.split('&').filter((pair) => {
+    const key = pair.split('=')[0];
+    let name = key;
+    try {
+      name = decodeURIComponent(key.replace(/\+/g, ' '));
+    } catch {
+      // Bozuk yüzde-kodlu anahtar: ham hâliyle karşılaştırılır.
+    }
+    return name !== 'page';
+  });
+  const out = kept.join('&');
+  return out ? `?${out}` : '';
+}

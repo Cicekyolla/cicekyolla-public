@@ -11,7 +11,7 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect } from "@/lib/managed-redirects";
+import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
@@ -158,12 +158,16 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
   // API erişilemezse/yavaşsa null döner ve istek bugünkü gibi devam eder.
   const managed = await resolveManagedRedirect(req.nextUrl.pathname);
   if (managed) {
-    // EK (SORGU DİZESİ KORUNUR): yönetilen 301 isteğin sorgu dizesini (gclid, utm_*, ?page …) hedefe
-    // taşır — locale dalıyla (yukarıda) AYNI kural. Önceden düşüyordu: slug'ı değişen bir sayfaya giden
-    // reklam tıklaması yönlendirmede `gclid`'i (tıklama ilişkilendirmesi) kaybediyordu. Hedef yol ve
-    // durum kodu aynen kayıttan; sorgusuz istekte Location bugünküyle bayt bayt aynıdır.
+    // EK (SORGU DİZESİ KORUNUR): yönetilen 301 isteğin sorgu dizesini (gclid, utm_* …) hedefe taşır.
+    // Önceden düşüyordu: slug'ı değişen bir sayfaya giden reklam tıklaması yönlendirmede `gclid`'i
+    // (tıklama ilişkilendirmesi) kaybediyordu. Hedef yol ve durum kodu aynen kayıttan; sorgusuz
+    // istekte Location bugünküyle bayt bayt aynıdır.
+    // EK (İKİ SINIR — lib/managed-redirects.ts managedRedirectSearch): hedef site içi güvenli bir yol
+    // değilse ("//dış-site") sorgu TAŞINMAZ (tıklama kimliği üçüncü hosta verilmez; yönlendirme önceki
+    // hâliyle aynı); `page` parametresi TAŞINMAZ (birleştirilen kategoride hedefte olmayan bir sayfaya
+    // 301 → 404 zinciri kurulmaz; hedefin 1. sayfasına inilir — önceki davranış).
     const target = new URL(managed.to, req.nextUrl.origin);
-    target.search = req.nextUrl.search;
+    target.search = managedRedirectSearch(managed.to, req.nextUrl.search);
     return NextResponse.redirect(target, managed.code);
   }
 
