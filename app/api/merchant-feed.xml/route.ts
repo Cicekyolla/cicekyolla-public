@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchProductsPaged, type PublicProductListItem } from "@/lib/api";
 import { SITE_URL } from "@/lib/site-config";
+import { servedProductImageUrl } from "@/lib/productImageUrl";
 
 export const runtime = "nodejs";
 export const revalidate = 3600;
@@ -44,6 +45,12 @@ function googleCategory(type: string): string {
 
 function toItem(product: PublicProductListItem): string | null {
   if (!product.slug || !product.name || !product.cover_image_url) return null;
+  // EK (TEK GÖRSEL KAYNAĞI): image_link, ürün sayfasının GERÇEKTEN gösterdiği dosyadır (stüdyo
+  // kopyası → medya normalizasyonu; lib/productImageUrl.ts). Kapağı eski "/storage/products/…"
+  // yolunda kalan ürünler artık çalışan /studio/… adresiyle çıkar; sunulabilir görseli olmayan
+  // ürün (ölü adres) — kapaksız ürün gibi — feed'e girmez (image_link zorunlu alandır).
+  const imageLink = servedProductImageUrl(product.cover_image_url);
+  if (!imageLink) return null;
 
   const regularMinor = Number(product.price_minor);
   const saleMinor = Number(product.sale_price_minor);
@@ -62,7 +69,7 @@ function toItem(product: PublicProductListItem): string | null {
       <g:title>${esc(product.name)}</g:title>
       <g:description>${esc(description)}</g:description>
       <g:link>${esc(abs(`/urun/${product.slug}`))}</g:link>
-      <g:image_link>${esc(abs(product.cover_image_url))}</g:image_link>
+      <g:image_link>${esc(imageLink)}</g:image_link>
       <g:availability>${availability}</g:availability>
       <g:condition>new</g:condition>
       <g:price>${(regularMinor / 100).toFixed(2)} ${esc(currency)}</g:price>${hasSale ? `

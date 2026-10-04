@@ -3,6 +3,8 @@ import { fetchProducts } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, findCategoryNodeBySlug } from "@/lib/catalog";
 import { isLegacyPleskMedia } from "@/lib/media";
+// EK (TEK GÖRSEL KAYNAĞI): yedek ürün kapağı ölü eski yolsa stüdyo kopyasına yönlenir.
+import { productCoverTileUrl } from "@/lib/productImageUrl";
 
 const CACHE_CONTROL = "public, s-maxage=1800, stale-while-revalidate=86400";
 
@@ -63,9 +65,11 @@ export async function GET(
         page_size: 12,
         sort: "created_at_desc",
       });
-      const image = products.find(
-        (product) => product.status === "active" && Boolean(product.cover_image_url)
-      )?.cover_image_url;
+      // EK: ölü eski kapağa (404) yönlendirilmez — stüdyo kopyası varsa o, yoksa sıradaki ürün / yer tutucu.
+      const image = products
+        .filter((product) => product.status === "active")
+        .map((product) => productCoverTileUrl(product.cover_image_url))
+        .find(Boolean);
 
       if (image) return redirectToImage(image, request);
     }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { fetchProducts, fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
@@ -15,6 +16,11 @@ import { CargoCategoryExperience } from "@/components/category/CargoCategoryExpe
 import { absoluteUrl } from "@/lib/site-config";
 import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
+import { buildCategoryPagination, isCategoryPageBeyondLast, isCategoryPageWithoutListing, isConfirmedEmptyCategory } from "@/lib/categoryPagination";
+import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
+import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, categorySortOf, categorySortParam } from "@/lib/categorySort";
+// EK (TEK GÖRSEL KAYNAĞI): kategori karosuna yedek konan ürün kapağı ölü eski yolsa stüdyo kopyası kullanılır.
+import { productCoverTileUrl } from "@/lib/productImageUrl";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -107,7 +113,9 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
         try {
           const prod = await fetchProducts({ category_id: catId, page_size: 1 });
           const firstProduct = prod?.[0];
-          if (firstProduct?.cover_image_url) return { ...cat, image: firstProduct.cover_image_url };
+          // EK: ölü eski kapak karoya konmaz (stüdyo kopyası varsa o; yoksa aşağıdaki yedek).
+          const cover = productCoverTileUrl(firstProduct?.cover_image_url);
+          if (cover) return { ...cat, image: cover };
         } catch {
           // API fail
         }
@@ -125,14 +133,12 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // Admin Ürün Merkezi > Kapsam/Kategori → API → DB → BURASI → müşteri.
   // slug → category_id → /api/products?category_id=&status=active&sort=&page=.
   // Kayıt yoksa/kategori id çözülmezse grid gizlenir (mock YOK, regresyon YOK).
-  const SORTS = [
-    { key: "created_at_desc", label: "En Yeni" },
-    { key: "price_asc", label: "Artan Fiyat" },
-    { key: "price_desc", label: "Azalan Fiyat" },
-    { key: "name_asc", label: "A → Z" },
-  ] as const;
-  const sortParam = typeof searchParams?.sort === "string" ? searchParams.sort : "created_at_desc";
-  const sort = (SORTS.find((s) => s.key === sortParam)?.key ?? "created_at_desc") as typeof SORTS[number]["key"];
+  // EK (TEK KATEGORİ SIRASI): varsayılan sıra ("Önerilen Sıralama") artık operatörün elle kategori
+  // sırasıdır (sort=category_order — Global kategori sayfasıyla aynı sıra); müşterinin seçtiği fiyat /
+  // ad sıralamaları aynen. API bu sırayı henüz tanımıyorsa okuma katmanı aynı isteği bugünkü sırayla
+  // tekrarlar (lib/api.ts) → liste bugünkü gibi çizilir. Kural: lib/categorySort.ts.
+  // `?sort` yoksa / tanınmıyorsa varsayılan sıra; geçerli değerler: price_asc · price_desc · name_asc.
+  const sort = categorySortOf(searchParams?.sort);
   const pageNum = Math.max(1, Number(typeof searchParams?.page === "string" ? searchParams.page : 1) || 1);
   // FilterBar filtreleri (gerçek backend paramları). Sahte filtre yok.
   const sp = (k: string) => (typeof searchParams?.[k] === "string" ? (searchParams[k] as string) : undefined);
@@ -174,7 +180,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
           page_size: 1,
           sort: "created_at_desc",
         });
-        const productImage = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+        // EK: ölü eski kapak karoya konmaz (stüdyo kopyası varsa o; yoksa aşağıdaki yedek).
+        const productImage = candidates.map((product) => productCoverTileUrl(product.cover_image_url)).find(Boolean);
         if (productImage) return { ...item, image: productImage };
       } catch {
         // API fail
@@ -194,20 +201,90 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
         is_new: isNew || undefined,
       })
     : null;
+  // EK (SEO YAYIN ZİNCİRİ): son sayfanın ötesindeki ?page=N boş/kopya bir listeyi
+  // 200 ile sunmaz → 404. Yalnız API o sayfa için gerçekten yanıt verdiyse karar
+  // verilir (lib/categoryPagination.ts); API kesintisinde sayfa bugünkü gibi çizilir.
+  // EK: kategori CANLI ağaçta yoksa (yalnız SEO kaydından çizilen sayfa) liste de yoktur →
+  // sayfa ≥ 2, 1. sayfanın kopyası olarak 200 dönmez. Ağaç statik yedekse karar verilmez.
+  if (isCategoryPageWithoutListing(pageNum, { liveTree: !!tree && tree !== CATEGORY_TREE_FALLBACK, categoryId })) notFound();
+  if (isCategoryPageBeyondLast(pageNum, productPage?.pagination)) notFound();
   const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
   const totalProducts = productPage?.pagination.total ?? 0;
+  // EK (KATEGORİ YASASI): filtre uygulanmamışken API "bu kategoride ürün yok" dediyse (başarılı yanıt,
+  // total 0) boş durum metni doğruyu söyler — "filtrelere uygun ürün bulunamadı" DEĞİL. Filtre varsa ya da
+  // okuma başarısızsa (durum bilinmiyor) bugünkü metin aynen. Karar: lib/categoryPagination.ts.
+  // EK: karar yalnız 1. sayfanın yanıtıyla verilir (son sayfanın ötesi dolu kategoride de total 0 döner).
+  const categoryEmpty = !filterType && !sameDay && !bestseller && !isNew && isConfirmedEmptyCategory(pageNum, productPage);
+  // EK (crawlable sayfalama): tarayıcı için gerçek sayfa bağlantıları. Sonsuz
+  // kaydırma aynen; yalnız SSR'a "Önceki / Sonraki sayfa" <a href="?page=N"> eklenir.
+  // Bağlantılar YALNIZ gerçekten uygulanan liste durumunu taşır (sıralama + filtreler);
+  // izleme parametreleri (gclid, utm_*) ve bilinmeyen parametreler bağlantıya girmez →
+  // çıplak yoldan gelen tarayıcı için adres daima "?page=N"dir.
+  const pagination = buildCategoryPagination(
+    path,
+    {
+      // Varsayılan sıra bağlantıya / URL'ye yazılmaz (bugünkü varsayılanla aynı kural).
+      sort: categorySortParam(sort),
+      type: filterType,
+      same_day: sameDay ? "1" : undefined,
+      bestseller: bestseller ? "1" : undefined,
+      new: isNew ? "1" : undefined,
+    },
+    pageNum,
+    totalPages,
+  );
+  // EK (crawlable sayfalama): Googlebot sonsuz kaydırmayı tetiklemez; derin ürünlerin tarama
+  // yolu bu gerçek bağlantılardır. "Önceki / Sonraki" + NUMARALI kompakt liste
+  // (1 … p-1 p p+1 … son) → 20 sayfalık kategoride son sayfa 19 değil 1 adım uzakta.
+  // Tek sayfalık kategoride hiç basılmaz (bugünkü çıktı birebir). Liste, ürün ızgarasından
+  // BAĞIMSIZ basılır (o sayfanın ürünlerinin hepsi görselsiz olsa da tarama yolu kopmaz) ve
+  // "Sayfa X / Y" yazısı taşımaz: sonsuz kaydırma tüm ürünleri yükledikten sonra da ziyaretçi
+  // için tarafsız bir sayfa dizini olarak okunur.
+  // EK (TAM NUMARALI LİSTE): 40 sayfaya kadar HER sayfa numarası gerçek bağlantıdır (geçerli sayfa
+  // aria-current="page", bağlantısız) → serinin her sayfası her sayfadan tek adım; 40'ın üstünde
+  // pencere + ilk + son + her 10. sayfa (lib/categoryPagination.ts categoryPageList). Liste satıra
+  // sığmazsa alt satıra sarar; numaralar eşit genişlikte küçük hücrelerdir (dokunma alanı); tipografi
+  // ve renkler aynı.
+  const pageNav = pagination.total > 1 ? (
+    <nav aria-label="Ürün sayfaları" className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] font-semibold text-[#7C3AED]">
+      {pagination.prev ? (
+        <Link href={pagination.prev.href} rel="prev" prefetch={false} className="hover:underline">← Önceki sayfa</Link>
+      ) : null}
+      <ol className="flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-1">
+        {pagination.pages.map((it) =>
+          it.kind === "gap" ? (
+            <li key={it.key} aria-hidden="true" className="px-1 font-normal text-[#9CA3AF]">…</li>
+          ) : (
+            <li key={it.page}>
+              {it.current ? (
+                <span aria-current="page" className="inline-block min-w-[1.75rem] px-1 py-1 text-center text-[#111827]">{it.page}</span>
+              ) : (
+                <Link href={it.href} prefetch={false} aria-label={`Sayfa ${it.page}`} className="inline-block min-w-[1.75rem] px-1 py-1 text-center hover:underline">{it.page}</Link>
+              )}
+            </li>
+          ),
+        )}
+      </ol>
+      {pagination.next ? (
+        <Link href={pagination.next.href} rel="next" prefetch={false} className="hover:underline">Sonraki sayfa →</Link>
+      ) : null}
+    </nav>
+  ) : null;
 
   // Türkiye Geneli Kargo vitrini: yalnız canlı katalog. Kategoriye bağlı kuru
   // çiçekler + kargoya uygun plant/artificial/gift tipleri birleştirilir.
   // Admin `cargo-product` blokları eklediyse vitrin seçimi/sırası onlardan gelir.
   const cargoSettings = page.body_blocks?.find((b) => b.type === "cargo-settings") as ({ value?: unknown; enabled?: unknown } | undefined);
   if (slug === "turkiye-geneli-kargo" && cargoSettings?.value !== "false" && cargoSettings?.enabled !== false) {
+    // EK (TEK KATEGORİ SIRASI): kategori sırası yalnız category_id ile anlamlıdır; kategorisiz bu üç
+    // okuma varsayılan sırada bugünkü isteğini (created_at_desc) aynen gönderir.
+    const cargoSort = sort === CATEGORY_DEFAULT_SORT ? CATEGORY_SORT_FALLBACK : sort;
     const cargoLists = await Promise.all([
       Promise.resolve(productPage?.items ?? []),
-      fetchProducts({ product_type: "plant", page_size: 60, sort }),
-      fetchProducts({ product_type: "artificial", page_size: 60, sort }),
-      fetchProducts({ product_type: "gift", page_size: 60, sort }),
+      fetchProducts({ product_type: "plant", page_size: 60, sort: cargoSort }),
+      fetchProducts({ product_type: "artificial", page_size: 60, sort: cargoSort }),
+      fetchProducts({ product_type: "gift", page_size: 60, sort: cargoSort }),
     ]);
     const unique = new Map<number, PublicProductListItem>();
     cargoLists.flat().forEach((product) => {
@@ -311,7 +388,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
             {/* Infinite scroll grid — ilk 50 SSR, sonrası server action ile otomatik yüklenir.
                 Numara sayfalama ana deneyim DEĞİL; SEO için ilk sayfa server-rendered kalır. */}
             <CategoryProductGrid
-              key={`${sort}|${filterType ?? ""}|${sameDay ? 1 : 0}|${bestseller ? 1 : 0}|${isNew ? 1 : 0}`}
+              key={`${sort}|${filterType ?? ""}|${sameDay ? 1 : 0}|${bestseller ? 1 : 0}|${isNew ? 1 : 0}|${pagination.current}`}
               initialItems={products}
               categoryId={categoryId as number}
               total={totalProducts}
@@ -320,17 +397,25 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               pageSize={50}
               filters={{ type: filterType || undefined, sameDay, bestseller, isNew }}
               contextTag={contextTag}
+              startPage={pagination.current}
             />
+            {/* EK (crawlable sayfalama): sayfa bağlantıları (yukarıda pageNav). Grid `key`'ine
+                sayfa eklendi ki bağlantıya tıklanınca liste o sayfadan yeniden kurulsun. */}
+            {pageNav}
           </section>
         ) : null}
 
         {/* Filtre sonucu boşsa bilgilendirme */}
+        {/* EK (KATEGORİ YASASI): kategorinin KENDİSİ boşsa (filtre yok, API total 0) metin bunu söyler;
+            temizlenecek filtre olmadığı için bağlantı ana sayfaya gider (metin hedefi söyler). İşaretleme / sınıflar aynı. */}
         {categoryId && products.length === 0 ? (
           <section className="max-w-[1440px] mx-auto px-6 lg:px-14 py-16 text-center">
-            <p className="text-[15px] text-[#6B7280]">Seçtiğin filtrelere uygun ürün bulunamadı.</p>
-            <Link href={path} scroll={false} className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline">
-              Filtreleri temizle
+            <p className="text-[15px] text-[#6B7280]">{categoryEmpty ? "Bu koleksiyonda şu anda ürün bulunmuyor." : "Seçtiğin filtrelere uygun ürün bulunamadı."}</p>
+            <Link href={categoryEmpty ? "/" : path} scroll={categoryEmpty} className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline">
+              {categoryEmpty ? "Ana sayfaya dön" : "Filtreleri temizle"}
             </Link>
+            {/* EK: bu sayfanın ürünleri görselsiz olsa da serinin diğer sayfalarına tarama yolu kalır. */}
+            {pageNav}
           </section>
         ) : null}
 

@@ -2,6 +2,8 @@ import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/catego
 import { mapTreeToItems, getBreadcrumbTrailFromTree } from "@/lib/catalog";
 import { buildHeaderMenu, HEADER_NAV_CONFIG } from "@/lib/headerNav";
 import { isCategoryVisible, type CategoryNode } from "@/lib/api";
+import type { Metadata } from "next";
+import { PRIVATE_ROUTE_ROBOTS } from "@/lib/privateRoutes";
 
 /* ============================================================================
    CICEKYOLLA — CATEGORY SYNC DATA AUDIT (canlı doğrulama)
@@ -10,6 +12,9 @@ import { isCategoryVisible, type CategoryNode } from "@/lib/api";
    ============================================================================ */
 
 export const dynamic = "force-dynamic"; // her ziyarette canlı sayım
+
+// EK (SEO YAYIN ZİNCİRİ): iç denetim sayfası — arama dizinine girmez. Kural: lib/privateRoutes.ts.
+export const metadata: Metadata = { title: "Kategori denetimi", robots: PRIVATE_ROUTE_ROBOTS };
 
 const isActive = (n: CategoryNode) =>
   n && typeof n.name === "string" && typeof n.slug === "string" && isCategoryVisible(n);

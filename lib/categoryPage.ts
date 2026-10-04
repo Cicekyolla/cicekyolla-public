@@ -18,10 +18,11 @@
 // ============================================================================
 
 import { unstable_noStore as noStore } from "next/cache";
-import { fetchSeoPage, fetchCategoryById, type SeoPublicPage } from "@/lib/api";
+import { fetchSeoPage, fetchSeoPageChecked, fetchCategoryById, fetchCategoryTree, isCategoryVisible, type SeoPublicPage } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
 import { needsCategorySeoFields, isLightCategoryNode, mergeCategoryNode } from "@/lib/categoryNodeEnrich";
+import { TR_CATEGORY_DEDICATED_ROUTES, trCategoryConfirmedIndexable } from "@/lib/global/hreflangFamily";
 
 // `app/[...slug]/page.tsx` içindeki prettySlug ile AYNI davranış. Oradaki kopya
 // lokasyon yollarında (il/ilçe/-mah) kullanılmayı sürdürdüğü için bilinçli olarak
@@ -111,4 +112,41 @@ export async function resolveCategoryPage(path: string): Promise<SeoPublicPage |
     return syntheticCategoryPage(path, { name: prettySlug(slug) });
   }
   return null;
+}
+
+/**
+ * EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): Türkçe kategori sayfası (/kategori/<slug>)
+ * KESİN indexlenebilir mi? Locale kategori sayfası `tr` hreflang'ini yalnız bu "evet"
+ * ise basar (Türkçe sayfa da kümeyi yalnız indexlenebilirken basar → bağ karşılıklı).
+ *
+ * Index durumu Türkçe sayfanın KENDİ çözücüsünden (resolveCategoryPage) gelir; ek olarak
+ * girdilerin GERÇEKTEN okunduğu doğrulanır: SEO kaydı okuması yanıt verdi mi, canlı ağaç
+ * (statik yedek değil) okundu mu, kategori ağaçta gizli (pasif/arşiv) mi. Okunamayan /
+ * bilinmeyen her durum → false. Okumalar sayfanınkilerle aynı isteklerdir (revalidate 300).
+ * Karar kuralı saf modülde: lib/global/hreflangFamily.ts trCategoryConfirmedIndexable.
+ */
+export async function isCategoryPageConfirmedIndexable(
+  slug: string | null | undefined,
+  categoryId?: number | string | null,
+): Promise<boolean> {
+  if (!slug) return false;
+  // EK: kendi statik rotasından sunulan kategori (ör. turkiye-geneli-kargo) hreflang kümesi basmaz.
+  if (TR_CATEGORY_DEDICATED_ROUTES.includes(slug)) return false;
+  const path = `/kategori/${slug}`;
+  try {
+    const [seo, liveTree, page] = await Promise.all([fetchSeoPageChecked(path), fetchCategoryTree(), resolveCategoryPage(path)]);
+    const node = liveTree ? findCategoryNodeBySlug(liveTree, slug) : null;
+    return trCategoryConfirmedIndexable({
+      seoRead: seo.ok,
+      treeRead: liveTree !== null,
+      // EK: Türkçe sayfa kümeyi yalnız ağaç düğümünü bulduğunda basar (kimliği oradan okur). `categoryId`
+      // (locale yüzeyinin kategori kimliği) verildiyse düğüm AYNI kategori olmalı — aksi hâlde iki taraf
+      // farklı category-locales kaydı okurdu.
+      nodeFound: !!node && (categoryId == null || String(node.id) === String(categoryId)),
+      hidden: !!node && !isCategoryVisible(node),
+      indexState: page?.index_state,
+    });
+  } catch {
+    return false;
+  }
 }
