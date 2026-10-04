@@ -328,6 +328,40 @@ test("categoryUrlsResultOf: EKSİK / kullanılamayan 200 yanıtı kategorileri s
   }
 });
 
+test("categoryUrlsResultOf: visible_products gelirse karar ONA göre (kapaksız ürün kategori ızgarasında görünmez); gelmezse active_products", () => {
+  const r = categoryUrlsResultOf(200, {
+    data: [
+      { url_path: "/kategori/gorunen", updated_at: null, active_products: 5, visible_products: 4 },
+      { url_path: "/kategori/yalniz-kapaksiz", updated_at: null, active_products: 3, visible_products: 0 },
+      { url_path: "/kategori/metin-sayim", updated_at: null, active_products: "2", visible_products: "2" },
+      { url_path: "/kategori/eski-bicim", updated_at: null, active_products: 7 },
+      { url_path: "/kategori/null-alan", updated_at: null, active_products: 1, visible_products: null },
+    ],
+    total: 5,
+  });
+  assert.equal(r.state, "ok");
+  const rows = r.state === "ok" ? r.rows : [];
+  assert.deepEqual(rows.map((x) => [x.url_path, x.active_products, x.visible_products]), [
+    ["/kategori/gorunen", 5, 4],
+    ["/kategori/yalniz-kapaksiz", 3, 0],
+    ["/kategori/metin-sayim", 2, 2],
+    ["/kategori/eski-bicim", 7, undefined],
+    ["/kategori/null-alan", 1, undefined],
+  ]);
+  assert.deepEqual(rows.filter(isIndexWorthyCategoryRow).map((x) => x.url_path), [
+    "/kategori/gorunen", "/kategori/metin-sayim", "/kategori/eski-bicim", "/kategori/null-alan",
+  ], "aktif ürünü olup hepsi kapaksız olan kategori sitemap'e girmez");
+  // Bozuk visible_products → satır geçersiz → kaynak kullanılmaz (envanter mantığı).
+  for (const bozuk of [-1, 1.5, "x", {}]) {
+    const b = categoryUrlsResultOf(200, { data: [{ url_path: "/kategori/a", active_products: 3, visible_products: bozuk }] });
+    assert.equal(b.state, "failed", JSON.stringify(bozuk));
+  }
+  // Hiçbir kategoride GÖRÜNEN ürün yoksa (aktif sayım dolu olsa bile) kaynak kullanılmaz.
+  const hepsiKapaksiz = categoryUrlsResultOf(200, { data: [{ url_path: "/kategori/a", active_products: 3, visible_products: 0 }] });
+  assert.equal(hepsiKapaksiz.state, "failed");
+  assert.match(hepsiKapaksiz.state === "failed" ? hepsiKapaksiz.warning ?? "" : "", /ürün listeleyen kategori yok/);
+});
+
 test("categoryUrlsResultOf: 50.000 satır sınırı aşılırsa kaynak kullanılmaz", () => {
   const satirlar = (n: number) => ({ data: Array.from({ length: n }, (_, i) => ({ url_path: `/kategori/k-${i}`, active_products: 1 })), total: n });
   assert.equal(categoryUrlsResultOf(200, satirlar(50_000)).state, "ok");

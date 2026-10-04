@@ -419,7 +419,7 @@ function productRowNode(row: ProductUrlRow, withImage: boolean): string {
 // EK (SEO YAYIN ZİNCİRİ — KATEGORİ YASASI) — ADDITIVE: categories.xml.
 // Yasa: "bir kategori sayfası yalnız en az bir aktif ürün listelediği sürece index'e
 // değerdir." Ürün kategorisi satırları GET /api/public/seo/category-urls yanıtından gelir ve
-// yalnız active_products > 0 olanlar listelenir (lastmod = updated_at). Uç yayında değilse
+// yalnız ürün LİSTELEYENLER (visible_products, yoksa active_products > 0) listelenir (lastmod = updated_at). Uç yayında değilse
 // (404), hata verirse ya da yanıt eksik / kullanılamazsa null → BUGÜNKÜ envanter mantığı
 // aynen (karar: lib/sitemapSources.ts categoryUrlsResultOf).
 // Ucun KAPSAMADIĞI satırlar envanterden bugünkü gibi eklenir:

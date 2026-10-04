@@ -271,6 +271,8 @@ export interface CategoryUrlRow {
   url_path: string;
   updated_at: string | null;
   active_products: number;
+  /** Kapak görseli de olan aktif ürün sayısı (vitrinde GÖRÜNEN). Eski API yanıtında yoktur. */
+  visible_products?: number;
 }
 
 export type CategoryUrlsResult =
@@ -294,9 +296,10 @@ function activeProductCount(value: unknown): number | null {
 /**
  * Durum kodu + gövde → sonuç. "ok" YALNIZ yanıt eksiksiz ve kullanılabilirse:
  *   • zarf `data` listesi taşır,
- *   • HER satır geçerli (yol /kategori/…, `active_products` negatif olmayan tam sayı),
+ *   • HER satır geçerli (yol /kategori/…, `active_products` negatif olmayan tam sayı;
+ *     `visible_products` gelmişse o da negatif olmayan tam sayı),
  *   • `total` (varsa) gelen satır sayısını aşmaz,
- *   • en az bir satır ürün listeler (active_products > 0),
+ *   • en az bir satır ürün listeler (isIndexWorthyCategoryRow),
  *   • satır sayısı tek dosya sınırını (50.000) aşmaz.
  * Aksi hâlde "failed" + günlük satırı → çağıran bugünkü envanter mantığına düşer. Aynı yol bir kez
  * (ilk satır). 404 ("missing") ve 200 dışı durumlar uyarısızdır — uç yayınlanmadan önce beklenen hâl.
@@ -312,9 +315,11 @@ export function categoryUrlsResultOf(status: number, json: unknown): CategoryUrl
   const samples: string[] = [];
   let invalid = 0;
   for (const raw of data) {
-    const row = raw as { url_path?: unknown; updated_at?: unknown; active_products?: unknown } | null;
+    const row = raw as { url_path?: unknown; updated_at?: unknown; active_products?: unknown; visible_products?: unknown } | null;
     const count = activeProductCount(row?.active_products);
-    if (!row || !isCategoryUrlPath(row.url_path) || count === null) {
+    const hasVisible = row != null && row.visible_products !== undefined && row.visible_products !== null;
+    const visible = hasVisible ? activeProductCount(row?.visible_products) : null;
+    if (!row || !isCategoryUrlPath(row.url_path) || count === null || (hasVisible && visible === null)) {
       invalid++;
       if (samples.length < AUDIT_SAMPLE_LIMIT) samples.push(JSON.stringify(raw ?? null).slice(0, 80));
       continue;
@@ -325,6 +330,7 @@ export function categoryUrlsResultOf(status: number, json: unknown): CategoryUrl
       url_path: row.url_path,
       updated_at: typeof row.updated_at === "string" && row.updated_at ? row.updated_at : null,
       active_products: count,
+      ...(visible !== null ? { visible_products: visible } : {}),
     });
   }
   if (invalid > 0) {
@@ -334,7 +340,7 @@ export function categoryUrlsResultOf(status: number, json: unknown): CategoryUrl
   if (total !== null && total > data.length) {
     return { state: "failed", warning: `yanıt eksik — total=${total} ama ${data.length} satır geldi; envanter mantığı kullanılır` };
   }
-  if (!rows.some((row) => row.active_products > 0)) {
+  if (!rows.some(isIndexWorthyCategoryRow)) {
     return { state: "failed", warning: `200 döndü ama ürün listeleyen kategori yok (${data.length} satır geldi); envanter mantığı kullanılır` };
   }
   if (rows.length > SITEMAP_MAX_URLS) {
@@ -343,7 +349,11 @@ export function categoryUrlsResultOf(status: number, json: unknown): CategoryUrl
   return { state: "ok", rows };
 }
 
-/** Kategori satırı sitemap'e girer mi? (yasa: en az bir aktif ürün) */
-export function isIndexWorthyCategoryRow(row: Pick<CategoryUrlRow, "active_products">): boolean {
-  return row.active_products > 0;
+/**
+ * Kategori satırı sitemap'e girer mi? Yasa: sayfa en az bir ürün LİSTELİYOR olmalı. API
+ * `visible_products` (aktif + kapak görselli) gönderiyorsa karar ona göre verilir — kapaksız ürün
+ * kategori ızgarasında gösterilmez; alan yoksa (eski yanıt) `active_products` kullanılır.
+ */
+export function isIndexWorthyCategoryRow(row: Pick<CategoryUrlRow, "active_products" | "visible_products">): boolean {
+  return (row.visible_products ?? row.active_products) > 0;
 }
