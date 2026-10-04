@@ -231,21 +231,26 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // BAĞIMSIZ basılır (o sayfanın ürünlerinin hepsi görselsiz olsa da tarama yolu kopmaz) ve
   // "Sayfa X / Y" yazısı taşımaz: sonsuz kaydırma tüm ürünleri yükledikten sonra da ziyaretçi
   // için tarafsız bir sayfa dizini olarak okunur.
+  // EK (TAM NUMARALI LİSTE): 40 sayfaya kadar HER sayfa numarası gerçek bağlantıdır (geçerli sayfa
+  // aria-current="page", bağlantısız) → serinin her sayfası her sayfadan tek adım; 40'ın üstünde
+  // pencere + ilk + son + her 10. sayfa (lib/categoryPagination.ts categoryPageList). Liste satıra
+  // sığmazsa alt satıra sarar; numaralar eşit genişlikte küçük hücrelerdir (dokunma alanı); tipografi
+  // ve renkler aynı.
   const pageNav = pagination.total > 1 ? (
     <nav aria-label="Ürün sayfaları" className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] font-semibold text-[#7C3AED]">
       {pagination.prev ? (
         <Link href={pagination.prev.href} rel="prev" prefetch={false} className="hover:underline">← Önceki sayfa</Link>
       ) : null}
-      <ol className="flex items-center gap-3">
+      <ol className="flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-1">
         {pagination.pages.map((it) =>
           it.kind === "gap" ? (
-            <li key={it.key} aria-hidden="true" className="font-normal text-[#9CA3AF]">…</li>
+            <li key={it.key} aria-hidden="true" className="px-1 font-normal text-[#9CA3AF]">…</li>
           ) : (
             <li key={it.page}>
               {it.current ? (
-                <span aria-current="page" className="text-[#111827]">{it.page}</span>
+                <span aria-current="page" className="inline-block min-w-[1.75rem] px-1 py-1 text-center text-[#111827]">{it.page}</span>
               ) : (
-                <Link href={it.href} prefetch={false} aria-label={`Sayfa ${it.page}`} className="hover:underline">{it.page}</Link>
+                <Link href={it.href} prefetch={false} aria-label={`Sayfa ${it.page}`} className="inline-block min-w-[1.75rem] px-1 py-1 text-center hover:underline">{it.page}</Link>
               )}
             </li>
           ),

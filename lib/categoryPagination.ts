@@ -1,6 +1,5 @@
 // ============================================================================
-// lib/categoryPagination.ts — ADDITIVE (10 Eyl 2026). Saf modül (ağ / Next yok);
-// tek ithal: locale sayfalamasıyla ORTAK kompakt sayfa listesi (compactPageList).
+// lib/categoryPagination.ts — ADDITIVE (10 Eyl 2026). Saf modül (ağ / Next yok).
 //
 // NEDEN: Kategori grid'i sonsuz kaydırma ile yükleniyor (CategoryProductGrid).
 // SSR HTML'de yalnız ilk 50 ürün bağlantısı vardı; `?page=N` sayfaları çalışıyor
@@ -18,8 +17,15 @@
 // son sayfa ilk sayfadan 19 adım uzaktaydı. Model artık NUMARALI kompakt listeyi de
 // taşır (1 … p-1 p p+1 … son; locale sayfalamasıyla aynı kural) → her sayfa en çok
 // birkaç adımda.
+//
+// EK (TAM NUMARALI LİSTE): kompakt listede 22 sayfalık bir kategorinin orta sayfaları
+// 1. sayfadan hâlâ birkaç adım uzaktaydı (en büyük kategori 31 sayfa). Numaralı liste
+// artık bu modülün KENDİ kuralıdır (categoryPageList, aşağıda): 40 sayfaya kadar HER
+// sayfa numarası gerçek bağlantıdır → serinin her sayfası her sayfadan TEK adım. 40'ın
+// üstünde pencere + ilk + son + her 10. sayfa. Locale sayfalaması kendi kompakt listesini
+// (lib/global/locationPaging.ts compactPageList) kullanmayı sürdürür — o değişmedi.
+// Bu modül artık hiçbir şey ithal etmez (yaprak modül).
 // ============================================================================
-import { compactPageList } from "./global/locationPaging.ts";
 
 export type CategorySearchParams = { [k: string]: string | string[] | undefined } | undefined;
 
@@ -38,8 +44,45 @@ export interface CategoryPagination {
   total: number;
   prev: CategoryPageLink | null;
   next: CategoryPageLink | null;
-  /** EK: kompakt numaralı liste (tek sayfada [1]); bağlantılar prev/next ile aynı href kuralından. */
+  /** EK: numaralı liste (tek sayfada [1]; kural categoryPageList); bağlantılar prev/next ile aynı href kuralından. */
   pages: CategoryPageItem[];
+}
+
+/** Bu sayfa sayısına kadar (dahil) HER sayfa numarası bağlantı olarak basılır. */
+export const CATEGORY_FULL_PAGE_LIST_MAX = 40;
+/** Daha uzun seride geçerli sayfanın iki yanında gösterilen sayfa sayısı. */
+export const CATEGORY_PAGE_WINDOW = 5;
+/** Daha uzun seride her zaman listelenen ara sayfaların adımı (10, 20, 30 …). */
+export const CATEGORY_PAGE_STEP = 10;
+
+/**
+ * EK (TAM NUMARALI LİSTE) — taranma derinliği için kategori sayfa listesi.
+ *  • toplam ≤ 40 → 1 … toplam, HEPSİ (boşluk yok): her sayfa, her sayfadan tek adım.
+ *  • toplam > 40 → pencere (p-5 … p+5) + ilk + son + her 10. sayfa; aradaki atlanan
+ *    bölümler "gap". Her sayfa en çok iki adımda: herhangi bir sayfa → en yakın 10'luk
+ *    sayfa → hedef (pencere yarıçapı = adımın yarısı). Tek sayfalık boşluk "…" yerine
+ *    sayfanın kendisiyle doldurulur.
+ * Aralık dışı girdiler sıkıştırılır (toplam en az 1; geçerli sayfa 1 … toplam).
+ */
+export function categoryPageList(current: number, total: number): (number | "gap")[] {
+  const t = Number.isFinite(total) && total >= 1 ? Math.floor(total) : 1;
+  const c = Number.isFinite(current) ? Math.min(t, Math.max(1, Math.floor(current))) : 1;
+  if (t <= CATEGORY_FULL_PAGE_LIST_MAX) return Array.from({ length: t }, (_, i) => i + 1);
+  const keep = new Set<number>([1, t]);
+  for (let n = c - CATEGORY_PAGE_WINDOW; n <= c + CATEGORY_PAGE_WINDOW; n++) keep.add(n);
+  for (let n = CATEGORY_PAGE_STEP; n < t; n += CATEGORY_PAGE_STEP) keep.add(n);
+  const sorted = [...keep].filter((n) => n >= 1 && n <= t).sort((a, b) => a - b);
+  const out: (number | "gap")[] = [];
+  let prev = 0;
+  for (const n of sorted) {
+    if (prev > 0) {
+      if (n - prev === 2) out.push(prev + 1);
+      else if (n - prev > 2) out.push("gap");
+    }
+    out.push(n);
+    prev = n;
+  }
+  return out;
 }
 
 /** `?page=N` bağlantısı: mevcut parametreler aynen, `page` en sonda; N ≤ 1 → kök yol. */
@@ -66,7 +109,7 @@ export function buildCategoryPagination(
   const current = Math.min(total, Math.max(1, Math.trunc(Number(currentPage)) || 1));
   const link = (page: number): CategoryPageLink => ({ page, href: categoryPageHref(path, searchParams, page) });
   let gaps = 0;
-  const pages: CategoryPageItem[] = compactPageList(current, total).map((n) =>
+  const pages: CategoryPageItem[] = categoryPageList(current, total).map((n) =>
     n === "gap" ? { kind: "gap", key: `gap-${++gaps}` } : { kind: "page", ...link(n), current: n === current },
   );
   return {

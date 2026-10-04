@@ -8,10 +8,14 @@ import {
   categoryCanonicalPath,
   categoryListingState,
   categoryPageHref,
+  categoryPageList,
   categoryPageTitle,
   isCategoryPageBeyondLast,
   isCategoryPageWithoutListing,
   parseCategoryPageParam,
+  CATEGORY_FULL_PAGE_LIST_MAX,
+  CATEGORY_PAGE_STEP,
+  CATEGORY_PAGE_WINDOW,
 } from "./categoryPagination.ts";
 
 test("sayfa 1 → kök yol (?page=1 ikiz URL üretilmez)", () => {
@@ -155,23 +159,84 @@ test("listesiz sayfa: kategori CANLI ağaçta yoksa sayfa ≥ 2 → 404; ağaç 
   assert.equal(isCategoryPageWithoutListing(2, { liveTree: true, categoryId: 13 }), false);
 });
 
-test("numaralı bağlantılar: 20 sayfada 1 … p-1 p p+1 … son — son sayfa ilk sayfadan TEK adım", () => {
+// EK (TAM NUMARALI LİSTE): 40 sayfaya kadar HER sayfa numarası bağlantı — önceki kompakt liste
+// (1 … p-1 p p+1 … son) 22 sayfalık kategoride orta sayfaları birkaç adım uzakta bırakıyordu.
+test("numaralı bağlantılar: 20 sayfada HER sayfa listelenir (boşluk yok) — her sayfa her sayfadan TEK adım", () => {
   const p = buildCategoryPagination("/kategori/guller", { sort: "price_asc" }, 1, 20);
   const sayfalar = p.pages.flatMap((it) => (it.kind === "page" ? [it.page] : []));
-  assert.deepEqual(sayfalar, [1, 2, 20]);
-  assert.deepEqual(p.pages.map((it) => it.kind), ["page", "page", "gap", "page"]);
+  assert.deepEqual(sayfalar, Array.from({ length: 20 }, (_, i) => i + 1));
+  assert.ok(p.pages.every((it) => it.kind === "page"), "40 sayfaya kadar '…' yok");
   const son = p.pages[p.pages.length - 1];
   assert.deepEqual(son, { kind: "page", page: 20, href: "/kategori/guller?sort=price_asc&page=20", current: false });
   assert.deepEqual(p.pages[0], { kind: "page", page: 1, href: "/kategori/guller?sort=price_asc", current: true }, "1. sayfa bağlantısı page taşımaz");
 
   const orta = buildCategoryPagination("/kategori/guller", undefined, 10, 20);
-  assert.deepEqual(orta.pages.map((it) => (it.kind === "page" ? it.page : "…")), [1, "…", 9, 10, 11, "…", 20]);
+  assert.deepEqual(orta.pages.map((it) => (it.kind === "page" ? it.page : "…")), Array.from({ length: 20 }, (_, i) => i + 1));
   assert.equal(orta.pages.filter((it) => it.kind === "page" && it.current).length, 1);
   assert.equal(new Set(orta.pages.map((it) => (it.kind === "gap" ? it.key : `p${it.page}`))).size, orta.pages.length, "React key'leri tekil");
   // Numaralı bağlantılar prev/next ile aynı href kuralından.
   const dokuz = orta.pages.find((it) => it.kind === "page" && it.page === 9);
   assert.equal(dokuz?.kind === "page" ? dokuz.href : null, "/kategori/guller?page=9");
   assert.equal(orta.prev?.href, "/kategori/guller?page=9");
+});
+
+test("categoryPageList: toplam ≤ 40 → 1 … toplam, hepsi; sınır tam 40'ta (en büyük kategori 31 sayfa)", () => {
+  assert.equal(CATEGORY_FULL_PAGE_LIST_MAX, 40);
+  for (const toplam of [1, 2, 7, 8, 22, 31, 40]) {
+    for (const gecerli of [1, Math.ceil(toplam / 2), toplam]) {
+      assert.deepEqual(categoryPageList(gecerli, toplam), Array.from({ length: toplam }, (_, i) => i + 1), `${gecerli}/${toplam}`);
+    }
+  }
+  // Aralık dışı girdiler sıkıştırılır.
+  assert.deepEqual(categoryPageList(99, 3), [1, 2, 3]);
+  assert.deepEqual(categoryPageList(Number.NaN, 0), [1]);
+  assert.deepEqual(categoryPageList(1, Number.NaN), [1]);
+});
+
+test("categoryPageList: toplam > 40 → pencere + ilk + son + HER 10. sayfa; boşluklar '…'", () => {
+  assert.deepEqual(categoryPageList(1, 41), [1, 2, 3, 4, 5, 6, "gap", 10, "gap", 20, "gap", 30, "gap", 40, 41]);
+  assert.deepEqual(
+    categoryPageList(25, 60),
+    [1, "gap", 10, "gap", 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, "gap", 40, "gap", 50, "gap", 60],
+  );
+  assert.deepEqual(categoryPageList(60, 60), [1, "gap", 10, "gap", 20, "gap", 30, "gap", 40, "gap", 50, "gap", 55, 56, 57, 58, 59, 60]);
+  // Tek sayfalık boşluk "…" yerine sayfanın kendisiyle doldurulur (8 ile 10 arasındaki 9).
+  assert.deepEqual(categoryPageList(3, 45).slice(0, 11), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "gap"]);
+  for (const [gecerli, toplam] of [[1, 41], [17, 53], [44, 44], [70, 137], [100, 250]] as const) {
+    const liste = categoryPageList(gecerli, toplam);
+    const sayfalar = liste.filter((n): n is number => n !== "gap");
+    assert.ok(sayfalar.includes(1) && sayfalar.includes(toplam), "ilk + son");
+    for (let n = CATEGORY_PAGE_STEP; n < toplam; n += CATEGORY_PAGE_STEP) assert.ok(sayfalar.includes(n), `her 10. sayfa: ${n} (${gecerli}/${toplam})`);
+    for (let n = Math.max(1, gecerli - CATEGORY_PAGE_WINDOW); n <= Math.min(toplam, gecerli + CATEGORY_PAGE_WINDOW); n++) assert.ok(sayfalar.includes(n), `pencere: ${n}`);
+    assert.deepEqual(sayfalar, [...new Set(sayfalar)].sort((a, b) => a - b), "artan, tekrarsız");
+    assert.ok(!liste.some((n, i) => n === "gap" && liste[i + 1] === "gap"), "art arda iki boşluk yok");
+  }
+});
+
+test("categoryPageList: uzun seride HER sayfa en çok İKİ adımda (herhangi bir sayfa → 10'luk sayfa → hedef)", () => {
+  for (const toplam of [41, 47, 49, 60, 137]) {
+    const birAdim = (kaynak: number) => new Set(categoryPageList(kaynak, toplam).filter((n): n is number => n !== "gap"));
+    for (const kaynak of [1, Math.ceil(toplam / 2), toplam]) {
+      const ilk = birAdim(kaynak);
+      const iki = new Set<number>(ilk);
+      for (const ara of ilk) for (const n of birAdim(ara)) iki.add(n);
+      for (let hedef = 1; hedef <= toplam; hedef++) assert.ok(iki.has(hedef), `${kaynak} → ${hedef} (toplam ${toplam})`);
+    }
+  }
+});
+
+test("numaralı bağlantılar: 41+ sayfada model boşluk + bağlantı taşır; geçerli sayfa tek ve bağlantıları href kuralından", () => {
+  const p = buildCategoryPagination("/kategori/cicekler", undefined, 25, 60);
+  assert.deepEqual(
+    p.pages.map((it) => (it.kind === "page" ? it.page : "…")),
+    [1, "…", 10, "…", 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, "…", 40, "…", 50, "…", 60],
+  );
+  assert.equal(p.pages.filter((it) => it.kind === "page" && it.current).length, 1);
+  assert.equal(new Set(p.pages.map((it) => (it.kind === "gap" ? it.key : `p${it.page}`))).size, p.pages.length, "React key'leri tekil");
+  const kirk = p.pages.find((it) => it.kind === "page" && it.page === 40);
+  assert.equal(kirk?.kind === "page" ? kirk.href : null, "/kategori/cicekler?page=40");
+  assert.deepEqual(p.prev, { page: 24, href: "/kategori/cicekler?page=24" });
+  assert.deepEqual(p.next, { page: 26, href: "/kategori/cicekler?page=26" });
 });
 
 test("numaralı bağlantılar: 7 sayfaya kadar hepsi; tek sayfada yalnız [1] (navigasyon basılmaz)", () => {
@@ -205,7 +270,31 @@ test("KAYNAK: kategori sayfası listesiz / ötesi sayfada 404 verir, bilinmeyen 
   // Ana seri okuması CategoryLanding'in sıralamasız/filtresiz isteğiyle AYNI parametreler (istek içi tekilleştirme).
   assert.ok(page.includes('fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: "created_at_desc" })'));
   assert.ok(landing.includes("category_id: categoryId, page_size: 50, page: pageNum, sort,"));
+  // EK (TAM NUMARALI LİSTE): numara listesi satıra sığmazsa sarar; önceki / sonraki bağlantıları rel taşır.
+  assert.ok(landing.includes('<ol className="flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-1">'));
+  assert.ok(landing.includes('<Link href={pagination.prev.href} rel="prev" prefetch={false}'));
+  assert.ok(landing.includes('<Link href={pagination.next.href} rel="next" prefetch={false}'));
 
   const grid = readFileSync(new URL("../components/category/CategoryProductGrid.tsx", import.meta.url), "utf8");
   assert.ok(grid.includes("startPage > 1 ? items.length : Math.max(total, items.length)"), "?page=N'de 'yüklendi' sayısı ekrandaki ürün sayısı");
+});
+
+// ---------------------------------------------------------------------------
+// EK: /kategori/turkiye-geneli-kargo — sayfalama kuralları BİLEREK uygulanmadı.
+// Rota sayfalı bir seri değildir: sorguyu hiç okumaz, kargoya uygun TÜM ürünleri tek sayfada
+// basar (ürün tipi sekmeleri istemcide süzer). `?page=N` yok sayılan bir parametredir ve çıplak
+// canonical o adresi doğru biçimde tek sayfada toplar. Buraya sayfa başına canonical / 404 /
+// numaralı bağlantı eklemek, var olmayan bir sayfalama UYDURMAK olurdu (görünür liste dilimlenir,
+// bugün 200 dönen adres 404'e döner). Bu nöbet, rota ileride GERÇEKTEN sayfalanırsa kuralların
+// (lib/categoryPagination.ts) ona da uygulanması gerektiğini hatırlatır.
+// ---------------------------------------------------------------------------
+test("KAYNAK: /kategori/turkiye-geneli-kargo sayfalı seri DEĞİLDİR — ?page okunmaz, tüm ürünler tek sayfada, canonical çıplak yol", () => {
+  const kargo = readFileSync(new URL("../app/kategori/turkiye-geneli-kargo/page.tsx", import.meta.url), "utf8");
+  assert.ok(!/searchParams/.test(kargo), "rota sorguyu okumaz → ?page=N yok sayılır");
+  assert.ok(kargo.includes("export default async function NationwideCargoPage() {"));
+  assert.ok(kargo.includes('alternates: { canonical: "/kategori/turkiye-geneli-kargo" },'), "her adres varyantı çıplak yola canonical verir");
+  assert.ok(kargo.includes("return <CargoCategoryExperience products={products.map(toCardProduct)} blocks={managed?.body_blocks ?? []} />;"), "liste dilimlenmeden bileşene geçer");
+  const vitrin = readFileSync(new URL("../components/category/CargoCategoryExperience.tsx", import.meta.url), "utf8");
+  assert.ok(!/searchParams/.test(vitrin), "vitrin de sorguyu okumaz");
+  assert.ok(vitrin.includes("{shown.map((p, i) =>"), "süzülen listenin tamamı basılır (sayfa dilimi yok)");
 });
