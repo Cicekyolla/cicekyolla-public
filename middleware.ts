@@ -158,10 +158,13 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
   // API erişilemezse/yavaşsa null döner ve istek bugünkü gibi devam eder.
   const managed = await resolveManagedRedirect(req.nextUrl.pathname);
   if (managed) {
-    return NextResponse.redirect(
-      new URL(managed.to, req.nextUrl.origin),
-      managed.code,
-    );
+    // EK (SORGU DİZESİ KORUNUR): yönetilen 301 isteğin sorgu dizesini (gclid, utm_*, ?page …) hedefe
+    // taşır — locale dalıyla (yukarıda) AYNI kural. Önceden düşüyordu: slug'ı değişen bir sayfaya giden
+    // reklam tıklaması yönlendirmede `gclid`'i (tıklama ilişkilendirmesi) kaybediyordu. Hedef yol ve
+    // durum kodu aynen kayıttan; sorgusuz istekte Location bugünküyle bayt bayt aynıdır.
+    const target = new URL(managed.to, req.nextUrl.origin);
+    target.search = req.nextUrl.search;
+    return NextResponse.redirect(target, managed.code);
   }
 
   const res = NextResponse.next();

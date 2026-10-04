@@ -354,6 +354,41 @@ test("REGRESYON: TR yolunda yönetilen 301 aynen çalışır (locale dalı TR'yi
   assert.equal(res.headers.get("location"), `${SITE}/`);
 });
 
+// EK (SORGU DİZESİ KORUNUR): TR yönetilen 301 dalı da isteğin sorgu dizesini hedefe taşır.
+test("TR yönetilen 301: sorgu dizesi korunur (gclid / utm / page) — locale dalıyla aynı kural; kod kayıttan", async () => {
+  onbellekEskit();
+  redirectStub = {
+    status: 200,
+    redirects: [
+      ...KAYITLAR,
+      { from: "/urun/eski-slug", to: "/urun/yeni-slug", code: 301 },
+      { from: "/kategori/eski-kategori", to: "/kategori/yeni-kategori", code: 308 },
+    ],
+  };
+  const urun = await middleware(istek("/urun/eski-slug?gclid=abc123&utm_source=google&utm_campaign=g%C3%BCl"));
+  assert.equal(urun.status, 301);
+  assert.equal(urun.headers.get("location"), `${SITE}/urun/yeni-slug?gclid=abc123&utm_source=google&utm_campaign=g%C3%BCl`, "sorgu bayt bayt taşınır");
+  const kategori = await middleware(istek("/kategori/eski-kategori?page=3"));
+  assert.equal(kategori.status, 308, "kod kayıttan");
+  assert.equal(kategori.headers.get("location"), `${SITE}/kategori/yeni-kategori?page=3`);
+  const kok = await middleware(istek("/cicek-gonder?gclid=x"));
+  assert.equal(kok.headers.get("location"), `${SITE}/?gclid=x`);
+  // Sorgusuz istekte Location bugünküyle aynı (sonda "?" yok).
+  assert.equal((await middleware(istek("/urun/eski-slug"))).headers.get("location"), `${SITE}/urun/yeni-slug`);
+  assert.equal((await middleware(istek("/urun/eski-slug?"))).headers.get("location"), `${SITE}/urun/yeni-slug`);
+  // Kaydı olmayan TR yolu sorguyla da bugünkü gibi devam eder.
+  assert.equal(devamMi(await middleware(istek("/urun/yeni-slug?gclid=abc123"))), true);
+});
+
+test("kaynak nöbeti: TR yönetilen 301 dalı hedefe isteğin sorgu dizesini kopyalar (iki dal aynı satırı taşır)", () => {
+  const src = readFileSync(path.join(REPO_KOK, "middleware.ts"), "utf8");
+  const trDal = src.slice(src.indexOf("const managed = await resolveManagedRedirect(req.nextUrl.pathname);"), src.indexOf("const res = NextResponse.next();"));
+  assert.ok(trDal.includes("const target = new URL(managed.to, req.nextUrl.origin);"));
+  assert.ok(trDal.includes("target.search = req.nextUrl.search;"));
+  assert.ok(trDal.includes("return NextResponse.redirect(target, managed.code);"));
+  assert.equal(src.split("target.search = req.nextUrl.search;").length - 1, 2, "locale dalı + TR dalı");
+});
+
 // ---------------------------------------------------------------------------
 // 3) Kaynak nöbeti
 // ---------------------------------------------------------------------------
