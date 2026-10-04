@@ -14,6 +14,7 @@ import { fetchWithDeadline } from "./fetchWithDeadline";
 import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
 import { productUrlsResultOf, type ProductUrlsResult } from "./sitemapSources.ts";
+import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, createSortFallback, isSortRejectedStatus } from "./categorySort.ts";
 export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type RedirectMap } from "./internalHref.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
@@ -632,8 +633,13 @@ export interface PublicProductListParams {
   delivery_model?: "same_day_courier" | "cargo" | "same_day_and_cargo" | "cargo_capable";
   /** true → veri önbelleği atlanır (Kargo Merkezi kararı anında yansısın: kargo kategorisi / alternatif listesi). */
   fresh?: boolean;
-  sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
+  /** EK: "category_order" = operatörün elle kategori sırası (category_id ile; lib/categorySort.ts). */
+  sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc" | "category_order";
 }
+
+// EK (TEK KATEGORİ SIRASI): "API varsayılan kategori sırasını tanımıyor" notu — süreç içi, 5 dk
+// (kural ve gerekçe: lib/categorySort.ts). Yalnız fetchProductsPaged kullanır.
+const categorySortFallback = createSortFallback();
 
 export async function fetchProducts(params: PublicProductListParams = {}): Promise<PublicProductListItem[]> {
   return (await fetchProductsPaged(params)).items;
@@ -660,8 +666,11 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.same_day_available) q.set("same_day_available", "true");
   if (params.delivery_scope) q.set("delivery_scope", params.delivery_scope);
   if (params.delivery_model) q.set("delivery_model", params.delivery_model);
-  if (params.sort) q.set("sort", params.sort);
-  const url = `${API_ORIGIN}/api/products?${q.toString()}`;
+  // EK (TEK KATEGORİ SIRASI): API'nin varsayılan kategori sırasını tanımadığı biliniyorsa (taze not)
+  // istek doğrudan bugünkü sırayla gider; aksi hâlde istenen sıra aynen gönderilir.
+  let sort = categorySortFallback.effective(params.sort);
+  if (sort) q.set("sort", sort);
+  let url = `${API_ORIGIN}/api/products?${q.toString()}`;
   const attempts = params.fresh
     ? [{ headers: apiHeaders(), cache: "no-store" as const }]
     : [
@@ -670,7 +679,20 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
     ];
   for (const init of attempts) {
     try {
-      const res = await fetch(url, init);
+      let res = await fetch(url, init);
+      // EK (TEK KATEGORİ SIRASI — deploy sırası güvenliği): API sort=category_order'ı henüz
+      // tanımıyorsa (bugünkü API: 422) AYNI istek bugünkü sıralamayla (created_at_desc) BİR KEZ
+      // tekrarlanır → URL bugünkü isteğin aynısıdır, sayfa bugünkü gibi çizilir. Her çağıran
+      // (kategori SSR'ı, sonsuz kaydırma, PDP ilgili ürünler) bu tek noktadan yararlanır.
+      // Not yalnız tekrar BAŞARILIYSA ve sıra sözleşmeye uygun istendiyse (category_id ile)
+      // düşülür: başka bir parametrenin reddi "API bu sırayı tanımıyor" sayılmaz.
+      if (sort === CATEGORY_DEFAULT_SORT && isSortRejectedStatus(res.status)) {
+        sort = CATEGORY_SORT_FALLBACK;
+        q.set("sort", sort);
+        url = `${API_ORIGIN}/api/products?${q.toString()}`;
+        res = await fetch(url, init);
+        if (res.ok && params.category_id) categorySortFallback.noteRejected();
+      }
       if (!res.ok) continue;
       const json = (await res.json()) as ProductPage;
       const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];

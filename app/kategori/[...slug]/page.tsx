@@ -25,6 +25,7 @@ import {
   parseCategoryPageParam,
   type CategoryListingState,
 } from "@/lib/categoryPagination";
+import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
 import { managedTitle, managedDescription } from "@/lib/managedSeoContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { fetchProductsPaged, type SeoPublicPage } from "@/lib/api";
@@ -64,7 +65,7 @@ async function mainSeriesState(path: string, pageNo: number): Promise<CategoryLi
   const tree = await getCategoryTree();
   const categoryId = tree ? findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, "")) : null;
   if (!categoryId) return "unknown";
-  const listing = await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: "created_at_desc" });
+  const listing = await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT });
   return categoryListingState(pageNo, listing.pagination);
 }
 

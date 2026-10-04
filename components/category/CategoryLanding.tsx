@@ -18,6 +18,7 @@ import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
 import { buildCategoryPagination, isCategoryPageBeyondLast, isCategoryPageWithoutListing } from "@/lib/categoryPagination";
 import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
+import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, categorySortOf, categorySortParam } from "@/lib/categorySort";
 
 /**
  * §Category Landing (Yol A — SEO-Content). Parça 1 (iskelet) + Parça 2 (iç-linkleme + CTA).
@@ -128,14 +129,12 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // Admin Ürün Merkezi > Kapsam/Kategori → API → DB → BURASI → müşteri.
   // slug → category_id → /api/products?category_id=&status=active&sort=&page=.
   // Kayıt yoksa/kategori id çözülmezse grid gizlenir (mock YOK, regresyon YOK).
-  const SORTS = [
-    { key: "created_at_desc", label: "En Yeni" },
-    { key: "price_asc", label: "Artan Fiyat" },
-    { key: "price_desc", label: "Azalan Fiyat" },
-    { key: "name_asc", label: "A → Z" },
-  ] as const;
-  const sortParam = typeof searchParams?.sort === "string" ? searchParams.sort : "created_at_desc";
-  const sort = (SORTS.find((s) => s.key === sortParam)?.key ?? "created_at_desc") as typeof SORTS[number]["key"];
+  // EK (TEK KATEGORİ SIRASI): varsayılan sıra ("Önerilen Sıralama") artık operatörün elle kategori
+  // sırasıdır (sort=category_order — Global kategori sayfasıyla aynı sıra); müşterinin seçtiği fiyat /
+  // ad sıralamaları aynen. API bu sırayı henüz tanımıyorsa okuma katmanı aynı isteği bugünkü sırayla
+  // tekrarlar (lib/api.ts) → liste bugünkü gibi çizilir. Kural: lib/categorySort.ts.
+  // `?sort` yoksa / tanınmıyorsa varsayılan sıra; geçerli değerler: price_asc · price_desc · name_asc.
+  const sort = categorySortOf(searchParams?.sort);
   const pageNum = Math.max(1, Number(typeof searchParams?.page === "string" ? searchParams.page : 1) || 1);
   // FilterBar filtreleri (gerçek backend paramları). Sahte filtre yok.
   const sp = (k: string) => (typeof searchParams?.[k] === "string" ? (searchParams[k] as string) : undefined);
@@ -215,7 +214,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   const pagination = buildCategoryPagination(
     path,
     {
-      sort: sort !== "created_at_desc" ? sort : undefined,
+      // Varsayılan sıra bağlantıya / URL'ye yazılmaz (bugünkü varsayılanla aynı kural).
+      sort: categorySortParam(sort),
       type: filterType,
       same_day: sameDay ? "1" : undefined,
       bestseller: bestseller ? "1" : undefined,
@@ -267,11 +267,14 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // Admin `cargo-product` blokları eklediyse vitrin seçimi/sırası onlardan gelir.
   const cargoSettings = page.body_blocks?.find((b) => b.type === "cargo-settings") as ({ value?: unknown; enabled?: unknown } | undefined);
   if (slug === "turkiye-geneli-kargo" && cargoSettings?.value !== "false" && cargoSettings?.enabled !== false) {
+    // EK (TEK KATEGORİ SIRASI): kategori sırası yalnız category_id ile anlamlıdır; kategorisiz bu üç
+    // okuma varsayılan sırada bugünkü isteğini (created_at_desc) aynen gönderir.
+    const cargoSort = sort === CATEGORY_DEFAULT_SORT ? CATEGORY_SORT_FALLBACK : sort;
     const cargoLists = await Promise.all([
       Promise.resolve(productPage?.items ?? []),
-      fetchProducts({ product_type: "plant", page_size: 60, sort }),
-      fetchProducts({ product_type: "artificial", page_size: 60, sort }),
-      fetchProducts({ product_type: "gift", page_size: 60, sort }),
+      fetchProducts({ product_type: "plant", page_size: 60, sort: cargoSort }),
+      fetchProducts({ product_type: "artificial", page_size: 60, sort: cargoSort }),
+      fetchProducts({ product_type: "gift", page_size: 60, sort: cargoSort }),
     ]);
     const unique = new Map<number, PublicProductListItem>();
     cargoLists.flat().forEach((product) => {

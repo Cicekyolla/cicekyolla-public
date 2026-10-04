@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { CATEGORY_DEFAULT_SORT, categorySortOf, categorySortParam } from "@/lib/categorySort";
 
 /* Çiçeksepeti-tarzı filtre çubuğu — GERÇEK backend filtreleri (/api/products):
    product_type, same_day_available, is_bestseller, is_new, sort.
@@ -17,8 +18,10 @@ const PRODUCT_TYPES = [
   { key: "service", label: "Servis" },
 ] as const;
 
+// EK (TEK KATEGORİ SIRASI): "Önerilen Sıralama" = varsayılan sıra (operatörün elle kategori sırası).
+// Varsayılan sıra URL'ye yazılmaz (parametre silinir) — bugünkü varsayılanla aynı kural.
 const SORTS = [
-  { key: "created_at_desc", label: "Önerilen Sıralama" },
+  { key: CATEGORY_DEFAULT_SORT, label: "Önerilen Sıralama" },
   { key: "price_asc", label: "Artan Fiyat" },
   { key: "price_desc", label: "Azalan Fiyat" },
   { key: "name_asc", label: "A → Z" },
@@ -66,7 +69,8 @@ export function FilterBar({ categories = [] }: { categories?: { name: string; hr
   }, [router, pathname, sp]);
 
   const curType = sp.get("type") ?? "";
-  const curSort = sp.get("sort") ?? "created_at_desc";
+  // Sunucunun uyguladığı sırayla AYNI çözüm (parametre yok / tanınmıyor → varsayılan).
+  const curSort = categorySortOf(sp.get("sort"));
   const typeLabel = PRODUCT_TYPES.find((t) => t.key === curType)?.label ?? "Ürün Tipi";
   const sortLabel = SORTS.find((s) => s.key === curSort)?.label ?? "Sıralama";
 
@@ -161,7 +165,7 @@ export function FilterBar({ categories = [] }: { categories?: { name: string; hr
               {SORTS.map((s) => (
                 <button
                   key={s.key}
-                  onClick={() => setParam("sort", s.key === "created_at_desc" ? null : s.key)}
+                  onClick={() => setParam("sort", categorySortParam(s.key) ?? null)}
                   className={`w-full text-left px-4 py-2.5 text-[13.5px] transition-colors ${curSort === s.key ? "text-[#7C3AED] font-semibold bg-[#F5F3FF]" : "text-[#374151] hover:bg-[#F9FAFB]"}`}
                 >
                   {s.label}

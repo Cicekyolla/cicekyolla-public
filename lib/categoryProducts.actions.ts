@@ -16,7 +16,9 @@ export async function loadCategoryProducts(input: {
   categoryId: number;
   page: number;
   pageSize: number;
-  sort: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
+  // EK (TEK KATEGORİ SIRASI): "category_order" = varsayılan sıra; API tanımıyorsa okuma katmanı
+  // aynı isteği bugünkü sırayla tekrarlar (lib/api.ts) → SSR sayfasıyla aynı sıra.
+  sort: "created_at_desc" | "price_asc" | "price_desc" | "name_asc" | "category_order";
   type?: string;
   sameDay?: boolean;
   bestseller?: boolean;

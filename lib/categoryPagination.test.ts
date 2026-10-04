@@ -268,8 +268,10 @@ test("KAYNAK: kategori sayfası listesiz / ötesi sayfada 404 verir, bilinmeyen 
   assert.ok(page.includes("const title = categoryPageTitle(managedTitle(page) || page.title_tag, seoPage);"));
   assert.ok(page.includes("const canonicalPath = categoryCanonicalPath(path, seoPage);"));
   // Ana seri okuması CategoryLanding'in sıralamasız/filtresiz isteğiyle AYNI parametreler (istek içi tekilleştirme).
-  assert.ok(page.includes('fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: "created_at_desc" })'));
+  // EK (TEK KATEGORİ SIRASI): ikisi de varsayılan sırayı (CATEGORY_DEFAULT_SORT) ister.
+  assert.ok(page.includes("fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT })"));
   assert.ok(landing.includes("category_id: categoryId, page_size: 50, page: pageNum, sort,"));
+  assert.ok(landing.includes("const sort = categorySortOf(searchParams?.sort);"));
   // EK (TAM NUMARALI LİSTE): numara listesi satıra sığmazsa sarar; önceki / sonraki bağlantıları rel taşır.
   assert.ok(landing.includes('<ol className="flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-1">'));
   assert.ok(landing.includes('<Link href={pagination.prev.href} rel="prev" prefetch={false}'));

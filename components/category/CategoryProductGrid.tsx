@@ -13,11 +13,14 @@ import { ProductCard, type CardContextTag } from "@/components/home/ProductCard"
 import type { CardProduct } from "@/lib/api";
 import { loadCategoryProducts } from "@/lib/categoryProducts.actions";
 
+// EK (TEK KATEGORİ SIRASI): "category_order" = varsayılan sıra (operatörün elle kategori sırası;
+// lib/categorySort.ts). Sonsuz kaydırma SSR ile AYNI sırayı ister → sayfalar arası tutarlı.
 export type CategorySort =
   | "created_at_desc"
   | "price_asc"
   | "price_desc"
-  | "name_asc";
+  | "name_asc"
+  | "category_order";
 
 export interface CategoryProductGridProps {
   initialItems: CardProduct[];

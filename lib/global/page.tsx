@@ -90,6 +90,7 @@ import {
 } from "./locationPaging";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
 import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
+import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
 import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
 import { mergedTexts } from "./v80/copy";
@@ -1109,8 +1110,10 @@ export async function LocalePage({ locale, path, searchParams }: {
     // — UI metinleri dict'ten, ad/açıklama Faz 2 overlay'inden locale'e göre) +
     // aynı kategoriden boyut önerileri + yalnız LOCALIZED yüzeyi olan related'lar.
     const primaryCat = data.categories.find((c) => c.is_primary) ?? data.categories[0];
+    // EK (TEK KATEGORİ SIRASI): TR PDP ile aynı — birincil kategorinin kendi (elle) sırası; API
+    // tanımıyorsa okuma katmanı bugünkü sırayla tekrarlar (lib/api.ts).
     const relatedRows = primaryCat
-      ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: "created_at_desc" })
+      ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: CATEGORY_DEFAULT_SORT })
       : [];
     const availableRelated = relatedRows.filter((r) => r.slug !== product.slug && r.cover_image_url);
     const price = product.sale_price_minor && Number(product.sale_price_minor) > 0 ? product.sale_price_minor : product.price_minor;

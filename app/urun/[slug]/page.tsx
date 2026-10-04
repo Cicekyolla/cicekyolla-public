@@ -27,6 +27,7 @@ import { toPlainText } from "@/lib/richText";
 import { productHreflangFamily } from "@/lib/global/hreflangFamily";
 import { fetchProductLocaleVersions } from "@/lib/hreflangSources";
 import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
+import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -216,9 +217,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   // ── İLGİLİ ÜRÜNLER (Cross-Sell) — aynı kategoriden, canlı katalog ──
   // Admin: ürünün kategorisi → /api/products?category_id= → BURASI. Mock YOK.
+  // EK (TEK KATEGORİ SIRASI): ilgili ürünler birincil kategorinin KENDİ sırasından okunur (kategori
+  // sayfasının varsayılan sırasıyla aynı: operatörün elle sırası). API bu sırayı henüz tanımıyorsa
+  // okuma katmanı aynı isteği bugünkü sırayla tekrarlar (lib/api.ts) → bugünkü liste.
   const primaryCat = data.categories.find((c) => c.is_primary) ?? data.categories[0];
   const relatedRows = primaryCat
-    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: "created_at_desc" })
+    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: CATEGORY_DEFAULT_SORT })
     : [];
   const availableRelated = relatedRows.filter((p) => p.slug !== product.slug && p.cover_image_url);
   const related = availableRelated.slice(0, 4).map(toCardProduct);
