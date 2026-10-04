@@ -280,12 +280,21 @@ function pathNode(path: string): string {
 
 // ADDITIVE: pages.xml — statik kurumsal rotalar + envanterdeki index brand/
 // delivery_info kayıtları (path bazında teklenir; envanter kaydı lastmod taşır).
+// EK (SEO YAYIN ZİNCİRİ): kendi statik rotasından sunulan kategori sayfaları
+// (TR_CATEGORY_DEDICATED_ROUTES — ör. /kategori/turkiye-geneli-kargo) index,follow yayınlanır ama
+// envanterde kaydı olmadığında HİÇBİR sitemap'te yer almıyordu (kategori ucu da bu yolu kapsamaz).
+// Envanterde index kaydı yoksa burada, statik rotalarla aynı biçimde (lastmod'suz) listelenir;
+// kayıt yayınlanınca satır categories.xml'e envanterden girer ve buradan kendiliğinden çıkar
+// (aynı URL iki sitemap'e yazılmaz). Liste tek kaynaktan: app/kategori altındaki statik rota
+// klasörleriyle eşitliği lib/hreflangFamily.test.ts sabitler.
 function pageNodes(inventory: SeoInventoryItem[]): string[] {
   const invItems = inventory.filter((item) => matchesType(item, "pages"));
   const invPaths = new Set(invItems.map((item) => item.url_path));
+  const allPaths = new Set(inventory.map((item) => item.url_path));
   return [
     ...invItems.map(urlNode),
     ...STATIC_INDEXABLE_PAGES.filter((p) => !invPaths.has(p)).map(pathNode),
+    ...[...DEDICATED_CATEGORY_PATHS].filter((p) => !allPaths.has(p)).map(pathNode),
   ];
 }
 
@@ -417,7 +426,8 @@ function productRowNode(row: ProductUrlRow, withImage: boolean): string {
 //   • category_location (konum + kategori sayfaları — ürün kategorisi değildir),
 //   • kendi statik rotasından sunulan kategori (ör. /kategori/turkiye-geneli-kargo): listesi
 //     kategori bağından değil teslimat profilinden gelir; ucun saydığı "kategoriye bağlı ürün"
-//     o sayfanın listelediği ürün sayısı DEĞİLDİR → o URL için envanter kararı geçerli kalır.
+//     o sayfanın listelediği ürün sayısı DEĞİLDİR → o URL için envanter kararı geçerli kalır:
+//     envanterde index kaydı VARSA burada listelenir; YOKSA pages.xml'de (pageNodes) listelenir.
 // ---------------------------------------------------------------------------
 const DEDICATED_CATEGORY_PATHS: ReadonlySet<string> = new Set(TR_CATEGORY_DEDICATED_ROUTES.map((slug) => `/kategori/${slug}`));
 

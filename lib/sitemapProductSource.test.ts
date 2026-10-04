@@ -586,6 +586,40 @@ test("categories.xml: kendi statik rotasından sunulan kategori (turkiye-geneli-
   assert.ok(!locs((await renderSitemapOrNull("categories"))!).includes(`${SITE}/kategori/turkiye-geneli-kargo`));
 });
 
+// EK: /kategori/turkiye-geneli-kargo index,follow yayınlanır ama envanterde kaydı olmadığında hiçbir
+// sitemap'te yer almıyordu (4 Eki 2026: canlı envanterde bu yolun kaydı yok).
+test("pages.xml: kendi statik rotasından sunulan kategori envanterde index kaydı yoksa burada listelenir; kayıt varsa yalnız categories.xml'de", async () => {
+  const KARGO = `${SITE}/kategori/turkiye-geneli-kargo`;
+  const envantersiz = { status: 200, body: { data: KATEGORI_ENVANTERI.body.data.filter((r) => r.url_path !== "/kategori/turkiye-geneli-kargo") } };
+
+  // 1) Envanterde kaydı YOK → pages.xml'de bir kez, lastmod'suz; categories.xml'de (iki yolda da) yok.
+  kur({ [INVENTORY]: envantersiz });
+  const sayfalar = await renderSitemapOrNull("pages");
+  assert.ok(sayfalar);
+  assert.equal(locs(sayfalar!).filter((l) => l === KARGO).length, 1);
+  assert.ok(sayfalar!.includes(`<url><loc>${KARGO}</loc></url>`), "statik rotalarla aynı biçim");
+  // Mevcut statik rotalar AYNEN ve aynı sırada; yeni satır yalnız sona eklenir.
+  const oncekiler = locs(sayfalar!).filter((l) => l !== KARGO);
+  assert.deepEqual(locs(sayfalar!), [...oncekiler, KARGO]);
+  assert.deepEqual(oncekiler.slice(0, 3), [`${SITE}/`, `${SITE}/hakkimizda`, `${SITE}/iletisim`]);
+  assert.equal(oncekiler.length, 10, "statik kurumsal rota sayısı değişmedi");
+  kur({ [INVENTORY]: envantersiz });
+  assert.ok(!locs((await renderSitemapOrNull("categories"))!).includes(KARGO), "uç yokken (envanter yolu)");
+  kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: envantersiz });
+  assert.ok(!locs((await renderSitemapOrNull("categories"))!).includes(KARGO), "uç varken");
+
+  // 2) Envanterde index kaydı VAR → categories.xml'de (envanter satırı, lastmod'lu); pages.xml'de YOK (aynı URL iki sitemap'e yazılmaz).
+  kur({ [INVENTORY]: KATEGORI_ENVANTERI });
+  assert.ok(!locs((await renderSitemapOrNull("pages"))!).includes(KARGO));
+  kur({ [INVENTORY]: KATEGORI_ENVANTERI });
+  assert.ok(locs((await renderSitemapOrNull("categories"))!).includes(KARGO));
+
+  // 3) Liste tek kaynaktan gelir (yol kodda ikinci kez yazılmadı).
+  const src = readFileSync(path.join(REPO_KOK, "lib", "sitemap.ts"), "utf8");
+  assert.ok(src.includes("...[...DEDICATED_CATEGORY_PATHS].filter((p) => !allPaths.has(p)).map(pathNode),"));
+  assert.ok(!src.includes('"/kategori/turkiye-geneli-kargo"'), "yol sabit olarak yazılmadı");
+});
+
 test("categories.xml: uç 404 (API henüz yayında değil) → bugünkü envanter mantığı BİREBİR", async () => {
   kur({ [INVENTORY]: KATEGORI_ENVANTERI });
   const xml = await renderSitemapOrNull("categories");
