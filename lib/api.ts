@@ -14,7 +14,7 @@ import { fetchWithDeadline } from "./fetchWithDeadline";
 import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
 import { categoryUrlsResultOf, productUrlsResultOf, type CategoryUrlsResult, type ProductUrlsResult } from "./sitemapSources.ts";
-import { CATEGORY_DEFAULT_SORT, CATEGORY_SORT_FALLBACK, createSortFallback, isSortRejectedStatus } from "./categorySort.ts";
+import { CATEGORY_DEFAULT_SORT, CATEGORY_ORDER_DEADLINE_MS, CATEGORY_SORT_FALLBACK, createSortFallback, isSortRejectedStatus, settledWithin } from "./categorySort.ts";
 export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type RedirectMap } from "./internalHref.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
@@ -706,19 +706,41 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
     ];
   for (const init of attempts) {
     try {
-      let res = await fetch(url, init);
       // EK (TEK KATEGORİ SIRASI — deploy sırası güvenliği): API sort=category_order'ı henüz
       // tanımıyorsa (bugünkü API: 422) AYNI istek bugünkü sıralamayla (created_at_desc) BİR KEZ
       // tekrarlanır → URL bugünkü isteğin aynısıdır, sayfa bugünkü gibi çizilir. Her çağıran
       // (kategori SSR'ı, sonsuz kaydırma, PDP ilgili ürünler) bu tek noktadan yararlanır.
       // Not yalnız tekrar BAŞARILIYSA ve sıra sözleşmeye uygun istendiyse (category_id ile)
       // düşülür: başka bir parametrenin reddi "API bu sırayı tanımıyor" sayılmaz.
-      if (sort === CATEGORY_DEFAULT_SORT && isSortRejectedStatus(res.status)) {
-        sort = CATEGORY_SORT_FALLBACK;
-        q.set("sort", sort);
-        url = `${API_ORIGIN}/api/products?${q.toString()}`;
+      // EK (FAIL-OPEN — her başarısızlık): API'nin bu sırayı tanıdığı BİLİNMİYORKEN varsayılan sıra
+      // isteği yalnız ret (422) ile değil, HANGİ nedenle olursa olsun sonuç vermezse (ağ hatası, 5xx,
+      // CATEGORY_ORDER_DEADLINE_MS içinde yanıt yok) bugünkü isteğe geçilir — AYNI `init` ile: bugünkü
+      // isteğin Data Cache kaydı (bayat da olsa) kullanılır, API kesintisinde liste boşalmaz. Geçiş
+      // kalıcıdır: bu çağrının ikinci (no-store) denemesi de bugünkü isteği gönderir → akış bugünkü
+      // iki denemenin aynısıdır. Süre sınırı AbortSignal'sız (lib/categorySort.ts settledWithin):
+      // istek içi tekilleştirme bozulmaz.
+      // EK (KABUL NOTU): API bu sırayı kabul ettiyse (taze not) akış bugünkü isteğin akışıyla BİREBİR
+      // aynıdır — süre sınırı yok, hata olursa aynı istek ikinci denemede (no-store) yinelenir; liste
+      // bugünkü sıraya çevrilmez (sayfalar arasında sıra karışmaz). Yalnız ret (API geri alındı) geçirir.
+      let res: Response;
+      if (sort === CATEGORY_DEFAULT_SORT) {
+        const known = categorySortFallback.accepted();
+        const tried = await settledWithin(fetch(url, init), known ? null : CATEGORY_ORDER_DEADLINE_MS);
+        const rejected = !!tried && isSortRejectedStatus(tried.status);
+        if (tried && tried.ok) {
+          categorySortFallback.noteAccepted();
+          res = tried;
+        } else if (known && !rejected) {
+          continue;
+        } else {
+          sort = CATEGORY_SORT_FALLBACK;
+          q.set("sort", sort);
+          url = `${API_ORIGIN}/api/products?${q.toString()}`;
+          res = await fetch(url, init);
+          if (rejected && res.ok && params.category_id) categorySortFallback.noteRejected();
+        }
+      } else {
         res = await fetch(url, init);
-        if (res.ok && params.category_id) categorySortFallback.noteRejected();
       }
       if (!res.ok) continue;
       const json = (await res.json()) as ProductPage;

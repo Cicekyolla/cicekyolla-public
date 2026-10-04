@@ -18,6 +18,26 @@
 // bilinmeyen sıralamayı HTTP 422 ile reddeder. Okuma katmanı (lib/api.ts fetchProductsPaged)
 // reddedilen isteği AYNI parametrelerle, bugünkü sıralamayla (created_at_desc) bir kez
 // tekrarlar → sayfa bugünkü gibi çizilir. Vitrin API'den önce de sonra da yayınlanabilir.
+//
+// EK (FAIL-OPEN — her başarısızlık): yalnız 422 değil; API'nin bu sırayı tanıdığı BİLİNMİYORKEN
+// varsayılan sıra isteği HANGİ nedenle olursa olsun sonuç vermezse (ağ hatası, 5xx,
+// CATEGORY_ORDER_DEADLINE_MS içinde yanıt yok) okuma katmanı AYNI isteği bugünkü sırayla, AYNI
+// önbellek ayarıyla gönderir → bugünkü isteğin Data Cache kaydı (bayat da olsa) kullanılır; API
+// kesintisinde kategori sayfası boşalmaz.
+// "API bu sırayı tanımıyor" notu yine YALNIZ ret (422/400) + başarılı tekrar ile düşülür.
+//
+// EK (KABUL NOTU): API varsayılan sırayı bir kez KABUL edince (200) bu da not edilir. Not tazeyken
+// istek, bugünkü isteğin akışıyla BİREBİR aynı yürür (süre sınırı yok; hata olursa aynı istek
+// no-store ile bir kez daha; ikisi de düşerse boş sayfa) — yalnız `sort` değeri farklıdır. Böylece
+// API yayınlandıktan sonra yavaş bir yanıt ya da geçici bir ağ hatası listeyi bugünkü sıraya
+// ÇEVİRMEZ (sayfa 1 elle sırada, sayfa 2 en-yeni sırada kalmaz). Ret görülürse (API geri alındı)
+// kabul notu silinir.
+//
+// NOT ÖMRÜ (bilinçli 5 dk): not süreç içidir. Vitrin API'den ÖNCE yayınlanırsa API yayınından
+// sonraki en çok 5 dk boyunca örnekler arasında sıra karışık olabilir (notu taze örnek bugünkü
+// sırayı, taze açılan örnek elle sırayı ister); süre dolunca kendiliğinden düzelir. Daha kısa
+// not, API beklenirken her örneğe daha sık ret yoklaması bindirirdi. API önce yayınlanırsa bu
+// pencere hiç oluşmaz (yayın sırası notu: PR gövdesi).
 // ============================================================================
 
 /** Kategori listesinin varsayılan sırası: operatörün elle kategori sırası. */
@@ -54,11 +74,49 @@ export function isSortRejectedStatus(status: number): boolean {
 /** "API varsayılan sırayı tanımıyor" notunun ömrü (süreç içi). */
 export const SORT_REJECTED_MEMO_MS = 5 * 60_000;
 
+/** EK: "API varsayılan sırayı tanıyor" (kabul) notunun ömrü — her başarılı yanıtta yenilenir (süreç içi). */
+export const SORT_ACCEPTED_MEMO_MS = 5 * 60_000;
+
+/**
+ * EK (FAIL-OPEN): varsayılan sıra isteğine tanınan süre. Aşılırsa istek bugünkü sırayla gönderilir
+ * (yavaş API'de sayfa, bugünkü isteğin önbellek kaydını beklemeden kullanır).
+ */
+export const CATEGORY_ORDER_DEADLINE_MS = 2_500;
+
+/**
+ * EK (FAIL-OPEN) — sözü süreyle sınırlar: `ms` içinde sonuçlanırsa değeri, reddedilirse ya da
+ * süre dolarsa null döner; ASLA fırlatmaz. AbortSignal BİLEREK kullanılmaz: React, `signal`
+ * taşıyan fetch'i istek içinde tekilleştirmez (generateMetadata + sayfa aynı okumayı iki kez
+ * yapardı). Süre dolduğunda asıl söz arka planda sürer (sonucu yutulur; başarılıysa Next onu
+ * yine Data Cache'e yazar → sonraki render önbellekten okur).
+ * `ms` null ise süre sınırı YOKTUR (yalnız ret null'a çevrilir).
+ */
+export function settledWithin<T>(work: Promise<T>, ms: number | null): Promise<T | null> {
+  if (ms === null) return work.then((value) => value, () => null);
+  return new Promise<T | null>((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+    );
+  });
+}
+
 export interface SortFallback {
   /** İsteğin GERÇEKTEN gönderileceği sıralama: not tazeyse varsayılan sıra yerine yedek sıra. */
   effective<T extends string | undefined>(sort: T): T | typeof CATEGORY_SORT_FALLBACK;
   /** API varsayılan sırayı reddetti ve aynı istek yedek sırayla BAŞARILI oldu → not düşülür. */
   noteRejected(): void;
+  /** EK: API varsayılan sırayı KABUL etti (başarılı yanıt) → kabul notu düşülür / yenilenir. */
+  noteAccepted(): void;
+  /** EK: API'nin varsayılan sırayı tanıdığı biliniyor mu? (taze kabul notu) */
+  accepted(): boolean;
 }
 
 /**
@@ -69,12 +127,20 @@ export interface SortFallback {
  */
 export function createSortFallback(now: () => number = () => Date.now()): SortFallback {
   let rejectedUntil = 0;
+  let acceptedUntil = 0;
   return {
     effective(sort) {
       return sort === CATEGORY_DEFAULT_SORT && rejectedUntil > now() ? CATEGORY_SORT_FALLBACK : sort;
     },
     noteRejected() {
       rejectedUntil = now() + SORT_REJECTED_MEMO_MS;
+      acceptedUntil = 0;
+    },
+    noteAccepted() {
+      acceptedUntil = now() + SORT_ACCEPTED_MEMO_MS;
+    },
+    accepted() {
+      return acceptedUntil > now();
     },
   };
 }

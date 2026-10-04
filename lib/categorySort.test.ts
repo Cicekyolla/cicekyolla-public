@@ -12,6 +12,12 @@
 //     süre dolunca varsayılan sıra yeniden denenir.
 //  4) Tekrar okuma katmanında (lib/api.ts) TEK yerdedir → kategori SSR'ı, sonsuz kaydırma ve PDP
 //     ilgili ürünler aynı korumayı kullanır; mevcut fonksiyon imzaları değişmedi.
+//  5) FAIL-OPEN — HER başarısızlık: varsayılan sıra isteği ağ hatası / 5xx verirse ya da süresinde
+//     yanıtlanmazsa AYNI istek bugünkü sırayla, AYNI önbellek ayarıyla gönderilir (bugünkü isteğin
+//     Data Cache kaydı kullanılır; API kesintisinde liste boşalmaz). Not yalnız ret (422/400) ile düşer.
+//  6) KABUL NOTU: API varsayılan sırayı kabul ettikten sonra akış bugünkü isteğin akışıyla birebir
+//     aynıdır (süre sınırı yok, hata olursa aynı istek no-store ile) — yavaş yanıt / geçici hata listeyi
+//     bugünkü sıraya çevirmez; yalnız ret (API geri alındı) çevirir.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -21,12 +27,15 @@ import path from "node:path";
 import {
   CATEGORY_CUSTOMER_SORTS,
   CATEGORY_DEFAULT_SORT,
+  CATEGORY_ORDER_DEADLINE_MS,
   CATEGORY_SORT_FALLBACK,
+  SORT_ACCEPTED_MEMO_MS,
   SORT_REJECTED_MEMO_MS,
   categorySortOf,
   categorySortParam,
   createSortFallback,
   isSortRejectedStatus,
+  settledWithin,
 } from "./categorySort.ts";
 
 const REPO_KOK = path.resolve(import.meta.dirname, "..");
@@ -122,6 +131,56 @@ test("createSortFallback: not yokken istenen sıra aynen; not tazeyken yalnız V
   assert.equal(SORT_REJECTED_MEMO_MS, 5 * 60_000);
 });
 
+test("createSortFallback — kabul notu: başarılı yanıtla düşer / yenilenir, süresi dolunca ve ret görülünce silinir", () => {
+  let saat = 1_000_000;
+  const not = createSortFallback(() => saat);
+  assert.equal(not.accepted(), false, "başlangıçta bilinmiyor");
+  not.noteAccepted();
+  assert.equal(not.accepted(), true);
+  assert.equal(not.effective("category_order"), "category_order", "kabul notu sıralamayı değiştirmez");
+  saat += SORT_ACCEPTED_MEMO_MS - 1;
+  assert.equal(not.accepted(), true);
+  not.noteAccepted(); // her başarılı yanıt notu yeniler
+  saat += SORT_ACCEPTED_MEMO_MS - 1;
+  assert.equal(not.accepted(), true, "yenilendi");
+  saat += 1;
+  assert.equal(not.accepted(), false, "süre doldu → yeniden 'bilinmiyor' (süre sınırı geri gelir)");
+  // API geri alındı: ret kabul notunu siler, ret notu devreye girer.
+  not.noteAccepted();
+  not.noteRejected();
+  assert.equal(not.accepted(), false);
+  assert.equal(not.effective("category_order"), "created_at_desc");
+  assert.equal(SORT_ACCEPTED_MEMO_MS, 5 * 60_000);
+});
+
+test("settledWithin: süresinde sonuçlanan söz değerini verir; reddedilen ya da süresi dolan söz null — asla fırlatmaz", async () => {
+  assert.equal(await settledWithin(Promise.resolve("tamam"), 50), "tamam");
+  assert.equal(await settledWithin(Promise.reject(new Error("other side closed")), 50), null, "ret → null");
+  const t0 = Date.now();
+  assert.equal(await settledWithin(new Promise<string>(() => { /* asılı kalır */ }), 30), null, "süre doldu → null");
+  assert.ok(Date.now() - t0 < 1_000, "süre sınırı kadar beklenir");
+  // Süre dolduktan SONRA reddedilen söz işlenmemiş ret (unhandledRejection) üretmez.
+  let yakalanmamis = 0;
+  const say = () => { yakalanmamis++; };
+  process.on("unhandledRejection", say);
+  let reddet: (e: Error) => void = () => {};
+  const gec = new Promise<string>((_, reject) => { reddet = reject; });
+  assert.equal(await settledWithin(gec, 10), null);
+  reddet(new Error("geç gelen hata"));
+  await new Promise((r) => setTimeout(r, 20));
+  process.off("unhandledRejection", say);
+  assert.equal(yakalanmamis, 0);
+  // Süre dolduktan sonra gelen DEĞER de yok sayılır (ilk sonuç geçerlidir).
+  let coz: (v: string) => void = () => {};
+  const gecDeger = settledWithin(new Promise<string>((resolve) => { coz = resolve; }), 10);
+  assert.equal(await gecDeger, null);
+  coz("geç");
+  assert.equal(CATEGORY_ORDER_DEADLINE_MS, 2_500);
+  // Süre sınırı null: beklenir (zamanlayıcı yok); ret yine null'a çevrilir.
+  assert.equal(await settledWithin(new Promise<string>((resolve) => setTimeout(() => resolve("yavaş"), 40)), null), "yavaş");
+  assert.equal(await settledWithin(Promise.reject(new Error("other side closed")), null), null);
+});
+
 // ---------------------------------------------------------------------------
 // 2) lib/api.ts — iki API kuşağı (fetch stub)
 // ---------------------------------------------------------------------------
@@ -141,18 +200,35 @@ let istekUrlleri: string[] = [];
 let agHatasi = 0;
 /** Belirli bir parametre varken 422 (sıralamadan BAĞIMSIZ ret) üretir. */
 let reddedilenParametre: string | null = null;
+/** API'ye giden isteklerin önbellek ayarı (sırayla): "revalidate:120" | "no-store". */
+let istekOnbellekleri: string[] = [];
+/** Varsayılan sıra (category_order) isteğinin arızası: durum kodu, ağ hatası ya da hiç yanıtlanmama. */
+let varsayilanSiraArizasi: number | "throw" | "hang" | null = null;
+/** true → API tamamen kapalı: HER istek ağ hatası verir. */
+let apiKapali = false;
+/** Varsayılan sıra (category_order) yanıtının gecikmesi (ms) — "API yavaş" senaryosu. */
+let varsayilanSiraGecikmeMs = 0;
 
 const urunler = (sira: string) =>
   sira === "category_order"
     ? [{ id: 3, slug: "elle-1", name: "Elle 1", cover_image_url: "/r2/a.webp" }, { id: 1, slug: "elle-2", name: "Elle 2", cover_image_url: "/r2/b.webp" }]
     : [{ id: 1, slug: "elle-2", name: "Elle 2", cover_image_url: "/r2/b.webp" }, { id: 3, slug: "elle-1", name: "Elle 1", cover_image_url: "/r2/a.webp" }];
 
-(globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
+(globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: unknown) => {
   const url = new URL(String(input));
   if (url.pathname !== "/api/products") return { ok: false, status: 404, json: async () => ({}) };
   const sira = url.searchParams.get("sort");
   istekSiralari.push(sira);
   istekUrlleri.push(url.pathname + url.search);
+  const ayar = init as { cache?: string; next?: { revalidate?: number } } | undefined;
+  istekOnbellekleri.push(ayar?.cache === "no-store" ? "no-store" : `revalidate:${ayar?.next?.revalidate}`);
+  if (apiKapali) throw new Error("other side closed");
+  if (sira === "category_order" && varsayilanSiraGecikmeMs > 0) await new Promise((resolve) => setTimeout(resolve, varsayilanSiraGecikmeMs));
+  if (sira === "category_order" && varsayilanSiraArizasi !== null) {
+    if (varsayilanSiraArizasi === "throw") throw new Error("other side closed");
+    if (varsayilanSiraArizasi === "hang") return new Promise(() => { /* hiç yanıtlanmaz */ });
+    return { ok: false, status: varsayilanSiraArizasi, json: async () => ({ error: "upstream" }) };
+  }
   if (agHatasi > 0) {
     agHatasi--;
     throw new Error("other side closed");
@@ -180,6 +256,10 @@ function sifirla(k: Kusak) {
   istekUrlleri = [];
   agHatasi = 0;
   reddedilenParametre = null;
+  istekOnbellekleri = [];
+  varsayilanSiraArizasi = null;
+  apiKapali = false;
+  varsayilanSiraGecikmeMs = 0;
   notuEskit();
 }
 
@@ -271,17 +351,143 @@ test("category_id OLMADAN istenen kategori sırası reddedilirse yedeğe düşü
   assert.deepEqual(istekSiralari, ["category_order"], "not düşülmediği için kategori isteği doğrudan elle sırayı dener");
 });
 
-test("ağ hatası: bugünkü iki deneme aynen (önbellekli → no-store); ret tekrarı ikinci denemede de çalışır", async () => {
+test("ağ hatası: varsayılan sıra isteği düşerse HEMEN bugünkü isteğe geçilir (aynı önbellek ayarı); her şey düşerse bugünkü iki deneme + boş sayfa", async () => {
   sifirla("bugunku");
   agHatasi = 1;
   const sayfa = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" });
-  assert.deepEqual(istekSiralari, ["category_order", "category_order", "created_at_desc"]);
+  assert.deepEqual(istekSiralari, ["category_order", "created_at_desc"], "varsayılan sıra ikinci kez denenmez");
+  assert.deepEqual(istekOnbellekleri, ["revalidate:120", "revalidate:120"], "bugünkü istek AYNI önbellek ayarıyla → Data Cache kaydı kullanılır");
   assert.deepEqual(sayfa.items.map((p) => p.slug), ["elle-2", "elle-1"]);
-  // Tüm denemeler başarısız → bugünkü yedek sayfa (boş), fırlatmaz.
+  assert.equal(sayfa.answered, true);
+  // Tüm denemeler başarısız → bugünkü yedek sayfa (boş), fırlatmaz. Bugünkü isteğin iki denemesi aynen (önbellekli → no-store).
   sifirla("yeni");
-  agHatasi = 9;
+  apiKapali = true;
   const bos = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" });
   assert.deepEqual(bos, { items: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 1 } });
+  assert.deepEqual(istekSiralari, ["category_order", "created_at_desc", "created_at_desc"]);
+  assert.deepEqual(istekOnbellekleri, ["revalidate:120", "revalidate:120", "no-store"]);
+});
+
+// ---------------------------------------------------------------------------
+// EK (FAIL-OPEN — her başarısızlık): vitrin API'den önce yayınlandığında API kesintisi / yavaşlığı
+// kategori sayfasını boşaltmamalı — bugünkü isteğin (created_at_desc) Data Cache kaydı kullanılmalı.
+// Next 14.2 Data Cache modeli: yalnız 200 saklanır; kayıt varsa (bayat da olsa) ağa gitmeden döner.
+// ---------------------------------------------------------------------------
+for (const [ad, ariza] of [["ağ hatası", "throw"], ["503", 503], ["502", 502], ["500", 500], ["404", 404]] as const) {
+  test(`FAIL-OPEN: varsayılan sıra isteği ${ad} verirken bugünkü istek yanıtlanabiliyorsa liste BUGÜNKÜ gibi gelir (answered) ve not düşülmez`, async () => {
+    sifirla("bugunku");
+    varsayilanSiraArizasi = ariza;
+    const sayfa = await fetchProductsPaged({ category_id: 13, page_size: 50, page: 3, sort: "category_order", product_type: "flower" });
+    assert.deepEqual(istekSiralari, ["category_order", "created_at_desc"]);
+    assert.deepEqual(istekOnbellekleri, ["revalidate:120", "revalidate:120"]);
+    assert.deepEqual(sayfa.items.map((p) => p.slug), ["elle-2", "elle-1"]);
+    assert.equal(sayfa.answered, true, "kategori 'okunamadı' sayılmaz");
+    // Geçiş isteği bugünkü isteğin bayt bayt aynısı (aynı URL → aynı Data Cache kaydı).
+    const gecisUrl = istekUrlleri[1];
+    varsayilanSiraArizasi = null;
+    istekSiralari = [];
+    istekUrlleri = [];
+    await fetchProductsPaged({ category_id: 13, page_size: 50, page: 3, sort: "created_at_desc", product_type: "flower" });
+    assert.equal(gecisUrl, istekUrlleri[0]);
+    // Arıza "API bu sırayı tanımıyor" DEĞİLDİR → not düşülmedi: sonraki istek varsayılan sırayı yine dener.
+    kusak = "yeni";
+    istekSiralari = [];
+    const sonra = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" });
+    assert.deepEqual(istekSiralari, ["category_order"]);
+    assert.deepEqual(sonra.items.map((p) => p.slug), ["elle-1", "elle-2"]);
+  });
+}
+
+test("FAIL-OPEN: varsayılan sıra isteği HİÇ yanıtlanmazsa süre dolunca bugünkü isteğe geçilir (sayfa sınırsız beklemez)", async () => {
+  sifirla("bugunku");
+  varsayilanSiraArizasi = "hang";
+  const t0 = gercekNow();
+  const sayfa = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" });
+  const sure = gercekNow() - t0;
+  assert.ok(sure >= CATEGORY_ORDER_DEADLINE_MS - 50 && sure < CATEGORY_ORDER_DEADLINE_MS + 1_500, `süre sınırı ≈ ${CATEGORY_ORDER_DEADLINE_MS} ms (ölçülen ${sure})`);
+  assert.deepEqual(istekSiralari, ["category_order", "created_at_desc"]);
+  assert.deepEqual(istekOnbellekleri, ["revalidate:120", "revalidate:120"]);
+  assert.deepEqual(sayfa.items.map((p) => p.slug), ["elle-2", "elle-1"]);
+  assert.equal(sayfa.answered, true);
+});
+
+test("FAIL-OPEN: Data Cache modeli — API kapalıyken bugünkü isteğin kaydı (bayat) kategori listesini taşır", async () => {
+  sifirla("bugunku");
+  // Önbellek modeli: yalnız 200 saklanır; önbellekli istekte kayıt varsa ağa gidilmez.
+  type Yanit = { ok: boolean; status: number; json: () => Promise<unknown> };
+  const asil = (globalThis as unknown as { fetch: (i: unknown, n?: unknown) => Promise<Yanit> }).fetch;
+  const kayitlar = new Map<string, unknown>();
+  const gunluk: string[] = [];
+  (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: unknown): Promise<Yanit> => {
+    const anahtar = String(input);
+    const sira = new URL(anahtar).searchParams.get("sort");
+    const onbellekli = (init as { cache?: string } | undefined)?.cache !== "no-store";
+    if (onbellekli && kayitlar.has(anahtar)) {
+      gunluk.push(`ÖNBELLEK ${sira}`);
+      return { ok: true, status: 200, json: async () => kayitlar.get(anahtar) };
+    }
+    gunluk.push(`AĞ ${sira}`);
+    const res = await asil(input, init);
+    if (onbellekli && res.status === 200) {
+      const govde = await res.json();
+      kayitlar.set(anahtar, govde);
+      return { ok: true, status: 200, json: async () => govde };
+    }
+    return res;
+  };
+  try {
+    // Sağlıklı gün: bugünkü isteğin kaydı oluşur (ret + tekrar).
+    const once = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" });
+    assert.deepEqual(gunluk, ["AĞ category_order", "AĞ created_at_desc"]);
+    // API kapanır; not süresi dolmuş (ya da taze açılmış bir örnek).
+    notuEskit();
+    apiKapali = true;
+    gunluk.length = 0;
+    const kesintide = await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" });
+    assert.deepEqual(gunluk, ["AĞ category_order", "ÖNBELLEK created_at_desc"], "bugünkü isteğin kaydı kullanıldı");
+    assert.deepEqual(kesintide, once, "kesintide liste bugünkü gibi çizilir");
+    assert.equal(kesintide.answered, true);
+    assert.equal(kesintide.items.length, 2);
+  } finally {
+    (globalThis as unknown as { fetch: unknown }).fetch = asil;
+  }
+});
+
+// EK (KABUL NOTU): API varsayılan sırayı tanıdıktan sonra okuma, bugünkü isteğin akışıyla birebir aynı yürür.
+test("KABUL NOTU: API sırayı tanıdıktan sonra yavaş yanıt BEKLENİR ve geçici hata aynı istekle yinelenir — liste bugünkü sıraya çevrilmez", async () => {
+  sifirla("yeni");
+  await fetchProductsPaged({ category_id: 13, page_size: 50, sort: "category_order" }); // kabul notu düşer
+  // 1) Yavaş yanıt (süre sınırından UZUN): beklenir, elle sıra gelir; bugünkü sıraya geçilmez.
+  istekSiralari = [];
+  varsayilanSiraGecikmeMs = CATEGORY_ORDER_DEADLINE_MS + 200;
+  const yavas = await fetchProductsPaged({ category_id: 14, page_size: 50, sort: "category_order" });
+  varsayilanSiraGecikmeMs = 0;
+  assert.deepEqual(istekSiralari, ["category_order"], "yavaş yanıt sırayı değiştirmez");
+  assert.deepEqual(yavas.items.map((p) => p.slug), ["elle-1", "elle-2"]);
+  // 2) Geçici ağ hatası: bugünkü iki deneme AYNI istekle (önbellekli → no-store); sıra yine elle sıra.
+  istekSiralari = [];
+  istekOnbellekleri = [];
+  agHatasi = 1;
+  const gecici = await fetchProductsPaged({ category_id: 15, page_size: 50, sort: "category_order" });
+  assert.deepEqual(istekSiralari, ["category_order", "category_order"]);
+  assert.deepEqual(istekOnbellekleri, ["revalidate:120", "no-store"]);
+  assert.deepEqual(gecici.items.map((p) => p.slug), ["elle-1", "elle-2"]);
+  // 3) İki deneme de 5xx: bugünkü davranış — boş yedek sayfa ('yanıt verdi' sayılmaz → kategori boş SANILMAZ).
+  istekSiralari = [];
+  varsayilanSiraArizasi = 503;
+  const kesinti = await fetchProductsPaged({ category_id: 16, page_size: 50, sort: "category_order" });
+  varsayilanSiraArizasi = null;
+  assert.deepEqual(istekSiralari, ["category_order", "category_order"]);
+  assert.deepEqual(kesinti, { items: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 1 } });
+  // 4) API geri alındı (ret): bugünkü sıraya geçilir, kabul notu silinir, ret notu düşer.
+  istekSiralari = [];
+  kusak = "bugunku";
+  const geriAlindi = await fetchProductsPaged({ category_id: 17, page_size: 50, sort: "category_order" });
+  assert.deepEqual(istekSiralari, ["category_order", "created_at_desc"]);
+  assert.deepEqual(geriAlindi.items.map((p) => p.slug), ["elle-2", "elle-1"]);
+  istekSiralari = [];
+  await fetchProductsPaged({ category_id: 18, page_size: 50, sort: "category_order" });
+  assert.deepEqual(istekSiralari, ["created_at_desc"], "ret notu taze → doğrudan bugünkü sıra");
 });
 
 test("her çağıran aynı korumadan yararlanır: fetchProducts (PDP ilgili ürünler) ve sonsuz kaydırma action'ı", async () => {
@@ -311,8 +517,13 @@ test("KAYNAK: varsayılan sıra tek sabitten; tekrar yalnız okuma katmanında; 
   const api = oku("lib/api.ts");
   assert.ok(api.includes("export async function fetchProductsPaged(params: PublicProductListParams & { page?: number } = {}): Promise<ProductPage> {"));
   assert.ok(api.includes("export async function fetchProducts(params: PublicProductListParams = {}): Promise<PublicProductListItem[]> {"));
-  assert.ok(api.includes("if (sort === CATEGORY_DEFAULT_SORT && isSortRejectedStatus(res.status)) {"));
-  assert.ok(api.includes("if (res.ok && params.category_id) categorySortFallback.noteRejected();"));
+  assert.ok(api.includes("const known = categorySortFallback.accepted();"));
+  assert.ok(api.includes("const tried = await settledWithin(fetch(url, init), known ? null : CATEGORY_ORDER_DEADLINE_MS);"), "süre sınırı AbortSignal'sız; API sırayı tanıyorsa sınır yok");
+  assert.ok(api.includes("const rejected = !!tried && isSortRejectedStatus(tried.status);"));
+  assert.ok(api.includes("} else if (known && !rejected) {"), "kabul notu tazeyken hata bugünkü sıraya çevirmez (ikinci deneme aynı istek)");
+  assert.ok(api.includes("if (rejected && res.ok && params.category_id) categorySortFallback.noteRejected();"), "not yalnız ret + başarılı tekrar ile");
+  const okuma = api.slice(api.indexOf("export async function fetchProductsPaged("), api.indexOf("// PAYLAŞILAN MAPPER"));
+  assert.ok(!/signal\s*:/.test(okuma) && !okuma.includes("AbortController"), "fetch'e signal verilmez (istek içi tekilleştirme korunur)");
   // Tekrar mantığı başka hiçbir dosyada yazılmadı.
   for (const dosya of ["components/category/CategoryLanding.tsx", "lib/categoryProducts.actions.ts", "app/urun/[slug]/page.tsx", "app/kategori/[...slug]/page.tsx", "lib/global/page.tsx"]) {
     assert.ok(!oku(dosya).includes("isSortRejectedStatus"), dosya);
