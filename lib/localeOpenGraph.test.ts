@@ -56,7 +56,8 @@ test("KAYNAK: site adı ve varsayılan görsel kök layout'takiyle AYNI ('bugün
   assert.ok(layout.includes(`url: "${OG_DEFAULT_IMAGE.url}"`));
   assert.ok(layout.includes(`width: ${OG_DEFAULT_IMAGE.width}`) && layout.includes(`height: ${OG_DEFAULT_IMAGE.height}`));
   assert.ok(layout.includes(`alt: "${OG_DEFAULT_IMAGE.alt}"`));
-  assert.ok(layout.includes('<html lang="tr"'), "kök layout tek ve Türkçe — <html lang> bu işin kapsamı dışında");
+  // 5 Eki 2026: <html lang> artık sunucuda isteğin yolundan kurulur (lib/htmlLang.ts; Türkçe yollar aynen "tr").
+  assert.ok(layout.includes("<html lang={htmlLang.lang} dir={htmlLang.dir}"), "kök layout tek; dil yoldan");
 });
 
 test("KAYNAK: localeMetadata'nın gerçek sayfa dönen HER dalı kendi openGraph'ını kurar (5 dal); PDP'de kapak geçer", () => {
