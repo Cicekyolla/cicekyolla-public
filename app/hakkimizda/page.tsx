@@ -3,6 +3,7 @@ import { fetchSeoPage } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Hakkımızda",
+  alternates: { canonical: "/hakkimizda" },
   description: "1986'dan bu yana çiçekçilik sanatı, taze çiçekler ve özenli teslimatla sevdiklerinize mutluluk ulaştırıyoruz.",
 };
 

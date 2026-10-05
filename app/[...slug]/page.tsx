@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Price } from "@/components/Price";
+import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
@@ -487,7 +488,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   );
 
   return <main className="bg-[#fcfbfd] text-[#111827]">
-    {breadcrumbLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} /> : null}
+    {breadcrumbLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(breadcrumbLd) }} /> : null}
     <section className="bg-white px-6 pb-16 pt-20 lg:px-14 lg:pb-24 lg:pt-28">
       <div className="mx-auto max-w-[1320px]">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#c4b5fd]/30 bg-[#f4efff] px-5 py-2 text-xs font-bold uppercase tracking-[.18em] text-[#6d28d9]"><Sparkles className="h-4 w-4" /> {cargoMode || reachOut ? "1–3 iş günü kargo" : reachNeutral ? "Teslimat adrese göre" : "Aynı gün hızlı teslimat"} — {place}</div>
@@ -687,7 +688,7 @@ export default async function Page({ params }: PageProps) {
   // Sayfa ≥2: tekrar metin/şema yok (FAQ/ham şema yalnız sayfa 1'de).
   const faqLd = pageNumber === 1 ? faqJsonLd(page) : null;
   const rawSchema = pageNumber === 1 && page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
-  const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
+  const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(rawSchema) }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}</>;
   const staticParts = deliveryParts(path);
   if (staticParts) {
     // TEK DAMAR (25 Eyl 2026): yalnız İstanbul İLÇE sayfaları aynı işletme (@id) + ilçe hizmet düğümünü taşır;
@@ -698,7 +699,7 @@ export default async function Page({ params }: PageProps) {
       const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
       localLd = istanbulDistrictJsonLd(identity, { path, areaName: locationLabel(page, prettySlug(staticParts[1])), pageName: page.h1 ?? "" });
     }
-    return <><DeliveryLanding page={page} path={path} showcase={showcase} pageNumber={pageNumber} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}</>;
+    return <><DeliveryLanding page={page} path={path} showcase={showcase} pageNumber={pageNumber} />{jsonLd}{localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localLd) }} /> : null}</>;
   }
   // Page type adı değişse bile yalnız gerçek şehir/ilçe eşleşmesi premium konum şablonuna alınır.
   const pillarDyn = await locationBlockParts(page, path);
@@ -711,7 +712,7 @@ export default async function Page({ params }: PageProps) {
       const identity = resolveSiteIdentity(homepage?.sections.find((s) => s.type === "hero")?.config);
       pillarLd = istanbulDistrictJsonLd(identity, { path, areaName: pillarDyn.districtName, pageName: page.h1 ?? "" });
     }
-    return <><DeliveryLanding page={page} path={path} dyn={dyn} showcase={showcase} pageNumber={pageNumber} selfPath={pillarDyn ? path : undefined} />{jsonLd}{pillarLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: pillarLd }} /> : null}</>;
+    return <><DeliveryLanding page={page} path={path} dyn={dyn} showcase={showcase} pageNumber={pageNumber} selfPath={pillarDyn ? path : undefined} />{jsonLd}{pillarLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(pillarLd) }} /> : null}</>;
   }
   if (pageNumber > 1) notFound();
   return <main><h1>{page.h1}</h1>{page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{page.body_blocks?.map((b, i) => renderBlock(b, i))}{page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;

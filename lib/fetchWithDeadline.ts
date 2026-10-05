@@ -14,22 +14,35 @@
 // Normal yolda davranış, yanıt ve önbellek anahtarları değişmez. Yalnız lokasyon
 // sayfasının okumalarında kullanılır; diğer çağrılar dokunulmadan kaldı.
 // Bağımsız modül (Next/DOM bağımlılığı yok) → lib/fetchWithDeadline.test.ts.
+//
+// EN KÖTÜ BEKLEME = 2 × timeoutMs (ilk deneme + tekrar). Süre, yanıt BAŞLIKLARI
+// gelene kadar işler; gövde okuması kapsam dışıdır.
+// EK (SEO yayın zinciri) — retryOnTimeout=false: SÜRE DOLDUYSA tekrar denenmez
+// (en kötü bekleme = 1 × timeoutMs); kopan soket gibi hızlı hatalar yine bir kez
+// tekrar denenir. Yedek yolu olan okumalar (hreflang, product-urls) bunu kullanır:
+// yanıt vermeyen bir uç iki kez beklenmez. Varsayılan (true) → davranış AYNEN.
 // ============================================================================
 export async function fetchWithDeadline(
   url: string,
   init: RequestInit & { headers?: Record<string, string> },
   timeoutMs: number,
   fetchFn: typeof fetch = fetch,
+  retryOnTimeout: boolean = true,
 ): Promise<Response> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
     try {
       const headers = attempt === 0 ? init.headers : { ...(init.headers ?? {}), "x-cy-retry": "1" };
       return await fetchFn(url, { ...init, headers, signal: controller.signal });
     } catch (err) {
       lastErr = err;
+      if (timedOut && !retryOnTimeout) break;
     } finally {
       clearTimeout(timer);
     }

@@ -16,6 +16,7 @@ import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCh
 import { type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 import { absoluteUrl } from "@/lib/site-config";
 import { useCurrency } from "@/lib/currency";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import galleryMapJson from "@/lib/gallery-map.json";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 
@@ -39,7 +40,7 @@ import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery, clearPendingSelection, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 import { useI18n, Num } from "@/lib/i18n";
-import { useProductTranslation } from "@/lib/i18n/content";
+import { useProductTranslation, CategoryHeadingText } from "@/lib/i18n/content";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 
 const WHATSAPP = "905458813450";
@@ -108,6 +109,7 @@ export function ProductDetail({
   sizeProducts = [],
   presentation,
   canonicalPath,
+  breadcrumbCategory,
 }: {
   data: PublicProductDetail;
   sizeProducts?: AutoSizeProduct[];
@@ -118,9 +120,13 @@ export function ProductDetail({
       locale vitrinleri kendi PDP yollarını geçer. WhatsApp hazır mesajındaki
       bağlantı bundan üretilir (bkz. waText). */
   canonicalPath?: string;
+  /** EK (SEO yayın zinciri): ürünün birincil kategorisi. Verilirse kırıntının orta
+      basamağı o kategoriye GERÇEK bağlantıdır (sunucudaki BreadcrumbList ile aynı
+      ad/adres); verilmezse bugünkü düz etiket (ürün tipi) aynen kalır. */
+  breadcrumbCategory?: { name: string; slug: string } | null;
 }) {
   // Fiyat yazımı seçili para biriminde. Taban DAİMA TRY kuruş; gerçek tahsilat TRY.
-  const { money } = useCurrency();
+  const { money, moneyTRY, isForeign } = useCurrency();
   const { product, images, variants } = data;
   const { t, locale } = useI18n();
   // Faz 2: onaylı çeviri varsa ad/açıklama SUNUMDA değişir; id/slug/fiyat/varyant/sepet TR kaynak kayıttır.
@@ -159,11 +165,12 @@ export function ProductDetail({
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
   const sel = variants.find((v) => v.id === variantId) ?? null;
-  const basePrice = sel?.price_minor ?? product.price_minor;
-  const salePrice = sel?.sale_price_minor ?? product.sale_price_minor;
-  const hasSale = salePrice != null && Number(salePrice) > 0 && Number(salePrice) < Number(basePrice);
-  const shown = hasSale ? salePrice : basePrice;
-  const discountPct = hasSale ? Math.round((1 - Number(salePrice) / Number(basePrice)) * 100) : 0;
+  // TEK FİYAT KURALI (lib/productPrice.ts — API sipariş birim fiyatıyla aynı): gösterilen = JSON-LD = tahsil edilen.
+  const resolved = resolveUnitPrice(product, sel);
+  const basePrice = resolved.baseMinor;
+  const hasSale = resolved.hasSale;
+  const shown = resolved.unitMinor;
+  const discountPct = hasSale ? Math.round((1 - shown / basePrice) * 100) : 0;
 
   // WhatsApp hazır mesajındaki ürün bağlantısı.
   //
@@ -204,7 +211,13 @@ export function ProductDetail({
         <nav className="flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
           <Link href="/" className="hover:text-[#7C3AED] transition-colors">{t("common.homePage")}</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>
+          {breadcrumbCategory ? (
+            <Link href={`/kategori/${breadcrumbCategory.slug}`} prefetch={false} className="text-[#6B7280] hover:text-[#7C3AED] transition-colors">
+              <CategoryHeadingText slug={breadcrumbCategory.slug} fallback={breadcrumbCategory.name} />
+            </Link>
+          ) : (
+            <span className="text-[#6B7280]">{locale === "tr" ? (TYPE_LABEL[product.product_type] ?? t("pdp.breadcrumbProduct")) : t("pdp.breadcrumbProduct")}</span>
+          )}
           <ChevronRight className="w-3 h-3" />
           <span className="text-[#111827] font-medium truncate max-w-[220px]">{displayName}</span>
         </nav>
@@ -308,6 +321,18 @@ export function ProductDetail({
               <Num className="text-[18px] text-[#C4B5FD] line-through font-medium mb-1">{money(basePrice)}</Num>
             )}
           </div>
+          {/* EK (SEO YAYIN ZİNCİRİ — fiyat tutarlılığı): gösterilen para TRY değilken tahsil edilecek
+              TRY tutarı fiyatın yanında AÇIKÇA yazılır → Product JSON-LD'deki fiyat (TRY, tahsil edilen
+              para) sayfada da görünür. Metin mevcut sözlükten (13 dil), tutar daima TRY biçiminde.
+              isForeign yalnız istemcide ve yalnız döviz seçiliyken true: Türkçe sayfa aynen.
+              EK (yerleşim kayması): locale PDP'de (`presentation` verilir) satırın yeri SUNUCU HTML'inde
+              boş olarak ayrılır (tek satır yüksekliği) → döviz kurları yüklenip bildirim geldiğinde fiyatın
+              altındaki satın alma kutusu aşağı kaymaz. Türkçe PDP'de yer ayrılmaz (bildirim orada çıkmaz). */}
+          {(isForeign || presentation) && (
+            <p className={`mt-2 text-[11.5px] leading-relaxed text-[#9CA3AF]${presentation ? " min-h-[19px]" : ""}`} data-charged-notice={isForeign ? "" : undefined} aria-hidden={isForeign ? undefined : true}>
+              {isForeign ? t("currency.chargedNotice", { amount: moneyTRY(shown) }) : null}
+            </p>
+          )}
 
           {/* Otomatik boyut önerileri — üç ayrı gerçek ürün; sahte varyant ve sahte fiyat YOK */}
           {sizeProducts.length >= 3 && (

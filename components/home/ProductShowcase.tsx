@@ -2,6 +2,7 @@
 // DTO ürün bölümü (best_sellers/editors_picks/product_showcase) → gerçek ProductCard grid.
 // Manuel ürün sırası DTO'dan gelen sırayla korunur. Boşsa güvenli gizlenir (null).
 import { useEffect, useState } from "react";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ProductCard, type Product, type ProductDeliveryPromise } from "./ProductCard";
@@ -85,11 +86,12 @@ async function resolveDeliveryPromise(): Promise<ProductDeliveryPromise | undefi
 }
 
 function toCard(p: HpProduct): Product {
-  const hasSale = p.sale_price_minor != null;
+  // TEK FİYAT KURALI (lib/productPrice.ts): indirim yalnız 0 < indirim < taban iken indirimdir.
+  const { unitMinor, baseMinor, hasSale } = resolveUnitPrice(p);
   return {
     id: p.id, name: p.name, slug: p.slug,
-    price: Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100),
-    originalPrice: hasSale ? Math.round(Number(p.price_minor) / 100) : undefined,
+    price: Math.round(unitMinor / 100),
+    originalPrice: hasSale ? Math.round(baseMinor / 100) : undefined,
     hasSale,
     image: p.cover_image_url ?? "",
     badge: p.is_new ? "Yeni" : undefined,

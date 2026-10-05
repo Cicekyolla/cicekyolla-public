@@ -5,6 +5,7 @@
 // ============================================================================
 import type { GlobalLocale } from "./config";
 import type { GlobalCatalogResponse } from "./globalCatalog";
+import { fetchWithDeadline } from "../fetchWithDeadline.ts";
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
@@ -28,7 +29,8 @@ export interface ProductLocaleCluster {
 }
 
 export interface LocaleInventory {
-  products: { slug: string; updated_at: string }[];
+  /** image / tr_slug: ADDITIVE (SEO yayın zinciri) — yeni API satırda verir; eski API'de alan yoktur (undefined). */
+  products: { slug: string; updated_at: string; image?: string | null; tr_slug?: string | null }[];
   categories: { slug: string; updated_at: string }[];
 }
 
@@ -182,5 +184,40 @@ export async function fetchLocaleInventory(locale: GlobalLocale): Promise<Locale
       products: [],
       categories: [],
     }
+  );
+}
+
+// ---- EK (SEO YAYIN ZİNCİRİ) — locale sitemap için "checked" okumalar -------
+// Yukarıdaki fetcher'lar DEĞİŞMEDİ (hata → boş/null; sayfalar aynı yolu kullanır).
+// Buradakiler hatayı BİLDİRİR: locale sitemap'i upstream hatasında boş 200 yerine
+// 503 verebilsin (lib/sitemapSources.ts). Dosya kuralı aynı: no-store, Data Cache yok.
+
+/** ok=false → uç OKUNAMADI (ağ / zaman aşımı / 200 dışı / bozuk gövde); ok=true ve data=null → yanıt geldi ama veri yok. */
+export interface CheckedRead<T> {
+  ok: boolean;
+  data: T | null;
+}
+
+async function getJsonChecked<T>(path: string): Promise<CheckedRead<T>> {
+  try {
+    // DAYANIKLILIK: 8 sn süre sınırı + tek tekrar (bkz. lib/fetchWithDeadline.ts).
+    const resp = await fetchWithDeadline(`${API_ORIGIN}${path}`, { cache: "no-store" }, 8_000);
+    if (!resp.ok) return { ok: false, data: null };
+    const body = (await resp.json()) as { data?: T };
+    return { ok: true, data: body.data ?? null };
+  } catch {
+    return { ok: false, data: null };
+  }
+}
+
+export function fetchLocaleInventoryChecked(locale: GlobalLocale): Promise<CheckedRead<LocaleInventory>> {
+  return getJsonChecked<LocaleInventory>(`/api/public/translations/surface/inventory?locale=${locale}`);
+}
+
+export function fetchGlobalPagesInventoryChecked(
+  locale: GlobalLocale
+): Promise<CheckedRead<{ page_key: string; updated_at: string }[]>> {
+  return getJsonChecked<{ page_key: string; updated_at: string }[]>(
+    `/api/public/global/pages-inventory?locale=${locale}`
   );
 }

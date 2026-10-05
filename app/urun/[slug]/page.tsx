@@ -1,9 +1,20 @@
 import type { Metadata } from "next";
+import { stripTrailingBrand, titleForTemplate } from "@/lib/titleBrand";
+import { descriptionSection, withoutApproxPrefix } from "@/lib/productFaqSections";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { fetchProductBySlug, fetchProductSeoById, fetchProducts, toCardProduct } from "@/lib/api";
+import { notFound, permanentRedirect } from "next/navigation";
+import { fetchProductBySlug, fetchProductSeoById, fetchProducts, isCategoryVisible, toCardProduct } from "@/lib/api";
+import { getCategoryTree } from "@/lib/categories";
+import {
+  breadcrumbCategoryOf,
+  buildProductBreadcrumbJsonLd,
+  findCategoryNodeById,
+  productSlugRedirectPath,
+  withRequestQuery,
+} from "@/lib/productBreadcrumb";
 import { Price } from "@/components/Price";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
 import { MetaViewContentTracker } from "@/components/analytics/MetaViewContentTracker";
@@ -16,6 +27,10 @@ const RELATED_SIZES = "(max-width:640px) 50vw, 25vw";
 const RELATED_AVIF_MEDIA = avifMediaFromSizes(RELATED_SIZES);
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { toPlainText } from "@/lib/richText";
+import { productHreflangFamily } from "@/lib/global/hreflangFamily";
+import { fetchProductLocaleVersions } from "@/lib/hreflangSources";
+import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
+import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -25,7 +40,7 @@ import { toPlainText } from "@/lib/richText";
    Yalnız 'active' ürün gösterilir (fetchProductBySlug gate eder → null → 404).
    ============================================================================ */
 
-type PageProps = { params: { slug: string } };
+type PageProps = { params: { slug: string }; searchParams?: { [key: string]: string | string[] | undefined } };
 
 type ProductFaq = { question: string; answer: string };
 
@@ -50,14 +65,10 @@ function plainText(value: string): string {
     .trim();
 }
 
-function htmlSection(description: string, start: RegExp, end?: RegExp): string {
-  const startMatch = start.exec(description);
-  if (!startMatch) return "";
-  const from = (startMatch.index ?? 0) + startMatch[0].length;
-  const rest = description.slice(from);
-  const endMatch = end?.exec(rest);
-  return rest.slice(0, endMatch?.index ?? rest.length);
-}
+// DÜZELTME (5 Eki 2026): bölümler sabit bitiş kalıbıyla kesiliyordu; açıklama başka bir başlık
+// kullandığında bölüm açıklamanın sonuna kadar uzuyor, sonraki bölümlerin başlıkları ve maddeleri
+// SSS cevabına karışıyordu. Sınır artık lib/productFaqSections.ts (descriptionSection): bölüm,
+// başlangıçtan sonra gelen İLK bölüm etiketinde biter.
 
 function headingItems(value: string): string[] {
   return [...value.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)]
@@ -80,34 +91,36 @@ function productFaqsFromDescription(productName: string, description?: string | 
   if (explicit.length) return explicit.slice(0, 8);
 
   const generated: ProductFaq[] = [];
-  const content = headingItems(htmlSection(description, /Ürün İçeriği/i, /Yaklaşık Ölçüler/i)).slice(0, 10);
+  const content = headingItems(descriptionSection(description, /Ürün İçeriği/i)).slice(0, 10);
   if (content.length) generated.push({
     question: `${productName} içeriğinde neler bulunur?`,
     answer: `${productName}; ${content.join(", ")} kullanılarak hazırlanır.`,
   });
 
   const text = plainText(description);
-  const height = text.match(/Yükseklik\s*:\s*([^.,;]+?cm)/i)?.[1];
-  const width = text.match(/Genişlik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const heightRaw = text.match(/Yükseklik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const widthRaw = text.match(/Genişlik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const height = heightRaw ? withoutApproxPrefix(heightRaw) : heightRaw;
+  const width = widthRaw ? withoutApproxPrefix(widthRaw) : widthRaw;
   if (height || width) generated.push({
     question: `${productName} ölçüleri nedir?`,
     answer: [height ? `Yaklaşık yükseklik ${height}` : "", width ? `genişlik ${width}` : ""].filter(Boolean).join(", ") + ".",
   });
 
-  const recipients = headingItems(htmlSection(description, /Kimlere Gönderilebilir\?/i, /Hangi Günlerde Gönderilebilir\?/i))
+  const recipients = headingItems(descriptionSection(description, /Kimlere Gönderilebilir\?/i))
     .filter((item) => !/:|cm/i.test(item)).slice(0, 8);
   if (recipients.length) generated.push({
     question: `${productName} kimlere gönderilebilir?`,
     answer: `Bu aranjman ${recipients.join(", ")} için şık bir hediye seçeneğidir.`,
   });
 
-  const occasions = headingItems(htmlSection(description, /Hangi Günlerde Gönderilebilir\?/i, /Çiçeklerin Anlamı/i)).slice(0, 8);
+  const occasions = headingItems(descriptionSection(description, /Hangi Günlerde Gönderilebilir\?/i)).slice(0, 8);
   if (occasions.length) generated.push({
     question: `${productName} hangi özel günler için uygundur?`,
     answer: `${occasions.join(", ")} gibi özel günlerde gönderilebilir.`,
   });
 
-  const care = plainText(htmlSection(description, /Bakım Talimatı/i));
+  const care = plainText(descriptionSection(description, /Bakım Talimatı/i));
   if (care) generated.push({
     question: `${productName} bakımı nasıl yapılır?`,
     answer: care.length > 420 ? `${care.slice(0, 417).replace(/\s+\S*$/, "")}…` : care,
@@ -122,23 +135,41 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { product, seo } = data;
   // MARKA EKLENMEZ: app/layout.tsx metadata şablonu ("%s | ÇiçekYolla")
   // zaten ekliyor — burada eklemek duplicate title'a yol açar.
-  const title = seo?.meta_title || product.name;
+  const title = stripTrailingBrand(seo?.meta_title || product.name);
   const description =
     seo?.meta_description ||
     product.short_description ||
     `${product.name} — aynı gün teslimat ve güvenli ödeme ile Cicekyolla'da.`;
-  const ogImage = seo?.og_image || data.images.find((i) => i.role === "cover")?.url || data.images[0]?.url;
-  return {
-    title,
+  // EK (TEK GÖRSEL KAYNAĞI): paylaşım görseli KAYITLI ham adres değil, vitrinin GERÇEKTEN
+  // sunduğu dosyadır (görünür <img> ile aynı karar: stüdyo kopyası → medya normalizasyonu),
+  // mutlak adresle. Aday sırası aynen (SEO görseli → kapak → ilk görsel); sunulamayan aday
+  // (ölü eski yol) atlanır, hiçbiri yoksa bugünkü yedek (og:image yok / varsayılan twitter görseli).
+  const ogImage = firstServedProductImageUrl([seo?.og_image, data.images.find((i) => i.role === "cover")?.url, data.images[0]?.url]);
+  // EK (SEO YAYIN ZİNCİRİ): canonical ve og:url istekteki yazımdan DEĞİL, KAYITLI
+  // slug'tan üretilir. Kayıtlı slug boşsa istek slug'ı kalır.
+  // DÜZELTME (5 Eki 2026): eski not "API araması büyük/küçük harf duyarsız → /urun/Kirmizi-Gul
+  // 200 dönüyordu" diyordu; YANLIŞ. API, slug'ı aramadan ÖNCE küçük harf biçimine göre doğrular
+  // (422) → büyük harfli yazım main'de de bu dalda da 404'tür; ikinci bir 200 adres hiç olmadı.
+  const canonicalPath = `/urun/${product.slug || params.slug}`;
+  // EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): ürünün en az bir indexlenebilir locale sürümü
+  // varsa Türkçe sayfa da kümeyi basar: tr (kendi canonical'ı) + o sürümler + locale
+  // kardeşleriyle AYNI x-default. Locale PDP'ler aynı kümeyi basar → bağ karşılıklı
+  // (tek yönlü bağ yok sayılır). Okuma önbellekli ve süre sınırlı; uç yok / yavaş / hata →
+  // null → hreflang basılmaz (bugünkü davranış). Kural: lib/global/hreflangFamily.ts.
+  const languages = productHreflangFamily(canonicalPath, (await fetchProductLocaleVersions(product.id))?.locales, absoluteUrl);
+  const meta: Metadata = {
+    title: titleForTemplate(title),
     description,
-    alternates: { canonical: absoluteUrl(`/urun/${params.slug}`) },
+    alternates: { canonical: absoluteUrl(canonicalPath) },
     robots: indexRobots(),
     openGraph: {
       title: seo?.og_title || title,
       description: seo?.og_description || description,
       images: ogImage ? [{ url: ogImage }] : undefined,
-      url: absoluteUrl(`/urun/${params.slug}`),
+      url: absoluteUrl(canonicalPath),
       type: "website",
+      // EK: alt segment openGraph'ı kök layout'unkinin yerine geçer → dil kodu burada da yazılır.
+      locale: "tr_TR",
     },
     twitter: {
       card: "summary_large_image",
@@ -147,17 +178,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: ogImage ? [ogImage] : [absoluteUrl("/twitter-image")],
     },
   };
+  return languages ? { ...meta, alternates: { ...meta.alternates, languages } } : meta;
 }
 
-export default async function ProductPage({ params }: PageProps) {
+export default async function ProductPage({ params, searchParams }: PageProps) {
   const data = await fetchProductBySlug(params.slug);
   if (!data) notFound();
 
+  // EK (SEO YAYIN ZİNCİRİ): istek slug'ı kayıtlı slug'tan farklıysa aynı ürün ikinci bir
+  // adreste 200 dönmez → kanonik adrese kalıcı yönlendirme (lib/productBreadcrumb.ts).
+  // DÜZELTME (5 Eki 2026): bu dal BÜYÜK HARFLİ yazımı yönlendirmez — API öyle bir slug için ürün
+  // döndürmez (422 → 404). Yalnız API'nin farklı yazımla ürün döndürdüğü bir durumda (ör. yüzde
+  // kodlaması) çalışan bir emniyet kuralıdır; "büyük harf → 308" beklentisi yanlıştı.
+  // EK: isteğin sorgu dizesi (gclid, utm_* …) hedefe taşınır → tıklama ilişkilendirmesi
+  // yönlendirmede kaybolmaz. (Rota zaten istek başına çizilir; `searchParams` bunu değiştirmez.)
+  const slugRedirect = productSlugRedirectPath(params.slug, data.product.slug);
+  if (slugRedirect) permanentRedirect(withRequestQuery(slugRedirect, searchParams));
+
   const { product, images } = data;
+  const canonicalSlug = product.slug || params.slug;
   const cover = images.find((i) => i.role === "cover")?.url || images[0]?.url;
-  const price = data.product.sale_price_minor && Number(data.product.sale_price_minor) > 0
-    ? data.product.sale_price_minor
-    : data.product.price_minor;
+  // TEK FİYAT KURALI (lib/productPrice.ts): JSON-LD fiyatı sayfanın İLK gösterdiği fiyattır
+  // (varsayılan seçili varyant = ilk aktif varyant; yoksa ürün) — sayfa ve sipariş ile aynı karar.
+  const price = resolveUnitPrice(data.product, data.variants?.[0]).unitMinor;
   const savedSeo = await fetchProductSeoById(product.id);
   const savedFaqs: ProductFaq[] = (savedSeo?.faq_json ?? []).flatMap((item) => {
     const question = item.q?.trim();
@@ -179,9 +222,12 @@ export default async function ProductPage({ params }: PageProps) {
 
   // ── İLGİLİ ÜRÜNLER (Cross-Sell) — aynı kategoriden, canlı katalog ──
   // Admin: ürünün kategorisi → /api/products?category_id= → BURASI. Mock YOK.
+  // EK (TEK KATEGORİ SIRASI): ilgili ürünler birincil kategorinin KENDİ sırasından okunur (kategori
+  // sayfasının varsayılan sırasıyla aynı: operatörün elle sırası). API bu sırayı henüz tanımıyorsa
+  // okuma katmanı aynı isteği bugünkü sırayla tekrarlar (lib/api.ts) → bugünkü liste.
   const primaryCat = data.categories.find((c) => c.is_primary) ?? data.categories[0];
   const relatedRows = primaryCat
-    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: "created_at_desc" })
+    ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: CATEGORY_DEFAULT_SORT })
     : [];
   const availableRelated = relatedRows.filter((p) => p.slug !== product.slug && p.cover_image_url);
   const related = availableRelated.slice(0, 4).map(toCardProduct);
@@ -192,8 +238,8 @@ export default async function ProductPage({ params }: PageProps) {
   const currentPriceMinor = Number(price);
   const sizeProducts: AutoSizeProduct[] = [...availableRelated]
     .sort((a, b) => {
-      const aPrice = Number(a.sale_price_minor && Number(a.sale_price_minor) > 0 ? a.sale_price_minor : a.price_minor);
-      const bPrice = Number(b.sale_price_minor && Number(b.sale_price_minor) > 0 ? b.sale_price_minor : b.price_minor);
+      const aPrice = resolveUnitPrice(a).unitMinor;
+      const bPrice = resolveUnitPrice(b).unitMinor;
       return Math.abs(aPrice - currentPriceMinor) - Math.abs(bPrice - currentPriceMinor);
     })
     .slice(0, 3)
@@ -206,7 +252,7 @@ export default async function ProductPage({ params }: PageProps) {
   const rating = product as { rating_avg?: number | string | null; rating_count?: number | string | null };
   const jsonLd = buildProductJsonLd({
     name: product.name,
-    slug: params.slug,
+    slug: canonicalSlug,
     productId: product.id,
     priceMinor: Number(price),
     currency: product.currency,
@@ -217,16 +263,30 @@ export default async function ProductPage({ params }: PageProps) {
     sku: product.sku,
     ratingAvg: rating.rating_avg,
     ratingCount: rating.rating_count,
-  }, { absolute: absoluteUrl, plainText: toPlainText });
+    // EK (TEK GÖRSEL KAYNAĞI): şema görselleri görünür görselle aynı karardan (lib/productImageUrl.ts).
+  }, { absolute: absoluteUrl, plainText: toPlainText, image: servedProductImageUrl });
+
+  // EK (SEO YAYIN ZİNCİRİ) — BreadcrumbList SUNUCUDA: Ana Sayfa → birincil kategori
+  // (varsa) → ürün. Kategori adı/slug'ı layout'un zaten okuduğu ağaçtan gelir
+  // (getCategoryTree React cache → ek istek yok); pasif/arşiv kategori ya da ağaçta
+  // bulunamayan id için orta basamak yazılmaz. Görünür kırıntı aynı kaynağı kullanır.
+  const categoryTree = primaryCat ? await getCategoryTree() : null;
+  const primaryNode = primaryCat ? findCategoryNodeById(categoryTree, primaryCat.category_id) : null;
+  const breadcrumbCategory = primaryNode && isCategoryVisible(primaryNode) ? breadcrumbCategoryOf(primaryNode) : null;
+  const breadcrumbJsonLd = buildProductBreadcrumbJsonLd(
+    { name: product.name, path: `/urun/${canonicalSlug}`, category: breadcrumbCategory },
+    absoluteUrl,
+  );
 
   return (
     <>
       {/* `<` kaçırılır: ürün açıklaması HTML içerir, içindeki bir `</script>`
           dizisi etiketi erken kapatıp sayfayı bozardı. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }} />
       <MetaViewContentTracker productId={product.id} priceTRY={Number(price) / 100} />
-      <ProductDetail data={data} sizeProducts={sizeProducts} />
+      <ProductDetail data={data} sizeProducts={sizeProducts} breadcrumbCategory={breadcrumbCategory} />
       {(() => {
         const fn = (product as { florist_note?: string | null; florist_note_status?: string | null });
         if (!fn.florist_note || fn.florist_note_status !== "approved") return null;

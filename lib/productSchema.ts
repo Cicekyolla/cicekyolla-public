@@ -26,6 +26,13 @@ export interface SchemaDeps {
   absolute: (path: string) => string;
   /** lib/richText.ts → toPlainText */
   plainText: (html: string | null | undefined) => string;
+  /**
+   * EK (TEK GÖRSEL KAYNAĞI): lib/productImageUrl.ts → servedProductImageUrl. Kayıtlı görsel
+   * adresini vitrinin GERÇEKTEN sunduğu mutlak adrese çevirir (stüdyo kopyası → medya
+   * normalizasyonu); sunulamayan (ölü eski yol) görsel için null döner ve o görsel listeye
+   * GİRMEZ. Verilmezse bugünkü davranış: `absolute(url)`.
+   */
+  image?: (url: string) => string | null;
 }
 
 /** Mağaza markası. products tablosunda brand kolonu YOK; ürünleri ÇiçekYolla
@@ -58,8 +65,10 @@ export interface ProductSchemaInput {
 }
 
 /** Kapak görseli önce, sonra galeri; hepsi MUTLAK URL, tekrarsız.
- *  Google structured data'da göreli URL kabul ETMEZ — canlıda "/r2/..." gidiyordu. */
-function buildImageList(images: ProductSchemaImage[], absolute: SchemaDeps["absolute"]): string[] {
+ *  Google structured data'da göreli URL kabul ETMEZ — canlıda "/r2/..." gidiyordu.
+ *  EK (TEK GÖRSEL KAYNAĞI): `image` verildiyse adres ondan gelir (vitrinin sunduğu dosya);
+ *  null dönen (sunulamayan) görsel atlanır — sıra korunur, ölü adres şemaya yazılmaz. */
+function buildImageList(images: ProductSchemaImage[], absolute: SchemaDeps["absolute"], image?: SchemaDeps["image"]): string[] {
   const cover = images.filter((i) => i?.role === "cover");
   const rest = images.filter((i) => i?.role !== "cover");
   const seen = new Set<string>();
@@ -67,7 +76,8 @@ function buildImageList(images: ProductSchemaImage[], absolute: SchemaDeps["abso
   for (const img of [...cover, ...rest]) {
     const raw = img?.url?.trim();
     if (!raw) continue;
-    const abs = absolute(raw);
+    const abs = image ? image(raw) : absolute(raw);
+    if (!abs) continue;
     if (seen.has(abs)) continue;
     seen.add(abs);
     out.push(abs);
@@ -105,7 +115,7 @@ export function buildAggregateRating(
 /** Ürün sayfasının Product JSON-LD nesnesi. */
 export function buildProductJsonLd(input: ProductSchemaInput, deps: SchemaDeps): Record<string, unknown> {
   const productUrl = deps.absolute(input.path || `/urun/${input.slug}`);
-  const images = buildImageList(input.images ?? [], deps.absolute);
+  const images = buildImageList(input.images ?? [], deps.absolute, deps.image);
   // Açıklama: kısa → uzun → ad. Düz metne indirgenir (schema HTML beklemez).
   const description =
     deps.plainText(input.shortDescription) ||

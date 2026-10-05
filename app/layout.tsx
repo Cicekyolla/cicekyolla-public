@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { htmlLangForPath } from "@/lib/htmlLang";
+import { currentRequestPath } from "@/lib/requestPath";
 import type { ReactNode } from "react";
 import Script from "next/script";
 import "./globals.css";
@@ -126,8 +128,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Diğer tüm alanlar (alt metin, tagline, iletişim) aynen korunur.
   const footerBrandLight = footerBrand ? { ...footerBrand, logoUrl: undefined } : undefined;
 
+  // EK (SAYFANIN DİLİ — SUNUCUDA): <html lang / dir> isteğin yolundan kurulur (13 dil sayfası kendi dilini,
+  // Arapça dir="rtl" basar; Türkçe yollar aynen lang="tr"). Yol Next'in çizim deposundan PASİF okunur —
+  // headers() / cookies() kullanılmaz, rotaların statik / ISR kararı değişmez (lib/requestPath.ts). Yol
+  // okunamazsa "tr" (önceki davranış); aşağıdaki cy-lang-dir betiği istemcide aynı değeri kurmayı sürdürür.
+  const htmlLang = htmlLangForPath(currentRequestPath());
+
   return (
-    <html lang="tr" suppressHydrationWarning style={headerColors ? {
+    <html lang={htmlLang.lang} dir={htmlLang.dir} suppressHydrationWarning style={headerColors ? {
       "--header-bg-color": headerColors.bg,
       "--header-text-color": headerColors.text,
       "--promo-bar-color": headerColors.promoBar,

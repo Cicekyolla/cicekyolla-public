@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { floristLocalFields, resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
+import { safeJsonLd } from "@/lib/jsonLdSafe";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchDeliveryZones, fetchProducts, fetchRedirectMap, fetchSeoPage, toCardProduct, withMovedDistrictHrefs } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
@@ -33,8 +34,12 @@ import { WorkshopToday } from "../components/home/WorkshopToday";
 import { MoodPicker } from "../components/home/MoodPicker";
 import { FlowerJourney } from "../components/home/FlowerJourney";
 import { BlogRail } from "../components/home/BlogRail";
-import { indexRobots, SITE_URL } from "@/lib/site-config";
+import { absoluteUrl, indexRobots, SITE_URL } from "@/lib/site-config";
 import { isLegacyPleskMedia } from "@/lib/media";
+// EK (TEK GÖRSEL KAYNAĞI): koleksiyon karosuna yedek konan ürün kapağı ölü eski yolsa stüdyo kopyası kullanılır.
+import { productCoverTileUrl } from "@/lib/productImageUrl";
+import { homeHreflangFamily } from "@/lib/global/hreflangFamily";
+import { fetchHomeLocaleVersions } from "@/lib/hreflangSources";
 
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
@@ -52,7 +57,7 @@ import { isLegacyPleskMedia } from "@/lib/media";
  * - Koleksiyon slider artık Hero'ya bağlı DEĞİL; kendi section'ında bağımsız akışta.
  */
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   // SEO kurtarma (15 Ağu 2026, operatör onaylı): eski güçlü dönemin Wayback-kanıtlı
   // title'ı geri getirildi — "çiçek yolla" poz ~2 dönemi bu head ile kazanılmıştı.
@@ -92,6 +97,19 @@ export const metadata: Metadata = {
   },
   robots: indexRobots(),
 };
+
+// EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): ana sayfa metadata'sı yukarıdaki nesnenin AYNISI;
+// tek ek, onaylı + indexlenebilir locale ana sayfası varsa `alternates.languages`:
+// tr (site kökü) + o locale ana sayfaları + locale kardeşleriyle AYNI x-default. Locale ana
+// sayfaları da `tr → site kökü` basar → bağ karşılıklı. Okuma önbellekli (revalidate 300;
+// no-store değil → rotanın render türü değişmez) ve süre sınırlı; satır yok / yavaş / hata →
+// null → nesne aynen döner.
+// (Next aynı segmentte `metadata` ile `generateMetadata`yı birlikte kabul etmez; nesne bu
+// yüzden artık dışa aktarılmıyor.) Kural: lib/global/hreflangFamily.ts.
+export async function generateMetadata(): Promise<Metadata> {
+  const languages = homeHreflangFamily(await fetchHomeLocaleVersions(), absoluteUrl);
+  return languages ? { ...metadata, alternates: { ...metadata.alternates, languages } } : metadata;
+}
 
 /** Organization + WebSite JSON-LD — ZIP Homepage şemasıyla aynı, SSR edilir.
  *  V65 fix: logo artık kırık /logo.png yerine GERÇEK logo URL'sine bağlanır
@@ -133,7 +151,7 @@ function HomeJsonLd({ logoUrl, identity }: { logoUrl: string; identity: SiteIden
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
     />
   );
 }
@@ -158,7 +176,8 @@ export default async function HomePage() {
       const categoryId = findCategoryIdBySlug(tree ?? [], item.id);
       if (!categoryId) return { ...item, image: "" };
       const candidates = await fetchProducts({ category_id: categoryId, page_size: 1 });
-      const image = candidates.find((product) => product.cover_image_url)?.cover_image_url;
+      // EK (TEK GÖRSEL KAYNAĞI): kapak ölü eski yoldaysa ürün kartının gösterdiği stüdyo kopyası; o da yoksa yer tutucu.
+      const image = candidates.map((product) => productCoverTileUrl(product.cover_image_url)).find(Boolean);
       return { ...item, image: image ?? "" };
     })
   );

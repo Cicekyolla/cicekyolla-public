@@ -76,7 +76,9 @@ test("PDP: locale sunumunda alt metin ve WhatsApp mesajı çevrilmiş adı kulla
 test("/sepet: dil çerezine göre başlık + seed'li provider; TR için hiçbir değişiklik yok", () => {
   const layout = read("../app/sepet/layout.tsx");
   assert.match(layout, /cookies\(\)\.get\(LANG_COOKIE\)/);
-  assert.match(layout, /if \(!dict\) return \{\};/, "TR: kök metadata korunur");
+  // EK (SEO YAYIN ZİNCİRİ): TR'de başlık / açıklama kökten gelir (title basılmaz); tek ek alan robots —
+  // sepet kişisel bir işlem sayfasıdır, arama dizinine girmez (lib/privateRoutes.ts).
+  assert.match(layout, /if \(!dict\) return \{ robots: PRIVATE_ROUTE_ROBOTS \};/, "TR: kök başlık / açıklama korunur");
   assert.match(layout, /if \(!dict\) return <>\{children\}<\/>;/, "TR: sarmalama yok");
   assert.match(layout, /title: dict\["cart\.title"\]/);
   const page = read("../app/sepet/page.tsx");

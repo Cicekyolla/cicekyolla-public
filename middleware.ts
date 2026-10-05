@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
 import { SITE_INDEXABLE } from "@/lib/site-config";
 import { resolveLegacyLocation, type LegacyLocationResult } from "@/lib/legacy-location-redirect";
 import {
@@ -11,7 +11,7 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-import { resolveManagedRedirect, isManagedRedirectTarget } from "@/lib/managed-redirects";
+import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
@@ -25,10 +25,29 @@ async function flattenManagedTarget(target: string): Promise<string> {
   const managed = await resolveManagedRedirect(target);
   return managed?.to ?? target;
 }
-export async function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest, event?: NextFetchEvent) {
   // GLOBAL Faz 1: /de ve /en locale yüzeyleri legacy redirect/location
   // resolver'larına GİRMEZ (kanun: locale path'leri yutulmamalı).
   if (isGlobalLocalePath(req.nextUrl.pathname)) {
+    /* EK (GLOBAL LOCALE 301) — ADDITIVE: locale ürün/kategori slug'ı değişince eski
+       adres (/de/produkt/<eski-slug>) 404'e düşüyordu. Yönetilen yönlendirme haritası
+       (GET /api/public/redirects) artık locale yollarını da taşır; burada YALNIZ tam
+       yol eşleşmesine bakılır — legacy kurallar locale yollarına hâlâ GİRMEZ ve kayıt
+       yoksa istek bugünkü gibi hemen devam eder. Hedef istek yoluyla aynıysa, site
+       dışına çıkıyorsa ya da zincirin herhangi bir yerinde çevrim varsa yönlendirilmez;
+       zincir (A→B→C) tek adımda nihai hedefe gider
+       (lib/managed-redirects.ts::managedLocaleFinalTarget). Kod kayıttan gelir (varsayılan
+       301 = kalıcı); sorgu dizesi (gclid, ?category, ?page) korunur.
+       FAIL-OPEN + UCUZ: harita süreç içinde 5 dk önbelleklidir (TR yollarıyla aynı harita).
+       Süresi dolunca locale isteği BEKLEMEZ — eldeki haritayla karar verilir, yenileme arka
+       planda (waitUntil) yapılır; yalnız süreçte hiç harita yokken beklenir (en çok 1,5 sn).
+       API erişilemezse/yavaşsa null döner → yönlendirme atlanır, sayfa çizilir. */
+    const localeManaged = await resolveManagedLocaleRedirect(req.nextUrl.pathname, (refresh) => event?.waitUntil(refresh));
+    if (localeManaged) {
+      const target = new URL(localeManaged.to, req.nextUrl.origin);
+      target.search = req.nextUrl.search;
+      return NextResponse.redirect(target, localeManaged.code);
+    }
     return NextResponse.next();
   }
   /* EK (DÖNGÜ GUARD) — ADDITIVE: gelen yol, onaylı bir yönetilen 301'in HEDEFİ
@@ -139,10 +158,17 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
   // API erişilemezse/yavaşsa null döner ve istek bugünkü gibi devam eder.
   const managed = await resolveManagedRedirect(req.nextUrl.pathname);
   if (managed) {
-    return NextResponse.redirect(
-      new URL(managed.to, req.nextUrl.origin),
-      managed.code,
-    );
+    // EK (SORGU DİZESİ KORUNUR): yönetilen 301 isteğin sorgu dizesini (gclid, utm_* …) hedefe taşır.
+    // Önceden düşüyordu: slug'ı değişen bir sayfaya giden reklam tıklaması yönlendirmede `gclid`'i
+    // (tıklama ilişkilendirmesi) kaybediyordu. Hedef yol ve durum kodu aynen kayıttan; sorgusuz
+    // istekte Location bugünküyle bayt bayt aynıdır.
+    // EK (İKİ SINIR — lib/managed-redirects.ts managedRedirectSearch): hedef site içi güvenli bir yol
+    // değilse ("//dış-site") sorgu TAŞINMAZ (tıklama kimliği üçüncü hosta verilmez; yönlendirme önceki
+    // hâliyle aynı); `page` parametresi TAŞINMAZ (birleştirilen kategoride hedefte olmayan bir sayfaya
+    // 301 → 404 zinciri kurulmaz; hedefin 1. sayfasına inilir — önceki davranış).
+    const target = new URL(managed.to, req.nextUrl.origin);
+    target.search = managedRedirectSearch(managed.to, req.nextUrl.search);
+    return NextResponse.redirect(target, managed.code);
   }
 
   const res = NextResponse.next();

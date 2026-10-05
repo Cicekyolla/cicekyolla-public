@@ -13,6 +13,7 @@ import { cookies } from "next/headers";
 import { I18nProvider } from "@/lib/i18n";
 import { DEFAULT_LOCALE, LANG_COOKIE, isLocale, type Locale } from "@/lib/i18n/config";
 import { dictFor } from "@/lib/i18n/dicts";
+import { PRIVATE_ROUTE_ROBOTS } from "@/lib/privateRoutes";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = cookieLocale();
   const dict = dictFor(locale);
   // TR: kök metadata (title/description) birebir korunur.
-  if (!dict) return {};
-  return { title: dict["cart.title"] };
+  // EK (SEO YAYIN ZİNCİRİ): sepet kişiye özel bir işlem sayfasıdır → arama dizinine girmez
+  // (kök layout'un "index, follow" varsayılanı burada geçerli olmamalı). Kural: lib/privateRoutes.ts.
+  if (!dict) return { robots: PRIVATE_ROUTE_ROBOTS };
+  return { title: dict["cart.title"], robots: PRIVATE_ROUTE_ROBOTS };
 }
 
 export default function SepetLayout({ children }: { children: React.ReactNode }) {

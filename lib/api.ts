@@ -13,6 +13,8 @@ import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from
 import { fetchWithDeadline } from "./fetchWithDeadline";
 import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
+import { categoryUrlsResultOf, productUrlsResultOf, type CategoryUrlsResult, type ProductUrlsResult } from "./sitemapSources.ts";
+import { CATEGORY_DEFAULT_SORT, CATEGORY_ORDER_DEADLINE_MS, CATEGORY_SORT_FALLBACK, createSortFallback, isSortRejectedStatus, settledWithin } from "./categorySort.ts";
 export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type RedirectMap } from "./internalHref.ts";
 
 // Backend origin (Render). Env ile override edilebilir.
@@ -68,6 +70,10 @@ export interface SeoPublicPage {
   // önüne almak için kullanılır. Eski API alanı göndermezse undefined kalır
   // ve davranış öncekiyle birebir aynıdır.
   content_source?: string | null;
+  // ADDITIVE (KATEGORİ YAYIN KURALI): sayfa bir SEO kaydından DEĞİL, kategori ağacından üretildiyse true
+  // (lib/categoryPage.ts syntheticCategoryPage). Kayıtlı sayfada alan yoktur. Yalnız kategori sayfasının
+  // robots kararında kullanılır: kayıtsız + ürünsüz sayfanın index'e verecek kendi içeriği yoktur.
+  synthetic?: boolean;
 }
 
 /** Operatör vitrini ürün kartı: mevcut GET /api/products/:id. Aktif değil / stok 0 / kapak yok / hata → null (ürün atlanır). */
@@ -117,6 +123,31 @@ export async function fetchSeoPage(
   if (!data || typeof data.url_path !== "string") return null;
 
   return data;
+}
+
+/** fetchSeoPage()'in hatayı bildiren hâli: ok=false → kayıt OKUNAMADI ("kayıt yok" demek değildir). */
+export interface SeoPageResult {
+  ok: boolean;
+  page: SeoPublicPage | null;
+}
+
+/**
+ * EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): fetchSeoPage() ile AYNI istek (aynı önbellek
+ * kaydı); fark yalnız sonucun "yanıt geldi, kayıt yok" (ok=true, page=null) ile "okunamadı"
+ * (ok=false: ağ / zaman aşımı / 404 dışı hata / bozuk gövde) ayrımını taşımasıdır.
+ * fetchSeoPage() DEĞİŞMEDİ.
+ */
+export async function fetchSeoPageChecked(path: string): Promise<SeoPageResult> {
+  const url = `${API_ORIGIN}/api/public/seo/page?path=${encodeURIComponent(path)}`;
+  try {
+    const res = await fetchWithDeadline(url, { headers: apiHeaders(), next: { revalidate: 300 } }, 6_000);
+    if (res.status === 404) return { ok: true, page: null };
+    if (!res.ok) return { ok: false, page: null };
+    const data = ((await res.json()) as { data?: SeoPublicPage } | null)?.data;
+    return { ok: true, page: data && typeof data.url_path === "string" ? data : null };
+  } catch {
+    return { ok: false, page: null };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -303,6 +334,97 @@ export async function fetchSeoInventory(): Promise<SeoInventoryItem[]> {
     return Array.isArray(json?.data) ? json.data : [];
   } catch {
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// EK (SEO YAYIN ZİNCİRİ) — ADDITIVE: sitemap için "checked" okumalar.
+// Yukarıdaki fetchSeoInventory() / fetchNeighborhoodUrlPage() DEĞİŞMEDİ (hata →
+// boş değer; çapraz bağlantı ve shard sayımı aynı yolu kullanır). Buradaki
+// varyantlar hatayı BİLDİRİR: sitemap rotası upstream hatasında boş 200 yerine
+// 503 verebilsin (karar: lib/sitemapSources.ts). Hepsi süre sınırlıdır.
+// ---------------------------------------------------------------------------
+export type { ProductUrlRow, ProductUrlsResult } from "./sitemapSources.ts";
+
+/**
+ * Aktif ürünlerin sitemap satırları — GET /api/public/seo/product-urls
+ * (ürün başına tek satır; products.xml ve images.xml'in tek kaynağı).
+ * 404 = uç henüz yayında değil ("missing"); ağ/zaman aşımı/200 dışı/bozuk gövde
+ * = "failed". İki durumda da çağıran bugünkü envanter yoluna düşer.
+ * EK: 200 gelip kullanılamayan ya da EKSİK yanıt (geçersiz yollu satır, `total` > satır
+ * sayısı, 50.000 sınırı) günlüğe yazılır — sessiz kayıp olmaz (karar: lib/sitemapSources.ts).
+ */
+export async function fetchProductUrls(): Promise<ProductUrlsResult> {
+  const url = `${API_ORIGIN}/api/public/seo/product-urls`;
+  try {
+    // DAYANIKLILIK: 8 sn süre sınırı. Süre dolarsa TEKRAR DENENMEZ (çağıran envanter yoluna
+    // düşer; o okumanın kendi sınırı var → en kötü toplam bekleme 16 sn değil 8 sn artar).
+    // Kopan soket gibi hızlı hatalar bir kez tekrar denenir (bkz. fetchWithDeadline).
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 8_000, fetch, false);
+    const result = res.status !== 200 ? productUrlsResultOf(res.status, null) : productUrlsResultOf(200, await res.json());
+    if (result.state !== "missing" && result.warning) console.warn(`[sitemap] product-urls: ${result.warning}`);
+    return result;
+  } catch {
+    return { state: "failed" };
+  }
+}
+
+export type { CategoryUrlRow, CategoryUrlsResult } from "./sitemapSources.ts";
+
+/**
+ * EK (KATEGORİ YASASI): yayınlı + index kategorilerin sitemap satırları ve aktif ürün sayıları —
+ * GET /api/public/seo/category-urls (YENİ uç; bugünkü API'de 404 → "missing").
+ * categories.xml yalnız en az bir aktif ürün listeleyen kategoriyi taşır (karar: lib/sitemapSources.ts).
+ * FAIL-OPEN: 404 / ağ / zaman aşımı / 200 dışı / eksik ya da kullanılamayan yanıt → çağıran bugünkü
+ * envanter mantığına düşer. 8 sn süre sınırı; süre dolunca TEKRAR DENENMEZ (fetchProductUrls ile aynı).
+ */
+export async function fetchCategoryUrls(): Promise<CategoryUrlsResult> {
+  const url = `${API_ORIGIN}/api/public/seo/category-urls`;
+  try {
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 8_000, fetch, false);
+    const result = res.status !== 200 ? categoryUrlsResultOf(res.status, null) : categoryUrlsResultOf(200, await res.json());
+    if (result.state === "failed" && result.warning) console.warn(`[sitemap] category-urls: ${result.warning}`);
+    return result;
+  } catch {
+    return { state: "failed" };
+  }
+}
+
+/** fetchSeoInventory()'nin hatayı bildiren hâli: ok=false → envanter OKUNAMADI (boş liste "kayıt yok" demek değildir). */
+export interface SeoInventoryResult {
+  ok: boolean;
+  items: SeoInventoryItem[];
+}
+
+export async function fetchSeoInventoryChecked(): Promise<SeoInventoryResult> {
+  const url = `${API_ORIGIN}/api/public/seo/inventory`;
+  try {
+    // fetchSeoInventory() ile aynı istek (aynı önbellek anahtarı): 12 sn sınır + tek tekrar.
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 12_000);
+    if (!res.ok) return { ok: false, items: [] };
+    const json = await res.json() as { data?: SeoInventoryItem[] };
+    return Array.isArray(json?.data) ? { ok: true, items: json.data } : { ok: false, items: [] };
+  } catch {
+    return { ok: false, items: [] };
+  }
+}
+
+/** fetchNeighborhoodUrlPage()'in hatayı bildiren hâli: null = sayfa OKUNAMADI. */
+export async function fetchNeighborhoodUrlPageChecked(
+  limit: number,
+  offset: number,
+): Promise<NeighborhoodUrlPage | null> {
+  const url = `${API_ORIGIN}/api/public/seo/neighborhood-urls?limit=${limit}&offset=${offset}`;
+  try {
+    // 10.000 kayıtlık sayfa ≈ 0,62 MB; 10 sn sınır + tek tekrar.
+    const res = await fetchWithDeadline(url, { next: { revalidate: 300 } }, 10_000);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: NeighborhoodUrlPage };
+    const data = json?.data;
+    if (!data || !Array.isArray(data.items)) return null;
+    return { total: Number(data.total) || 0, items: data.items };
+  } catch {
+    return null;
   }
 }
 
@@ -536,8 +658,13 @@ export interface PublicProductListParams {
   delivery_model?: "same_day_courier" | "cargo" | "same_day_and_cargo" | "cargo_capable";
   /** true → veri önbelleği atlanır (Kargo Merkezi kararı anında yansısın: kargo kategorisi / alternatif listesi). */
   fresh?: boolean;
-  sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc";
+  /** EK: "category_order" = operatörün elle kategori sırası (category_id ile; lib/categorySort.ts). */
+  sort?: "created_at_desc" | "price_asc" | "price_desc" | "name_asc" | "category_order";
 }
+
+// EK (TEK KATEGORİ SIRASI): "API varsayılan kategori sırasını tanımıyor" notu — süreç içi, 5 dk
+// (kural ve gerekçe: lib/categorySort.ts). Yalnız fetchProductsPaged kullanır.
+const categorySortFallback = createSortFallback();
 
 export async function fetchProducts(params: PublicProductListParams = {}): Promise<PublicProductListItem[]> {
   return (await fetchProductsPaged(params)).items;
@@ -546,6 +673,12 @@ export async function fetchProducts(params: PublicProductListParams = {}): Promi
 export interface ProductPage {
   items: PublicProductListItem[];
   pagination: { page: number; page_size: number; total: number; total_pages: number };
+  /**
+   * EK (KATEGORİ YASASI): true = API bu istek için GERÇEKTEN yanıt verdi ve `pagination` yanıttan
+   * geliyor. Okuma başarısız olduğunda dönen yedek sayfa (total 0) bu alanı TAŞIMAZ → "kategori
+   * boş" ile "okunamadı" ayrışır (karar: lib/categoryPagination.ts isConfirmedEmptyListing).
+   */
+  answered?: boolean;
 }
 
 /** Sayfalı ürün listesi (kategori grid'i sıralama + sayfalama için). */
@@ -564,8 +697,11 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   if (params.same_day_available) q.set("same_day_available", "true");
   if (params.delivery_scope) q.set("delivery_scope", params.delivery_scope);
   if (params.delivery_model) q.set("delivery_model", params.delivery_model);
-  if (params.sort) q.set("sort", params.sort);
-  const url = `${API_ORIGIN}/api/products?${q.toString()}`;
+  // EK (TEK KATEGORİ SIRASI): API'nin varsayılan kategori sırasını tanımadığı biliniyorsa (taze not)
+  // istek doğrudan bugünkü sırayla gider; aksi hâlde istenen sıra aynen gönderilir.
+  let sort = categorySortFallback.effective(params.sort);
+  if (sort) q.set("sort", sort);
+  let url = `${API_ORIGIN}/api/products?${q.toString()}`;
   const attempts = params.fresh
     ? [{ headers: apiHeaders(), cache: "no-store" as const }]
     : [
@@ -574,12 +710,48 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
     ];
   for (const init of attempts) {
     try {
-      const res = await fetch(url, init);
+      // EK (TEK KATEGORİ SIRASI — deploy sırası güvenliği): API sort=category_order'ı henüz
+      // tanımıyorsa (bugünkü API: 422) AYNI istek bugünkü sıralamayla (created_at_desc) BİR KEZ
+      // tekrarlanır → URL bugünkü isteğin aynısıdır, sayfa bugünkü gibi çizilir. Her çağıran
+      // (kategori SSR'ı, sonsuz kaydırma, PDP ilgili ürünler) bu tek noktadan yararlanır.
+      // Not yalnız tekrar BAŞARILIYSA ve sıra sözleşmeye uygun istendiyse (category_id ile)
+      // düşülür: başka bir parametrenin reddi "API bu sırayı tanımıyor" sayılmaz.
+      // EK (FAIL-OPEN — her başarısızlık): API'nin bu sırayı tanıdığı BİLİNMİYORKEN varsayılan sıra
+      // isteği yalnız ret (422) ile değil, HANGİ nedenle olursa olsun sonuç vermezse (ağ hatası, 5xx,
+      // CATEGORY_ORDER_DEADLINE_MS içinde yanıt yok) bugünkü isteğe geçilir — AYNI `init` ile: bugünkü
+      // isteğin Data Cache kaydı (bayat da olsa) kullanılır, API kesintisinde liste boşalmaz. Geçiş
+      // kalıcıdır: bu çağrının ikinci (no-store) denemesi de bugünkü isteği gönderir → akış bugünkü
+      // iki denemenin aynısıdır. Süre sınırı AbortSignal'sız (lib/categorySort.ts settledWithin):
+      // istek içi tekilleştirme bozulmaz.
+      // EK (KABUL NOTU): API bu sırayı kabul ettiyse (taze not) akış bugünkü isteğin akışıyla BİREBİR
+      // aynıdır — süre sınırı yok, hata olursa aynı istek ikinci denemede (no-store) yinelenir; liste
+      // bugünkü sıraya çevrilmez (sayfalar arasında sıra karışmaz). Yalnız ret (API geri alındı) geçirir.
+      let res: Response;
+      if (sort === CATEGORY_DEFAULT_SORT) {
+        const known = categorySortFallback.accepted();
+        const tried = await settledWithin(fetch(url, init), known ? null : CATEGORY_ORDER_DEADLINE_MS);
+        const rejected = !!tried && isSortRejectedStatus(tried.status);
+        if (tried && tried.ok) {
+          categorySortFallback.noteAccepted();
+          res = tried;
+        } else if (known && !rejected) {
+          continue;
+        } else {
+          sort = CATEGORY_SORT_FALLBACK;
+          q.set("sort", sort);
+          url = `${API_ORIGIN}/api/products?${q.toString()}`;
+          res = await fetch(url, init);
+          if (rejected && res.ok && params.category_id) categorySortFallback.noteRejected();
+        }
+      } else {
+        res = await fetch(url, init);
+      }
       if (!res.ok) continue;
       const json = (await res.json()) as ProductPage;
       const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
       const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
-      return { items, pagination: json?.pagination ?? empty.pagination };
+      // EK (KATEGORİ YASASI): `answered` yalnız sayfalama bilgisi yanıttan geldiyse true (yedek sayfa taşımaz).
+      return json?.pagination ? { items, pagination: json.pagination, answered: true } : { items, pagination: empty.pagination };
     } catch {
       // Başarısız cevap önbelleğe alınmadan ikinci canlı okumayı dene.
     }

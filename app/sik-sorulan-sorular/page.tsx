@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { fetchSeoPage } from "@/lib/api";
+import { safeJsonLd } from "@/lib/jsonLdSafe";
 import { FaqExperience, type FaqItem } from "@/components/faq/FaqExperience";
 
-export const metadata:Metadata={title:"Sık Sorulan Sorular",description:"Sipariş, teslimat, ürün, ödeme ve kurumsal hizmetlerle ilgili sık sorulan sorular."};
+export const metadata:Metadata={title:"Sık Sorulan Sorular",alternates:{canonical:"/sik-sorulan-sorular"},description:"Sipariş, teslimat, ürün, ödeme ve kurumsal hizmetlerle ilgili sık sorulan sorular."};
 
 const FALLBACK:FaqItem[]=[
  {category:"Sipariş & Teslimat",question:"Aynı gün teslimat için son sipariş saati nedir?",answer:"Uygun son sipariş saati teslimat bölgesi ve güncel yoğunluğa göre sipariş adımında gösterilir."},
@@ -21,5 +22,5 @@ export default async function FaqPage(){
  const saved=(managed?.body_blocks??[]).filter(b=>b.type==="faq-item"&&typeof b.title==="string"&&typeof b.text==="string").map(b=>({category:String(b.kind||"Genel"),question:String(b.title),answer:String(b.text)}));
  const items=saved.length?saved:FALLBACK;
  const jsonLd={"@context":"https://schema.org","@type":"FAQPage",mainEntity:items.map(item=>({"@type":"Question",name:item.question,acceptedAnswer:{"@type":"Answer",text:item.answer}}))};
- return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/><FaqExperience items={items}/></>;
+ return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:safeJsonLd(jsonLd)}}/><FaqExperience items={items}/></>;
 }

@@ -12,7 +12,7 @@
 // Veri kanalı yeni değil: link-dictionary ile aynı desen (public uç + TTL cache).
 // ============================================================================
 
-import { parseShowcasePath } from './showcasePagination.ts';
+import { parseShowcasePath, isSafeInternalPath } from './showcasePagination.ts';
 
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.onrender.com';
@@ -150,4 +150,175 @@ export async function managedRedirectTargets(): Promise<ReadonlySet<string>> {
 /** Bu yol yönetilen bir 301'in hedefi mi? Evetse legacy kurallar atlanır. */
 export async function isManagedRedirectTarget(pathname: string): Promise<boolean> {
   return isManagedTargetPath(pathname, await managedRedirectTargets());
+}
+
+// ============================================================================
+// EK (GLOBAL LOCALE 301) — ADDITIVE. Mevcut hiçbir fonksiyon değiştirilmedi.
+//
+// SORUN: middleware Global locale yollarında (/de/…, /en/… — 13 dil) hiçbir
+// kurala bakmadan devam ediyordu. Locale ürün/kategori slug'ı değişince eski
+// adres (/de/produkt/<eski-slug>) 404'e düşüyor, birikmiş sinyal taşınmıyordu.
+// GET /api/public/redirects artık locale yollarını da taşıyor
+// (/<locale>/<bölüm>/<eski-slug> → yeni adres).
+//
+// ÇÖZÜM: locale yolu için YALNIZ tam yol eşleşmesine bakılır (legacy konum/
+// kategori kuralları locale yollarına hâlâ GİRMEZ). Aşağıdaki saf yardımcı
+// kaydın uygulanıp uygulanmayacağına karar verir.
+//
+// FAIL-SAFE: harita boşsa / API erişilemezse resolveManagedRedirect null döner
+// → istek bugünkü gibi doğrudan devam eder.
+// ============================================================================
+
+/**
+ * Saf yardımcı (test edilebilir): locale yolu için uygulanacak yönlendirme.
+ *   hit  — bu yolun kaydı (resolveManagedRedirect sonucu); yoksa null.
+ *   back — hedefin kendi kaydı (varsa); çevrim tespiti için.
+ * null dönerse istek olduğu gibi devam eder:
+ *   • kayıt yok,
+ *   • hedef istek yoluyla aynı (kendine yönlendirme),
+ *   • hedef site içi güvenli bir yol değil ("//dış-site" → açık yönlendirme),
+ *   • hedef bu yola geri dönüyor (A→B, B→A → ERR_TOO_MANY_REDIRECTS).
+ */
+export function managedLocaleTarget(
+  pathname: string,
+  hit: { to: string; code: number } | null,
+  back: { to: string; code: number } | null = null,
+): { to: string; code: number } | null {
+  if (!hit) return null;
+  const from = normalize(pathname);
+  const to = normalize(hit.to);
+  if (to === from) return null;
+  if (!isSafeInternalPath(to)) return null;
+  if (back && normalize(back.to) === from) return null;
+  return { to, code: hit.code };
+}
+
+// ============================================================================
+// EK (GLOBAL LOCALE 301 — ZİNCİR + UCUZ HARİTA) — ADDITIVE. Yukarıdaki hiçbir
+// fonksiyon değiştirilmedi.
+//
+// 1) ZİNCİR / ÇEVRİM. managedLocaleTarget yalnız İKİ adımlı çevrimi (A→B, B→A)
+//    görüyordu: A→B, B→C, C→A kayıtları her adımda yönlendirip sonsuz döngü
+//    üretir; A→B→C ise iki ayrı 301 demektir. managedLocaleFinalTarget haritayı
+//    ziyaret kümesiyle izler: zincir TEK adımda nihai hedefe düzleşir, HER
+//    uzunlukta çevrimde yönlendirme yapılmaz (sayfa çizilir).
+//
+// 2) UCUZ HARİTA. Locale yolları daha önce middleware'de hiç beklemiyordu.
+//    Haritanın süresi dolduğunda ELDEKİ (bayat) harita hemen kullanılır, yenileme
+//    arka planda yapılır → API yavaşken locale istekleri 1,5 sn beklemez. Yalnız
+//    süreçte hiç harita yokken (soğuk açılış) beklenir: aksi hâlde soğuk açılışta
+//    eski adres 301 yerine 404 görürdü. TR yollarının harita okuması AYNEN.
+// ============================================================================
+
+/** Locale zincirinde izlenecek en çok adım; aşılırsa yönlendirme yapılmaz (tahmin yok). */
+export const MANAGED_LOCALE_MAX_HOPS = 5;
+
+/**
+ * Saf yardımcı (test edilebilir): locale yolunun NİHAİ yönlendirme hedefi.
+ *   lookup — normalize edilmiş yol → kayıt (haritadan); yoksa null/undefined.
+ * null dönerse istek olduğu gibi devam eder:
+ *   • kayıt yok,
+ *   • zincirin herhangi bir yerinde çevrim (başlangıca ya da ara adıma geri dönüş),
+ *   • İLK hedef site içi güvenli bir yol değil ("//dış-site" → açık yönlendirme),
+ *   • zincir MANAGED_LOCALE_MAX_HOPS adımdan uzun.
+ * Zincirin İLERİKİ bir adımı güvenli değilse o adım izlenmez; son güvenli hedefte durulur.
+ * Kod ilk kayıttan gelir; zincirde geçici (302/307) bir adım varsa sonuç da geçicidir
+ * (geçici bir taşınma, düzleştirilince kalıcıya dönüşmez).
+ */
+export function managedLocaleFinalTarget(
+  pathname: string,
+  lookup: (path: string) => { to: string; code: number } | null | undefined,
+  maxHops: number = MANAGED_LOCALE_MAX_HOPS,
+): { to: string; code: number } | null {
+  const from = normalize(pathname);
+  let hit = lookup(from) ?? null;
+  if (!hit) return null;
+  const seen = new Set<string>([from]);
+  let to = from;
+  let code = hit.code;
+  for (let hop = 0; hit; hop++) {
+    if (hop >= maxHops) return null;
+    const next = normalize(hit.to);
+    if (!isSafeInternalPath(next)) {
+      if (hop === 0) return null;
+      break;
+    }
+    if (seen.has(next)) return null;
+    seen.add(next);
+    if (hit.code === 302 || hit.code === 307) code = hit.code;
+    to = next;
+    hit = lookup(next) ?? null;
+  }
+  return { to, code };
+}
+
+/**
+ * Locale yolu için harita: taze ise o; süresi dolmuşsa eldeki harita HEMEN döner ve yenileme
+ * arka planda başlar (`defer` verilirse yenileme ona teslim edilir — Edge'de waitUntil).
+ * Süreçte hiç harita yoksa beklenir (en çok TIMEOUT_MS).
+ */
+async function getMapForLocale(defer?: (refresh: Promise<unknown>) => void): Promise<Map<string, Entry>> {
+  if (cache && cache.expiresAt > Date.now()) return cache.map;
+  if (!cache) return getMap();
+  const stale = cache.map;
+  const refresh = getMap().catch(() => stale);
+  if (defer) defer(refresh);
+  return stale;
+}
+
+/**
+ * Locale yolu için uygulanacak yönlendirme (zincir düzleştirilmiş, çevrimsiz); yoksa null.
+ * FAIL-OPEN: harita boşsa / okunamadıysa null → istek bugünkü gibi doğrudan devam eder.
+ */
+export async function resolveManagedLocaleRedirect(
+  pathname: string,
+  defer?: (refresh: Promise<unknown>) => void,
+): Promise<{ to: string; code: number } | null> {
+  try {
+    const map = await getMapForLocale(defer);
+    if (map.size === 0) return null;
+    return managedLocaleFinalTarget(pathname, (path) => map.get(path));
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================================
+// EK (TR YÖNETİLEN 301 — TAŞINAN SORGU DİZESİ) — ADDITIVE. Yukarıdaki hiçbir
+// fonksiyon değiştirilmedi.
+//
+// TR yönetilen 301 dalı isteğin sorgu dizesini hedefe taşır (gclid / utm_* kaybolmasın).
+// İki sınır:
+//   1) Hedef site içi güvenli bir yol DEĞİLSE ("//dış-site/yol" — normalize() bu biçimi
+//      korur, tarayıcı dış siteye çözer) sorgu TAŞINMAZ: ziyaretçinin tıklama kimliği / utm
+//      değerleri üçüncü bir hosta verilmez. Yönlendirmenin kendisi önceki hâliyle aynıdır
+//      (kayıt operatör onaylıdır; sorgusuz Location — bu eklemeden önceki davranış).
+//   2) `page` parametresi TAŞINMAZ: hedef başka bir liste olabilir (kategori birleştirme —
+//      9 sayfalık kategori 3 sayfalık kategoriye taşındıysa "?page=7" hedefte 404 verir).
+//      Sayfa numarası düşünce yönlendirme hedefin 1. sayfasına iner (200) — sorgu dizesi
+//      taşınmadan önceki davranışla aynı. Diğer parametreler bayt bayt aynen kalır.
+// ============================================================================
+
+/**
+ * Saf yardımcı (test edilebilir): TR yönetilen yönlendirmede hedefe yazılacak sorgu dizesi.
+ *   to     — kaydın hedef yolu (normalize edilmiş).
+ *   search — isteğin sorgu dizesi ("?a=1&b=2" ya da "").
+ * Dönen değer "" ya da "?…" biçimindedir. Kalan parametreler yeniden kodlanmaz (ham parçalar korunur).
+ */
+export function managedRedirectSearch(to: string, search: string): string {
+  if (!isSafeInternalPath(to)) return '';
+  const raw = typeof search === 'string' ? search.replace(/^\?/, '') : '';
+  if (!raw) return '';
+  const kept = raw.split('&').filter((pair) => {
+    const key = pair.split('=')[0];
+    let name = key;
+    try {
+      name = decodeURIComponent(key.replace(/\+/g, ' '));
+    } catch {
+      // Bozuk yüzde-kodlu anahtar: ham hâliyle karşılaştırılır.
+    }
+    return name !== 'page';
+  });
+  const out = kept.join('&');
+  return out ? `?${out}` : '';
 }

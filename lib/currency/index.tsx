@@ -9,7 +9,12 @@
  *   uygulanır. Üç sonucu var, üçü de zorunlu:
  *     1) Hydration mismatch YOK.
  *     2) Next.js ISR / CDN önbelleğine kullanıcıya özel fiyat ASLA girmez.
- *     3) Googlebot daima TRY görür → canonical/schema deterministik kalır.
+ *     3) İLK HTML ve JSON-LD daima TRY'dir → canonical/schema deterministik kalır.
+ *        DÜZELTME (5 Eki 2026): "Googlebot daima TRY görür" YANLIŞTI. Google sayfayı JavaScript ile
+ *        de çizer; dil sayfasında çerezsiz ziyaretçinin para birimi mount'tan sonra URL diline göre
+ *        EUR / USD olur. Bu yüzden ürün sayfası, gösterilen para TRY değilken TAHSİL EDİLECEK ₺ tutarını
+ *        fiyatın yanında ayrıca yazar (ProductDetail — currency.chargedNotice): şemadaki fiyat (TRY)
+ *        çizilmiş sayfada da görünür.
  *
  * • Kur SUNUCUDAN gelir (`/api/fx/rates`, tek istek). Ürün başına istek YOK.
  *

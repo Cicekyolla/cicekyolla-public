@@ -4,7 +4,7 @@ import { fetchSeoPage } from "@/lib/api";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { contactChannels, directionsUrl, mapsOpenUrl, resolveSiteIdentity } from "@/lib/siteIdentity";
 
-export const metadata: Metadata = { title:"İletişim", description:"ÇiçekYolla iletişim kanalları, çalışma saatleri ve mesaj formu." };
+export const metadata: Metadata = { title:"İletişim", alternates:{ canonical:"/iletisim" }, description:"ÇiçekYolla iletişim kanalları, çalışma saatleri ve mesaj formu." };
 
 const ICONS = { whatsapp:MessageCircle, phone:Phone, email:Mail, address:MapPin };
 const CORE_KINDS = new Set(["whatsapp", "phone", "email", "address"]);

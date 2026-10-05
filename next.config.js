@@ -44,6 +44,25 @@ const nextConfig = {
         ],
       },
       {
+        // EK (RANGE) — yukarıdaki kuraldan SONRA durmalı (aynı anahtarda son eşleşen
+        // kazanır). `Range` başlıklı isteğe köken 206 (kısmi içerik) döner; kısmi
+        // yanıt PAYLAŞILAN (CDN) önbelleğe girmemelidir — herkese o parça sunulurdu.
+        // Range taşıyan isteğin yanıtı CDN'de saklanmaz (iki CDN başlığı no-store).
+        // Tarayıcının KENDİ önbelleği kısmi yanıtı aralığıyla birlikte doğru saklar;
+        // <video>/<audio> her istekte Range gönderdiği için tarayıcı başlığı da
+        // no-store olursa her oynatma / sarma / tekrar ziyaret baytları yeniden
+        // indirirdi → `private` (paylaşılan önbellek yasak) + uzun ömür: tarayıcı
+        // davranışı bu kural eklenmeden önceki hâliyle aynı. Range'siz normal istekler
+        // yukarıdaki kuralla aynen önbelleklenir. Nöbet testi: lib/r2RangeHeaders.test.ts.
+        source: "/r2/:path*",
+        has: [{ type: "header", key: "range" }],
+        headers: [
+          { key: "Cache-Control", value: "private, max-age=31536000, immutable" },
+          { key: "CDN-Cache-Control", value: "no-store" },
+          { key: "Vercel-CDN-Cache-Control", value: "no-store" },
+        ],
+      },
+      {
         // ŞİFRE BELİRLEME — tek kullanımlık hesap devralma anahtarı taşır
         // (DESIGN §3.A.9). Bu sayfa:
         //   • hiçbir yere Referer SIZDIRMAZ ("?token=" biçimi hâlâ canlıyken

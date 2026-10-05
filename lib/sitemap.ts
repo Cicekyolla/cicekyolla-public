@@ -1,6 +1,19 @@
-import { fetchNeighborhoodUrlPage, fetchProductsPaged, fetchSeoInventory, type SeoInventoryItem } from "@/lib/api";
+import {
+  fetchCategoryUrls,
+  fetchNeighborhoodUrlPage,
+  fetchNeighborhoodUrlPageChecked,
+  fetchProductsPaged,
+  fetchProductUrls,
+  fetchSeoInventory,
+  fetchSeoInventoryChecked,
+  type SeoInventoryItem,
+} from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getIndexableBlogPosts } from "@/lib/blog";
+import { isFailedProductPage, type CategoryUrlRow, type ProductUrlRow } from "@/lib/sitemapSources";
+import { TR_CATEGORY_DEDICATED_ROUTES } from "@/lib/global/hreflangFamily";
+// EK (TEK GÖRSEL KAYNAĞI): <image:loc> görünür ürün görseliyle AYNI karardan gelir.
+import { servedProductImageUrl } from "@/lib/productImageUrl";
 
 // ---------------------------------------------------------------------------
 // ADDITIVE — pages.xml için indexlenebilir statik kurumsal rotalar.
@@ -54,19 +67,40 @@ function validDate(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function isIndexableInventoryItem(item: SeoInventoryItem): boolean {
+  return (
+    item.index_state === "index" &&
+    // Mevcut API canonical motoru mahalleyi üst ilçeye canonical eder.
+    // Self-canonical olmayan mahalle URL'leri XML/HTML dizine alınmaz.
+    item.page_type !== "neighborhood" &&
+    item.url_path.startsWith("/") &&
+    !item.url_path.includes("?") &&
+    !item.url_path.includes("#")
+  );
+}
+
 export async function getIndexableInventory(): Promise<SeoInventoryItem[]> {
   if (!SITE_INDEXABLE) return [];
   const inventory = await fetchSeoInventory();
-  return inventory.filter(
-    (item) =>
-      item.index_state === "index" &&
-      // Mevcut API canonical motoru mahalleyi üst ilçeye canonical eder.
-      // Self-canonical olmayan mahalle URL'leri XML/HTML dizine alınmaz.
-      item.page_type !== "neighborhood" &&
-      item.url_path.startsWith("/") &&
-      !item.url_path.includes("?") &&
-      !item.url_path.includes("#"),
-  );
+  return inventory.filter(isIndexableInventoryItem);
+}
+
+// ---------------------------------------------------------------------------
+// EK (SEO YAYIN ZİNCİRİ) — ADDITIVE: "upstream hatası boş 200 üretmez".
+// Yukarıdaki getIndexableInventory() hata hâlinde boş liste döndürür; sitemap
+// bunu "kayıt yok" sanıp BOŞ bir 200 urlset basıyor, CDN de 5 dk saklıyordu.
+// Aşağıdaki okumalar aynı süzgeci kullanır ama hatayı `failed` ile bildirir;
+// rota bunu 503'e çevirir (lib/sitemapSources.ts → sitemapResponse).
+// MEŞRU boşluk (önizleme: SITE_INDEXABLE=false) hata DEĞİLDİR — upstream'e hiç
+// gidilmez, çıktı bugünküyle aynı kalır.
+// ---------------------------------------------------------------------------
+type InventoryRead = { items: SeoInventoryItem[]; failed: boolean };
+type NodeRead = { nodes: string[]; failed: boolean };
+
+async function readIndexableInventory(): Promise<InventoryRead> {
+  if (!SITE_INDEXABLE) return { items: [], failed: false };
+  const result = await fetchSeoInventoryChecked();
+  return { items: result.items.filter(isIndexableInventoryItem), failed: !result.ok };
 }
 
 // ---------------------------------------------------------------------------
@@ -90,17 +124,27 @@ function passesProvinceLock(urlPath: string): boolean {
 // ADDITIVE: neighborhoods.xml — panelde yayınlanmış mahalleler (il ayrımı YOK).
 // Envanteri bypass eder; doğrudan index_state='index' + page_type='neighborhood'
 // çeker. Yayın anında index_state'i admin publish() yazar (seoApi.ts).
+function isIndexableNeighborhoodItem(item: SeoInventoryItem): boolean {
+  return (
+    item.index_state === "index" &&
+    item.page_type === "neighborhood" &&
+    passesProvinceLock(item.url_path) &&
+    !item.url_path.includes("?") &&
+    !item.url_path.includes("#")
+  );
+}
+
 export async function getIndexableNeighborhoods(): Promise<SeoInventoryItem[]> {
   if (!SITE_INDEXABLE) return [];
   const inventory = await fetchSeoInventory();
-  return inventory.filter(
-    (item) =>
-      item.index_state === "index" &&
-      item.page_type === "neighborhood" &&
-      passesProvinceLock(item.url_path) &&
-      !item.url_path.includes("?") &&
-      !item.url_path.includes("#"),
-  );
+  return inventory.filter(isIndexableNeighborhoodItem);
+}
+
+// EK (SEO YAYIN ZİNCİRİ): acil şalter yolunun hatayı bildiren okuması (bkz. readIndexableInventory).
+async function readIndexableNeighborhoods(): Promise<InventoryRead> {
+  if (!SITE_INDEXABLE) return { items: [], failed: false };
+  const result = await fetchSeoInventoryChecked();
+  return { items: result.items.filter(isIndexableNeighborhoodItem), failed: !result.ok };
 }
 
 // ---------------------------------------------------------------------------
@@ -155,24 +199,36 @@ export async function neighborhoodShardCount(): Promise<number> {
 
 /** 1 tabanlı shard; aralık dışıysa boş urlset (geçerli XML). */
 export async function renderNeighborhoodShard(shard: number): Promise<string> {
-  const nodes = await neighborhoodShardNodes(shard);
+  const { nodes } = await neighborhoodShardNodes(shard);
+  return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${nodes.join("")}</urlset>`;
+}
+
+/** EK (SEO YAYIN ZİNCİRİ): null = shard'ın bir sayfası OKUNAMADI → rota 503 (eksik shard 200 ile verilmez). */
+export async function renderNeighborhoodShardOrNull(shard: number): Promise<string | null> {
+  const { nodes, failed } = await neighborhoodShardNodes(shard);
+  if (failed) return null;
   return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${nodes.join("")}</urlset>`;
 }
 
 /** Bir shard'ın URL düğümleri — yalnız o pencereyi çeker, tam envanteri DEĞİL. */
-async function neighborhoodShardNodes(shard: number): Promise<string[]> {
-  if (!SITE_INDEXABLE || shard < 1) return [];
+async function neighborhoodShardNodes(shard: number): Promise<NodeRead> {
+  if (!SITE_INDEXABLE || shard < 1) return { nodes: [], failed: false };
   if (SITEMAP_PROVINCE_LOCK.length > 0) {
-    return shardSliceOf(await getIndexableNeighborhoods(), shard).map(urlNode);
+    const locked = await readIndexableNeighborhoods();
+    return { nodes: shardSliceOf(locked.items, shard).map(urlNode), failed: locked.failed };
   }
   const start = (shard - 1) * NEIGHBORHOOD_SHARD_SIZE;
   const nodes: string[] = [];
   for (let off = start; off < start + NEIGHBORHOOD_SHARD_SIZE; off += NEIGHBORHOOD_PAGE_SIZE) {
-    const page = await fetchNeighborhoodUrlPage(NEIGHBORHOOD_PAGE_SIZE, off);
+    // EK (SEO YAYIN ZİNCİRİ): sayfa okunamazsa (null) o ana kadarki düğümlerle
+    // çıkılır — eski çıktıyla aynı — ama `failed` işaretlenir; rota eksik shard
+    // yerine 503 döner.
+    const page = await fetchNeighborhoodUrlPageChecked(NEIGHBORHOOD_PAGE_SIZE, off);
+    if (!page) return { nodes, failed: true };
     for (const row of page.items) nodes.push(neighborhoodUrlNode(row));
     if (page.items.length < NEIGHBORHOOD_PAGE_SIZE) break;
   }
-  return nodes;
+  return { nodes, failed: false };
 }
 
 /** Kompakt [url_path, updated_at] çiftinden <url> düğümü. */
@@ -224,22 +280,32 @@ function pathNode(path: string): string {
 
 // ADDITIVE: pages.xml — statik kurumsal rotalar + envanterdeki index brand/
 // delivery_info kayıtları (path bazında teklenir; envanter kaydı lastmod taşır).
+// EK (SEO YAYIN ZİNCİRİ): kendi statik rotasından sunulan kategori sayfaları
+// (TR_CATEGORY_DEDICATED_ROUTES — ör. /kategori/turkiye-geneli-kargo) index,follow yayınlanır ama
+// envanterde kaydı olmadığında HİÇBİR sitemap'te yer almıyordu (kategori ucu da bu yolu kapsamaz).
+// Envanterde index kaydı yoksa burada, statik rotalarla aynı biçimde (lastmod'suz) listelenir;
+// kayıt yayınlanınca satır categories.xml'e envanterden girer ve buradan kendiliğinden çıkar
+// (aynı URL iki sitemap'e yazılmaz). Liste tek kaynaktan: app/kategori altındaki statik rota
+// klasörleriyle eşitliği lib/hreflangFamily.test.ts sabitler.
 function pageNodes(inventory: SeoInventoryItem[]): string[] {
   const invItems = inventory.filter((item) => matchesType(item, "pages"));
   const invPaths = new Set(invItems.map((item) => item.url_path));
+  const allPaths = new Set(inventory.map((item) => item.url_path));
   return [
     ...invItems.map(urlNode),
     ...STATIC_INDEXABLE_PAGES.filter((p) => !invPaths.has(p)).map(pathNode),
+    ...[...DEDICATED_CATEGORY_PATHS].filter((p) => !allPaths.has(p)).map(pathNode),
   ];
 }
 
 // ADDITIVE: blog.xml — tek kaynak Admin/DB'deki /blog SEO sayfası
 // (getBlogPosts: body_blocks "blog-post" kayıtları; boşsa küratörlü fallback).
 // Envanterde /blog path'leri varsa lastmod'larıyla önceliklidir.
-async function blogNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
+async function blogNodes(inventory: SeoInventoryItem[]): Promise<NodeRead> {
   const invItems = inventory.filter((item) => matchesType(item, "blog"));
   const invPaths = new Set(invItems.map((item) => item.url_path));
   const nodes = invItems.map(urlNode);
+  let failed = false;
   if (!invPaths.has("/blog")) nodes.push(pathNode("/blog"));
   try {
     const posts = await getIndexableBlogPosts();
@@ -251,8 +317,9 @@ async function blogNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
     }
   } catch {
     // Blog kaynağına ulaşılamazsa envanter + /blog kökü ile yetinilir.
+    failed = true;
   }
-  return nodes;
+  return { nodes, failed };
 }
 
 // ADDITIVE: neighborhoods.xml — İstanbul mahalleleri (getIndexableNeighborhoods).
@@ -261,11 +328,11 @@ async function neighborhoodNodes(): Promise<string[]> {
   return neighborhoods.map(urlNode);
 }
 
-async function imageNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
+async function imageNodes(inventory: SeoInventoryItem[]): Promise<NodeRead> {
   const productItems = inventory.filter(
     (item) => item.page_type === "product" && item.url_path.startsWith("/urun/"),
   );
-  if (productItems.length === 0) return [];
+  if (productItems.length === 0) return { nodes: [], failed: false };
 
   const wanted = new Map(productItems.map((item) => [item.url_path.replace(/^\/urun\//, ""), item]));
   const nodes: string[] = [];
@@ -274,6 +341,10 @@ async function imageNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
 
   do {
     const result = await fetchProductsPaged({ page, page_size: 100 });
+    // EK (SEO YAYIN ZİNCİRİ): fetchProductsPaged hata hâlinde boş sayfa (total 0)
+    // döndürür; envanterde ürün varken bu "ürün yok" değil "okunamadı" demektir →
+    // eksik images.xml 200 ile verilmez (rota 503 döner).
+    if (isFailedProductPage(result.pagination)) return { nodes, failed: true };
     totalPages = Math.max(1, result.pagination.total_pages);
     for (const product of result.items) {
       const seoItem = wanted.get(product.slug);
@@ -281,9 +352,11 @@ async function imageNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
       const lastmod = validDate(seoItem.updated_at);
       // Sitemap standardı MUTLAK URL ister; DB'deki "/r2/..." proxy yolları
       // aynen basılınca GSC "Geçersiz URL" veriyordu (1294 örnek, 3 Ağu 2026).
-      const imageLoc = product.cover_image_url.startsWith("http")
-        ? product.cover_image_url
-        : absoluteUrl(product.cover_image_url);
+      // EK (TEK GÖRSEL KAYNAĞI): adres vitrinin GERÇEKTEN sunduğu dosyadır (stüdyo kopyası →
+      // medya normalizasyonu; "/r2/…" çıktısı bugünküyle aynı). Sunulamayan kapak (stüdyo
+      // kopyası olmayan eski yol) için satır basılmaz — yeni yoldaki (productRowNode) kuralla aynı.
+      const imageLoc = servedProductImageUrl(product.cover_image_url);
+      if (!imageLoc) continue;
       nodes.push(
         [
           "<url>",
@@ -291,7 +364,7 @@ async function imageNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
           lastmod ? `<lastmod>${lastmod}</lastmod>` : "",
           "<image:image>",
           `<image:loc>${escapeXml(imageLoc)}</image:loc>`,
-          `<image:title>${escapeXml(product.name)}</image:title>`,
+          // <image:title> KALDIRILDI: Google bu etiketi kullanımdan kaldırdı (yok sayıyor).
           "</image:image>",
           "</url>",
         ].join(""),
@@ -300,30 +373,172 @@ async function imageNodes(inventory: SeoInventoryItem[]): Promise<string[]> {
     page += 1;
   } while (page <= totalPages && page <= 500);
 
-  return nodes;
+  return { nodes, failed: false };
 }
 
-export async function renderSitemap(type: SitemapType): Promise<string> {
-  const inventory = await getIndexableInventory();
-  const nodes =
-    type === "images"
-      ? await imageNodes(inventory)
-      : type === "pages"
-        ? pageNodes(inventory)
-        : type === "neighborhoods"
-          ? await neighborhoodNodes()
-          : type === "blog"
-            ? await blogNodes(inventory)
-            : inventory.filter((item) => matchesType(item, type)).map(urlNode);
+// ---------------------------------------------------------------------------
+// EK (SEO YAYIN ZİNCİRİ) — ADDITIVE: products.xml / images.xml TEK KAYNAĞI.
+// Sahip kuralı: AKTİF ÜRÜN SİTEMAP DIŞINDA KALAMAZ. Envanter (seo_page) kaydı
+// olmayan yeni ürünler products.xml'e giremiyordu (10 Eyl 2026: 205 aktif ürün).
+// Kaynak artık GET /api/public/seo/product-urls (aktif ürün başına tek satır).
+// Uç yayında değilse (404), hata verirse ya da boş dönerse null → çağıran
+// BUGÜNKÜ envanter yoluna düşer (vitrin API'den önce de sonra da yayınlanabilir).
+// EK: yanıt EKSİKSE (`incomplete`: yolu geçersiz satır atıldı ya da `total` satır
+// sayısından büyük) satırlar yine kullanılır ama çağıran eksikleri envanterle
+// TAMAMLAR (readSitemapNodes) → çıktı iki kaynağın hiçbirinden dar olmaz.
+// ---------------------------------------------------------------------------
+type ActiveProductRows = { rows: ProductUrlRow[]; incomplete: boolean };
+
+async function readActiveProductRows(): Promise<ActiveProductRows | null> {
+  if (!SITE_INDEXABLE) return null;
+  const result = await fetchProductUrls();
+  return result.state === "ok" ? { rows: result.rows, incomplete: result.incomplete === true } : null;
+}
+
+/**
+ * Aktif ürün satırından <url>; withImage ise kapak görseli <image:image><image:loc> olarak eklenir.
+ * withImage iken basılabilir görsel adresi yoksa (boş, `data:`, stüdyo kopyası olmayan eski medya yolu)
+ * boş string döner → satır images.xml'e girmez.
+ */
+function productRowNode(row: ProductUrlRow, withImage: boolean): string {
+  const lastmod = row.updated_at ? validDate(row.updated_at) : null;
+  // EK (TEK GÖRSEL KAYNAĞI): lib/productImageUrl.ts — görünür <img> ile aynı karar (stüdyo kopyası
+  // olan eski yol artık çalışan /studio/… adresiyle basılır; kopyası olmayan ölü yol basılmaz).
+  const imageLoc = withImage ? servedProductImageUrl(row.image) : null;
+  if (withImage && !imageLoc) return "";
+  return [
+    "<url>",
+    `<loc>${escapeXml(absoluteUrl(row.url_path))}</loc>`,
+    lastmod ? `<lastmod>${lastmod}</lastmod>` : "",
+    imageLoc ? `<image:image><image:loc>${escapeXml(imageLoc)}</image:loc></image:image>` : "",
+    "</url>",
+  ].join("");
+}
+
+// ---------------------------------------------------------------------------
+// EK (SEO YAYIN ZİNCİRİ — KATEGORİ YASASI) — ADDITIVE: categories.xml.
+// KURAL (5 Eki 2026 — düzeltildi): kategori sayfasının index durumunu KAYIT belirler; ürün sayısı tek
+// başına sitemap'ten düşürmez. Ürün kategorisi satırları GET /api/public/seo/category-urls yanıtından gelir
+// (yayında + index kategori kayıtları) ve HEPSİ listelenir (lastmod = updated_at); sayım alanları yalnız
+// kaynak sağlık denetiminde kullanılır (lib/sitemapSources.ts). Uç yayında değilse
+// (404), hata verirse ya da yanıt eksik / kullanılamazsa null → BUGÜNKÜ envanter mantığı
+// aynen (karar: lib/sitemapSources.ts categoryUrlsResultOf).
+// Ucun KAPSAMADIĞI satırlar envanterden bugünkü gibi eklenir:
+//   • category_location (konum + kategori sayfaları — ürün kategorisi değildir),
+//   • kendi statik rotasından sunulan kategori (ör. /kategori/turkiye-geneli-kargo): listesi
+//     kategori bağından değil teslimat profilinden gelir; ucun saydığı "kategoriye bağlı ürün"
+//     o sayfanın listelediği ürün sayısı DEĞİLDİR → o URL için envanter kararı geçerli kalır:
+//     envanterde index kaydı VARSA burada listelenir; YOKSA pages.xml'de (pageNodes) listelenir.
+// ---------------------------------------------------------------------------
+const DEDICATED_CATEGORY_PATHS: ReadonlySet<string> = new Set(TR_CATEGORY_DEDICATED_ROUTES.map((slug) => `/kategori/${slug}`));
+
+async function readActiveCategoryRows(): Promise<CategoryUrlRow[] | null> {
+  if (!SITE_INDEXABLE) return null;
+  const result = await fetchCategoryUrls();
+  return result.state === "ok" ? result.rows : null;
+}
+
+/** Envanter satırı kategori ucunun kapsamı DIŞINDA mı? (dışındaysa bugünkü gibi envanterden listelenir) */
+function isOutsideCategoryUrls(item: SeoInventoryItem): boolean {
+  return item.page_type !== "category" || DEDICATED_CATEGORY_PATHS.has(item.url_path);
+}
+
+function categoryRowNode(row: CategoryUrlRow): string {
+  const lastmod = row.updated_at ? validDate(row.updated_at) : null;
+  return ["<url>", `<loc>${escapeXml(absoluteUrl(row.url_path))}</loc>`, lastmod ? `<lastmod>${lastmod}</lastmod>` : "", "</url>"].join("");
+}
+
+/** Bir sitemap tipinin düğümleri + "kaynak okunamadı" bilgisi (tek uygulama; iki render da bunu kullanır). */
+async function readSitemapNodes(type: SitemapType): Promise<NodeRead> {
+  if (type === "categories") {
+    // İki okuma PARALEL (ek bekleme yok); envanter iki yolda da gerekir (category_location satırları).
+    const [rows, inv] = await Promise.all([readActiveCategoryRows(), readIndexableInventory()]);
+    const fromInventory = inv.items.filter((item) => matchesType(item, type));
+    // Uç yok / kullanılamadı → bugünkü envanter mantığı birebir.
+    if (!rows) return { nodes: fromInventory.map(urlNode), failed: inv.failed };
+    // Envanter OKUNAMADIYSA ucun kapsamadığı satırlar eksik kalırdı → eksik sitemap 200 ile
+    // verilmez (`failed` → rota 503; bugünkü kuralın aynısı).
+    const outside = fromInventory.filter(isOutsideCategoryUrls);
+    const outsidePaths = new Set(outside.map((item) => item.url_path));
+    const nodes = [
+      ...rows.filter((row) => !outsidePaths.has(row.url_path) && !DEDICATED_CATEGORY_PATHS.has(row.url_path)).map(categoryRowNode),
+      ...outside.map(urlNode),
+    ];
+    return { nodes, failed: inv.failed };
+  }
+  if (type === "products" || type === "images") {
+    const active = await readActiveProductRows();
+    if (active) {
+      const nodes =
+        type === "images"
+          ? active.rows.map((row) => productRowNode(row, true)).filter((node) => node !== "")
+          : active.rows.map((row) => productRowNode(row, false));
+      if (!active.incomplete) return { nodes, failed: false };
+      // EK — EKSİK YANIT: ürün ucunun KAPSAMADIĞI yollar bugünkü envanter mantığıyla eklenir
+      // (birleşim). Envanter yalnız bu olağan dışı durumda okunur; okunamazsa eldeki aktif
+      // satırlarla yetinilir (kaynak ucu yanıt verdi → 503 değil; eksik zaten günlüğe yazıldı).
+      const covered = new Set(active.rows.map((row) => row.url_path));
+      const rest = (await readIndexableInventory()).items.filter((item) => !covered.has(item.url_path));
+      if (type === "images") return { nodes: [...nodes, ...(await imageNodes(rest)).nodes], failed: false };
+      return { nodes: [...nodes, ...rest.filter((item) => matchesType(item, "products")).map(urlNode)], failed: false };
+    }
+  }
+  const { items: inventory, failed } = await readIndexableInventory();
+  if (type === "images") {
+    const legacy = await imageNodes(inventory);
+    return { nodes: legacy.nodes, failed: failed || legacy.failed };
+  }
+  if (type === "pages") return { nodes: pageNodes(inventory), failed };
+  if (type === "neighborhoods") return { nodes: await neighborhoodNodes(), failed };
+  if (type === "blog") {
+    // Blog'un URL kümesi yazı listesinden gelir (envanter yalnız lastmod katar):
+    // yalnız İKİ kaynak da okunamadıysa "üretilemedi" sayılır.
+    const blog = await blogNodes(inventory);
+    return { nodes: blog.nodes, failed: failed && blog.failed };
+  }
+  return { nodes: inventory.filter((item) => matchesType(item, type)).map(urlNode), failed };
+}
+
+function sitemapXml(type: SitemapType, nodes: string[]): string {
   const imageNamespace =
     type === "images" ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : "";
   return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imageNamespace}>${nodes.join("")}</urlset>`;
+}
+
+export async function renderSitemap(type: SitemapType): Promise<string> {
+  return sitemapXml(type, (await readSitemapNodes(type)).nodes);
+}
+
+/** EK (SEO YAYIN ZİNCİRİ): null = bu tipin kaynağı OKUNAMADI → rota 503 (boş/eksik sitemap 200 ile verilmez). */
+export async function renderSitemapOrNull(type: SitemapType): Promise<string | null> {
+  const { nodes, failed } = await readSitemapNodes(type);
+  return failed ? null : sitemapXml(type, nodes);
 }
 
 export async function renderSitemapIndex(): Promise<string> {
   if (!SITE_INDEXABLE) {
     return `${XML_HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
   }
+  return sitemapIndexXml(await neighborhoodShardCount());
+}
+
+/**
+ * EK (SEO YAYIN ZİNCİRİ): null = mahalle shard sayısı OKUNAMADI → rota 503.
+ * Aksi hâlde index yalnız neighborhoods-1 ile (diğer shard'lar eksik) 200 dönüyor
+ * ve CDN bu eksik index'i 5 dk saklıyordu.
+ */
+export async function renderSitemapIndexOrNull(): Promise<string | null> {
+  if (!SITE_INDEXABLE) return renderSitemapIndex();
+  if (SITEMAP_PROVINCE_LOCK.length > 0) {
+    // Acil şalter aktifse kilit TAM liste üzerinde uygulanır (neighborhoodShardCount ile aynı kural).
+    const locked = await readIndexableNeighborhoods();
+    return locked.failed ? null : sitemapIndexXml(shardCountOf(locked.items.length));
+  }
+  const first = await fetchNeighborhoodUrlPageChecked(1, 0);
+  return first ? sitemapIndexXml(shardCountOf(first.total)) : null;
+}
+
+function sitemapIndexXml(shardCount: number): string {
   // GLOBAL Faz 2 (ADDITIVE): locale sitemap discovery — TR tip listesi ve
   // envanteri DEĞİŞMEDİ; index'e yalnız locale-de/locale-en girişleri eklenir.
   // Bu dosyalar sadece approved+indexable Global URL'leri taşır (boşsa boş urlset).
@@ -331,7 +546,6 @@ export async function renderSitemapIndex(): Promise<string> {
   // sayısı kadar neighborhoods-N girişi listelenir. Bugün shard sayısı 1 olduğu
   // için index'e giren tek satır "neighborhoods-1.xml" olur; içeriği bugünkü
   // neighborhoods.xml ile birebir aynıdır.
-  const shardCount = await neighborhoodShardCount();
   const neighborhoodTypes = Array.from({ length: shardCount }, (_, i) => `neighborhoods-${i + 1}`);
   const allTypes: string[] = [
     ...SITEMAP_TYPES.filter((t) => t !== "neighborhoods"),

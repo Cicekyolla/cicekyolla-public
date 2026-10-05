@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeJsonLd } from "@/lib/jsonLdSafe";
 import { BadgeCheck, Globe2, Map, Sparkles } from "lucide-react";
 import { SiteMapContent } from "./SiteMapContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
@@ -33,7 +34,7 @@ export default async function SiteHaritasiPage() {
 
   return (
     <main className="min-h-screen bg-[#FAF8FD]">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
       <section className="relative overflow-hidden bg-[#0B0317] px-5 pb-20 pt-24 text-white sm:px-8 lg:px-14">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(124,58,237,0.42),transparent_34%),radial-gradient(circle_at_12%_88%,rgba(91,33,182,0.28),transparent_30%)]" />
         <div className="relative mx-auto max-w-[1440px]">
