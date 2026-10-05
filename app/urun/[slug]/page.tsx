@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { stripTrailingBrand, titleForTemplate } from "@/lib/titleBrand";
+import { descriptionSection, withoutApproxPrefix } from "@/lib/productFaqSections";
 import { resolveUnitPrice } from "@/lib/productPrice";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
@@ -64,14 +65,10 @@ function plainText(value: string): string {
     .trim();
 }
 
-function htmlSection(description: string, start: RegExp, end?: RegExp): string {
-  const startMatch = start.exec(description);
-  if (!startMatch) return "";
-  const from = (startMatch.index ?? 0) + startMatch[0].length;
-  const rest = description.slice(from);
-  const endMatch = end?.exec(rest);
-  return rest.slice(0, endMatch?.index ?? rest.length);
-}
+// DÜZELTME (5 Eki 2026): bölümler sabit bitiş kalıbıyla kesiliyordu; açıklama başka bir başlık
+// kullandığında bölüm açıklamanın sonuna kadar uzuyor, sonraki bölümlerin başlıkları ve maddeleri
+// SSS cevabına karışıyordu. Sınır artık lib/productFaqSections.ts (descriptionSection): bölüm,
+// başlangıçtan sonra gelen İLK bölüm etiketinde biter.
 
 function headingItems(value: string): string[] {
   return [...value.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)]
@@ -94,34 +91,36 @@ function productFaqsFromDescription(productName: string, description?: string | 
   if (explicit.length) return explicit.slice(0, 8);
 
   const generated: ProductFaq[] = [];
-  const content = headingItems(htmlSection(description, /Ürün İçeriği/i, /Yaklaşık Ölçüler/i)).slice(0, 10);
+  const content = headingItems(descriptionSection(description, /Ürün İçeriği/i)).slice(0, 10);
   if (content.length) generated.push({
     question: `${productName} içeriğinde neler bulunur?`,
     answer: `${productName}; ${content.join(", ")} kullanılarak hazırlanır.`,
   });
 
   const text = plainText(description);
-  const height = text.match(/Yükseklik\s*:\s*([^.,;]+?cm)/i)?.[1];
-  const width = text.match(/Genişlik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const heightRaw = text.match(/Yükseklik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const widthRaw = text.match(/Genişlik\s*:\s*([^.,;]+?cm)/i)?.[1];
+  const height = heightRaw ? withoutApproxPrefix(heightRaw) : heightRaw;
+  const width = widthRaw ? withoutApproxPrefix(widthRaw) : widthRaw;
   if (height || width) generated.push({
     question: `${productName} ölçüleri nedir?`,
     answer: [height ? `Yaklaşık yükseklik ${height}` : "", width ? `genişlik ${width}` : ""].filter(Boolean).join(", ") + ".",
   });
 
-  const recipients = headingItems(htmlSection(description, /Kimlere Gönderilebilir\?/i, /Hangi Günlerde Gönderilebilir\?/i))
+  const recipients = headingItems(descriptionSection(description, /Kimlere Gönderilebilir\?/i))
     .filter((item) => !/:|cm/i.test(item)).slice(0, 8);
   if (recipients.length) generated.push({
     question: `${productName} kimlere gönderilebilir?`,
     answer: `Bu aranjman ${recipients.join(", ")} için şık bir hediye seçeneğidir.`,
   });
 
-  const occasions = headingItems(htmlSection(description, /Hangi Günlerde Gönderilebilir\?/i, /Çiçeklerin Anlamı/i)).slice(0, 8);
+  const occasions = headingItems(descriptionSection(description, /Hangi Günlerde Gönderilebilir\?/i)).slice(0, 8);
   if (occasions.length) generated.push({
     question: `${productName} hangi özel günler için uygundur?`,
     answer: `${occasions.join(", ")} gibi özel günlerde gönderilebilir.`,
   });
 
-  const care = plainText(htmlSection(description, /Bakım Talimatı/i));
+  const care = plainText(descriptionSection(description, /Bakım Talimatı/i));
   if (care) generated.push({
     question: `${productName} bakımı nasıl yapılır?`,
     answer: care.length > 420 ? `${care.slice(0, 417).replace(/\s+\S*$/, "")}…` : care,
