@@ -147,8 +147,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // (ölü eski yol) atlanır, hiçbiri yoksa bugünkü yedek (og:image yok / varsayılan twitter görseli).
   const ogImage = firstServedProductImageUrl([seo?.og_image, data.images.find((i) => i.role === "cover")?.url, data.images[0]?.url]);
   // EK (SEO YAYIN ZİNCİRİ): canonical ve og:url istekteki yazımdan DEĞİL, KAYITLI
-  // slug'tan üretilir (API araması büyük/küçük harf duyarsız → /urun/Kirmizi-Gul
-  // kendi yazımıyla canonical veriyordu). Kayıtlı slug boşsa istek slug'ı kalır.
+  // slug'tan üretilir. Kayıtlı slug boşsa istek slug'ı kalır.
+  // DÜZELTME (5 Eki 2026): eski not "API araması büyük/küçük harf duyarsız → /urun/Kirmizi-Gul
+  // 200 dönüyordu" diyordu; YANLIŞ. API, slug'ı aramadan ÖNCE küçük harf biçimine göre doğrular
+  // (422) → büyük harfli yazım main'de de bu dalda da 404'tür; ikinci bir 200 adres hiç olmadı.
   const canonicalPath = `/urun/${product.slug || params.slug}`;
   // EK (SEO YAYIN ZİNCİRİ — hreflang ailesi): ürünün en az bir indexlenebilir locale sürümü
   // varsa Türkçe sayfa da kümeyi basar: tr (kendi canonical'ı) + o sürümler + locale
@@ -184,9 +186,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const data = await fetchProductBySlug(params.slug);
   if (!data) notFound();
 
-  // EK (SEO YAYIN ZİNCİRİ): istek slug'ı kayıtlı slug'tan farklıysa (büyük/küçük
-  // harf ya da başka bir normalizasyon farkı) aynı ürün ikinci bir adreste 200
-  // dönmez → kanonik adrese kalıcı yönlendirme (lib/productBreadcrumb.ts).
+  // EK (SEO YAYIN ZİNCİRİ): istek slug'ı kayıtlı slug'tan farklıysa aynı ürün ikinci bir
+  // adreste 200 dönmez → kanonik adrese kalıcı yönlendirme (lib/productBreadcrumb.ts).
+  // DÜZELTME (5 Eki 2026): bu dal BÜYÜK HARFLİ yazımı yönlendirmez — API öyle bir slug için ürün
+  // döndürmez (422 → 404). Yalnız API'nin farklı yazımla ürün döndürdüğü bir durumda (ör. yüzde
+  // kodlaması) çalışan bir emniyet kuralıdır; "büyük harf → 308" beklentisi yanlıştı.
   // EK: isteğin sorgu dizesi (gclid, utm_* …) hedefe taşınır → tıklama ilişkilendirmesi
   // yönlendirmede kaybolmaz. (Rota zaten istek başına çizilir; `searchParams` bunu değiştirmez.)
   const slugRedirect = productSlugRedirectPath(params.slug, data.product.slug);

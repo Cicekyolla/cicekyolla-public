@@ -6,11 +6,13 @@
 //
 // TR ürün sayfasının (/urun/<slug>) iki kuralı burada saf karar olarak durur:
 //
-//  1) KANONİK SLUG. API slug aramasını büyük/küçük harf duyarsız yapıyor;
-//     /urun/Kirmizi-Gul 200 dönüyor ve canonical'ı da istekteki yazımla
-//     basıyordu → aynı ürün birden çok adreste indekslenebiliyordu. Canonical,
-//     og:url ve JSON-LD url artık KAYITLI slug'tan üretilir; istek slug'ı
-//     kayıtlı slug'tan farklıysa kalıcı yönlendirme yapılır.
+//  1) KANONİK SLUG. Canonical, og:url ve JSON-LD url KAYITLI slug'tan üretilir; istek
+//     slug'ı kayıtlı slug'tan farklıysa kalıcı yönlendirme yapılır.
+//     DÜZELTME (5 Eki 2026): buradaki eski gerekçe ("API araması büyük/küçük harf duyarsız;
+//     /urun/Kirmizi-Gul 200 dönüyor") YANLIŞTI. API slug'ı aramadan önce küçük harf biçimine
+//     göre doğrular; büyük harfli yazım ürün döndürmez → sayfa 404 verir (main'de de). Bu kural
+//     büyük harfi YÖNLENDİRMEZ; yalnız API'nin farklı yazımla ürün döndürdüğü durumda devreye
+//     giren bir emniyet kuralıdır.
 //
 //  2) BREADCRUMB. BreadcrumbList yalnız istemcide (BreadcrumbSchemaTracker)
 //     ve var olmayan "/urunler" basamağıyla enjekte ediliyordu. Artık sunucuda:

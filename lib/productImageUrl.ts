@@ -5,7 +5,7 @@
 // stüdyo kopyası → /studio/<dosya>, yoksa medya normalizasyonu). Makineye dönük
 // çıktılar (Product JSON-LD, og:image / twitter:image, image sitemap, merchant feed)
 // ise KAYITLI ham adresi basıyordu. Kapağı eski "/storage/products/….webp" yolunda
-// kalan ürünlerde (4 Eki 2026 taraması: 131 aktif ürün × 14 dil sürümü) sayfa çalışan
+// kalan ürünlerde (4 Eki 2026 taraması: 131 aktif ürünün Türkçe sayfası; Global ürünlerden yalnız 2'si) sayfa çalışan
 // /studio/… dosyasını gösterirken Google'a 404 veren bir görsel bildiriliyordu.
 //
 // KURAL: makineye dönük her çıktı, görünür <img> ile AYNI kararı kullanır
