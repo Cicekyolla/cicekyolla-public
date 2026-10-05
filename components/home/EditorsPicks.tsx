@@ -18,11 +18,9 @@ export interface EditorPick {
   description?: string; cta?: string; enabled?: boolean;
 }
 
-const productFallback:EditorPick[]=[
- {id:1,name:"Siyah Kutuda Kırmızı Güller",subtitle:"Editör No. 01",price:849,badge:"Editör Seçimi",image:"https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=900&h=1100&fit=crop&auto=format&q=90",slug:"premium-kirmizi-guller"},
- {id:2,name:"Peony & Ranunculus Mix",subtitle:"Editör No. 02",price:999,badge:"Limited Edition",image:"https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=900&h=1100&fit=crop&auto=format&q=90",slug:"pembe-sakayik-buketi"},
- {id:3,name:"Beyaz Zarafet Aranjmanı",subtitle:"Editör No. 03",price:749,badge:"Premium",image:"https://images.unsplash.com/photo-1487530811015-780f2f5a3f48?w=900&h=1100&fit=crop&auto=format&q=90",slug:"beyaz-lale-aranjmani"},
-];
+// Uydurma ürün yedeği KALDIRILDI: CMS okunamadığında ve öne çıkan ürün de yokken üç hayali kart
+// (uydurma ad / fiyat / stok fotoğrafı; ikisinin adresi 404) basılıyordu. Gerçek ürün yoksa yalnız
+// editoryal KATEGORİ kartları gösterilir — sabit kodlu ürün bağlantısı hiçbir koşulda üretilmez.
 const editorialFallback:EditorPick[]=[
  {id:"curated-arrangement",name:"İmza Aranjmanlar",subtitle:"Usta Eller",badge:"Editör Seçimi",image:"/editor-picks/curated-arrangement.jpg",href:"/kategori/cicek-aranjmanlari",description:"Özenle hazırlanan seçkin aranjmanlar.",cta:"Koleksiyonu Keşfet",enabled:true},
  {id:"romantic-red-roses",name:"Aşkın Kırmızı Hali",subtitle:"Sevgiliye Özel",badge:"Limited Edition",image:"/editor-picks/romantic-red-roses.jpg",href:"/kategori/sevgiliye-cicek",description:"Duyguları tek bakışta anlatan kırmızı güller.",cta:"Sevgiliye Seç",enabled:true},
@@ -33,7 +31,7 @@ export function EditorsPicks({products,config,title,subtitle}:{
  products?:EditorPick[];config?:Record<string,unknown>;title?:string|null;subtitle?:string|null;
 }) {
  const cards=Array.isArray(config?.cards)?(config.cards as EditorPick[]):null;
- const picks=(cards?.length?cards.filter(card=>card.enabled!==false):config?editorialFallback:products?.length?products:productFallback);
+ const picks=(cards?.length?cards.filter(card=>card.enabled!==false):config?editorialFallback:products?.length?products:editorialFallback);
  const eyebrow=typeof config?.eyebrow==="string"&&config.eyebrow.trim()?config.eyebrow:"VIP Koleksiyon";
  const heading=title?.trim()||"Özenle Küratörlenen";
  const accent=subtitle?.trim()||"Editör Seçimleri";

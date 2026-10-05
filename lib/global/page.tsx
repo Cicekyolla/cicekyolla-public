@@ -421,6 +421,15 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       robots: surface.indexable ? undefined : NOINDEX,
       alternates: { canonical: self },
       openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description, image: cover }),
+      // EK (TEK GÖRSEL KAYNAĞI): alt segment twitter alanını tanımlamazsa kök layout'un GENEL görseli
+      // miras kalır → og:image ürün kapağıyken twitter:image site görseli oluyordu. Türkçe ürün
+      // sayfasıyla aynı kural: kapak varsa o, yoksa varsayılan paylaşım görseli.
+      twitter: {
+        card: "summary_large_image",
+        ...(title ? { title } : {}),
+        ...(surface.meta_description ? { description: surface.meta_description } : {}),
+        images: [cover ?? absoluteUrl("/twitter-image")],
+      },
     };
     if (surface.indexable && cluster) {
       // Ürün ailesi: tr (/urun/<kayıtlı slug>) + indexlenebilir locale PDP'leri. Küme okunamadıysa basılmaz.
