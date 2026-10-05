@@ -70,6 +70,10 @@ export interface SeoPublicPage {
   // önüne almak için kullanılır. Eski API alanı göndermezse undefined kalır
   // ve davranış öncekiyle birebir aynıdır.
   content_source?: string | null;
+  // ADDITIVE (KATEGORİ YAYIN KURALI): sayfa bir SEO kaydından DEĞİL, kategori ağacından üretildiyse true
+  // (lib/categoryPage.ts syntheticCategoryPage). Kayıtlı sayfada alan yoktur. Yalnız kategori sayfasının
+  // robots kararında kullanılır: kayıtsız + ürünsüz sayfanın index'e verecek kendi içeriği yoktur.
+  synthetic?: boolean;
 }
 
 /** Operatör vitrini ürün kartı: mevcut GET /api/products/:id. Aktif değil / stok 0 / kapak yok / hata → null (ürün atlanır). */

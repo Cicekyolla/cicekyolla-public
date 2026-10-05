@@ -231,8 +231,8 @@ test("KAYNAK: locale ana sayfa / kategori / ürün kümeleri aile kurucusundan g
   const home = dal("home", 'if (parsed.kind === "page")');
   assert.ok(home.includes("const languages = row.indexable ? homeHreflangFamily(row.locales, absoluteUrl) : null;"));
   const category = dal("category", 'if (parsed.kind === "product")');
-  // EK (KATEGORİ YASASI): o dilde ürün listelemeyen kategori noindex'tir → küme de basmaz.
-  assert.ok(category.includes("if (surface.indexable && !emptyCategory) {"));
+  // KURAL (5 Eki 2026): dil kategori sayfasının index durumunu çeviri kaydı belirler; indexlenebilir sayfa kümeyi basar.
+  assert.ok(category.includes("if (surface.indexable) {"));
   // tr yalnız karşılığı kesinken: Türkçe sayfanın küme kaynağı bu sayfayı listeliyor VE Türkçe sayfa kesin indexlenebilir.
   // EK — SIRA: önce küme kaynağı; bu sayfayı listelemiyorsa (uç yayınlanana kadar her istekte) Türkçe sayfa
   // okumaları HİÇ yapılmaz (Promise.all yok → sonucu atılacak ek upstream okuması / bekleme yok).

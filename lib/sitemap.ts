@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
 import { getIndexableBlogPosts } from "@/lib/blog";
-import { isFailedProductPage, isIndexWorthyCategoryRow, type CategoryUrlRow, type ProductUrlRow } from "@/lib/sitemapSources";
+import { isFailedProductPage, type CategoryUrlRow, type ProductUrlRow } from "@/lib/sitemapSources";
 import { TR_CATEGORY_DEDICATED_ROUTES } from "@/lib/global/hreflangFamily";
 // EK (TEK GÖRSEL KAYNAĞI): <image:loc> görünür ürün görseliyle AYNI karardan gelir.
 import { servedProductImageUrl } from "@/lib/productImageUrl";
@@ -417,9 +417,10 @@ function productRowNode(row: ProductUrlRow, withImage: boolean): string {
 
 // ---------------------------------------------------------------------------
 // EK (SEO YAYIN ZİNCİRİ — KATEGORİ YASASI) — ADDITIVE: categories.xml.
-// Yasa: "bir kategori sayfası yalnız en az bir aktif ürün listelediği sürece index'e
-// değerdir." Ürün kategorisi satırları GET /api/public/seo/category-urls yanıtından gelir ve
-// yalnız ürün LİSTELEYENLER (visible_products, yoksa active_products > 0) listelenir (lastmod = updated_at). Uç yayında değilse
+// KURAL (5 Eki 2026 — düzeltildi): kategori sayfasının index durumunu KAYIT belirler; ürün sayısı tek
+// başına sitemap'ten düşürmez. Ürün kategorisi satırları GET /api/public/seo/category-urls yanıtından gelir
+// (yayında + index kategori kayıtları) ve HEPSİ listelenir (lastmod = updated_at); sayım alanları yalnız
+// kaynak sağlık denetiminde kullanılır (lib/sitemapSources.ts). Uç yayında değilse
 // (404), hata verirse ya da yanıt eksik / kullanılamazsa null → BUGÜNKÜ envanter mantığı
 // aynen (karar: lib/sitemapSources.ts categoryUrlsResultOf).
 // Ucun KAPSAMADIĞI satırlar envanterden bugünkü gibi eklenir:
@@ -460,7 +461,7 @@ async function readSitemapNodes(type: SitemapType): Promise<NodeRead> {
     const outside = fromInventory.filter(isOutsideCategoryUrls);
     const outsidePaths = new Set(outside.map((item) => item.url_path));
     const nodes = [
-      ...rows.filter((row) => isIndexWorthyCategoryRow(row) && !outsidePaths.has(row.url_path)).map(categoryRowNode),
+      ...rows.filter((row) => !outsidePaths.has(row.url_path) && !DEDICATED_CATEGORY_PATHS.has(row.url_path)).map(categoryRowNode),
       ...outside.map(urlNode),
     ];
     return { nodes, failed: inv.failed };

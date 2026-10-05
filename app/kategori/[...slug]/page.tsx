@@ -22,6 +22,7 @@ import { stripTrailingBrand } from "@/lib/titleBrand";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
   categoryCanonicalPath,
+  categoryIndexRule,
   categoryListingState,
   categoryPageTitle,
   EMPTY_CATEGORY_ROBOTS,
@@ -90,12 +91,23 @@ async function mainSeriesState(path: string, pageNo: number): Promise<CategoryLi
  * FAIL-OPEN: ağaç okunamadıysa (statik yedek) ya da ürün okuması başarısızsa false → bugünkü robots
  * (API kesintisi dolu bir kategoriyi index dışına itmez).
  */
-async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?: string | null): Promise<boolean> {
-  if (pageNo !== 1) return false;
+// EK (KATEGORİ YAYIN KURALI — 5 Eki 2026): ürün SAYISI tek başına index durumunu değiştirmez
+// (kural: lib/categoryPagination.ts categoryIndexRule). Bu işlev artık yalnız şu üç durumda true döner:
+//   1) kategori canlı ağaçta ama AKTİF DEĞİL (taslak …) → her sayfasında index dışı,
+//   2) ürün kategorisi sayfası canlı ağaçta çözülemiyor (yalnız SEO kaydı kalmış) → listesi yok (eski kural aynen),
+//   3) sayfa KAYITSIZ (ağaçtan üretilen sentetik sayfa) ve filtresiz listesi kesin boş → kendi içeriği de ürünü de yok.
+// SEO kaydı olan AKTİF kategori ürünsüz olsa da robots kaydın index_state'idir (ürün okuması yapılmaz).
+async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?: string | null, synthetic = false): Promise<boolean> {
   const tree = await getCategoryTree();
   if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;
-  const categoryId = findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, ""));
+  const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
+  const node = findCategoryNodeBySlug(tree, slug);
+  const rule = categoryIndexRule({ status: (node as { status?: unknown } | null)?.status, synthetic });
+  if (node && rule === "noindex") return true;
+  if (pageNo !== 1) return false;
+  const categoryId = findCategoryIdBySlug(tree, slug);
   if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });
+  if (rule !== "count") return false;
   return isConfirmedEmptyCategory(
     pageNo,
     await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),
@@ -140,7 +152,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // yanıt verdi, total 0) robots "noindex, follow" olur ve hreflang kümesi basılmaz (noindex sayfa aile
   // üyesi olamaz). Zaten index dışı sayfada (önizleme / noindex kayıt) okuma yapılmaz, robots aynen.
   // Karar yalnız 1. sayfada verilir (sayfa N ≥ 2'nin yanıtı kategori için kanıt değildir).
-  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type));
+  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type, page.synthetic === true));
   let languages: Record<string, string> | null = null;
   if (pageNo === 1 && page.index_state === "index" && !emptyCategory) {
     const tree = await getCategoryTree();

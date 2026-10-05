@@ -549,17 +549,20 @@ const BUGUNKU_KATEGORILER = [
   `${SITE}/kategori/yalniz-envanterde`,
 ];
 
-test("categories.xml: kategori ucu ok → yalnız ÜRÜN LİSTELEYEN kategoriler (lastmod = updated_at) + ucun kapsamadığı envanter satırları", async () => {
+test("categories.xml: kategori ucu ok → ucun HER satırı (yayında + index kayıt; ürün sayısı sitemap'ten DÜŞÜRMEZ, lastmod = updated_at) + ucun kapsamadığı envanter satırları", async () => {
   kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: KATEGORI_ENVANTERI });
   const xml = await renderSitemapOrNull("categories");
   assert.ok(xml);
   assert.deepEqual(locs(xml!), [
     `${SITE}/kategori/guller`,
+    `${SITE}/kategori/bos-kategori`,
     `${SITE}/kategori/yeni-kategori-envanterde-yok`,
     `${SITE}/maltepe-cicek-siparisi`,
     `${SITE}/kategori/turkiye-geneli-kargo`,
   ]);
-  assert.ok(!xml!.includes("/kategori/bos-kategori"), "0 aktif ürünlü kategori sitemap'te yok");
+  // KURAL (5 Eki 2026): yayında + index kaydı olan kategori ürünsüz olsa da sitemap'te KALIR (index durumunu kayıt belirler).
+  assert.ok(xml!.includes(`<loc>${SITE}/kategori/bos-kategori</loc><lastmod>2026-09-01T08:00:00.000Z</lastmod>`), "ürünsüz ama yayında + index kategori listelenir");
+  assert.equal(locs(xml!).filter((l) => l === `${SITE}/kategori/turkiye-geneli-kargo`).length, 1, "kendi rotasından sunulan kategori tek kez (envanter satırı)");
   assert.ok(!xml!.includes("/kategori/yalniz-envanterde"), "ucun listelemediği ürün kategorisi (yayınlı + index değil) girmez");
   assert.ok(!xml!.includes("noindex-kategori"));
   assert.ok(xml!.includes(`<loc>${SITE}/kategori/guller</loc><lastmod>2026-10-01T08:00:00.000Z</lastmod>`), "lastmod uçtan");
@@ -578,10 +581,11 @@ test("categories.xml: kendi statik rotasından sunulan kategori (turkiye-geneli-
   const xml = await renderSitemapOrNull("categories");
   assert.equal(locs(xml!).filter((l) => l === `${SITE}/kategori/turkiye-geneli-kargo`).length, 1);
   assert.ok(xml!.includes(`<loc>${SITE}/kategori/turkiye-geneli-kargo</loc><lastmod>2026-08-02T00:00:00.000Z</lastmod>`));
-  // Envanterde YOKSA ve uç dolu sayıyorsa uçtan gelir; uç 0 sayıyorsa hiç girmez.
+  // Envanterde YOKSA uç ne sayarsa saysın categories.xml'e uçtan GİRMEZ: bu rota için karar envanterdedir,
+  // kayıt yoksa pages.xml listeler (aşağıdaki test) → aynı URL iki sitemap'e yazılmaz.
   const envantersiz = { status: 200, body: { data: KATEGORI_ENVANTERI.body.data.filter((s) => s.url_path !== "/kategori/turkiye-geneli-kargo") } };
   kur({ [CATEGORY_URLS]: dolu, [INVENTORY]: envantersiz });
-  assert.ok(locs((await renderSitemapOrNull("categories"))!).includes(`${SITE}/kategori/turkiye-geneli-kargo`));
+  assert.ok(!locs((await renderSitemapOrNull("categories"))!).includes(`${SITE}/kategori/turkiye-geneli-kargo`));
   kur({ [CATEGORY_URLS]: KATEGORI_UCU, [INVENTORY]: envantersiz });
   assert.ok(!locs((await renderSitemapOrNull("categories"))!).includes(`${SITE}/kategori/turkiye-geneli-kargo`));
 });

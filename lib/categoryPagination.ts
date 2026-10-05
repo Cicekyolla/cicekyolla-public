@@ -239,6 +239,26 @@ export function isCategoryPageWithoutListing(
 /** Boş kategorinin robots değeri: index dışı, bağlantılar izlenir (menü / ilgili koleksiyonlar taranır). */
 export const EMPTY_CATEGORY_ROBOTS = { index: false, follow: true } as const;
 
+// ============================================================================
+// EK (KATEGORİ YAYIN KURALI — 5 Eki 2026) — yukarıdaki yasanın DÜZELTİLMİŞ hâli.
+// Önceki kural "ürün sayısı 0 ⇒ noindex + sitemap dışı" idi. Dayanağı ölçülmemişti: canlıdaki
+// ürünsüz 56 kategori sayfası kendi SEO başlığı, giriş metni ve SSS'i olan içerik sayfalarıdır;
+// yalnız sayıya bakıp index dışına itmek yayınlanmış sayfayı kaybettirir ve tek ürünlü kategoride
+// index durumunu ürün aktif / pasif oldukça oynatır.
+//
+// KURAL: bir kategori sayfasının index durumunu KAYIT belirler; ürün sayısı tek başına DEĞİŞTİRMEZ.
+//   • kategori aktif değilse (taslak …)            → "noindex"  (yayında olmayan kategori index'e verilmez)
+//   • sayfa bir SEO kaydından geliyorsa             → "record"   (robots = kaydın index_state'i; sayım YOK)
+//   • sayfa kayıtsızsa (ağaçtan üretilen sentetik)  → "count"    (kendi içeriği yoktur: ürün de yoksa index'e değmez)
+// Durum alanı yoksa / okunamadıysa kategori aktif sayılır (fail-open: kesinti dolu sayfayı index dışına itmez).
+// ============================================================================
+export type CategoryIndexRule = "noindex" | "record" | "count";
+export function categoryIndexRule(input: { status?: unknown; synthetic?: boolean | null }): CategoryIndexRule {
+  const status = typeof input.status === "string" ? input.status.trim().toLowerCase() : "";
+  if (status && status !== "active") return "noindex";
+  return input.synthetic === true ? "count" : "record";
+}
+
 /**
  * Liste KESİN boş mu? Yalnız API bu istek için gerçekten yanıt verdiyse (`answered` — okuma başarısız
  * olduğunda dönen yedek sayfa taşımaz), yanıt `total` = 0 bildirdiyse ve satır da gelmediyse true.

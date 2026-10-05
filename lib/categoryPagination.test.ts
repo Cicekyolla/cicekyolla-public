@@ -20,6 +20,7 @@ import {
   CATEGORY_PAGE_STEP,
   CATEGORY_PAGE_WINDOW,
   EMPTY_CATEGORY_ROBOTS,
+  categoryIndexRule,
 } from "./categoryPagination.ts";
 
 test("sayfa 1 → kök yol (?page=1 ikiz URL üretilmez)", () => {
@@ -351,17 +352,38 @@ test("isCategoryWithoutListing: canlı ağaçta karşılığı olmayan ÜRÜN KA
   }
 });
 
-test("KAYNAK: Türkçe kategori sayfası boş kategoride noindex,follow basar ve hreflang kümesi basmaz; boş durum metni doğruyu söyler", () => {
+test("KURAL: kategori index durumunu KAYIT belirler — ürün sayısı tek başına değiştirmez; aktif olmayan kategori ve kayıtsız + ürünsüz sayfa index dışı", () => {
+  // SEO kaydı olan AKTİF kategori: ürün sayısına bakılmaz.
+  assert.equal(categoryIndexRule({ status: "active", synthetic: false }), "record");
+  assert.equal(categoryIndexRule({ status: "active" }), "record");
+  assert.equal(categoryIndexRule({ status: "ACTIVE ", synthetic: null }), "record");
+  // Durum alanı yok / okunamadı → aktif sayılır (kesinti dolu sayfayı index dışına itmez).
+  for (const status of [undefined, null, "", 0, {}]) assert.equal(categoryIndexRule({ status, synthetic: false }), "record", String(status));
+  // Aktif olmayan kategori: kayıt ne derse desin index dışı.
+  for (const status of ["draft", "passive", "archived", "Draft"]) {
+    assert.equal(categoryIndexRule({ status, synthetic: false }), "noindex", status);
+    assert.equal(categoryIndexRule({ status, synthetic: true }), "noindex", status);
+  }
+  // Kayıtsız (ağaçtan üretilen) sayfa: kendi içeriği yoktur → ürün sayımına gidilir.
+  assert.equal(categoryIndexRule({ status: "active", synthetic: true }), "count");
+  assert.equal(categoryIndexRule({ synthetic: true }), "count");
+});
+
+test("KAYNAK: Türkçe kategori sayfası yeni kuralı uygular (kayıtlı sayfada ürün okuması yok); boş durum metni doğruyu söyler", () => {
   const page = readFileSync(new URL("../app/kategori/[...slug]/page.tsx", import.meta.url), "utf8");
-  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type));"));
+  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type, page.synthetic === true));"));
   assert.ok(page.includes("robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : indexRobots(page.index_state),"), "karar yoksa bugünkü robots");
   assert.ok(page.includes("if (pageNo === 1 && page.index_state === \"index\" && !emptyCategory) {"), "noindex sayfa hreflang ailesine girmez");
   // Karar yalnız CANLI ağaç + başarılı ürün okumasıyla verilir; istek ana serinin isteğiyle aynı.
   const fn = page.slice(page.indexOf("async function isCategoryConfirmedEmpty("), page.indexOf("export async function generateMetadata"));
   assert.ok(fn.includes("if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;"));
-  // EK: karar yalnız 1. sayfada; okuma da ancak o zaman yapılır (sayfa ≥ 2'de ek istek yok).
+  // Aktif olmayan kategori HER sayfasında index dışı (durum, sayfa numarasından önce sorulur; ağaç istek içinde tekildir).
+  assert.ok(fn.includes('if (node && rule === "noindex") return true;'));
+  assert.ok(fn.indexOf('if (node && rule === "noindex") return true;') < fn.indexOf("if (pageNo !== 1) return false;"));
+  // Ürün sayımı yalnız 1. sayfada ve YALNIZ kayıtsız (sentetik) sayfada yapılır: kayıtlı sayfada ürün okuması YOK.
   assert.ok(fn.includes("if (pageNo !== 1) return false;"));
-  assert.ok(fn.indexOf("if (pageNo !== 1) return false;") < fn.indexOf("await getCategoryTree()"), "sayfa ≥ 2'de hiçbir okuma yapılmaz");
+  assert.ok(fn.includes('if (rule !== "count") return false;'));
+  assert.ok(fn.indexOf('if (rule !== "count") return false;') < fn.indexOf("await fetchProductsPaged("), "kayıtlı sayfada ürün okuması yapılmaz");
   // EK: ağaçta çözülemeyen ürün kategorisi sayfası listesizdir (konum + kategori sayfaları hariç).
   assert.ok(fn.includes("if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });"));
   assert.ok(fn.includes("return isConfirmedEmptyCategory("));
@@ -378,11 +400,13 @@ test("KAYNAK: Türkçe kategori sayfası boş kategoride noindex,follow basar ve
   assert.ok(landing.includes('<section className="max-w-[1440px] mx-auto px-6 lg:px-14 py-16 text-center">'), "boş durum işaretlemesi aynı");
   assert.ok(landing.includes('className="inline-block mt-4 text-[13px] font-semibold text-[#7C3AED] hover:underline"'));
 
-  // Locale kategori sayfası: o dilde ürün listelemiyorsa noindex,follow + hreflang yok.
+  // Locale kategori sayfası: index durumunu çeviri KAYDI belirler; ürün sayısı index dışına itmez.
   const motor = readFileSync(new URL("./global/page.tsx", import.meta.url), "utf8");
-  assert.ok(motor.includes("const emptyCategory = surface.indexable && Array.isArray(surface.products) && surface.products.length === 0;"));
-  assert.ok(motor.includes("robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : surface.indexable ? undefined : NOINDEX,"));
-  assert.ok(motor.includes("if (surface.indexable && !emptyCategory) {"));
+  const kategoriDali = motor.slice(motor.indexOf('if (parsed.kind === "category")'), motor.indexOf('if (parsed.kind === "product")'));
+  assert.ok(kategoriDali.includes("robots: surface.indexable ? undefined : NOINDEX,"));
+  assert.ok(kategoriDali.includes("if (surface.indexable) {"));
+  assert.equal(/surface\.products\.length === 0/.test(kategoriDali), false, "ürün sayımına bağlı robots kararı geri gelmemeli");
+  assert.equal(motor.includes("EMPTY_CATEGORY_ROBOTS"), false);
 });
 
 // ---------------------------------------------------------------------------

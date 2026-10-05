@@ -350,9 +350,10 @@ export function categoryUrlsResultOf(status: number, json: unknown): CategoryUrl
 }
 
 /**
- * Kategori satırı sitemap'e girer mi? Yasa: sayfa en az bir ürün LİSTELİYOR olmalı. API
- * `visible_products` (aktif + kapak görselli) gönderiyorsa karar ona göre verilir — kapaksız ürün
- * kategori ızgarasında gösterilmez; alan yoksa (eski yanıt) `active_products` kullanılır.
+ * Kategori satırı ürün LİSTELİYOR mu? (API `visible_products` — aktif + kapak görselli — gönderiyorsa o,
+ * yoksa `active_products`.) 5 Eki 2026'dan beri sitemap'e girme ÖLÇÜTÜ DEĞİLDİR (ürün sayısı tek başına
+ * kategori sayfasını sitemap'ten düşürmez — lib/sitemap.ts); yalnız yukarıdaki KAYNAK SAĞLIK denetiminde
+ * kullanılır: 200 dönen yanıtta HİÇBİR kategori ürün listelemiyorsa yanıt bozuk sayılır.
  */
 export function isIndexWorthyCategoryRow(row: Pick<CategoryUrlRow, "active_products" | "visible_products">): boolean {
   return (row.visible_products ?? row.active_products) > 0;

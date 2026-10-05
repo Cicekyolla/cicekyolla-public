@@ -18,6 +18,7 @@
 // ============================================================================
 
 import { unstable_noStore as noStore } from "next/cache";
+import { categoryIndexRule } from "@/lib/categoryPagination";
 import { fetchSeoPage, fetchSeoPageChecked, fetchCategoryById, fetchCategoryTree, isCategoryVisible, type SeoPublicPage } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryNodeBySlug } from "@/lib/catalog";
@@ -54,6 +55,7 @@ export function syntheticCategoryPage(path: string, node: Record<string, unknown
     body_blocks: [],
     faq: Array.isArray(node.faq_json) ? (node.faq_json as SeoPublicPage["faq"]) : [],
     schema_jsonld: {},
+    synthetic: true,
   };
 }
 
@@ -143,7 +145,8 @@ export async function isCategoryPageConfirmedIndexable(
       // (locale yüzeyinin kategori kimliği) verildiyse düğüm AYNI kategori olmalı — aksi hâlde iki taraf
       // farklı category-locales kaydı okurdu.
       nodeFound: !!node && (categoryId == null || String(node.id) === String(categoryId)),
-      hidden: !!node && !isCategoryVisible(node),
+      // EK (KATEGORİ YAYIN KURALI): aktif olmayan (taslak …) kategori Türkçe sayfada index dışıdır → küme üyesi olamaz.
+      hidden: !!node && (!isCategoryVisible(node) || categoryIndexRule({ status: (node as { status?: unknown }).status }) === "noindex"),
       indexState: page?.index_state,
     });
   } catch {
