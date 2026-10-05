@@ -22,6 +22,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
+import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 // ADDITIVE (Release 1 — Global Foundation): işletme kimliği TEK DAMAR (Admin hero.config →
 // resolveSiteIdentity) locale ana sayfa ve İstanbul ilçe sayfalarına da şema olarak basılır
 // (TR ana sayfa/ilçe ile aynı @id, aynı NAP/saat; aggregateRating YOK).
@@ -923,9 +924,9 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       <div data-location-section="hero" className="contents">
         {/* Lokasyon kırıntısı — üst seviyeler gerçek <a href> (şehir sayfasında da) */}
         {kirinti}
-        {kirintiLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: kirintiLd }} /> : null}
-        {localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localLd }} /> : null}
-        {faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}
+        {kirintiLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(kirintiLd) }} /> : null}
+        {localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localLd) }} /> : null}
+        {faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
         {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
@@ -961,7 +962,7 @@ export async function LocalePage({ locale, path, searchParams }: {
     return (
       <V80Shell locale={locale} header={header} footer={v80FooterFromView(view, contact)}>
         {/* Release 1: locale ana sayfada da işletme şeması (TR ana sayfa ile aynı kaynak/düğüm). */}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: localeHomeJsonLd(identity, locale) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localeHomeJsonLd(identity, locale)) }} />
         <V80Page view={view} />
       </V80Shell>
     );

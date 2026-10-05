@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { floristLocalFields, resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
+import { safeJsonLd } from "@/lib/jsonLdSafe";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
 import { fetchDeliveryZones, fetchProducts, fetchRedirectMap, fetchSeoPage, toCardProduct, withMovedDistrictHrefs } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
@@ -150,7 +151,7 @@ function HomeJsonLd({ logoUrl, identity }: { logoUrl: string; identity: SiteIden
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
     />
   );
 }

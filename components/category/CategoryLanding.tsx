@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { fetchProducts, fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
 import { getCategoryTree } from "@/lib/categories";
+import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
   mapTreeToItems,
   getBreadcrumbTrailFromTree,
@@ -549,7 +550,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
       {/* ── Breadcrumb JSON-LD (additive; mevcut schema ile çakışmaz) ── */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd(page.h1, path, trail) }}
+        dangerouslySetInnerHTML={{ __html: escapeJsonLdText(breadcrumbJsonLd(page.h1, path, trail)) }}
       />
     </>
   );

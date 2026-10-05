@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
 import { resolveCategoryPage } from "@/lib/categoryPage";
+import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
   categoryCanonicalPath,
   categoryListingState,
@@ -165,6 +166,6 @@ export default async function Page({ params, searchParams }: PageProps) {
   if (parseCategoryPageParam(searchParams?.page) === null) notFound();
   const faqLd = faqJsonLd(page);
   const rawSchema = page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
-  const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: rawSchema }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} /> : null}</>;
+  const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(rawSchema) }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}</>;
   return <><CategoryLanding page={page} path={path} searchParams={searchParams} />{jsonLd}</>;
 }
