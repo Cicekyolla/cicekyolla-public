@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { stripTrailingBrand } from "@/lib/titleBrand";
+import { stripTrailingBrand, titleForTemplate } from "@/lib/titleBrand";
 import { resolveUnitPrice } from "@/lib/productPrice";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
@@ -159,7 +159,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // null → hreflang basılmaz (bugünkü davranış). Kural: lib/global/hreflangFamily.ts.
   const languages = productHreflangFamily(canonicalPath, (await fetchProductLocaleVersions(product.id))?.locales, absoluteUrl);
   const meta: Metadata = {
-    title,
+    title: titleForTemplate(title),
     description,
     alternates: { canonical: absoluteUrl(canonicalPath) },
     robots: indexRobots(),

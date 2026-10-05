@@ -18,7 +18,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
 import { resolveCategoryPage } from "@/lib/categoryPage";
-import { stripTrailingBrand } from "@/lib/titleBrand";
+import { stripTrailingBrand, titleForTemplate } from "@/lib/titleBrand";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
   categoryCanonicalPath,
@@ -160,7 +160,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (node) languages = categoryHreflangFamily(path, (await fetchCategoryLocaleVersions(node.id))?.locales, absoluteUrl);
   }
   const meta: Metadata = {
-    title,
+    title: titleForTemplate(title),
     description,
     alternates: { canonical: absoluteUrl(canonicalPath) },
     robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : indexRobots(page.index_state),

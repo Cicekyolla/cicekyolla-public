@@ -23,7 +23,7 @@ import Link from "next/link";
 import { absoluteUrl, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { resolveUnitPrice } from "@/lib/productPrice";
-import { stripTrailingBrand } from "@/lib/titleBrand";
+import { stripTrailingBrand, titleForTemplate } from "@/lib/titleBrand";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 // ADDITIVE (Release 1 — Global Foundation): işletme kimliği TEK DAMAR (Admin hero.config →
 // resolveSiteIdentity) locale ana sayfa ve İstanbul ilçe sayfalarına da şema olarak basılır
@@ -328,13 +328,13 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const self = absoluteUrl(`/${locale}`);
     if (!row) {
       const title = HOME_FALLBACK[locale].title;
-      return { title, robots: NOINDEX, alternates: { canonical: self }, openGraph: localeOpenGraph(locale, { url: self, title }) };
+      return { title: titleForTemplate(title), robots: NOINDEX, alternates: { canonical: self }, openGraph: localeOpenGraph(locale, { url: self, title }) };
     }
     // Ana sayfa ailesi: tr (site kökü) + indexlenebilir locale ana sayfaları; noindex satır küme basmaz.
     const languages = row.indexable ? homeHreflangFamily(row.locales, absoluteUrl) : null;
     const title = row.seo_title ?? row.h1 ?? HOME_FALLBACK[locale].title;
     return {
-      title,
+      title: titleForTemplate(title),
       description: row.meta_description ?? undefined,
       robots: row.indexable ? undefined : NOINDEX,
       alternates: languages ? { canonical: self, languages } : { canonical: self },
@@ -356,7 +356,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const languages = listingPage > 1 ? null : pageLanguages(locale, row);
     const title = locationPageTitle(locale, stripTrailingBrand(row.seo_title ?? row.h1 ?? undefined), seo.titlePage);
     return {
-      title,
+      title: titleForTemplate(title),
       description: row.meta_description ?? undefined,
       robots: row.indexable ? undefined : NOINDEX,
       alternates: languages ? { canonical: self, languages } : { canonical: self },
@@ -373,7 +373,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     // (surface.indexable); listelediği ürün sayısı tek başına index dışına itmez (önceki sayım kuralı kaldırıldı —
     // canlıda yayında olan ürünsüz dil kategori sayfalarını deploy anında index dışına atıyordu).
     const meta: Metadata = {
-      title,
+      title: titleForTemplate(title),
       description: surface.meta_description ?? undefined,
       robots: surface.indexable ? undefined : NOINDEX,
       alternates: { canonical: self },
@@ -414,7 +414,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const cover = firstServedProductImageUrl([detail?.images.find((i) => i.role === "cover")?.url, detail?.images[0]?.url]);
     const title = stripTrailingBrand(surface.seo_title ?? surface.name ?? undefined);
     const meta: Metadata = {
-      title,
+      title: titleForTemplate(title),
       description: surface.meta_description ?? undefined,
       robots: surface.indexable ? undefined : NOINDEX,
       alternates: { canonical: self },
