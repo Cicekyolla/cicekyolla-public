@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CategoryLanding } from "@/components/category/CategoryLanding";
 import { resolveCategoryPage } from "@/lib/categoryPage";
+import { stripTrailingBrand } from "@/lib/titleBrand";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
   categoryCanonicalPath,
@@ -121,7 +122,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo)) !== "ok" ? 1 : pageNo;
   // EK (SEO YAYIN ZİNCİRİ): sayfalı seride her sayfa KENDİ başlığını taşır
   // (sayfa 1 aynen; N ≥ 2 → " – Sayfa N").
-  const title = categoryPageTitle(managedTitle(page) || page.title_tag, seoPage);
+  const title = categoryPageTitle(stripTrailingBrand(managedTitle(page) || page.title_tag), seoPage);
   const description = managedDescription(page) || page.meta_description;
   // Kategori sayfaları her zaman kendi yolunu canonical alır; kataloğdaki bayat
   // canonical'lar artık 404 veren /cicekler/* yollarını gösterebiliyordu.

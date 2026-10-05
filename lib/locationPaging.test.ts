@@ -509,7 +509,7 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(meta.includes("const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };"));
   assert.ok(meta.includes("const self = absoluteUrl(seo.canonicalPath);"));
   assert.ok(meta.includes("const languages = listingPage > 1 ? null : pageLanguages(locale, row);"));
-  assert.ok(meta.includes("const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, seo.titlePage);"));
+  assert.ok(meta.includes("const title = locationPageTitle(locale, stripTrailingBrand(row.seo_title ?? row.h1 ?? undefined), seo.titlePage);"));
   // Karar yardımcısı planı / görünümü YENİDEN kurmaz (tek plan kuralı); okumaları LocalePage'inkilerle aynı çağrılardır
   // ve niyet sayfasında GlobalPageBody ile aynı varsayılan kategori eklemesini kullanır.
   const seoFn = page.slice(page.indexOf("async function listingSeoFor("), page.indexOf("export async function localeMetadata"));

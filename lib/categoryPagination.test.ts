@@ -269,7 +269,7 @@ test("KAYNAK: kategori sayfası listesiz / ötesi sayfada 404 verir, bilinmeyen 
 
   const page = readFileSync(new URL("../app/kategori/[...slug]/page.tsx", import.meta.url), "utf8");
   assert.ok(page.includes('const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo)) !== "ok" ? 1 : pageNo;'));
-  assert.ok(page.includes("const title = categoryPageTitle(managedTitle(page) || page.title_tag, seoPage);"));
+  assert.ok(page.includes("const title = categoryPageTitle(stripTrailingBrand(managedTitle(page) || page.title_tag), seoPage);"));
   assert.ok(page.includes("const canonicalPath = categoryCanonicalPath(path, seoPage);"));
   // Ana seri okuması CategoryLanding'in sıralamasız/filtresiz isteğiyle AYNI parametreler (istek içi tekilleştirme).
   // EK (TEK KATEGORİ SIRASI): ikisi de varsayılan sırayı (CATEGORY_DEFAULT_SORT) ister.

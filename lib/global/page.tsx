@@ -22,6 +22,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
+import { stripTrailingBrand } from "@/lib/titleBrand";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 // ADDITIVE (Release 1 — Global Foundation): işletme kimliği TEK DAMAR (Admin hero.config →
 // resolveSiteIdentity) locale ana sayfa ve İstanbul ilçe sayfalarına da şema olarak basılır
@@ -353,7 +354,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };
     const self = absoluteUrl(seo.canonicalPath);
     const languages = listingPage > 1 ? null : pageLanguages(locale, row);
-    const title = locationPageTitle(locale, row.seo_title ?? row.h1 ?? undefined, seo.titlePage);
+    const title = locationPageTitle(locale, stripTrailingBrand(row.seo_title ?? row.h1 ?? undefined), seo.titlePage);
     return {
       title,
       description: row.meta_description ?? undefined,
@@ -367,7 +368,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     const surface = await fetchCategorySurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`);
-    const title = surface.seo_title ?? surface.name ?? undefined;
+    const title = stripTrailingBrand(surface.seo_title ?? surface.name ?? undefined);
     // EK (KATEGORİ YASASI): yüzey okundu ve bu dilde HİÇ ürün listelemiyorsa sayfa index'e değer
     // değildir → "noindex, follow" ve hreflang kümesi basılmaz (Türkçe kategori sayfasıyla aynı kural;
     // API yayınlandığında bu sayfa locale sitemap'inden de düşer). Ürün listesi alanı yoksa / biçimi
@@ -413,7 +414,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     // EK (TEK GÖRSEL KAYNAĞI): kayıtlı ham adres değil, vitrinin GERÇEKTEN sunduğu dosya (görünür
     // <img> ile aynı karar), mutlak adresle; sunulamayan aday atlanır, hiçbiri yoksa varsayılan görsel.
     const cover = firstServedProductImageUrl([detail?.images.find((i) => i.role === "cover")?.url, detail?.images[0]?.url]);
-    const title = surface.seo_title ?? surface.name ?? undefined;
+    const title = stripTrailingBrand(surface.seo_title ?? surface.name ?? undefined);
     const meta: Metadata = {
       title,
       description: surface.meta_description ?? undefined,

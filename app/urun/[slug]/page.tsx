@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { stripTrailingBrand } from "@/lib/titleBrand";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
@@ -134,7 +135,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { product, seo } = data;
   // MARKA EKLENMEZ: app/layout.tsx metadata şablonu ("%s | ÇiçekYolla")
   // zaten ekliyor — burada eklemek duplicate title'a yol açar.
-  const title = seo?.meta_title || product.name;
+  const title = stripTrailingBrand(seo?.meta_title || product.name);
   const description =
     seo?.meta_description ||
     product.short_description ||
