@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { stripTrailingBrand } from "@/lib/titleBrand";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { ProductDisplayName } from "@/lib/i18n/content";
 import Link from "next/link";
@@ -194,9 +195,9 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const { product, images } = data;
   const canonicalSlug = product.slug || params.slug;
   const cover = images.find((i) => i.role === "cover")?.url || images[0]?.url;
-  const price = data.product.sale_price_minor && Number(data.product.sale_price_minor) > 0
-    ? data.product.sale_price_minor
-    : data.product.price_minor;
+  // TEK FİYAT KURALI (lib/productPrice.ts): JSON-LD fiyatı sayfanın İLK gösterdiği fiyattır
+  // (varsayılan seçili varyant = ilk aktif varyant; yoksa ürün) — sayfa ve sipariş ile aynı karar.
+  const price = resolveUnitPrice(data.product, data.variants?.[0]).unitMinor;
   const savedSeo = await fetchProductSeoById(product.id);
   const savedFaqs: ProductFaq[] = (savedSeo?.faq_json ?? []).flatMap((item) => {
     const question = item.q?.trim();
@@ -234,8 +235,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const currentPriceMinor = Number(price);
   const sizeProducts: AutoSizeProduct[] = [...availableRelated]
     .sort((a, b) => {
-      const aPrice = Number(a.sale_price_minor && Number(a.sale_price_minor) > 0 ? a.sale_price_minor : a.price_minor);
-      const bPrice = Number(b.sale_price_minor && Number(b.sale_price_minor) > 0 ? b.sale_price_minor : b.price_minor);
+      const aPrice = resolveUnitPrice(a).unitMinor;
+      const bPrice = resolveUnitPrice(b).unitMinor;
       return Math.abs(aPrice - currentPriceMinor) - Math.abs(bPrice - currentPriceMinor);
     })
     .slice(0, 3)

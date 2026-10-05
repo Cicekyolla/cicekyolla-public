@@ -22,6 +22,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import { stripTrailingBrand } from "@/lib/titleBrand";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 // ADDITIVE (Release 1 — Global Foundation): işletme kimliği TEK DAMAR (Admin hero.config →
@@ -1130,7 +1131,8 @@ export async function LocalePage({ locale, path, searchParams }: {
       ? await fetchProducts({ category_id: primaryCat.category_id, page_size: 20, sort: CATEGORY_DEFAULT_SORT })
       : [];
     const availableRelated = relatedRows.filter((r) => r.slug !== product.slug && r.cover_image_url);
-    const price = product.sale_price_minor && Number(product.sale_price_minor) > 0 ? product.sale_price_minor : product.price_minor;
+    // TEK FİYAT KURALI (lib/productPrice.ts): Türkçe ürün sayfasıyla aynı — sayfanın ilk gösterdiği (ve tahsil edilen) fiyat.
+    const price = resolveUnitPrice(product, data.variants?.[0]).unitMinor;
     const currentPriceMinor = Number(price);
     // ADDITIVE (24 Eyl 2026): Product JSON-LD — TR PDP ile TEK KAYNAK (lib/productSchema.ts).
     // Ad/açıklama o dilin yüzeyinden, URL locale PDP yolu; fiyat/stok/puan sayfadakiyle AYNI (TRY).
@@ -1158,8 +1160,8 @@ export async function LocalePage({ locale, path, searchParams }: {
     const sizeProducts: AutoSizeProduct[] = availableRelated
       .filter((r) => localizedBySlug.has(r.slug))
       .sort((a, b) => {
-        const aP = Number(a.sale_price_minor && Number(a.sale_price_minor) > 0 ? a.sale_price_minor : a.price_minor);
-        const bP = Number(b.sale_price_minor && Number(b.sale_price_minor) > 0 ? b.sale_price_minor : b.price_minor);
+        const aP = resolveUnitPrice(a).unitMinor;
+        const bP = resolveUnitPrice(b).unitMinor;
         return Math.abs(aP - currentPriceMinor) - Math.abs(bP - currentPriceMinor);
       })
       .slice(0, 3)

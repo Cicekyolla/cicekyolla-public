@@ -16,6 +16,7 @@ import { Heart, MessageCircle, ShoppingBag, Truck, Zap, Sparkles, Star, ShieldCh
 import { type PublicProductDetail, type PublicProductImage } from "@/lib/api";
 import { absoluteUrl } from "@/lib/site-config";
 import { useCurrency } from "@/lib/currency";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import galleryMapJson from "@/lib/gallery-map.json";
 import { FlowerGuaranteeBadge } from "@/components/FlowerGuaranteeBadge";
 
@@ -164,11 +165,12 @@ export function ProductDetail({
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
   const sel = variants.find((v) => v.id === variantId) ?? null;
-  const basePrice = sel?.price_minor ?? product.price_minor;
-  const salePrice = sel?.sale_price_minor ?? product.sale_price_minor;
-  const hasSale = salePrice != null && Number(salePrice) > 0 && Number(salePrice) < Number(basePrice);
-  const shown = hasSale ? salePrice : basePrice;
-  const discountPct = hasSale ? Math.round((1 - Number(salePrice) / Number(basePrice)) * 100) : 0;
+  // TEK FİYAT KURALI (lib/productPrice.ts — API sipariş birim fiyatıyla aynı): gösterilen = JSON-LD = tahsil edilen.
+  const resolved = resolveUnitPrice(product, sel);
+  const basePrice = resolved.baseMinor;
+  const hasSale = resolved.hasSale;
+  const shown = resolved.unitMinor;
+  const discountPct = hasSale ? Math.round((1 - shown / basePrice) * 100) : 0;
 
   // WhatsApp hazır mesajındaki ürün bağlantısı.
   //

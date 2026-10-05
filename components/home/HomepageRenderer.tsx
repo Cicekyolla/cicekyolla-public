@@ -30,6 +30,7 @@ import { WhatsAppCTA } from "./WhatsAppCTA";
 import { Newsletter } from "./Newsletter";
 import { ProductShowcase } from "./ProductShowcase";
 import { EditorsPicks } from "./EditorsPicks";
+import { resolveUnitPrice } from "@/lib/productPrice";
 import { WorkshopToday } from "./WorkshopToday";
 import type { WorkshopSlot } from "./WorkshopToday";
 import { MoodPicker } from "./MoodPicker";
@@ -61,7 +62,7 @@ function buildWorkshopSlots(s: HpSection): WorkshopSlot[] {
   for (const p of s.products ?? []) {
     if (slots.length >= 3) break;
     if (!p.cover_image_url) continue; // görselsiz ürün slotu bozar → statik karta bırak
-    const minor = p.sale_price_minor ?? p.price_minor;
+    const minor = resolveUnitPrice(p).unitMinor;
     slots.push({
       title: p.name,
       tag: p.is_new ? "Yeni" : "Bugün atölyeden",
