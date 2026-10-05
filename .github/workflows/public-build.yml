@@ -25,3 +25,30 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  unit-tests:
+    # EK (5 Eki 2026): hiçbir iş akışı birim testlerini koşmuyordu (yalnız derleme). Testler Node'un
+    # yerleşik koşucusu + TypeScript tip silmesiyle çalışır (Node ≥ 23.6); derleme işi Node 20'de kalır.
+    name: Unit tests (node --test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test file discovery (must find the whole suite)
+        run: |
+          count=$(ls lib/*.test.ts | wc -l)
+          echo "unit test files discovered: $count"
+          test "$count" -ge 60
+
+      - name: Unit tests
+        run: npm run test:unit
