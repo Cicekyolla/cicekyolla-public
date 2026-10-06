@@ -8,7 +8,7 @@
 // B) Orkide, C) Fırsat, D) Saksı, E) Premium olarak eşlenir. İlk genel
 // vitrindeki Admin ürünleri ve manuel sırası aynen korunur.
 // ============================================================================
-import { fetchProducts, type CategoryNode, type PublicProductListItem } from "./api";
+import { fetchListingPage, fetchProducts, type CategoryNode, type PublicProductListItem } from "./api";
 import { findCategoryIdBySlug } from "./catalog";
 import type { HpProduct } from "./homepage";
 
@@ -126,7 +126,10 @@ async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promi
     if (rows.length >= LIMIT) break;
     const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
     if (!categoryId) continue; // slug canlı ağaçta yoksa sessizce sıradakine geç
-    push(await fetchProducts({ category_id: categoryId, page_size: LIMIT * 2, sort: "created_at_desc" }));
+    // EK (GENEL LİSTELEME MOTORU — sözleşme §4 Homepage): aynı listeleme ucu (source=category, page 1, per_page=limit;
+    // stok/kapak/fiyat süzgeci SQL'de). Uç yok / hata → bugünkü dolgu (fetchProducts) BİREBİR. URL / canonical / LOCKED yapı değişmez.
+    const listed = await fetchListingPage({ source: { kind: "category", category_id: categoryId }, page: 1, per_page: LIMIT, sort: "created_at_desc" });
+    push(listed ? listed.items : await fetchProducts({ category_id: categoryId, page_size: LIMIT * 2, sort: "created_at_desc" }));
   }
 
   if (rows.length < LIMIT && spec.topup === "sale") {

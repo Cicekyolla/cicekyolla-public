@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { fetchProducts, fetchProductsPaged, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
+import { fetchListingSettings, fetchProducts, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
+// EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan (varsayılan 50 — bugünkü); kaynak listeleme ucu → bugünkü uç.
+import { fetchCategoryListing } from "@/lib/listingSurface";
 import { getCategoryTree } from "@/lib/categories";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
@@ -193,13 +195,15 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
     })
   );
 
+  // EK (LİSTELEME MOTORU): page_size = settings.per_page (varsayılan 50 = bugünkü), total_pages = min(uç, max_pages),
+  // max_items tavanı. Kaynak: listeleme ucu (stok/kapak süzgeci SQL'de); uç yoksa ya da filtre varsa fetchProductsPaged (bugünkü).
+  // Rota metadata'sı (mainSeriesState) AYNI yardımcıyı AYNI parametrelerle çağırır → istek içi tekilleştirme korunur.
+  const settings = await fetchListingSettings();
+  const perPage = settings.per_page;
   const productPage = categoryId
-    ? await fetchProductsPaged({
-        category_id: categoryId, page_size: 50, page: pageNum, sort,
-        product_type: filterType || undefined,
-        same_day_available: sameDay || undefined,
-        is_bestseller: bestseller || undefined,
-        is_new: isNew || undefined,
+    ? await fetchCategoryListing({
+        categoryId, page: pageNum, sort, settings,
+        filters: { product_type: filterType || undefined, same_day_available: sameDay || undefined, is_bestseller: bestseller || undefined, is_new: isNew || undefined },
       })
     : null;
   // EK (SEO YAYIN ZİNCİRİ): son sayfanın ötesindeki ?page=N boş/kopya bir listeyi
@@ -395,7 +399,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               total={totalProducts}
               totalPages={totalPages}
               sort={sort}
-              pageSize={50}
+              pageSize={perPage}
+              maxPages={settings.max_pages}
               filters={{ type: filterType || undefined, sameDay, bestseller, isNew }}
               contextTag={contextTag}
               startPage={pagination.current}

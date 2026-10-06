@@ -29,6 +29,8 @@ export interface CategoryProductGridProps {
   totalPages: number;
   sort: CategorySort;
   pageSize?: number;
+  /** EK (LİSTELEME MOTORU): global max_pages tavanı — server action'ın döndürdüğü sayfa sayısı bunu aşamaz. Verilmezse bugünkü. */
+  maxPages?: number;
   filters?: {
     type?: string;
     sameDay?: boolean;
@@ -62,6 +64,7 @@ export function CategoryProductGrid({
   totalPages,
   sort,
   pageSize = 50,
+  maxPages: maxPagesCap,
   filters,
   contextTag,
   startPage = 1,
@@ -88,6 +91,7 @@ export function CategoryProductGrid({
         categoryId,
         page: next,
         pageSize,
+        maxPages: maxPagesCap,
         sort,
         type: filters?.type,
         sameDay: filters?.sameDay,
@@ -104,7 +108,7 @@ export function CategoryProductGrid({
     } finally {
       setLoading(false);
     }
-  }, [loading, done, page, categoryId, pageSize, sort, filters, maxPages]);
+  }, [loading, done, page, categoryId, pageSize, maxPagesCap, sort, filters, maxPages]);
 
   useEffect(() => {
     const el = sentinel.current;

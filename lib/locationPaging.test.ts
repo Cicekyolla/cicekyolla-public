@@ -477,7 +477,9 @@ test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam ka
   assert.ok(!page.includes("flattenPlan(plan)"), "kargo tam listeyi kart modeline çevirmez");
   assert.equal(page.split("resolveLocationCatalog(").length - 1, 1, "görünüm tek yerde, bir kez");
   assert.equal(page.split("planLocationPage(").length - 1, 1);
-  assert.match(page, /resolveLocationCatalog\(plan, searchParams, `\/\$\{locale\}\/\$\{row\.page_key\}`, SHOP\[locale\]\.all\)/, "linkler canonical sorgusuz yoldan");
+  // EK (LİSTELEME MOTORU): 5. parametre = global ayardan sayfa boyutu (settings.per_page); taban yol ve etiket aynen.
+  assert.match(page, /resolveLocationCatalog\(plan, searchParams, `\/\$\{locale\}\/\$\{row\.page_key\}`, SHOP\[locale\]\.all, listingSize\)/, "linkler canonical sorgusuz yoldan");
+  assert.ok(page.includes("const listingSize = plan ? (await fetchListingSettings()).per_page : undefined;"), "sayfa boyutu global ayardan (fail-open)");
   const items = fn("catalogItems");
   assert.match(items, /return ids\s*\.map\(\(id\) => plan\.byId\.get\(id\)\)/);
   for (const name of ["CatalogCommerceSection", "CargoCatalogSection"]) {
@@ -520,11 +522,13 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(seoFn.includes("withIntentCategory(listing, await fetchLocaleCatalog(locale), mainCategory)"));
   assert.ok(seoFn.includes("return locationListingSeo(basePath, listing, readable ? { category: listingCategoryParam(effective?.category) } : null, mainCategory);"));
   const pageMeta = meta.slice(meta.indexOf('if (parsed.kind === "page")'), meta.indexOf('if (parsed.kind === "category")'));
-  // EK (MADDE 6): kategori dalı sorguyu YALNIZ 404 kapısı için okur (isCategoryListingNotFound(listing)) — başka kullanım yok.
+  // EK (MADDE 6 → LİSTELEME MOTORU): kategori dalı artık gerçek seri; sorguyu YALNIZ saf yardımcılarla okur:
+  // parseListingPageParam (geçersiz sayfa kapısı, yüzey okunmadan) + isCategoryListingNotFound (son sayfanın ötesi) — başka kullanım yok.
   const categoryMeta = meta.slice(meta.indexOf('if (parsed.kind === "category")'), meta.indexOf('if (parsed.kind === "product")'));
-  assert.equal(categoryMeta.split(/\blisting\b/).length - 1, 1, "kategori dalında sorgu yalnız kapıda okunur");
-  assert.ok(categoryMeta.includes("isCategoryListingNotFound(listing)"));
-  assert.equal(meta.split(/\blisting\b/).length - 1, pageMeta.split(/\blisting\b/).length - 1 + 1 + 1, "sorgu yalnız lokasyon / niyet dalında + kategori kapısında okunur (imza + o dal + kapı)");
+  assert.equal(categoryMeta.split(/\blisting\b/).length - 1, 2, "kategori dalında sorgu yalnız iki kapıda okunur");
+  assert.ok(categoryMeta.includes("const listingPage = parseListingPageParam(listing?.page);"));
+  assert.ok(categoryMeta.includes("isCategoryListingNotFound(listing, categoryTotalPages)"));
+  assert.equal(meta.split(/\blisting\b/).length - 1, pageMeta.split(/\blisting\b/).length - 1 + 1 + 2, "sorgu yalnız lokasyon / niyet dalında + kategori kapılarında okunur (imza + o dal + iki kapı)");
   // 404: son sayfanın ötesi / çözülmeyen ?category / kapalı ürün alanı — görünümün kurulduğu yerde, HAM sorguyla.
   assert.ok(body.includes('if (isLocationListingNotFound(rawSearchParams, view, order.includes("commerce"))) notFound();'));
   assert.ok(body.indexOf("isLocationListingNotFound(") < body.indexOf("const continuation = isLocationContinuationPage(view, order);"));
@@ -594,17 +598,24 @@ test("kaynak koruması: kategori dalı kapıyı hem metadata'da hem render'da y�
   const metaStart = page.indexOf('if (parsed.kind === "category") {');
   assert.ok(metaStart > 0);
   const metaBlock = page.slice(metaStart, page.indexOf('if (parsed.kind === "product") {', metaStart));
-  const gate = metaBlock.indexOf("isCategoryListingNotFound(listing)");
+  // EK (LİSTELEME MOTORU — gerçek seri): iki kapı. (1) geçersiz ?page (0/abc/1.5) YÜZEY OKUNMADAN index dışı;
+  // (2) son sayfanın ötesi, toplam sayfa (yüzey ürün sayısı + global ayar) bilinince index dışı.
+  const gate = metaBlock.indexOf("if (listingPage === null) return { robots: NOINDEX };");
   assert.ok(gate > 0, "localeMetadata kategori dalında kapı olmalı");
+  assert.ok(metaBlock.indexOf("const listingPage = parseListingPageParam(listing?.page);") < gate);
   assert.ok(gate < metaBlock.indexOf("fetchCategorySurface("), "kapı yüzey okumasından önce (geçersiz istek upstream'e gitmez)");
-  assert.ok(/isCategoryListingNotFound\(listing\)\) return \{ robots: NOINDEX \}/.test(metaBlock), "404'e giden isteğin metadata'sı index dışı");
+  assert.ok(/isCategoryListingNotFound\(listing, categoryTotalPages\)\) return \{ robots: NOINDEX \}/.test(metaBlock), "404'e giden isteğin metadata'sı index dışı");
+  assert.ok(metaBlock.includes("const categoryTotalPages = Math.max(1, listingTotalPages(surface.products.length, listingSettings.per_page, listingSettings.max_items, listingSettings.max_pages));"), "toplam sayfa motor kuralından");
 
   const renderStart = page.indexOf('if (parsed.kind === "category") {', metaStart + 1);
   assert.ok(renderStart > metaStart, "LocalePage kategori dalı");
   const renderBlock = page.slice(renderStart, page.indexOf('if (parsed.kind === "product") {', renderStart));
-  const rgate = renderBlock.indexOf("isCategoryListingNotFound(searchParams)) notFound()");
+  const rgate = renderBlock.indexOf("if (parseListingPageParam(searchParams?.page) === null) notFound();");
   assert.ok(rgate > 0, "LocalePage kategori dalında notFound kapısı olmalı");
   assert.ok(rgate < renderBlock.indexOf("fetchCategorySurface("), "kapı yüzey okumasından önce");
+  assert.ok(renderBlock.includes("if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();"), "son sayfanın ötesi 404");
+  assert.ok(renderBlock.includes("sliceLocationPage(surface.products, categoryPage, perPage)"), "yalnız dilim basılır");
+  assert.ok(renderBlock.includes("<GlobalPagination locale={locale} pagination={locationPagination(categoryBase, null, categoryPage, categoryTotalPages)} />"), "gerçek sayfa bağlantıları");
 });
 
 test("kaynak koruması: TR URL / canonical / hreflang sistemine dokunulmadı (kategori self-canonical ve hreflang ailesi aynen)", () => {

@@ -35,7 +35,9 @@ import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
 import { CATEGORY_TREE_FALLBACK } from "@/lib/categoryFallback";
 import { managedTitle, managedDescription } from "@/lib/managedSeoContent";
 import { absoluteUrl, indexRobots, SITE_INDEXABLE } from "@/lib/site-config";
-import { fetchProductsPaged, type SeoPublicPage } from "@/lib/api";
+import { fetchListingSettings, type SeoPublicPage } from "@/lib/api";
+// EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan; kaynak listeleme ucu → bugünkü uç (fail-open).
+import { fetchCategoryListing } from "@/lib/listingSurface";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, findCategoryNodeBySlug } from "@/lib/catalog";
 import { categoryHreflangFamily } from "@/lib/global/hreflangFamily";
@@ -72,7 +74,9 @@ async function mainSeriesState(path: string, pageNo: number): Promise<CategoryLi
   const tree = await getCategoryTree();
   const categoryId = tree ? findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, "")) : null;
   if (!categoryId) return "unknown";
-  const listing = await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT });
+  // EK (LİSTELEME MOTORU): CategoryLanding ile AYNI yardımcı + AYNI ayar → aynı istek (tekilleştirme); page_size = settings.per_page.
+  const settings = await fetchListingSettings();
+  const listing = await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings });
   return categoryListingState(pageNo, listing.pagination);
 }
 
@@ -108,9 +112,10 @@ async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?:
   const categoryId = findCategoryIdBySlug(tree, slug);
   if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });
   if (rule !== "count") return false;
+  const settings = await fetchListingSettings();
   return isConfirmedEmptyCategory(
     pageNo,
-    await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),
+    await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings }),
   );
 }
 

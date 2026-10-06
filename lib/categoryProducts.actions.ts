@@ -16,6 +16,8 @@ export async function loadCategoryProducts(input: {
   categoryId: number;
   page: number;
   pageSize: number;
+  /** EK (LİSTELEME MOTORU): global max_pages tavanı (CategoryLanding'in SSR'da uyguladığıyla aynı); yoksa bugünkü. */
+  maxPages?: number;
   // EK (TEK KATEGORİ SIRASI): "category_order" = varsayılan sıra; API tanımıyorsa okuma katmanı
   // aynı isteği bugünkü sırayla tekrarlar (lib/api.ts) → SSR sayfasıyla aynı sıra.
   sort: "created_at_desc" | "price_asc" | "price_desc" | "name_asc" | "category_order";
@@ -44,7 +46,7 @@ export async function loadCategoryProducts(input: {
       .filter((p) => p.cover_image_url)
       .map(toCardProduct),
     total: pageData.pagination.total,
-    totalPages: pageData.pagination.total_pages,
+    totalPages: input.maxPages && input.maxPages >= 1 ? Math.min(pageData.pagination.total_pages, Math.floor(input.maxPages)) : pageData.pagination.total_pages,
     page: pageData.pagination.page,
   };
 }

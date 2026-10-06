@@ -20,6 +20,9 @@ import { avifMediaFromSizes } from "@/lib/avifPolicy";
 const LOCATION_SIZES = "(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw";
 const LOCATION_AVIF_MEDIA = avifMediaFromSizes(LOCATION_SIZES);
 
+// Varsayılanlar bugünkü değerler; çağıran SSR ile AYNI sayfa boyutunu geçer (EK — LİSTELEME MOTORU):
+// SSR 30 ürün basarken "Daha Fazla Göster" page_size 12 ile 2. sayfayı (13–24) istiyordu → ilk tıkta hepsi
+// tekrar (dedupe) → "yeni ürün yok" izlenimi. pageSize/maxItems prop'ları bu uyumsuzluğu çağıranda kapatır.
 const PAGE_SIZE = 12;
 const MAX_ITEMS = 48;
 
@@ -38,6 +41,10 @@ type LocationProductsProps = {
   placeName: string;
   initialItems: CardProduct[];
   initialTotal: number;
+  /** EK: istemci sayfa boyutu (varsayılan 12 — bugünkü); SSR'ın bastığı sayfa boyutuyla aynı verilmeli. */
+  pageSize?: number;
+  /** EK: istemcide en çok bu kadar ürün biriktirilir (varsayılan 48 — bugünkü). */
+  maxItems?: number;
 };
 
 type ApiEnvelope = {
@@ -51,12 +58,13 @@ async function fetchPage(
   props: Pick<LocationProductsProps, "citySlug" | "districtSlug" | "neighborhoodSlug">,
   filter: FilterKey,
   page: number,
+  pageSize: number = PAGE_SIZE,
 ): Promise<{ items: CardProduct[]; total: number } | null> {
   const p = new URLSearchParams({
     city: props.citySlug,
     district: props.districtSlug,
     page: String(page),
-    page_size: String(PAGE_SIZE),
+    page_size: String(pageSize),
   });
   if (props.neighborhoodSlug) p.set("neighborhood", props.neighborhoodSlug);
   if (filter !== "all") p.set(filter, "true");
@@ -79,6 +87,8 @@ export function LocationProducts({
   placeName,
   initialItems,
   initialTotal,
+  pageSize = PAGE_SIZE,
+  maxItems = MAX_ITEMS,
 }: LocationProductsProps) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [items, setItems] = useState<CardProduct[]>(initialItems);
@@ -100,7 +110,7 @@ export function LocationProducts({
         setLoading(false);
         return;
       }
-      const result = await fetchPage({ citySlug, districtSlug, neighborhoodSlug }, next, 1);
+      const result = await fetchPage({ citySlug, districtSlug, neighborhoodSlug }, next, 1, pageSize);
       if (result) {
         setItems(result.items);
         setTotal(result.total);
@@ -110,19 +120,19 @@ export function LocationProducts({
       }
       setLoading(false);
     },
-    [filter, loading, initialItems, initialTotal, citySlug, districtSlug, neighborhoodSlug],
+    [filter, loading, initialItems, initialTotal, citySlug, districtSlug, neighborhoodSlug, pageSize],
   );
 
   const loadMore = useCallback(async () => {
-    if (loading || items.length >= Math.min(total, MAX_ITEMS)) return;
+    if (loading || items.length >= Math.min(total, maxItems)) return;
     setLoading(true);
     setFailed(false);
     const nextPage = page + 1;
-    const result = await fetchPage({ citySlug, districtSlug, neighborhoodSlug }, filter, nextPage);
+    const result = await fetchPage({ citySlug, districtSlug, neighborhoodSlug }, filter, nextPage, pageSize);
     if (result) {
       setItems((prev) => {
         const seen = new Set(prev.map((x) => x.id));
-        return [...prev, ...result.items.filter((x) => !seen.has(x.id))].slice(0, MAX_ITEMS);
+        return [...prev, ...result.items.filter((x) => !seen.has(x.id))].slice(0, maxItems);
       });
       setTotal(result.total);
       setPage(nextPage);
@@ -130,9 +140,9 @@ export function LocationProducts({
       setFailed(true);
     }
     setLoading(false);
-  }, [loading, items.length, total, page, filter, citySlug, districtSlug, neighborhoodSlug]);
+  }, [loading, items.length, total, page, filter, citySlug, districtSlug, neighborhoodSlug, pageSize, maxItems]);
 
-  const canLoadMore = items.length < Math.min(total, MAX_ITEMS);
+  const canLoadMore = items.length < Math.min(total, maxItems);
 
   return (
     <div>

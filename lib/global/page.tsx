@@ -39,7 +39,10 @@ import { isCategoryPageConfirmedIndexable } from "@/lib/categoryPage";
 import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
 import { LABELS } from "./locationLabels";
-import { fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
+import { fetchListingSettings, fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
+// EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan (fail-open DEFAULTS); matematik tek yerde.
+import { listingTotalPages } from "@/lib/listingEngine";
+import { GlobalPagination } from "@/components/global/GlobalPagination";
 import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
 import { ProductImage } from "@/components/product/ProductImage";
 import { ProductDetail, type AutoSizeProduct } from "@/components/product/ProductDetail";
@@ -89,6 +92,7 @@ import {
 import {
   resolveLocationCatalog, isLocationContinuationPage,
   parseListingPageParam, listingCategoryParam, locationListingSeo, locationPageTitle, isLocationListingNotFound, isCategoryListingNotFound,
+  sliceLocationPage, locationPagination, locationPageHref,
   type LocationCatalogView, type LocationSearchParams,
 } from "./locationPaging";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
@@ -370,13 +374,21 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
   }
 
   if (parsed.kind === "category") {
-    // EK (MADDE 6): kategori sayfası serisizdir — geçersiz / 1'in ötesindeki ?page 404 verir (LocalePage)
-    // → metadata index dışı; yüzey okuması yapılmaz. Sorgusuz istek ve 1. sayfa aynen.
-    if (isCategoryListingNotFound(listing)) return { robots: NOINDEX };
+    // EK (MADDE 6 → LİSTELEME MOTORU): dil kategori sayfası artık GERÇEK seridir (settings.per_page'lik dilimler).
+    // Geçersiz ?page (0, abc, 1.5 …) yüzey OKUNMADAN index dışı; son sayfanın ötesi yüzey + ayar okunduktan sonra
+    // (toplam sayfa = min(ceil(min(ürün, max_items)/per_page), max_pages)) → LocalePage 404 verir, metadata index dışı.
+    const listingPage = parseListingPageParam(listing?.page);
+    if (listingPage === null) return { robots: NOINDEX };
     const surface = await fetchCategorySurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
+    const listingSettings = await fetchListingSettings();
+    const categoryTotalPages = Math.max(1, listingTotalPages(surface.products.length, listingSettings.per_page, listingSettings.max_items, listingSettings.max_pages));
+    if (isCategoryListingNotFound(listing, categoryTotalPages)) return { robots: NOINDEX };
     const self = absoluteUrl(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`);
-    const title = stripTrailingBrand(surface.seo_title ?? surface.name ?? undefined);
+    // Sayfa ≥ 2: canonical KENDİ yolu (yol + page parametresi — GlobalPagination linkleriyle aynı biçim, locationPageHref),
+    // başlık "– Sayfa N" ekiyle (o dilde); hreflang kümesi yalnız 1. sayfada (lokasyon serisiyle aynı desen). Sayfa 1 AYNEN.
+    const seriesSelf = listingPage > 1 ? absoluteUrl(locationPageHref(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`, { page: listingPage })) : self;
+    const title = locationPageTitle(locale, stripTrailingBrand(surface.seo_title ?? surface.name ?? undefined), listingPage);
     // EK (KATEGORİ YAYIN KURALI — 5 Eki 2026): dil kategori sayfasının index durumunu çeviri KAYDI belirler
     // (surface.indexable); listelediği ürün sayısı tek başına index dışına itmez (önceki sayım kuralı kaldırıldı —
     // canlıda yayında olan ürünsüz dil kategori sayfalarını deploy anında index dışına atıyordu).
@@ -384,10 +396,13 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       title: titleForTemplate(title),
       description: surface.meta_description ?? undefined,
       robots: surface.indexable ? undefined : NOINDEX,
-      alternates: { canonical: self },
-      openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description }),
+      alternates: { canonical: seriesSelf },
+      openGraph: localeOpenGraph(locale, { url: seriesSelf, title, description: surface.meta_description }),
     };
     if (surface.indexable) {
+      // EK (LİSTELEME MOTORU): hreflang kümesi YALNIZ 1. sayfada (sayfa ≥ 2 kendi canonical'ını taşır; kardeş dilin
+      // N. sayfası aynı ürün dilimini taşımaz) — lokasyon serisiyle aynı kural. Sayfa ≥ 2'de küme okuması da yapılmaz.
+      if (listingPage === 1) {
       // tr yalnız KARŞILIĞI KESİNKEN eklenir: (1) Türkçe sayfanın kümesini kurduğu kaynak (category-locales)
       // bu sayfayı listeliyor ve (2) Türkçe kategori sayfası kesin indexlenebilir. Uç henüz yayında değilse /
       // okunamadıysa / durum bilinmiyorsa tr eklenmez → küme bugünkü gibi (tek yönlü bağ üretilmez).
@@ -404,6 +419,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
         absoluteUrl,
       );
       if (languages) meta.alternates = { canonical: self, languages };
+      }
     }
     return meta;
   }
@@ -849,8 +865,10 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   // Bu isteğin katalog görünümü: filtre (?category) + 24'lük sayfa (?page). SON sıralı listeden (Tümü = allOrder,
   // kategori = Admin sırası) dilim; linkler canonical sorgusuz yoldan. 1. sayfada geçersiz ?category → Tümü (yönlendirme yok);
   // geçersiz ?page ve sayfa ≥ 2'de çözülmeyen liste aşağıda 404 verir.
+  // EK (LİSTELEME MOTORU): sayfa boyutu global ayardan (varsayılan 50; önceki sabit 24 = LOCATION_PAGE_SIZE yalnız yedek).
+  const listingSize = plan ? (await fetchListingSettings()).per_page : undefined;
   const view: LocationCatalogView | null = plan
-    ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all)
+    ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all, listingSize)
     : null;
   const tiles = locationTiles(catalog, plan, cargo);
   // Bölüm sırası: Admin (storefront structure.locationSections, catalog yanıtında) — yoksa varsayılan.
@@ -1023,18 +1041,25 @@ export async function LocalePage({ locale, path, searchParams }: {
   }
 
   if (parsed.kind === "category") {
-    // EK (MADDE 6): kategori sayfası ürünlerin TAMAMINI tek sayfada basar (seri yok). ?page=2/999/abc
-    // 1. sayfanın kopyasını 200 ile sunmaz → 404 (TR kategori ve locale lokasyon kuralıyla aynı).
-    if (isCategoryListingNotFound(searchParams)) notFound();
+    // EK (MADDE 6 → LİSTELEME MOTORU): dil kategori sayfası GERÇEK seri — settings.per_page'lik dilimler, gerçek
+    // <a href="?page=N"> bağlantıları (GlobalPagination). Geçersiz ?page (0/abc/1.5) yüzey OKUNMADAN 404; son sayfanın
+    // ötesi yüzey + ayar okunduktan sonra 404 (1. sayfanın kopyası 200 ile sunulmaz). Sorgusuz istek ve ?page=1 aynen.
+    if (parseListingPageParam(searchParams?.page) === null) notFound();
     // Katalog, sayfa altındaki "ilgili kategoriler" iç bağlantıları için; yüzeyle
-    // PARALEL çekilir (ek gecikme yok).
-    const [surface, catalog, contact] = await Promise.all([
+    // PARALEL çekilir (ek gecikme yok). Ayar fail-open (uç yoksa DEFAULTS).
+    const [surface, catalog, contact, listingSettings] = await Promise.all([
       fetchCategorySurface(locale, parsed.slug),
       fetchLocaleCatalog(locale),
       v80Contact(),
+      fetchListingSettings(),
     ]);
     if (!surface) notFound();
+    const perPage = listingSettings.per_page;
+    const categoryTotalPages = Math.max(1, listingTotalPages(surface.products.length, perPage, listingSettings.max_items, listingSettings.max_pages));
+    if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();
+    const categoryPage = parseListingPageParam(searchParams?.page) ?? 1;
     const seg = SEGMENTS[locale];
+    const categoryBase = `/${locale}/${seg.category}/${surface.slug}`;
     // KATEGORİ ÜRÜNLERİ (API): GLOBAL KATALOG (o dilde canlı tüm aktif ürünler) ∩ Product Center'daki
     // GERÇEK bağ, Global Merkezi sırası (13 dilde ortak). Vitrin seçimi şart DEĞİL.
     //  • yeni API: kartlar satırdan, TAMAMI (ürün başına detay isteği yok)
@@ -1042,12 +1067,14 @@ export async function LocalePage({ locale, path, searchParams }: {
     let cards: { card: CardProductUi; href: string }[];
     let footer: Awaited<ReturnType<typeof v80FooterFromCatalog>>;
     if (surface.products.length && hasCardFields(surface.products)) {
-      cards = surface.products.map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
+      // Dilim SON sıralı listeden (Global Merkezi sırası); yalnız bu sayfanın kartları DOM'a gider.
+      cards = sliceLocationPage(surface.products, categoryPage, perPage).map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
       footer = await v80FooterFromCatalog(locale, catalog, contact);
     } else {
       // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
       // gerçek fiyat/rozet/derivatives) + localized ad + locale PDP linki.
-      const members = surface.products.slice(0, 24);
+      // EK (LİSTELEME MOTORU): eski "ilk 24" yerine bu sayfanın dilimi (detay isteği yalnız dilim için).
+      const members = sliceLocationPage(surface.products, categoryPage, perPage);
       const [details, footerModel] = await Promise.all([
         Promise.all(members.map((m) => fetchProductBySlug(m.tr_slug))),
         v80FooterFromCatalog(locale, catalog, contact),
@@ -1097,12 +1124,14 @@ export async function LocalePage({ locale, path, searchParams }: {
           </section>
         )}
 
-        {/* 3) Ürün vitrini — keşiften hemen sonra satın alınabilir ürünler. */}
+        {/* 3) Ürün vitrini — keşiften hemen sonra satın alınabilir ürünler (bu sayfanın dilimi). */}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {cards.map(({ card: c, href }, idx) => (
             <ProductCard key={c.id} product={c} idx={Math.min(idx, 7)} href={href} />
           ))}
         </div>
+        {/* EK (LİSTELEME MOTORU): gerçek sayfa bağlantıları (?page=N; page=1 yazılmaz); tek sayfada basılmaz. */}
+        <GlobalPagination locale={locale} pagination={locationPagination(categoryBase, null, categoryPage, categoryTotalPages)} />
 
         {/* 4) Uzun SEO/hikâye içeriği — TAMAMI korunur; kategori keşfinin de ürün
             vitrininin de ALTINDA durur, alışveriş akışını kesmez.
