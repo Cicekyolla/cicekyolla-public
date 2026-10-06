@@ -317,3 +317,27 @@ export const LOCATION_PAGING_LABELS: Record<GlobalLocale, { nav: string; prev: s
 export function locationPageLabel(locale: GlobalLocale, n: number): string {
   return LOCATION_PAGING_LABELS[locale].page.replace("{n}", String(n));
 }
+
+// ============================================================================
+// EK (MADDE 6 — DİL KATEGORİ SAYFASI ?page KAPISI, 6 Eki 2026) — ADDITIVE.
+//
+// Dil kategori sayfası (/de/kategorie/<slug> …) bugün SERİSİZDİR: yüzeyin verdiği ürünlerin
+// TAMAMI tek sayfada basılır, sayfalama bağlantısı yoktur ve `?page` okunmaz. Bu yüzden
+// ?page=2 / ?page=999 / ?page=abc 1. sayfanın birebir kopyasını 200 ile (canonical taban yola)
+// sunuyordu. Aynı sitede TR kategori (?page=999 → 404) ve locale lokasyon/niyet sayfaları
+// (isLocationListingNotFound) kopyayı 200 ile sunmaz. Bu kural o ikisiyle hizalar:
+//   • `page` yok ya da "1" → sayfa normal (canonical/hreflang sorgusuz yol — DEĞİŞMEDİ)
+//   • pozitif tam sayı olmayan `page` (0, -1, 1.5, abc, "02", boş) → 404
+//   • son sayfanın ötesi → 404; seri olmadığı için toplam sayfa 1'dir (`totalPages` varsayılanı).
+//     İleride gerçek 24'lük seri açılırsa toplam sayfa parametre olarak verilir; kural aynı kalır.
+// Yüzey okuması YAPILMAZ: karar yalnız ham sorgudan (geçersiz istek upstream'e gitmez).
+// ============================================================================
+export function isCategoryListingNotFound(
+  searchParams: LocationSearchParams | null | undefined,
+  totalPages: number = 1,
+): boolean {
+  const page = parseListingPageParam(searchParams?.page);
+  if (page === null) return true;
+  const t = Number.isFinite(totalPages) && totalPages >= 1 ? Math.floor(totalPages) : 1;
+  return page > t;
+}
