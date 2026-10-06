@@ -874,3 +874,105 @@ export async function fetchLocationProducts(
     return null;
   }
 }
+
+// ============================================================================
+// EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md) — ADDITIVE.
+// Üç yeni okuma; mevcut imzalara DOKUNULMADI. Hepsi FAIL-OPEN: uç henüz yayında değilse
+// (404), 5xx verirse ya da süre dolarsa çağıran bugünkü yoluna düşer.
+//   • fetchListingSettings()      GET /api/public/seo/listing-settings  (revalidate 300) → ayar | DEFAULTS
+//   • fetchListingPage(params)    GET /api/public/seo/listing           (revalidate 120, 6 sn) → zarf | null
+//   • fetchListingCardsByIds(ids) aynı uç, source=ids (sıra korunur)                       → satırlar | null
+// Satırlar GET /api/products satırıyla aynı alan adlarını taşır → toCardProduct ile eşlenir;
+// görsel adresleri fetchProductsPaged ile aynı şekilde (mediaUrlOrNull / mediaDerivatives) normalize edilir.
+// ============================================================================
+import {
+  DEFAULT_LISTING_SETTINGS,
+  listingQueryParams,
+  normalizeListingSettings,
+  type ListingQuery,
+  type ListingSettings,
+} from "./listingEngine.ts";
+export type { ListingQuery, ListingSettings, ListingSource, ListingSort } from "./listingEngine.ts";
+
+export interface ListingPagination {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+  has_more?: boolean;
+}
+
+export interface ListingPageResult {
+  items: PublicProductListItem[];
+  pagination: ListingPagination;
+  meta?: { source?: string; settings?: Partial<ListingSettings> } | null;
+}
+
+/** Global listeleme ayarı; uç yoksa / okunamazsa sözleşme varsayılanları (her alan sınıra çekilmiş). */
+export async function fetchListingSettings(): Promise<ListingSettings> {
+  try {
+    const res = await fetchWithDeadline(
+      `${API_ORIGIN}/api/public/seo/listing-settings`,
+      { headers: apiHeaders(), next: { revalidate: 300 } },
+      4_000,
+      fetch,
+      false,
+    );
+    if (!res.ok) return { ...DEFAULT_LISTING_SETTINGS };
+    const json = (await res.json()) as { data?: { settings?: unknown } } | null;
+    return normalizeListingSettings(json?.data?.settings);
+  } catch {
+    return { ...DEFAULT_LISTING_SETTINGS };
+  }
+}
+
+function normalizeListingRows(rows: unknown): PublicProductListItem[] {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter((it): it is PublicProductListItem => !!it && typeof it === "object" && Number.isInteger(Number((it as { id?: unknown }).id)))
+    .map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
+}
+
+/**
+ * Listeleme ucundan bir sayfa. Uç yok (404) / 5xx / zaman aşımı / bozuk zarf → null (çağıran bugünkü yola düşer).
+ * Sayfa > total_pages ise uç items: [] döner; 404 kararı çağıranındır (lib/listingEngine.ts listingPageState).
+ */
+export async function fetchListingPage(params: ListingQuery): Promise<ListingPageResult | null> {
+  const q = new URLSearchParams();
+  for (const [k, v] of listingQueryParams(params)) q.set(k, v);
+  const url = `${API_ORIGIN}/api/public/seo/listing?${q.toString()}`;
+  try {
+    const res = await fetchWithDeadline(url, { headers: apiHeaders(), next: { revalidate: 120 } }, 6_000, fetch, false);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: { items?: unknown; pagination?: Partial<ListingPagination>; meta?: ListingPageResult["meta"] } } | null;
+    const data = json?.data;
+    if (!data || !Array.isArray(data.items)) return null;
+    const items = normalizeListingRows(data.items);
+    const p = data.pagination ?? {};
+    const per_page = Number(p.per_page) > 0 ? Number(p.per_page) : params.per_page ?? DEFAULT_LISTING_SETTINGS.per_page;
+    const total = Number.isFinite(Number(p.total)) ? Number(p.total) : items.length;
+    const total_pages = Number.isFinite(Number(p.total_pages)) ? Number(p.total_pages) : Math.ceil(total / per_page);
+    const page = Number(p.page) >= 1 ? Number(p.page) : params.page ?? 1;
+    return {
+      items,
+      pagination: { page, per_page, total, total_pages, has_more: typeof p.has_more === "boolean" ? p.has_more : page < total_pages },
+      meta: data.meta ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Manuel vitrin kartları TOPLU (source=ids; istek sırası korunur; aktif/stok/kapak süzgeci SQL'de).
+ * Uç yoksa / hata → null → çağıran ürün başına GET /api/products/:id yoluna (fetchProductCardById) düşer.
+ */
+export async function fetchListingCardsByIds(ids: number[]): Promise<PublicProductListItem[] | null> {
+  const clean = ids.filter((id) => Number.isInteger(id) && id > 0).slice(0, 500);
+  if (clean.length === 0) return [];
+  const result = await fetchListingPage({ source: { kind: "ids", ids: clean } });
+  if (!result) return null;
+  // Sıra: istek sırası (uç korur; korumazsa burada yeniden kurulur — eksik olanlar atlanır).
+  const byId = new Map(result.items.map((it) => [Number(it.id), it] as const));
+  return clean.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+}
