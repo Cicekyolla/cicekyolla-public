@@ -131,6 +131,9 @@ function detailToCard(locale: GlobalLocale, d: PublicProductDetail, localizedNam
     slug: pr.slug,
     price: Math.round((hasSale ? Number(pr.sale_price_minor) : Number(pr.price_minor)) / 100),
     originalPrice: hasSale ? Math.round(Number(pr.price_minor) / 100) : undefined,
+    // Madde 3: kuruş kaynağı — ProductCard `priceMinor ?? price*100` okur; TR'de "₺1.999,02", dövizde tam cent.
+    priceMinor: Math.round(hasSale ? Number(pr.sale_price_minor) : Number(pr.price_minor)),
+    originalPriceMinor: hasSale ? Math.round(Number(pr.price_minor)) : undefined,
     image: cover?.url ?? "",
     badge: rawBadge ? (BADGE_L10N[locale][rawBadge] ?? rawBadge) : undefined,
     productType: pr.product_type,
@@ -161,6 +164,8 @@ function rowToCard(locale: GlobalLocale, p: CardRow): CardProductUi {
     slug: p.tr_slug,
     price: Math.round((hasSale ? (sale as number) : price) / 100),
     originalPrice: hasSale ? Math.round(price / 100) : undefined,
+    priceMinor: Math.round(hasSale ? (sale as number) : price),
+    originalPriceMinor: hasSale ? Math.round(price) : undefined,
     image: mediaUrl(p.image),
     badge: rawBadge ? (BADGE_L10N[locale][rawBadge] ?? rawBadge) : undefined,
     productType: p.product_type ?? undefined,
@@ -1172,6 +1177,7 @@ export async function LocalePage({ locale, path, searchParams }: {
           id: r.id, slug: r.slug, name: lp.name,
           href: `/${locale}/${seg.product}/${lp.slug}`,
           price: Math.round((hasSale ? Number(r.sale_price_minor) : Number(r.price_minor)) / 100),
+          priceMinor: Math.round(hasSale ? Number(r.sale_price_minor) : Number(r.price_minor)),
           image: r.cover_image_url ?? "",
         } as AutoSizeProduct;
       })

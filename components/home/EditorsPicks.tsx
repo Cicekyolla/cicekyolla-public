@@ -14,6 +14,8 @@ import { Price } from "@/components/Price";
 
 export interface EditorPick {
   id: number|string; name: string; subtitle: string; price?: number;
+  /** TRY kuruş — varsa `price` (yuvarlanmış lira) yerine bu basılır (Madde 3). */
+  priceMinor?: number;
   badge: string; image: string; slug?: string; href?: string;
   description?: string; cta?: string; enabled?: boolean;
 }
@@ -55,7 +57,7 @@ export function EditorsPicks({products,config,title,subtitle}:{
           <h3 style={{fontFamily:"var(--font-display)",fontSize:"1.45rem",lineHeight:1.15}} className="text-white font-semibold mb-2">{card.name}</h3>
           {card.description&&<p className="text-white/60 text-sm leading-6 max-w-sm">{card.description}</p>}
           <div className="flex items-center justify-between mt-4">
-           {card.price?<p style={{fontFamily:"var(--font-display)",fontSize:"1.4rem"}} className="text-white/90 font-semibold"><Price minor={card.price*100} /></p>:<span/>}
+           {card.price?<p style={{fontFamily:"var(--font-display)",fontSize:"1.4rem"}} className="text-white/90 font-semibold"><Price minor={card.priceMinor ?? card.price*100} /></p>:<span/>}
            <span className="flex items-center gap-1.5 text-white/70 text-xs font-semibold group-hover:text-white transition-colors">{card.cta||"İncele"}<ArrowRight className="w-3.5 h-3.5"/></span>
           </div>
          </div>

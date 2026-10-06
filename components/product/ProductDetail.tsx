@@ -100,6 +100,9 @@ export type AutoSizeProduct = {
   href?: string;
   image: string;
   price: number;
+  /** TRY kuruş (tahsil edilen birim fiyat). Verilirse `price` (yuvarlanmış lira) yerine BU basılır;
+   *  yoksa eski davranış (price × 100) korunur. */
+  priceMinor?: number;
   derivatives?: PublicProductImage["derivatives"];
   blurhash?: string | null;
 };
@@ -357,7 +360,7 @@ export function ProductDetail({
                     <Link
                       key={item.id}
                       href={item.href ?? `/urun/${item.slug}`}
-                      aria-label={`${label}: ${item.name}, ${money(item.price * 100)}`}
+                      aria-label={`${label}: ${item.name}, ${money(item.priceMinor ?? item.price * 100)}`}
                       className={`group flex items-center gap-3 overflow-hidden rounded-[18px] border bg-white p-2.5 transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] sm:block sm:p-0 ${
                         index === 1 ? "border-[#8B5CF6] bg-[#F8F5FF] shadow-[0_7px_20px_rgba(124,58,237,0.10)]" : "border-[#EDE9FE]"
                       }`}
@@ -379,7 +382,7 @@ export function ProductDetail({
                             <p className="text-[14px] font-bold text-[#111827]">{label}</p>
                             <p className="text-[11px] text-[#9CA3AF]">{tier}</p>
                           </div>
-                          <p className={`text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>{money(item.price * 100)}</p>
+                          <p className={`text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>{money(item.priceMinor ?? item.price * 100)}</p>
                         </div>
                         <p
                           className="mt-2 text-[11px] font-medium leading-[1.45] text-[#4B5563]"

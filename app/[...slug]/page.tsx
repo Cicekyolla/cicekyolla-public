@@ -4,7 +4,7 @@ import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, formatMinorTRY, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { descriptionWithPage, isSafeInternalPath, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
 import { getLocationBlock, getShowcaseItems, hierarchicalPathOf, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
@@ -433,7 +433,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   const reachOut = reach === "out";
   const reachNeutral = reach === "mixed" || reach === "unknown" || reach === "far";
   const farThreshold = reach === "far" && locationData?.meta?.min_product_price_minor != null
-    ? `₺${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(locationData.meta.min_product_price_minor / 100)}`
+    ? formatMinorTRY(locationData.meta.min_product_price_minor)
     : null;
   const deliveryTime = cargoMode || reachOut ? "1–3 iş günü" : reachNeutral ? "Adrese göre belirlenir" : district?.time || "Aynı gün";
   const seoDescription = locationSeoDescription(parts, cityName, districtName, neighborhood, trDeliveryMode(reach));

@@ -1,9 +1,16 @@
 // ---------------------------------------------------------------------------
 // PARA BİÇİMİ — tek gösterim noktası.
 //
-// TRY DAVRANIŞI BİLEREK DEĞİŞTİRİLMEDİ (TRY regresyonu sıfır):
-//   Canlıdaki `formatMinorTRY` çıktısı "₺1.999"dur (tr-TR, kuruş gösterilmez).
-//   Aynı çıktı burada BİREBİR korunur; Türk müşteri hiçbir fark görmez.
+// TRY KURALI (Madde 3 — kuruşlu fiyat görünümü):
+//   Tam liralı tutar canlıdaki gibi kuruşsuz yazılır: "₺1.999" (tr-TR). Bu
+//   çıktı BİREBİR korunur; kataloğun ~%98'i (1677/1708) tam liralıdır.
+//   Kuruşu SIFIR OLMAYAN tutar artık gizlenmez, iki basamakla yazılır:
+//   199902 → "₺1.999,02", 3899 → "₺38,99", 199950 → "₺1.999,50".
+//   Gerekçe: tahsil edilen tutar kuruşlu (API VARIANT_UNIT_PRICE_SQL kuruşu
+//   aynen faturalar; JSON-LD offers.price ve merchant feed "1999.02" basar);
+//   vitrinin "₺1.999" göstermesi = görünen ≠ tahsil edilen. Yuvarlama YOK.
+//   Kural TEK yerdir: `tryFractionDigits` — diğer TRY biçimlendiriciler
+//   (memberAccountView, subscription/theme, admin formatMinor) buna hizalıdır.
 //
 // USD/EUR:
 //   Kullanıcının dilinde doğal biçim (Intl) + 2 basamak. Cent gizlenmez.
@@ -20,6 +27,15 @@ import type { Currency } from "./config";
 const BASE_CURRENCY = "TRY" as const;
 /** `config.CURRENCIES` sembolleriyle aynı; yalnız geri düşüş biçimi için. */
 const SYMBOL: Record<string, string> = { TRY: "₺", USD: "$", EUR: "€" };
+
+/**
+ * TRY için gösterilecek kesir basamağı: kuruş 0 → 0 basamak ("₺1.999"),
+ * kuruş var → 2 basamak ("₺1.999,02"). Yarım basamak ("₺1.999,5") ÜRETİLMEZ.
+ * @param minor kuruş (tam sayı; sayı olmayan/kesirli değer yuvarlanır)
+ */
+export function tryFractionDigits(minor: number): 0 | 2 {
+  return Math.round(Math.abs(minor)) % 100 === 0 ? 0 : 2;
+}
 
 export interface FormatOpts {
   /** Başına "≈" koyar. Yalnız sepet/checkout toplamı için. TRY'de yok sayılır. */
@@ -45,7 +61,9 @@ export function formatMoney(
   // ── TRY: canlıdaki biçimin AYNISI. Değiştirilmesi yasak. ──
   // TRY gerçek tutardır, yaklaşık değildir → "≈" ASLA eklenmez.
   if (currency === BASE_CURRENCY) {
-    return `₺${n.toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
+    // Kuruş 0 → bugünkü çıktı aynen ("₺1.999"); kuruş var → "₺1.999,02".
+    const digits = tryFractionDigits(Number(minor));
+    return `₺${n.toLocaleString("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
   }
 
   let out: string;

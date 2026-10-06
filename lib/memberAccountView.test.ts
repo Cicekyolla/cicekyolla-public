@@ -173,8 +173,9 @@ test("hoş geldin teklifi: kullanılabilir durumda GERÇEK kural metni kurulur",
   });
   assert.equal(view.state, "usable");
   assert.equal(view.code, "HOSGELDIN150");
-  assert.match(view.ruleText, /150,00/);
-  assert.match(view.ruleText, /500,00/);
+  // Madde 3: tam liralı tutar kuruşsuz yazılır ("₺150"), vitrinle aynı kural.
+  assert.match(view.ruleText, /₺150 indirim/);
+  assert.match(view.ruleText, /₺500 ve üzeri/);
   assert.match(view.ruleText, /ilk siparişinizde/);
 });
 
@@ -207,8 +208,13 @@ test("kural metni uydurulmaz: alan yoksa cümle de yok", () => {
 });
 
 test("tutar/tarih biçimlendirme: bozuk değerde ekran kırılmaz", () => {
-  assert.match(formatMinorTry(15000), /150,00/);
-  assert.match(formatMinorTry(null), /0,00/);
+  // Madde 3: Hesabım, vitrin/sepet/checkout ile AYNI kural — tam lira kuruşsuz, kuruşlu tutar 2 basamak.
+  assert.equal(formatMinorTry(15000), "₺150");
+  assert.equal(formatMinorTry(null), "₺0");
+  assert.equal(formatMinorTry(199902), "₺1.999,02");
+  assert.equal(formatMinorTry(199902, "TRY"), "₺1.999,02");
+  // TRY dışı para birimi eski Intl yolunda kalır (2 basamak).
+  assert.match(formatMinorTry(6212, "USD"), /62,12/);
   assert.equal(formatDeliveryDate(null), "Tarih belirlenmedi");
   assert.equal(formatDeliveryDate("bozuk-tarih"), "Tarih belirlenmedi");
   assert.match(formatDeliveryDate("2026-09-20"), /2026/);

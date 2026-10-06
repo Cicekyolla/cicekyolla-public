@@ -156,7 +156,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
   // DİL DEĞİŞİMİ = SUNUM: t kimliği değişince check/slot YENİDEN ÇALIŞMAZ (slot korunur). Hata metinleri ref ile.
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
-  const { money } = useCurrency();
+  const { money, moneyTRY } = useCurrency();
   const fmts = useMemo(() => makeFmts(intl), [intl]);
   const labelOf = useCallback((offset: number) => labelOfFor(offset, fmts, t("common.today"), t("common.tomorrow")), [fmts, t]);
   const feeText = useCallback((minor?: number) => feeTextFor(minor, t("common.free"), money), [t, money]);
@@ -455,7 +455,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
               const showCargo = !!cargo?.available;
               // 108: uzak band + ürün eşik altında → neden kurye yok, açık yazılır (eşik API'den; karar API'de).
               const thresholdNote = sd?.reason === "below_price_threshold" && sd.min_product_price_minor != null
-                ? <p className="mb-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#6B7280]" data-threshold-note><AlertCircle className="w-3.5 h-3.5 mt-[1px] shrink-0 text-[#9CA3AF]" />{t("planner.thresholdNote", { amount: `₺${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(sd.min_product_price_minor / 100)}` })}</p>
+                ? <p className="mb-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#6B7280]" data-threshold-note><AlertCircle className="w-3.5 h-3.5 mt-[1px] shrink-0 text-[#9CA3AF]" />{t("planner.thresholdNote", { amount: moneyTRY(sd.min_product_price_minor) })}</p>
                 : null;
               if (!showSameday && !showCargo) {
                 return (

@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { convertMinor, priceInCurrency, rateFor } from "./currency/price.ts";
-import { formatMoney } from "./currency/format.ts";
+import { formatMoney, tryFractionDigits } from "./currency/format.ts";
 import {
   BASE_CURRENCY,
   CURRENCIES,
@@ -187,11 +187,53 @@ test("7 günü aşan bülten KULLANILMAZ — eski kurla fiyat gösterilmez", () 
 
 // ═══ BİÇİM ═════════════════════════════════════════════════════════════════
 
-test("TRY biçimi CANLIDAKİYLE BİREBİR AYNI — kuruş yok, dilden bağımsız", () => {
+test("TRY biçimi: tam lira CANLIDAKİYLE BİREBİR AYNI — kuruş yazılmaz, dilden bağımsız", () => {
   assert.equal(formatMoney(299900, "TRY", "tr-TR"), "₺2.999");
   assert.equal(formatMoney(124000, "TRY", "tr-TR"), "₺1.240");
   assert.equal(formatMoney(299900, "TRY", "en-GB"), "₺2.999");
   assert.equal(formatMoney(299900, "TRY", "ar-u-nu-latn"), "₺2.999");
+  assert.equal(formatMoney("299900", "TRY", "tr-TR"), "₺2.999", "API string minor");
+  assert.equal(formatMoney(0, "TRY", "tr-TR"), "₺0");
+});
+
+// ═══ MADDE 3 — KURUŞLU FİYAT GÖRÜNÜMÜ ══════════════════════════════════════
+// Canlı kanıt (06.10.2026 merchant feed): 1708 aktif üründen 31'i kuruşlu
+// (1999.02, 5998.99, 38.99 ...). Tahsilat kuruşu aynen alır, JSON-LD/feed
+// "1999.02" basar; vitrin "₺1.999" gösteriyordu → görünen ≠ tahsil edilen.
+// KURAL: kuruş 0 → kuruşsuz (eski çıktı aynen); kuruş var → DAİMA 2 basamak.
+
+test("MADDE 3: kuruşlu TRY tutar GİZLENMEZ — iki basamakla yazılır (yuvarlama yok)", () => {
+  assert.equal(formatMoney(199902, "TRY", "tr-TR"), "₺1.999,02"); // pembe-guller-lavanta
+  assert.equal(formatMoney(599899, "TRY", "tr-TR"), "₺5.998,99"); // zarif-karisik-buket
+  assert.equal(formatMoney(3899, "TRY", "tr-TR"), "₺38,99");      // tebrikler (eskiden "₺39")
+  assert.equal(formatMoney("179898", "TRY", "tr-TR"), "₺1.798,98", "API string minor");
+  // Eski davranış ("₺1.999") artık üretilmez — görünen fiyat tahsil edilenle aynı.
+  assert.notEqual(formatMoney(199902, "TRY", "tr-TR"), "₺1.999");
+});
+
+test("MADDE 3: yarım basamak ASLA üretilmez — 50 kuruş '₺1.999,50' (toLocaleString varsayılanı '₺1.999,5' idi)", () => {
+  assert.equal(formatMoney(199950, "TRY", "tr-TR"), "₺1.999,50");
+  assert.equal(formatMoney(10, "TRY", "tr-TR"), "₺0,10");
+  assert.equal(formatMoney(5, "TRY", "tr-TR"), "₺0,05");
+});
+
+test("MADDE 3: kesir basamağı kuralı TEK yerde — tryFractionDigits", () => {
+  for (const m of [0, 100, 299900, 124000, -5000]) assert.equal(tryFractionDigits(m), 0, String(m));
+  for (const m of [1, 99, 199902, 3899, 199950, -199902]) assert.equal(tryFractionDigits(m), 2, String(m));
+  // Dilden bağımsız: kuruşlu TRY her dilde tr-TR biçiminde (₺ + nokta binlik + virgül kuruş).
+  assert.equal(formatMoney(199902, "TRY", "en-GB"), "₺1.999,02");
+  assert.equal(formatMoney(199902, "TRY", "ar-u-nu-latn"), "₺1.999,02");
+});
+
+test("MADDE 3: sepet/checkout toplamı (approx) TRY'de de kuruşu gösterir, '≈' yine eklenmez", () => {
+  // %15 kupon: 199000 − 29850 = 169150 → müşteri "₺1.691,50" görür; PayTR 1691.50 çeker.
+  assert.equal(formatMoney(169150, "TRY", "tr-TR", { approx: true }), "₺1.691,50");
+  assert.equal(formatMoney(169100, "TRY", "tr-TR", { approx: true }), "₺1.691");
+});
+
+test("MADDE 3: döviz dalı DEĞİŞMEDİ — USD/EUR daima 2 basamak, tam cent'te de", () => {
+  assert.match(formatMoney(6200, "USD", "en-GB"), /62[.,]00/);
+  assert.match(formatMoney(6212, "USD", "en-GB"), /62[.,]12/);
 });
 
 test("TRY'ye ASLA '≈' eklenmez — TRY gerçek tutardır, yaklaşık değil", () => {

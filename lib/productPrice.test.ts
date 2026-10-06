@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveUnitPrice, type PriceSource } from "./productPrice.ts";
+import { formatMoney } from "./currency/format.ts";
 
 /** API ifadesinin (backend/src/pricing/unitPriceSql.ts VARIANT_UNIT_PRICE_SQL) satır satır karşılığı — bağımsız referans. */
 function apiUnitPrice(p: { price: number; sale: number | null }, v: { price: number | null; sale: number | null } | null): number {
@@ -86,4 +87,77 @@ test("bağlantı: ürün sayfası, JSON-LD (TR + dil) ve vitrin kartları aynı 
   }
   assert.match(read("components/home/ProductShowcase.tsx"), /const \{ unitMinor, baseMinor, hasSale \} = resolveUnitPrice\(p\);/);
   assert.match(read("components/home/HomepageRenderer.tsx"), /const minor = resolveUnitPrice\(p\)\.unitMinor;/);
+});
+
+
+// ═══ MADDE 3 — KURUŞLU FİYAT: tahsil edilen kuruş vitrine AYNEN taşınır ═══════
+// Kaynak: API kuruşu değiştirmez (VARIANT_UNIT_PRICE_SQL), resolveUnitPrice de
+// değiştirmez; gösterim lib/currency/format.ts kuralıdır (kuruş var → 2 basamak).
+// Bu bölüm yuvarlanmış LİRA (`price`) üzerinden fiyat BASAN yolları da yakalar:
+// kart/PDP/editör kartı kuruş kaynağını (`priceMinor`) taşımak zorundadır.
+
+const src = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+
+test("MADDE 3: kuruşlu birim fiyat çözümde korunur ve gösterimde gizlenmez", () => {
+  const r = resolveUnitPrice({ price_minor: "199902", sale_price_minor: null });
+  assert.equal(r.unitMinor, 199902);
+  assert.equal(formatMoney(r.unitMinor, "TRY", "tr-TR"), "₺1.999,02");
+  const sale = resolveUnitPrice({ price_minor: 250000, sale_price_minor: "224998" });
+  assert.deepEqual([sale.unitMinor, sale.baseMinor, sale.hasSale], [224998, 250000, true]);
+  assert.equal(formatMoney(sale.unitMinor, "TRY", "tr-TR"), "₺2.249,98");
+  assert.equal(formatMoney(sale.baseMinor, "TRY", "tr-TR"), "₺2.500");
+  // JSON-LD / feed ile aynı sayı: (minor/100).toFixed(2)
+  assert.equal((r.unitMinor / 100).toFixed(2), "1999.02");
+});
+
+test("MADDE 3: yuvarlanmış lira × 100 kuruşu KAYBEDER — kart kuruş kaynağını (priceMinor) taşır", () => {
+  const minor = 199902;
+  const roundedLira = Math.round(minor / 100); // CardProduct.price
+  assert.notEqual(roundedLira * 100, minor, "price*100 kuruşu geri getiremez");
+  assert.equal(formatMoney(roundedLira * 100, "TRY", "tr-TR"), "₺1.999");
+  assert.equal(formatMoney(minor, "TRY", "tr-TR"), "₺1.999,02");
+  // lib/api.ts toCardProduct: priceMinor kuruşu aynen taşır.
+  const api = src("lib/api.ts");
+  assert.ok(api.includes("priceMinor: Math.round(hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)),"));
+  // ProductCard yuvarlanmış liraya yalnız kuruş kaynağı YOKSA düşer.
+  assert.ok(src("components/home/ProductCard.tsx").includes("money(product.priceMinor ?? product.price * 100)"));
+});
+
+test("MADDE 3: PDP boyut önerileri, Editör Seçimi ve 13 dil kartları kuruş kaynağı taşır", () => {
+  const pdp = src("components/product/ProductDetail.tsx");
+  assert.equal(pdp.split("money(item.priceMinor ?? item.price * 100)").length - 1, 2, "aria-label + görünen fiyat");
+  assert.ok(!pdp.includes("money(item.price * 100)"), "yuvarlanmış liradan fiyat basılmaz");
+  assert.ok(src("components/home/EditorsPicks.tsx").includes("<Price minor={card.priceMinor ?? card.price*100} />"));
+  assert.ok(src("app/page.tsx").includes("priceMinor: Math.round(hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)),"));
+  const g = src("lib/global/page.tsx");
+  assert.ok(g.includes("priceMinor: Math.round(hasSale ? Number(pr.sale_price_minor) : Number(pr.price_minor)),"), "detailToCard");
+  assert.ok(g.includes("priceMinor: Math.round(hasSale ? (sale as number) : price),"), "rowToCard");
+  assert.ok(g.includes("priceMinor: Math.round(hasSale ? Number(r.sale_price_minor) : Number(r.price_minor)),"), "locale sizeProducts");
+});
+
+test("MADDE 3: TRY biçimlendirici TEK — yerel Intl/toLocaleString kopyaları merkezi kurala devredildi", () => {
+  // PayTR tutar etiketi ham toLocaleString ("₺1.691,5") değil, moneyTRY.
+  const co = src("components/checkout/CheckoutWizard.tsx");
+  assert.ok(co.includes("amountLabel={moneyTRY(paytrAmountMinor ?? total)}"));
+  assert.ok(!co.includes('/ 100).toLocaleString("tr-TR")'));
+  // Hesabım ve abonelik TRY'de formatMoney'e devreder.
+  assert.ok(src("lib/memberAccountView.ts").includes('return formatMoney(minor ?? 0, "TRY", "tr-TR");'));
+  assert.ok(src("components/subscription/theme.ts").includes("? formatMoney(minor, 'TRY', 'tr-TR')"));
+  // Uzak bölge eşiği metinleri (PDP planlayıcı + lokasyon sayfası).
+  assert.ok(src("components/product/DeliveryPlanner.tsx").includes("amount: moneyTRY(sd.min_product_price_minor)"));
+  assert.ok(src("app/[...slug]/page.tsx").includes("? formatMinorTRY(locationData.meta.min_product_price_minor)"));
+  // Kuruşu SİLEN TRY biçimi (maximumFractionDigits: 0) vitrin/bileşen kodunda kalmadı.
+  for (const p of ["components/product/DeliveryPlanner.tsx", "app/[...slug]/page.tsx", "components/checkout/CheckoutWizard.tsx"]) {
+    assert.ok(!src(p).includes("maximumFractionDigits: 0"), `${p}: yerel kuruş-silen biçim kalmamalı`);
+  }
+});
+
+test("MADDE 3: makine okuyan fiyatlar DOKUNULMADI — JSON-LD offers.price ve merchant feed 2 basamaklı kuruş basar", () => {
+  assert.ok(src("lib/productSchema.ts").includes("price: (priceMinor / 100).toFixed(2),"));
+  const feed = src("app/api/merchant-feed.xml/route.ts");
+  assert.ok(feed.includes("<g:price>${(regularMinor / 100).toFixed(2)} ${esc(currency)}</g:price>"));
+  assert.ok(feed.includes("<g:sale_price>${(saleMinor / 100).toFixed(2)} ${esc(currency)}</g:sale_price>"));
+  // Sepet motoru ve ödeme istemcisi fiyat BİÇİMLEMEZ; kuruş hesaba aynen girer (dokunulmadı).
+  assert.ok(src("lib/cart.tsx").includes("subtotalMinor: items.reduce((sum, item) => sum + item.unitPriceMinor * item.quantity, 0),"));
+  assert.ok(!src("lib/payment.ts").includes("formatMoney"));
 });
