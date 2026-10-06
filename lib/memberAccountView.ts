@@ -24,6 +24,7 @@
 
 /* ────────────────────────── Sunucu sözleşmesi ────────────────────────── */
 
+import { formatMoney } from "./currency/format.ts";
 export interface MemberOrderItem {
   id: number;
   product_name: string;
@@ -176,6 +177,10 @@ export interface WelcomeCouponResponse {
 
 export function formatMinorTry(minor: number | null | undefined, currency = "TRY"): string {
   const value = Number(minor ?? 0) / 100;
+  // Madde 3: TRY'de vitrinle AYNI kural (lib/currency/format.ts) — tam lira "₺150",
+  // kuruşlu "₺1.999,02". Eskiden daima ",00" basılıyordu ("₺150,00"); sipariş
+  // listesi ile sepet/checkout/PDP aynı tutarı farklı yazıyordu.
+  if (!currency || currency === "TRY") return formatMoney(minor ?? 0, "TRY", "tr-TR");
   try {
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",

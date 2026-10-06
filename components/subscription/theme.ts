@@ -3,6 +3,7 @@
 // ⚠️ BU DEĞERLER FIGMA EXPORT'UNDAN BİREBİR ALINMIŞTIR. Değiştirilmemiştir,
 // yorumlanmamıştır, "iyileştirilmemiştir". Kaynak: Figma Make export
 // `src/index.css` @theme bloğu + `src/App.tsx` C sabiti.
+import { formatMoney } from '@/lib/currency/format';
 //
 // NEDEN SAYFAYA ÖZEL: Bu palet ve tipografi (Playfair Display + DM Sans, teal)
 // mevcut V72 tasarım sisteminden (Fraunces + Manrope, mor) FARKLIDIR. Figma
@@ -55,9 +56,12 @@ export const PLAN_GORSELI: Record<string, string> = {
 };
 
 export const kurus = (minor: number, currency = 'TRY'): string =>
-  new Intl.NumberFormat('tr-TR', {
-    style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2,
-  }).format(minor / 100);
+  // Madde 3: TRY'de vitrinle AYNI kural (lib/currency/format.ts); diğer para birimleri eskisi gibi.
+  currency === 'TRY'
+    ? formatMoney(minor, 'TRY', 'tr-TR')
+    : new Intl.NumberFormat('tr-TR', {
+        style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2,
+      }).format(minor / 100);
 
 const AY_TR = [
   'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',

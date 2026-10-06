@@ -204,6 +204,7 @@ export default async function HomePage() {
         slug: p.slug,
         subtitle: `Editör No. 0${i + 1}`,
         price: Math.round((hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)) / 100),
+        priceMinor: Math.round(hasSale ? Number(p.sale_price_minor) : Number(p.price_minor)),
         badge: p.is_new ? "Yeni" : "Editör Seçimi",
         image: p.cover_image_url as string,
       };

@@ -538,7 +538,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       <PaytrFrame
         url={paytrUrl}
         /* PayTR'nin tahsil edeceği tutar = sunucunun sipariş toplamı. */
-        amountLabel={`₺${((paytrAmountMinor ?? total) / 100).toLocaleString("tr-TR")}`}
+        amountLabel={moneyTRY(paytrAmountMinor ?? total)}
         productName={shownName}
         onCancel={() => setPaytrUrl(null)}
       />
