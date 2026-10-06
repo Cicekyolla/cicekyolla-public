@@ -274,8 +274,14 @@ test("KAYNAK: kategori sayfası listesiz / ötesi sayfada 404 verir, bilinmeyen 
   assert.ok(page.includes("const canonicalPath = categoryCanonicalPath(path, seoPage);"));
   // Ana seri okuması CategoryLanding'in sıralamasız/filtresiz isteğiyle AYNI parametreler (istek içi tekilleştirme).
   // EK (TEK KATEGORİ SIRASI): ikisi de varsayılan sırayı (CATEGORY_DEFAULT_SORT) ister.
-  assert.ok(page.includes("fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT })"));
-  assert.ok(landing.includes("category_id: categoryId, page_size: 50, page: pageNum, sort,"));
+  // EK (GENEL LİSTELEME MOTORU): ikisi de AYNI yardımcıyı (lib/listingSurface.ts fetchCategoryListing) AYNI global ayarla
+  // çağırır; page_size düz 50 değil settings.per_page (varsayılan 50 = bugünkü). Yardımcı: listeleme ucu → fetchProductsPaged (bugünkü).
+  assert.ok(page.includes("fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings })"));
+  assert.ok(landing.includes("categoryId, page: pageNum, sort, settings,"));
+  assert.ok(landing.includes("const perPage = settings.per_page;"));
+  assert.ok(!/page_size: 50\b/.test(page) && !/page_size: 50\b/.test(landing), "düz 50 kalmadı");
+  const listingSurface = readFileSync(new URL("./listingSurface.ts", import.meta.url), "utf8");
+  assert.ok(listingSurface.includes("page_size: perPage") && listingSurface.includes("fetchProductsPaged({"), "fallback bugünkü uç, aynı per_page");
   assert.ok(landing.includes("const sort = categorySortOf(searchParams?.sort);"));
   // EK (TAM NUMARALI LİSTE): numara listesi satıra sığmazsa sarar; önceki / sonraki bağlantıları rel taşır.
   assert.ok(landing.includes('<ol className="flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-1">'));
@@ -383,11 +389,13 @@ test("KAYNAK: Türkçe kategori sayfası yeni kuralı uygular (kayıtlı sayfada
   // Ürün sayımı yalnız 1. sayfada ve YALNIZ kayıtsız (sentetik) sayfada yapılır: kayıtlı sayfada ürün okuması YOK.
   assert.ok(fn.includes("if (pageNo !== 1) return false;"));
   assert.ok(fn.includes('if (rule !== "count") return false;'));
-  assert.ok(fn.indexOf('if (rule !== "count") return false;') < fn.indexOf("await fetchProductsPaged("), "kayıtlı sayfada ürün okuması yapılmaz");
+  assert.ok(fn.indexOf('if (rule !== "count") return false;') < fn.indexOf("await fetchCategoryListing("), "kayıtlı sayfada ürün okuması yapılmaz");
+  assert.ok(fn.indexOf('if (rule !== "count") return false;') < fn.indexOf("await fetchListingSettings("), "ayar okuması da kapıdan sonra");
   // EK: ağaçta çözülemeyen ürün kategorisi sayfası listesizdir (konum + kategori sayfaları hariç).
   assert.ok(fn.includes("if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });"));
   assert.ok(fn.includes("return isConfirmedEmptyCategory("));
-  assert.ok(fn.includes("await fetchProductsPaged({ category_id: categoryId, page_size: 50, page: pageNo, sort: CATEGORY_DEFAULT_SORT }),"));
+  // EK (LİSTELEME MOTORU): CategoryLanding ile AYNI yardımcı + AYNI ayar (page_size = settings.per_page).
+  assert.ok(fn.includes("await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings }),"));
   assert.match(page, /^export const revalidate = 300;$/m, "rota ayarı değişmedi");
 
   const landing = readFileSync(new URL("../components/category/CategoryLanding.tsx", import.meta.url), "utf8");

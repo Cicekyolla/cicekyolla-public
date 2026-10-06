@@ -4,10 +4,12 @@ import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 import { Check, Clock3, MapPin, MessageCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, formatMinorTRY, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchDistrictNeighborhoods, fetchListingCardsByIds, fetchListingPage, fetchListingSettings, fetchLocationProducts, fetchProducts, fetchRedirectMap, fetchSeoPage, fetchProductCardById, formatMinorTRY, toCardProduct, type BodyBlock, type CardProduct, type CityDistrictSummary, type DistrictNeighborhoods, type LocationProductsPage, type SeoPublicPage } from "@/lib/api";
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { descriptionWithPage, isSafeInternalPath, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
-import { getLocationBlock, getShowcaseItems, hierarchicalPathOf, showcasePageIds, showcaseTotalPages } from "@/lib/showcaseBlocks";
+import { getLocationBlock, getShowcaseBlock, hierarchicalPathOf } from "@/lib/showcaseBlocks";
+// EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md): saf kararlar lib/listingEngine.ts.
+import { cappedTotalPages, isLocationPageType, listingPageState, listingTotalPages, pageSlice, resolveShowcaseConfig, type ResolvedShowcase } from "@/lib/listingEngine";
 import { introWrapperClass, skipAutoLinkInjection } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
 import { NightOrderStrip } from "@/components/home/NightOrderStrip";
@@ -135,6 +137,8 @@ function syntheticDeliveryPage(path: string, parts: string[]): SeoPublicPage {
     body_blocks: [],
     faq: [],
     schema_jsonld: {},
+    // EK (LİSTELEME MOTORU): kayıtsız (sentetik) sayfa — otomatik /sayfa/N serisi açılmaz (taban yayında değil).
+    synthetic: true,
   };
 }
 
@@ -188,36 +192,90 @@ type Resolved =
   | { kind: "redirect"; to: string }
   | { kind: "notfound" };
 
-/** Vitrin ürün kartları: yalnız GÖSTERİLEN sayfanın en çok 30 ürünü; çözülemeyen ürün atlanır, sıra korunur. */
+/** Vitrin ürün kartları (ürün başına GET /api/products/:id — bugünkü yol): yalnız GÖSTERİLEN sayfanın ürünleri; çözülemeyen ürün atlanır, sıra korunur. */
 async function loadShowcaseCards(ids: number[]): Promise<CardProduct[]> {
   const rows = await Promise.all(ids.map((id) => fetchProductCardById(id).catch(() => null)));
   return rows.filter((r): r is NonNullable<typeof r> => r != null).map(toCardProduct);
+}
+
+// ── EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md) ──────────────────────
+// Sayfanın vitrin yapılandırması = showcase bloğu (manual / auto) + global ayar (fail-open DEFAULTS)
+// + sayfa bağlamı. Blok yoksa ve ayar `auto` ise ilçe/mahalle (lokasyon) ve özel gün sayfaları
+// OTOMATİK seri alır (kaynak: lib/listingEngine.ts deriveSource). Sentetik (kayıtsız) sayfada
+// otomatik seri AÇILMAZ: taban yol yayında değil → /sayfa/N 404 olur, sayfa 1'de kırık link doğardı.
+// Vitrin / seri yoksa null → bugünkü akış (LocationProducts → fetchProducts → boş) BİREBİR.
+/** Hiyerarşik yol (/il/ilçe[/mahalle]) → lokasyon tipli sayfada kaynak bağlamı; il sayfası (tek parça) null. */
+function locationFromPath(page: SeoPublicPage, path: string): { city: string; district: string; neighborhood?: string } | null {
+  if (!isLocationPageType(page.page_type)) return null;
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length < 2 || parts.length > 3) return null;
+  return parts[2] ? { city: parts[0], district: parts[1], neighborhood: parts[2] } : { city: parts[0], district: parts[1] };
+}
+
+async function showcaseConfigFor(page: SeoPublicPage, path: string): Promise<ResolvedShowcase | null> {
+  const block = getShowcaseBlock(page);
+  // Blok yoksa otomatik seri YALNIZ yayınlı LOKASYON sayfasında (ilçe/mahalle); özel gün ve diğer sayfalar blok olmadan
+  // bugünkü gibi ürün göstermez (ayar okuması da yapılmaz — gereksiz istek yok).
+  if (!block && (page.synthetic === true || !isLocationPageType(page.page_type))) return null;
+  const settings = await fetchListingSettings();
+  const categoryId = Number((page as { category_id?: unknown }).category_id);
+  return resolveShowcaseConfig(block, settings, {
+    pageType: page.page_type,
+    path,
+    location: getLocationBlock(page) ?? locationFromPath(page, path),
+    categoryId: Number.isInteger(categoryId) && categoryId > 0 ? categoryId : null,
+  });
+}
+
+/**
+ * Vitrin görünümü (N. sayfa):
+ *   • manual → kartlar TOPLU (source=ids); uç yoksa bugünkü per-id yol. Toplam sayfa, uç varken
+ *     ÇÖZÜLEN kart sayısından (sözleşme §4 fail-safe: pasif/stoksuz kimlikler boş son sayfa üretmez).
+ *   • auto → listeleme ucu; uç yok / hata → null → çağıran bugünkü fallback zincirine düşer.
+ */
+async function loadListingView(cfg: ResolvedShowcase, pageNumber: number): Promise<ShowcaseView | null> {
+  const { offset, limit } = pageSlice(pageNumber, cfg.perPage);
+  if (cfg.mode === "manual") {
+    const cards = await fetchListingCardsByIds(cfg.items);
+    if (cards === null) {
+      // FAIL-OPEN (ids ucu yok): ürün başına yol; toplam sayfa aktif kimlik sayısından (bugünkü kural).
+      const items = await loadShowcaseCards(cfg.items.slice(offset, offset + limit));
+      return { items, total: cfg.items.length, totalPages: listingTotalPages(cfg.items.length, cfg.perPage, cfg.maxItems, cfg.maxPages) };
+    }
+    return { items: cards.slice(offset, offset + limit).map(toCardProduct), total: cards.length, totalPages: listingTotalPages(cards.length, cfg.perPage, cfg.maxItems, cfg.maxPages) };
+  }
+  const listing = await fetchListingPage({ source: cfg.source, page: pageNumber, per_page: cfg.perPage, max_items: cfg.maxItems, in_stock: cfg.inStock, sort: cfg.sort });
+  if (!listing) return null; // FAIL-OPEN: uç yok / 404 / 5xx / zaman aşımı → bugünkü yol (LocationProducts / fetchProducts / per-id)
+  return {
+    items: listing.items.map(toCardProduct),
+    total: listing.pagination.total,
+    totalPages: cappedTotalPages(listing.pagination, cfg.perPage, cfg.maxItems, cfg.maxPages),
+  };
 }
 
 /** Vitrin sayfalaması dahil çözümleme. Sayfalama/vitrin yoksa resolvePage ile BİREBİR aynı akış. */
 async function resolveRequest(requestedPath: string): Promise<Resolved> {
   const parsed = parseShowcasePath(requestedPath);
   if (parsed.page !== null) {
-    // Sonsuz URL uzayı açma: taban yol published SEO sayfası + aktif vitrin öğesi>0 + N<=toplam sayfa.
+    // Sonsuz URL uzayı açma: taban yol published SEO sayfası + vitrin / otomatik seri + N<=toplam sayfa.
     if (!isSafeInternalPath(parsed.basePath)) return { kind: "notfound" }; // "//evil.com/sayfa/1" açık yönlendirme olmasın
     const base = await fetchSeoPage(parsed.basePath);
-    const ids = getShowcaseItems(base);
-    if (!base || ids.length === 0) return { kind: "notfound" };
-    if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath }; // yalnız vitrinli, yayındaki taban sayfaya
-    const totalPg = showcaseTotalPages(ids.length);
-    if (parsed.page > totalPg) return { kind: "notfound" };
-    const items = await loadShowcaseCards(showcasePageIds(ids, parsed.page));
-    if (items.length === 0) return { kind: "notfound" };
-    return { kind: "ok", path: parsed.basePath, pageNumber: parsed.page, page: base, showcase: { items, total: ids.length, totalPages: totalPg } };
+    if (!base) return { kind: "notfound" };
+    const cfg = await showcaseConfigFor(base, parsed.basePath);
+    if (!cfg) return { kind: "notfound" }; // ne vitrin ne otomatik seri → bugünkü gibi 404
+    if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath }; // yalnız vitrinli / serili, yayındaki taban sayfaya
+    const view = await loadListingView(cfg, parsed.page);
+    if (!view || listingPageState(parsed.page, view.totalPages, true) !== "ok" || view.items.length === 0) return { kind: "notfound" };
+    return { kind: "ok", path: parsed.basePath, pageNumber: parsed.page, page: base, showcase: view };
   }
   const page = await resolvePage(requestedPath);
   if (!page) return { kind: "notfound" };
   let showcase: ShowcaseView | null = null;
-  const ids = getShowcaseItems(page);
-  if (ids.length > 0) {
-    const items = await loadShowcaseCards(showcasePageIds(ids, 1));
-    // Hiç ürün çözülemezse vitrin yok sayılır: bugünkü akış (fallback).
-    if (items.length > 0) showcase = { items, total: ids.length, totalPages: showcaseTotalPages(ids.length) };
+  const cfg = await showcaseConfigFor(page, requestedPath);
+  if (cfg) {
+    const view = await loadListingView(cfg, 1);
+    // Hiç ürün çözülemezse / uç yoksa vitrin yok sayılır: bugünkü akış (fallback).
+    if (view && view.items.length > 0) showcase = view;
   }
   return { kind: "ok", path: requestedPath, pageNumber: 1, page, showcase };
 }
@@ -277,6 +335,8 @@ function syntheticDynamicDeliveryPage(path: string, dyn: DynDelivery): SeoPublic
     body_blocks: [],
     faq: [],
     schema_jsonld: {},
+    // EK (LİSTELEME MOTORU): kayıtsız (sentetik) sayfa — otomatik /sayfa/N serisi açılmaz (taban yayında değil).
+    synthetic: true,
   };
 }
 
@@ -558,6 +618,8 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
         placeName={place}
         initialItems={locationData.items.map(toCardProduct)}
         initialTotal={locationData.pagination.total}
+        pageSize={LOCATION_PAGE_SIZE}
+        maxItems={LOCATION_PAGE_SIZE * 2}
       />
     ) : products.length ? <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">{products.map((p) => <Link key={p.id} href={`/urun/${p.slug}`} className="group overflow-hidden rounded-[18px] bg-white"><div className="aspect-square overflow-hidden rounded-[18px] bg-[#f7f5fa]">{p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="grid h-full place-items-center text-[#8b5cf6]">ÇiçekYolla</div>}</div><div className="pt-5"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">{cargoMode ? "Türkiye Geneli Kargo" : "Premium Aranjman"}</p><h3 className="mt-3 text-lg font-semibold text-[#171020]">{p.name}</h3><p className="mt-3 text-xl font-bold"><Price minor={p.priceMinor} /></p></div></Link>)}</div> : <div className="mt-10 rounded-[24px] border border-[#ede9fe] bg-white p-8"><p className="text-[#746c80]">{cargoMode ? "Şu anda Türkiye geneli kargoya açık ürün bulunmuyor." : "Bu bölgeye gönderilebilen güncel ürünler çiçek koleksiyonunda listeleniyor."}</p><Link href={cargoMode ? "/kategori/turkiye-geneli-kargo" : "/kategori/cicekler"} className="mt-5 inline-flex rounded-full bg-[#8b5cf6] px-6 py-3 font-bold text-white">{cargoMode ? "Tüm Kargolu Ürünleri Gör" : "Çiçekleri İncele"}</Link></div>}</section>
 
@@ -714,6 +776,9 @@ export default async function Page({ params }: PageProps) {
     }
     return <><DeliveryLanding page={page} path={path} dyn={dyn} showcase={showcase} pageNumber={pageNumber} selfPath={pillarDyn ? path : undefined} />{jsonLd}{pillarLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(pillarLd) }} /> : null}</>;
   }
-  if (pageNumber > 1) notFound();
-  return <main><h1>{page.h1}</h1>{page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{page.body_blocks?.map((b, i) => renderBlock(b, i))}{page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;
+  // EK (LİSTELEME MOTORU): özel gün sayfası vitrin / otomatik seri taşıyorsa ürünleri ve /sayfa/N serisini basar
+  // (sayfa ≥ 2: yalnız ürünler; metin / SSS / şema 1. sayfada). Diğer genel sayfalarda /sayfa/N bugünkü gibi 404.
+  const specialShowcase = page.page_type === "special_day" && showcase ? showcase : null;
+  if (pageNumber > 1 && !specialShowcase) notFound();
+  return <main><h1>{page.h1}</h1>{pageNumber === 1 && page.intro_html ? <div dangerouslySetInnerHTML={{ __html: page.intro_html }} /> : null}{pageNumber === 1 ? page.body_blocks?.map((b, i) => renderBlock(b, i)) : null}{specialShowcase ? <section className="mx-auto max-w-[1320px] px-6 py-12 lg:px-14"><ShowcaseGrid items={specialShowcase.items} basePath={path} page={pageNumber} totalPages={specialShowcase.totalPages} /></section> : null}{pageNumber === 1 && page.faq && page.faq.length > 0 ? <section><h2>Sıkça Sorulan Sorular</h2>{page.faq.map((f, i) => f.q && f.a ? <div key={i}><h3>{f.q}</h3><p>{f.a}</p></div> : null)}</section> : null}{jsonLd}</main>;
 }

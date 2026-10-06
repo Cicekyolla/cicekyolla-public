@@ -85,3 +85,15 @@ export function productDetailToListItem(d: PublicProductDetail | null | undefine
 export function isPillarPage(page: { page_type?: string; url_path?: string } | null | undefined, wantPath: string): boolean {
   return !!page && page.page_type === "category_location" && page.url_path === wantPath;
 }
+
+// ============================================================================
+// EK (GENEL LİSTELEME MOTORU) — ADDITIVE. Ham showcase bloğu (mode / per_page / max_items / source / items)
+// lib/listingEngine.ts resolveShowcaseConfig'e verilir. getShowcaseItems DEĞİŞMEDİ (manuel kimlik kuralı aynı).
+// ============================================================================
+import type { ShowcaseBlockConfig } from "./listingEngine.ts";
+
+/** Sayfanın showcase bloğu (varsa, ham hâliyle); yoksa null. */
+export function getShowcaseBlock(page: WithBlocks): ShowcaseBlockConfig | null {
+  const block = blocks(page).find((x) => x.type === "showcase");
+  return block ? (block as ShowcaseBlockConfig) : null;
+}
