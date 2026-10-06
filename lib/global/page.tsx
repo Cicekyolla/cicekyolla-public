@@ -88,7 +88,7 @@ import {
 } from "./locationSections";
 import {
   resolveLocationCatalog, isLocationContinuationPage,
-  parseListingPageParam, listingCategoryParam, locationListingSeo, locationPageTitle, isLocationListingNotFound,
+  parseListingPageParam, listingCategoryParam, locationListingSeo, locationPageTitle, isLocationListingNotFound, isCategoryListingNotFound,
   type LocationCatalogView, type LocationSearchParams,
 } from "./locationPaging";
 import { mediaUrl, mediaDerivatives } from "@/lib/media";
@@ -365,6 +365,9 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
   }
 
   if (parsed.kind === "category") {
+    // EK (MADDE 6): kategori sayfası serisizdir — geçersiz / 1'in ötesindeki ?page 404 verir (LocalePage)
+    // → metadata index dışı; yüzey okuması yapılmaz. Sorgusuz istek ve 1. sayfa aynen.
+    if (isCategoryListingNotFound(listing)) return { robots: NOINDEX };
     const surface = await fetchCategorySurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`);
@@ -1015,6 +1018,9 @@ export async function LocalePage({ locale, path, searchParams }: {
   }
 
   if (parsed.kind === "category") {
+    // EK (MADDE 6): kategori sayfası ürünlerin TAMAMINI tek sayfada basar (seri yok). ?page=2/999/abc
+    // 1. sayfanın kopyasını 200 ile sunmaz → 404 (TR kategori ve locale lokasyon kuralıyla aynı).
+    if (isCategoryListingNotFound(searchParams)) notFound();
     // Katalog, sayfa altındaki "ilgili kategoriler" iç bağlantıları için; yüzeyle
     // PARALEL çekilir (ek gecikme yok).
     const [surface, catalog, contact] = await Promise.all([
