@@ -9,7 +9,7 @@ import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { descriptionWithPage, isSafeInternalPath, parseShowcasePath, titleWithPage } from "@/lib/showcasePagination";
 import { getLocationBlock, getShowcaseBlock, hierarchicalPathOf } from "@/lib/showcaseBlocks";
 // EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md): saf kararlar lib/listingEngine.ts.
-import { cappedTotalPages, isLocationPageType, listingPageState, listingTotalPages, pageSlice, resolveShowcaseConfig, type ResolvedShowcase } from "@/lib/listingEngine";
+import { isLocationPageType, listingPageState, listingQueryFor, mergePinnedFirst, pageSlice, resolveShowcaseConfig, resolvedPageSize, resolvedTotalPages, resolvedTotalPagesFrom, type ResolvedShowcase } from "@/lib/listingEngine";
 import { introWrapperClass, skipAutoLinkInjection } from "@/lib/operatorLinks";
 import { NeighborhoodCards } from "@/components/location/NeighborhoodCards";
 import { NightOrderStrip } from "@/components/home/NightOrderStrip";
@@ -198,25 +198,33 @@ async function loadShowcaseCards(ids: number[]): Promise<CardProduct[]> {
   return rows.filter((r): r is NonNullable<typeof r> => r != null).map(toCardProduct);
 }
 
-// ── EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md) ──────────────────────
-// Sayfanın vitrin yapılandırması = showcase bloğu (manual / auto) + global ayar (fail-open DEFAULTS)
-// + sayfa bağlamı. Blok yoksa ve ayar `auto` ise ilçe/mahalle (lokasyon) ve özel gün sayfaları
-// OTOMATİK seri alır (kaynak: lib/listingEngine.ts deriveSource). Sentetik (kayıtsız) sayfada
-// otomatik seri AÇILMAZ: taban yol yayında değil → /sayfa/N 404 olur, sayfa 1'de kırık link doğardı.
-// Vitrin / seri yoksa null → bugünkü akış (LocationProducts → fetchProducts → boş) BİREBİR.
-/** Hiyerarşik yol (/il/ilçe[/mahalle]) → lokasyon tipli sayfada kaynak bağlamı; il sayfası (tek parça) null. */
-function locationFromPath(page: SeoPublicPage, path: string): { city: string; district: string; neighborhood?: string } | null {
+// ── EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md + CONTRACT_V2.md) ───────
+// Sayfanın vitrin yapılandırması = showcase bloğu (manual / auto+pinned / override) + global ayar (fail-open
+// DEFAULTS) + sayfa bağlamı. Blok yoksa ve ayar `auto` ise: yayınlı il / ilçe / mahalle (lokasyon) sayfaları
+// OTOMATİK seri alır (il: city-only kaynak — v2); özel gün sayfası YALNIZ sayfaya bağlı kategori (category_id)
+// varsa occasion serisi alır, kategorisizse ÜRÜNSÜZ kalır (katalog gösterilmez; lib/listingEngine.ts deriveSource).
+// Sentetik (kayıtsız) sayfada otomatik seri AÇILMAZ: taban yol yayında değil → /sayfa/N 404 olur, sayfa 1'de
+// kırık link doğardı. Vitrin / seri yoksa ya da uç yanıt vermezse null → bugünkü akış (LocationProducts →
+// fetchProducts → boş) BİREBİR (il sayfasında da: uç city-only'yi tanımıyorsa bugünkü 30/100'lük vitrin).
+/** Hiyerarşik yol (/il[/ilçe[/mahalle]]) → lokasyon tipli sayfada kaynak bağlamı; il sayfası (tek parça) city-only. */
+function locationFromPath(page: SeoPublicPage, path: string): { city: string; district?: string; neighborhood?: string } | null {
   if (!isLocationPageType(page.page_type)) return null;
   const parts = path.split("/").filter(Boolean);
-  if (parts.length < 2 || parts.length > 3) return null;
+  if (parts.length < 1 || parts.length > 3) return null;
+  if (parts.length === 1) return { city: parts[0] };
   return parts[2] ? { city: parts[0], district: parts[1], neighborhood: parts[2] } : { city: parts[0], district: parts[1] };
+}
+
+/** Blok yokken otomatik seri açılabilen sayfa tipleri: yayınlı lokasyon (il/ilçe/mahalle) ve özel gün (bağlı kategori varsa). */
+function autoSeriesPageType(pageType: string | null | undefined): boolean {
+  return isLocationPageType(pageType) || (pageType ?? "").toLowerCase() === "special_day";
 }
 
 async function showcaseConfigFor(page: SeoPublicPage, path: string): Promise<ResolvedShowcase | null> {
   const block = getShowcaseBlock(page);
-  // Blok yoksa otomatik seri YALNIZ yayınlı LOKASYON sayfasında (ilçe/mahalle); özel gün ve diğer sayfalar blok olmadan
+  // Blok yoksa otomatik seri YALNIZ yayınlı lokasyon / özel gün sayfasında; diğer sayfalar blok olmadan
   // bugünkü gibi ürün göstermez (ayar okuması da yapılmaz — gereksiz istek yok).
-  if (!block && (page.synthetic === true || !isLocationPageType(page.page_type))) return null;
+  if (!block && (page.synthetic === true || !autoSeriesPageType(page.page_type))) return null;
   const settings = await fetchListingSettings();
   const categoryId = Number((page as { category_id?: unknown }).category_id);
   return resolveShowcaseConfig(block, settings, {
@@ -231,25 +239,30 @@ async function showcaseConfigFor(page: SeoPublicPage, path: string): Promise<Res
  * Vitrin görünümü (N. sayfa):
  *   • manual → kartlar TOPLU (source=ids); uç yoksa bugünkü per-id yol. Toplam sayfa, uç varken
  *     ÇÖZÜLEN kart sayısından (sözleşme §4 fail-safe: pasif/stoksuz kimlikler boş son sayfa üretmez).
- *   • auto → listeleme ucu; uç yok / hata → null → çağıran bugünkü fallback zincirine düşer.
+ *   • auto → listeleme ucu (v2: pinned_ids / paginate / max none / city-only); uç yok / hata → null → çağıran
+ *     bugünkü fallback zincirine düşer. Sayfalama kapalıysa (pagination_enabled=false) tek sayfa.
+ *   • Sorgu ve sayfa hesabı TEK yerde (lib/listingEngine.ts listingQueryFor / resolvedTotalPages*).
  */
 async function loadListingView(cfg: ResolvedShowcase, pageNumber: number): Promise<ShowcaseView | null> {
-  const { offset, limit } = pageSlice(pageNumber, cfg.perPage);
+  const pageSize = resolvedPageSize(cfg);
+  const { offset, limit } = cfg.paginationEnabled ? pageSlice(pageNumber, pageSize) : { offset: 0, limit: pageSize };
   if (cfg.mode === "manual") {
     const cards = await fetchListingCardsByIds(cfg.items);
     if (cards === null) {
       // FAIL-OPEN (ids ucu yok): ürün başına yol; toplam sayfa aktif kimlik sayısından (bugünkü kural).
       const items = await loadShowcaseCards(cfg.items.slice(offset, offset + limit));
-      return { items, total: cfg.items.length, totalPages: listingTotalPages(cfg.items.length, cfg.perPage, cfg.maxItems, cfg.maxPages) };
+      return { items, total: cfg.items.length, totalPages: resolvedTotalPages(cfg, cfg.items.length) };
     }
-    return { items: cards.slice(offset, offset + limit).map(toCardProduct), total: cards.length, totalPages: listingTotalPages(cards.length, cfg.perPage, cfg.maxItems, cfg.maxPages) };
+    return { items: cards.slice(offset, offset + limit).map(toCardProduct), total: cards.length, totalPages: resolvedTotalPages(cfg, cards.length) };
   }
-  const listing = await fetchListingPage({ source: cfg.source, page: pageNumber, per_page: cfg.perPage, max_items: cfg.maxItems, in_stock: cfg.inStock, sort: cfg.sort });
+  const listing = await fetchListingPage(listingQueryFor(cfg, pageNumber));
   if (!listing) return null; // FAIL-OPEN: uç yok / 404 / 5xx / zaman aşımı → bugünkü yol (LocationProducts / fetchProducts / per-id)
+  // Uç pinned_ids'i tanımıyorsa (eski uç) öne çıkarılanlar 1. sayfada burada öne alınır (tekrar yok); tanıyorsa aynı sonuç.
+  const rows = pageNumber === 1 && cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : listing.items;
   return {
-    items: listing.items.map(toCardProduct),
+    items: rows.map(toCardProduct),
     total: listing.pagination.total,
-    totalPages: cappedTotalPages(listing.pagination, cfg.perPage, cfg.maxItems, cfg.maxPages),
+    totalPages: resolvedTotalPagesFrom(cfg, listing.pagination),
   };
 }
 

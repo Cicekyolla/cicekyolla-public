@@ -91,7 +91,9 @@ export async function fetchProductCardById(id: number): Promise<PublicProductLis
 
 // Tek sayfa çeker. published değilse backend not_found döndürür → null.
 export async function fetchSeoPage(
-  path: string
+  path: string,
+  /** EK (ADMİN TEK MERKEZ): Global yüzeyler kategori bloğunu Data Cache'siz okur (globalNoStore sözleşmesi). */
+  opts?: { noStore?: boolean },
 ): Promise<SeoPublicPage | null> {
   const url = `${API_ORIGIN}/api/public/seo/page?path=${encodeURIComponent(
     path
@@ -100,7 +102,7 @@ export async function fetchSeoPage(
   let res: Response;
   try {
     // DAYANIKLILIK: 6 sn süre sınırı + tek tekrar (bkz. fetchWithDeadline).
-    res = await fetchWithDeadline(url, {
+    res = await fetchWithDeadline(url, opts?.noStore ? { headers: apiHeaders(), cache: "no-store" } : {
       headers: apiHeaders(),
       // ISR: sayfayı belirli aralıkla yeniden üret (public site tazeliği).
       next: { revalidate: 300 },
@@ -879,9 +881,9 @@ export async function fetchLocationProducts(
 // EK (GENEL LİSTELEME MOTORU — sözleşme scratchpad/listing/CONTRACT.md) — ADDITIVE.
 // Üç yeni okuma; mevcut imzalara DOKUNULMADI. Hepsi FAIL-OPEN: uç henüz yayında değilse
 // (404), 5xx verirse ya da süre dolarsa çağıran bugünkü yoluna düşer.
-//   • fetchListingSettings()      GET /api/public/seo/listing-settings  (revalidate 300) → ayar | DEFAULTS
-//   • fetchListingPage(params)    GET /api/public/seo/listing           (revalidate 120, 6 sn) → zarf | null
-//   • fetchListingCardsByIds(ids) aynı uç, source=ids (sıra korunur)                       → satırlar | null
+//   • fetchListingSettings(opts?)      GET /api/public/seo/listing-settings  (revalidate 300; opts.noStore → Data Cache yok) → ayar | DEFAULTS
+//   • fetchListingPage(params, opts?)  GET /api/public/seo/listing           (revalidate 120 / no-store, 6 sn) → zarf | null
+//   • fetchListingCardsByIds(ids, opts?) aynı uç, source=ids (sıra korunur; opts.locale ile dil satırları) → satırlar | null
 // Satırlar GET /api/products satırıyla aynı alan adlarını taşır → toCardProduct ile eşlenir;
 // görsel adresleri fetchProductsPaged ile aynı şekilde (mediaUrlOrNull / mediaDerivatives) normalize edilir.
 // ============================================================================
@@ -900,20 +902,40 @@ export interface ListingPagination {
   total: number;
   total_pages: number;
   has_more?: boolean;
+  /** v2 (sözleşme v2 §3): sonuçta önce gelen ÖNE ÇIKARILAN satır sayısı; eski uçta yok. */
+  pinned_count?: number;
+}
+
+/** Listeleme ucu satırı: GET /api/products satırı + v2 locale alanları (yalnız `locale` sorgusunda; eski uçta yok). */
+export interface ListingRow extends PublicProductListItem {
+  locale_name?: string | null;
+  locale_slug?: string | null;
+  locale_description?: string | null;
 }
 
 export interface ListingPageResult {
-  items: PublicProductListItem[];
+  items: ListingRow[];
   pagination: ListingPagination;
   meta?: { source?: string; settings?: Partial<ListingSettings> } | null;
 }
 
+/** EK (ADMİN TEK MERKEZ): Global yüzeyler Data Cache'siz okur (globalNoStore sözleşmesi) — { noStore: true }. */
+export interface ListingReadOptions {
+  noStore?: boolean;
+}
+
+function listingCacheInit(opts: ListingReadOptions | undefined, revalidate: number): RequestInit & { headers: Record<string, string> } {
+  return opts?.noStore
+    ? { headers: apiHeaders(), cache: "no-store" }
+    : { headers: apiHeaders(), next: { revalidate } };
+}
+
 /** Global listeleme ayarı; uç yoksa / okunamazsa sözleşme varsayılanları (her alan sınıra çekilmiş). */
-export async function fetchListingSettings(): Promise<ListingSettings> {
+export async function fetchListingSettings(opts?: ListingReadOptions): Promise<ListingSettings> {
   try {
     const res = await fetchWithDeadline(
       `${API_ORIGIN}/api/public/seo/listing-settings`,
-      { headers: apiHeaders(), next: { revalidate: 300 } },
+      listingCacheInit(opts, 300),
       4_000,
       fetch,
       false,
@@ -926,23 +948,30 @@ export async function fetchListingSettings(): Promise<ListingSettings> {
   }
 }
 
-function normalizeListingRows(rows: unknown): PublicProductListItem[] {
+function normalizeListingRows(rows: unknown): ListingRow[] {
   if (!Array.isArray(rows)) return [];
   return rows
-    .filter((it): it is PublicProductListItem => !!it && typeof it === "object" && Number.isInteger(Number((it as { id?: unknown }).id)))
+    .filter((it): it is ListingRow => !!it && typeof it === "object" && Number.isInteger(Number((it as { id?: unknown }).id)))
     .map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
+}
+
+/** v2: uç `locale`yi tanıdı mı? (Her satırda locale_name + locale_slug; eski uç TR satır döner → false → bugünkü yol.) */
+export function listingRowsLocalized(items: ListingRow[]): items is (ListingRow & { locale_name: string; locale_slug: string })[] {
+  return items.length > 0 && items.every((r) => typeof r.locale_name === "string" && r.locale_name.trim() !== "" && typeof r.locale_slug === "string" && r.locale_slug.trim() !== "");
 }
 
 /**
  * Listeleme ucundan bir sayfa. Uç yok (404) / 5xx / zaman aşımı / bozuk zarf → null (çağıran bugünkü yola düşer).
  * Sayfa > total_pages ise uç items: [] döner; 404 kararı çağıranındır (lib/listingEngine.ts listingPageState).
+ * v2 parametreleri (pinned_ids, paginate, max none, locale, city-only location) eski uçta yok sayılır ya da
+ * 4xx verir → null → FAIL-OPEN. opts.noStore: Global yüzeyler için Data Cache yok.
  */
-export async function fetchListingPage(params: ListingQuery): Promise<ListingPageResult | null> {
+export async function fetchListingPage(params: ListingQuery, opts?: ListingReadOptions): Promise<ListingPageResult | null> {
   const q = new URLSearchParams();
   for (const [k, v] of listingQueryParams(params)) q.set(k, v);
   const url = `${API_ORIGIN}/api/public/seo/listing?${q.toString()}`;
   try {
-    const res = await fetchWithDeadline(url, { headers: apiHeaders(), next: { revalidate: 120 } }, 6_000, fetch, false);
+    const res = await fetchWithDeadline(url, listingCacheInit(opts, 120), 6_000, fetch, false);
     if (!res.ok) return null;
     const json = (await res.json()) as { data?: { items?: unknown; pagination?: Partial<ListingPagination>; meta?: ListingPageResult["meta"] } } | null;
     const data = json?.data;
@@ -953,9 +982,10 @@ export async function fetchListingPage(params: ListingQuery): Promise<ListingPag
     const total = Number.isFinite(Number(p.total)) ? Number(p.total) : items.length;
     const total_pages = Number.isFinite(Number(p.total_pages)) ? Number(p.total_pages) : Math.ceil(total / per_page);
     const page = Number(p.page) >= 1 ? Number(p.page) : params.page ?? 1;
+    const pinned_count = Number.isInteger(Number(p.pinned_count)) && Number(p.pinned_count) >= 0 ? Number(p.pinned_count) : undefined;
     return {
       items,
-      pagination: { page, per_page, total, total_pages, has_more: typeof p.has_more === "boolean" ? p.has_more : page < total_pages },
+      pagination: { page, per_page, total, total_pages, has_more: typeof p.has_more === "boolean" ? p.has_more : page < total_pages, ...(pinned_count !== undefined ? { pinned_count } : {}) },
       meta: data.meta ?? null,
     };
   } catch {
@@ -967,10 +997,10 @@ export async function fetchListingPage(params: ListingQuery): Promise<ListingPag
  * Manuel vitrin kartları TOPLU (source=ids; istek sırası korunur; aktif/stok/kapak süzgeci SQL'de).
  * Uç yoksa / hata → null → çağıran ürün başına GET /api/products/:id yoluna (fetchProductCardById) düşer.
  */
-export async function fetchListingCardsByIds(ids: number[]): Promise<PublicProductListItem[] | null> {
+export async function fetchListingCardsByIds(ids: number[], opts?: ListingReadOptions & { locale?: string }): Promise<ListingRow[] | null> {
   const clean = ids.filter((id) => Number.isInteger(id) && id > 0).slice(0, 500);
   if (clean.length === 0) return [];
-  const result = await fetchListingPage({ source: { kind: "ids", ids: clean } });
+  const result = await fetchListingPage({ source: { kind: "ids", ids: clean }, ...(opts?.locale ? { locale: opts.locale } : {}) }, opts);
   if (!result) return null;
   // Sıra: istek sırası (uç korur; korumazsa burada yeniden kurulur — eksik olanlar atlanır).
   const byId = new Map(result.items.map((it) => [Number(it.id), it] as const));

@@ -39,9 +39,13 @@ import { isCategoryPageConfirmedIndexable } from "@/lib/categoryPage";
 import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
 import { LABELS } from "./locationLabels";
-import { fetchListingSettings, fetchProductBySlug, fetchProducts, fetchProductsPaged, formatMinorTRY, type PublicProductDetail } from "@/lib/api";
+import { fetchListingPage, fetchListingSettings, fetchProductBySlug, fetchProducts, fetchProductsPaged, fetchSeoPage, formatMinorTRY, listingRowsLocalized, type ListingRow, type ListingSettings, type PublicProductDetail } from "@/lib/api";
+// EK (ADMİN TEK MERKEZ): dil kategori / lokasyon serileri listeleme ucundan (locale, pinned_ids) — tek sayfa hesabı; uç locale'i
+// tanımıyorsa (locale_name yok) bugünkü surface / catalog yolu (fail-open). Okumalar no-store (globalNoStore sözleşmesi).
+import { capListing, defaultShowcaseConfig, listingQueryFor, mergePinnedFirst, resolveShowcaseConfig, resolvedPageSize, resolvedTotalPages, resolvedTotalPagesFrom, type ResolvedShowcase } from "@/lib/listingEngine";
+import { getShowcaseBlock } from "@/lib/showcaseBlocks";
+import type { CategorySurface, CategorySurfaceProduct } from "./api";
 // EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan (fail-open DEFAULTS); matematik tek yerde.
-import { listingTotalPages } from "@/lib/listingEngine";
 import { GlobalPagination } from "@/components/global/GlobalPagination";
 import { ProductCard, type Product as CardProductUi } from "@/components/home/ProductCard";
 import { ProductImage } from "@/components/product/ProductImage";
@@ -180,6 +184,66 @@ function rowToCard(locale: GlobalLocale, p: CardRow): CardProductUi {
     derivatives: mediaDerivatives(p.derivatives ?? null),
     blurhash: p.blurhash ?? null,
   };
+}
+
+/** Listeleme ucu satırı (locale) → kart satırı (rowToCard) — ad o dilde, href o dilin ürün yolu. */
+function localeRowToCard(locale: GlobalLocale, r: ListingRow & { locale_name: string; locale_slug: string }): { card: CardProductUi; href: string } {
+  const seg = SEGMENTS[locale];
+  const card = rowToCard(locale, {
+    id: r.id, tr_slug: r.slug, name: r.locale_name, price_minor: r.price_minor, sale_price_minor: r.sale_price_minor,
+    image: r.cover_image_url, blurhash: r.cover_blurhash ?? null, derivatives: r.cover_derivatives ?? null,
+    is_new: r.is_new, is_bestseller: r.is_bestseller, same_day_available: r.same_day_available, product_type: r.product_type, delivery_scope: r.delivery_scope,
+  });
+  return { card, href: `/${locale}/${seg.product}/${r.locale_slug}` };
+}
+
+/** Listeleme ucu satırı (locale) → lokasyon planı ürünü (catalogItems ile aynı kart modeli). */
+function localeRowToCatalogProduct(r: ListingRow & { locale_name: string; locale_slug: string }): CatalogProduct {
+  return {
+    id: r.id, tr_slug: r.slug, slug: r.locale_slug, name: r.locale_name,
+    price_minor: Number(r.price_minor), sale_price_minor: r.sale_price_minor == null ? null : Number(r.sale_price_minor),
+    image: r.cover_image_url, blurhash: r.cover_blurhash ?? null, derivatives: r.cover_derivatives ?? null,
+    same_day_available: !!r.same_day_available, delivery_model_code: r.delivery_model_code ?? null,
+    is_new: !!r.is_new, is_bestseller: !!r.is_bestseller, product_category_slugs: [],
+    product_type: r.product_type ?? null, delivery_scope: r.delivery_scope ?? null,
+  };
+}
+
+/** Dil kategori serisi — TEK hesap (metadata ve gövde aynı yardımcı):
+ *  kaynak = listeleme ucu (source=category, locale, pinned_ids = TR kategori bloğu) → uç locale'i tanımıyorsa (satırda
+ *  locale_name yok) surface.products (max_items tavanı dilimde de). totalPages en az 1 (404 kapısı isCategoryListingNotFound). */
+interface LocaleCategorySeries {
+  totalPages: number;
+  /** Listeleme ucundan kartlar (bu sayfanın dilimi); null → surface yolu (members). */
+  listingCards: { card: CardProductUi; href: string }[] | null;
+  /** surface yolu: bu sayfanın üyeleri (yeni API: kart alanlı; eski API: detay isteği). */
+  members: CategorySurfaceProduct[];
+}
+async function localeCategorySeries(locale: GlobalLocale, surface: CategorySurface, settings: ListingSettings, page: number): Promise<LocaleCategorySeries> {
+  const categoryId = Number(surface.category_id);
+  const source = { kind: "category" as const, category_id: categoryId };
+  // Kategori Merkezi bloğu (TR kategori seo_page): manual → ids; auto+pinned → pinned_ids. Okunamazsa yalnız global ayar.
+  const block = categoryId > 0 && surface.tr_slug ? getShowcaseBlock(await fetchSeoPage(`/kategori/${surface.tr_slug}`, { noStore: true }).catch(() => null)) : null;
+  const cfg: ResolvedShowcase = { ...((block && resolveShowcaseConfig(block, settings, { pageType: "category", categoryId })) || defaultShowcaseConfig(settings, source)), sort: "default" };
+  if (categoryId > 0) {
+    const listing = await fetchListingPage(listingQueryFor(cfg, page, { locale }), { noStore: true });
+    if (listing && listingRowsLocalized(listing.items)) {
+      const rows = page === 1 && cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : [...listing.items];
+      return {
+        totalPages: Math.max(1, resolvedTotalPagesFrom(cfg, listing.pagination)),
+        listingCards: rows.filter(listingRowsLocalizedOne).map((r) => localeRowToCard(locale, r)),
+        members: [],
+      };
+    }
+  }
+  // FAIL-OPEN: bugünkü yüzey listesi (Global Merkezi sırası); tavanlar motordan (max_items dilimde de, tek sayfa modu).
+  const pool = capListing(surface.products, cfg.maxItems);
+  const totalPages = Math.max(1, resolvedTotalPages(cfg, pool.length));
+  const members = cfg.paginationEnabled ? sliceLocationPage(pool, page, resolvedPageSize(cfg)) : pool;
+  return { totalPages, listingCards: null, members };
+}
+function listingRowsLocalizedOne(r: ListingRow): r is ListingRow & { locale_name: string; locale_slug: string } {
+  return listingRowsLocalized([r]);
 }
 
 /** Lokasyon sayfası planı (katalog modu) — GlobalPageBody'de BİR KEZ kurulur, bölümler paylaşır. */
@@ -381,8 +445,9 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     if (listingPage === null) return { robots: NOINDEX };
     const surface = await fetchCategorySurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
-    const listingSettings = await fetchListingSettings();
-    const categoryTotalPages = Math.max(1, listingTotalPages(surface.products.length, listingSettings.per_page, listingSettings.max_items, listingSettings.max_pages));
+    const listingSettings = await fetchListingSettings({ noStore: true });
+    // Gövdeyle AYNI yardımcı + AYNI istek (istek içi tekilleştirme) → aynı sayfa sayısı.
+    const categoryTotalPages = (await localeCategorySeries(locale, surface, listingSettings, listingPage)).totalPages;
     if (isCategoryListingNotFound(listing, categoryTotalPages)) return { robots: NOINDEX };
     const self = absoluteUrl(`/${locale}/${SEGMENTS[locale].category}/${surface.slug}`);
     // Sayfa ≥ 2: canonical KENDİ yolu (yol + page parametresi — GlobalPagination linkleriyle aynı biçim, locationPageHref),
@@ -866,10 +931,39 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   // kategori = Admin sırası) dilim; linkler canonical sorgusuz yoldan. 1. sayfada geçersiz ?category → Tümü (yönlendirme yok);
   // geçersiz ?page ve sayfa ≥ 2'de çözülmeyen liste aşağıda 404 verir.
   // EK (LİSTELEME MOTORU): sayfa boyutu global ayardan (varsayılan 50; önceki sabit 24 = LOCATION_PAGE_SIZE yalnız yedek).
-  const listingSize = plan ? (await fetchListingSettings()).per_page : undefined;
-  const view: LocationCatalogView | null = plan
-    ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all, listingSize)
+  // EK (ADMİN TEK MERKEZ): max_items / max_pages / tek sayfa tavanları da aynı ayardan (no-store); "Tümü" listesi
+  // listeleme ucundan (locale + location [+ pinned_ids]) — uç locale'i tanımıyorsa plan (katalog) aynen.
+  const listingSettings = plan ? await fetchListingSettings({ noStore: true }) : null;
+  const listingSize = listingSettings?.per_page;
+  const listingCaps = listingSettings ? { maxItems: listingSettings.max_items, maxPages: listingSettings.max_pages, paginate: listingSettings.pagination_enabled } : undefined;
+  let view: LocationCatalogView | null = plan
+    ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all, listingSize, listingCaps)
     : null;
+  if (plan && view && listingSettings && view.category === null && loc) {
+    // İl / ilçe / mahalle AYNI blok + AYNI uç (sözleşme v2 §5): TR seo_page showcase bloğu (manual → ids; auto+pinned → pinned_ids)
+    // no-store okunur; yoksa yalnız global ayar. Uç locale'i tanımıyorsa (locale_name yok) plan (katalog) aynen.
+    const location = { city: loc.city, ...(loc.kind !== "city" ? { district: loc.district } : {}), ...(loc.kind === "neighborhood" ? { neighborhood: loc.neighborhood } : {}) };
+    const block = getShowcaseBlock(await fetchSeoPage(`/${row.page_key}`, { noStore: true }).catch(() => null));
+    const cfg = (block && resolveShowcaseConfig(block, listingSettings, { pageType: loc.kind, location })) ?? defaultShowcaseConfig(listingSettings, { kind: "location", ...location });
+    const wantedPage = parseListingPageParam(rawSearchParams?.page) ?? 1;
+    const listing = await fetchListingPage(listingQueryFor(cfg, wantedPage, { locale }), { noStore: true });
+    if (listing && listingRowsLocalized(listing.items)) {
+      // manual (ids): uç sayfalamaz → tüm liste gelir, dilim burada; auto: uç dilimi (pinned önce; eski uç tanımasa da burada).
+      const all = cfg.mode === "manual" ? listing.items : wantedPage === 1 && cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : listing.items;
+      const totalPages = Math.max(1, cfg.mode === "manual" ? resolvedTotalPages(cfg, all.length) : resolvedTotalPagesFrom(cfg, listing.pagination));
+      const page = wantedPage <= totalPages ? wantedPage : 1;
+      const size = resolvedPageSize(cfg);
+      const rows = cfg.mode === "manual" ? (cfg.paginationEnabled ? all.slice((page - 1) * size, page * size) : all.slice(0, size)) : all;
+      const total = cfg.mode === "manual" ? all.length : listing.pagination.total;
+      for (const r of listing.items) if (!plan.byId.has(r.id)) plan.byId.set(r.id, localeRowToCatalogProduct(r));
+      const basePath = `/${locale}/${row.page_key}`;
+      view = {
+        ...view, page, totalPages, total, ids: rows.map((r) => r.id),
+        chips: view.chips.map((c) => (c.key === null ? { ...c, count: total } : c)),
+        pagination: locationPagination(basePath, null, page, totalPages),
+      };
+    }
+  }
   const tiles = locationTiles(catalog, plan, cargo);
   // Bölüm sırası: Admin (storefront structure.locationSections, catalog yanıtında) — yoksa varsayılan.
   // Kargo destinasyonunda emotion + cta listeden düşer (aynı gün / İstanbul vaadi yok).
@@ -1051,30 +1145,36 @@ export async function LocalePage({ locale, path, searchParams }: {
       fetchCategorySurface(locale, parsed.slug),
       fetchLocaleCatalog(locale),
       v80Contact(),
-      fetchListingSettings(),
+      fetchListingSettings({ noStore: true }),
     ]);
     if (!surface) notFound();
-    const perPage = listingSettings.per_page;
-    const categoryTotalPages = Math.max(1, listingTotalPages(surface.products.length, perPage, listingSettings.max_items, listingSettings.max_pages));
-    if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();
     const categoryPage = parseListingPageParam(searchParams?.page) ?? 1;
+    // EK (ADMİN TEK MERKEZ): seri TEK yardımcıdan (localeCategorySeries — metadata ile aynı): listeleme ucu (locale,
+    // pinned_ids) → uç locale'i tanımıyorsa surface.products (max_items dilimde de). Sayfa sayısı tek hesap.
+    const series = await localeCategorySeries(locale, surface, listingSettings, categoryPage);
+    const categoryTotalPages = series.totalPages;
+    if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();
     const seg = SEGMENTS[locale];
     const categoryBase = `/${locale}/${seg.category}/${surface.slug}`;
     // KATEGORİ ÜRÜNLERİ (API): GLOBAL KATALOG (o dilde canlı tüm aktif ürünler) ∩ Product Center'daki
     // GERÇEK bağ, Global Merkezi sırası (13 dilde ortak). Vitrin seçimi şart DEĞİL.
-    //  • yeni API: kartlar satırdan, TAMAMI (ürün başına detay isteği yok)
-    //  • eski API (kart alanı yok): bugünkü davranış AYNEN — ilk 24 üye + core detay
+    //  • listeleme ucu (locale): kartlar satırdan (bu sayfanın dilimi; pinned önce)
+    //  • yeni API yüzeyi: kartlar satırdan, TAMAMI (ürün başına detay isteği yok)
+    //  • eski API (kart alanı yok): bugünkü davranış AYNEN — bu sayfanın üyeleri + core detay
     let cards: { card: CardProductUi; href: string }[];
     let footer: Awaited<ReturnType<typeof v80FooterFromCatalog>>;
-    if (surface.products.length && hasCardFields(surface.products)) {
+    if (series.listingCards) {
+      cards = series.listingCards;
+      footer = await v80FooterFromCatalog(locale, catalog, contact);
+    } else if (series.members.length && hasCardFields(series.members)) {
       // Dilim SON sıralı listeden (Global Merkezi sırası); yalnız bu sayfanın kartları DOM'a gider.
-      cards = sliceLocationPage(surface.products, categoryPage, perPage).map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
+      cards = series.members.map((p) => ({ card: rowToCard(locale, p), href: `/${locale}/${seg.product}/${p.slug}` }));
       footer = await v80FooterFromCatalog(locale, catalog, contact);
     } else {
       // Kartlar TR mağaza ailesiyle birebir: core detay (mediaUrl'lü görsel,
       // gerçek fiyat/rozet/derivatives) + localized ad + locale PDP linki.
       // EK (LİSTELEME MOTORU): eski "ilk 24" yerine bu sayfanın dilimi (detay isteği yalnız dilim için).
-      const members = sliceLocationPage(surface.products, categoryPage, perPage);
+      const members = series.members;
       const [details, footerModel] = await Promise.all([
         Promise.all(members.map((m) => fetchProductBySlug(m.tr_slug))),
         v80FooterFromCatalog(locale, catalog, contact),

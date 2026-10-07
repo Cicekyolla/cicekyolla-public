@@ -478,8 +478,14 @@ test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam ka
   assert.equal(page.split("resolveLocationCatalog(").length - 1, 1, "görünüm tek yerde, bir kez");
   assert.equal(page.split("planLocationPage(").length - 1, 1);
   // EK (LİSTELEME MOTORU): 5. parametre = global ayardan sayfa boyutu (settings.per_page); taban yol ve etiket aynen.
-  assert.match(page, /resolveLocationCatalog\(plan, searchParams, `\/\$\{locale\}\/\$\{row\.page_key\}`, SHOP\[locale\]\.all, listingSize\)/, "linkler canonical sorgusuz yoldan");
-  assert.ok(page.includes("const listingSize = plan ? (await fetchListingSettings()).per_page : undefined;"), "sayfa boyutu global ayardan (fail-open)");
+  // EK (ADMİN TEK MERKEZ): 6. parametre = motor tavanları (max_items dilimde de, max_pages, tek sayfa); ayar no-store okunur.
+  assert.match(page, /resolveLocationCatalog\(plan, searchParams, `\/\$\{locale\}\/\$\{row\.page_key\}`, SHOP\[locale\]\.all, listingSize, listingCaps\)/, "linkler canonical sorgusuz yoldan");
+  assert.ok(page.includes("const listingSettings = plan ? await fetchListingSettings({ noStore: true }) : null;"), "ayar global + no-store (fail-open DEFAULTS)");
+  assert.ok(page.includes("const listingSize = listingSettings?.per_page;"), "sayfa boyutu global ayardan");
+  assert.ok(page.includes("const listingCaps = listingSettings ? { maxItems: listingSettings.max_items, maxPages: listingSettings.max_pages, paginate: listingSettings.pagination_enabled } : undefined;"));
+  // "Tümü" listesi listeleme ucundan (locale + location); uç locale'i tanımıyorsa plan aynen; görünüm yine tek nesne (view).
+  assert.ok(page.includes("if (plan && view && listingSettings && view.category === null && loc) {"), "override yalnız Tümü listesinde ve katalog okunabildiyse");
+  assert.ok(page.includes("if (listing && listingRowsLocalized(listing.items)) {"), "uç locale satırı vermediyse bugünkü plan");
   const items = fn("catalogItems");
   assert.match(items, /return ids\s*\.map\(\(id\) => plan\.byId\.get\(id\)\)/);
   for (const name of ["CatalogCommerceSection", "CargoCatalogSection"]) {
@@ -605,7 +611,12 @@ test("kaynak koruması: kategori dalı kapıyı hem metadata'da hem render'da y�
   assert.ok(metaBlock.indexOf("const listingPage = parseListingPageParam(listing?.page);") < gate);
   assert.ok(gate < metaBlock.indexOf("fetchCategorySurface("), "kapı yüzey okumasından önce (geçersiz istek upstream'e gitmez)");
   assert.ok(/isCategoryListingNotFound\(listing, categoryTotalPages\)\) return \{ robots: NOINDEX \}/.test(metaBlock), "404'e giden isteğin metadata'sı index dışı");
-  assert.ok(metaBlock.includes("const categoryTotalPages = Math.max(1, listingTotalPages(surface.products.length, listingSettings.per_page, listingSettings.max_items, listingSettings.max_pages));"), "toplam sayfa motor kuralından");
+  // EK (ADMİN TEK MERKEZ): toplam sayfa TEK yardımcıdan (localeCategorySeries: listeleme ucu → surface + motor tavanları); gövdeyle aynı.
+  assert.ok(metaBlock.includes("const categoryTotalPages = (await localeCategorySeries(locale, surface, listingSettings, listingPage)).totalPages;"), "toplam sayfa motor kuralından");
+  const series = page.slice(page.indexOf("async function localeCategorySeries("), page.indexOf("function listingRowsLocalizedOne("));
+  assert.ok(series.includes("const totalPages = Math.max(1, resolvedTotalPages(cfg, pool.length));"), "surface yolunda motor hesabı");
+  assert.ok(series.includes("const pool = capListing(surface.products, cfg.maxItems);"), "max_items dilimde de");
+  assert.ok(series.includes("totalPages: Math.max(1, resolvedTotalPagesFrom(cfg, listing.pagination)),"), "uç yolunda motor hesabı");
 
   const renderStart = page.indexOf('if (parsed.kind === "category") {', metaStart + 1);
   assert.ok(renderStart > metaStart, "LocalePage kategori dalı");
@@ -614,7 +625,9 @@ test("kaynak koruması: kategori dalı kapıyı hem metadata'da hem render'da y�
   assert.ok(rgate > 0, "LocalePage kategori dalında notFound kapısı olmalı");
   assert.ok(rgate < renderBlock.indexOf("fetchCategorySurface("), "kapı yüzey okumasından önce");
   assert.ok(renderBlock.includes("if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();"), "son sayfanın ötesi 404");
-  assert.ok(renderBlock.includes("sliceLocationPage(surface.products, categoryPage, perPage)"), "yalnız dilim basılır");
+  assert.ok(renderBlock.includes("const series = await localeCategorySeries(locale, surface, listingSettings, categoryPage);"), "gövde aynı yardımcı");
+  assert.ok(page.includes("const members = cfg.paginationEnabled ? sliceLocationPage(pool, page, resolvedPageSize(cfg)) : pool;"), "yalnız dilim basılır");
+  assert.ok(renderBlock.includes("cards = series.listingCards;") && renderBlock.includes("const members = series.members;"), "kartlar yalnız bu sayfanın dilimi");
   assert.ok(renderBlock.includes("<GlobalPagination locale={locale} pagination={locationPagination(categoryBase, null, categoryPage, categoryTotalPages)} />"), "gerçek sayfa bağlantıları");
 });
 

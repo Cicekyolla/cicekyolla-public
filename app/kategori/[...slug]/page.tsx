@@ -38,6 +38,9 @@ import { absoluteUrl, indexRobots, SITE_INDEXABLE } from "@/lib/site-config";
 import { fetchListingSettings, type SeoPublicPage } from "@/lib/api";
 // EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan; kaynak listeleme ucu → bugünkü uç (fail-open).
 import { fetchCategoryListing } from "@/lib/listingSurface";
+// EK (ADMİN TEK MERKEZ): kategori bloğu (manual / pinned) metadata ve boş-kategori kararında da AYNI okunur (aynı istek).
+import { getShowcaseBlock } from "@/lib/showcaseBlocks";
+import type { ShowcaseBlockConfig } from "@/lib/listingEngine";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, findCategoryNodeBySlug } from "@/lib/catalog";
 import { categoryHreflangFamily } from "@/lib/global/hreflangFamily";
@@ -70,13 +73,13 @@ function faqJsonLd(page: SeoPublicPage): string | null {
  * istekle AYNIDIR (aynı URL → istek içi tekilleştirme; ek upstream çağrısı yok). Sıralı /
  * filtreli istekte tek ek okuma Data Cache'lidir (revalidate 120).
  */
-async function mainSeriesState(path: string, pageNo: number): Promise<CategoryListingState> {
+async function mainSeriesState(path: string, pageNo: number, block: ShowcaseBlockConfig | null): Promise<CategoryListingState> {
   const tree = await getCategoryTree();
   const categoryId = tree ? findCategoryIdBySlug(tree, path.replace(/^\/kategori\//, "").replace(/\/+$/, "")) : null;
   if (!categoryId) return "unknown";
   // EK (LİSTELEME MOTORU): CategoryLanding ile AYNI yardımcı + AYNI ayar → aynı istek (tekilleştirme); page_size = settings.per_page.
   const settings = await fetchListingSettings();
-  const listing = await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings });
+  const listing = await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings, block });
   return categoryListingState(pageNo, listing.pagination);
 }
 
@@ -101,7 +104,7 @@ async function mainSeriesState(path: string, pageNo: number): Promise<CategoryLi
 //   2) ürün kategorisi sayfası canlı ağaçta çözülemiyor (yalnız SEO kaydı kalmış) → listesi yok (eski kural aynen),
 //   3) sayfa KAYITSIZ (ağaçtan üretilen sentetik sayfa) ve filtresiz listesi kesin boş → kendi içeriği de ürünü de yok.
 // SEO kaydı olan AKTİF kategori ürünsüz olsa da robots kaydın index_state'idir (ürün okuması yapılmaz).
-async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?: string | null, synthetic = false): Promise<boolean> {
+async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?: string | null, synthetic = false, block: ShowcaseBlockConfig | null = null): Promise<boolean> {
   const tree = await getCategoryTree();
   if (!tree || tree === CATEGORY_TREE_FALLBACK) return false;
   const slug = path.replace(/^\/kategori\//, "").replace(/\/+$/, "");
@@ -115,7 +118,7 @@ async function isCategoryConfirmedEmpty(path: string, pageNo: number, pageType?:
   const settings = await fetchListingSettings();
   return isConfirmedEmptyCategory(
     pageNo,
-    await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings }),
+    await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings, block }),
   );
 }
 
@@ -136,7 +139,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // varsa alır. Liste durumu bilinmiyorsa (okuma başarısız / kategori ağaçta çözülemedi) ya da
   // sayfa son sayfanın ötesindeyse çıplak yol + düz başlık (önceki hâl) → 1. sayfanın kopyası
   // kendi adresiyle index'e önerilmez. Kural: lib/categoryPagination.ts categoryListingState.
-  const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo)) !== "ok" ? 1 : pageNo;
+  const block = getShowcaseBlock(page);
+  const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo, block)) !== "ok" ? 1 : pageNo;
   // EK (SEO YAYIN ZİNCİRİ): sayfalı seride her sayfa KENDİ başlığını taşır
   // (sayfa 1 aynen; N ≥ 2 → " – Sayfa N").
   const title = categoryPageTitle(stripTrailingBrand(managedTitle(page) || page.title_tag), seoPage);
@@ -157,7 +161,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   // yanıt verdi, total 0) robots "noindex, follow" olur ve hreflang kümesi basılmaz (noindex sayfa aile
   // üyesi olamaz). Zaten index dışı sayfada (önizleme / noindex kayıt) okuma yapılmaz, robots aynen.
   // Karar yalnız 1. sayfada verilir (sayfa N ≥ 2'nin yanıtı kategori için kanıt değildir).
-  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type, page.synthetic === true));
+  const emptyCategory = SITE_INDEXABLE && page.index_state === "index" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type, page.synthetic === true, block));
   let languages: Record<string, string> | null = null;
   if (pageNo === 1 && page.index_state === "index" && !emptyCategory) {
     const tree = await getCategoryTree();

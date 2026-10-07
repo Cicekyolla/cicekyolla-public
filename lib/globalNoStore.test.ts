@@ -58,3 +58,21 @@ test("admin varsayılan metin/yapı kaynağı (/api/global/v80-defaults) kısa �
   assert.ok(!/"Cache-Control": "[^"]*(s-maxage=300|stale-while-revalidate=600)/.test(src), "eski 5 dk + 10 dk önbellek başlığı kalmamalı");
   assert.ok(!/^export const revalidate = 300;$/m.test(src));
 });
+
+// EK (ADMİN TEK MERKEZ): Global yüzeylerin listeleme okumaları (ayar, liste, kategori bloğu) Data Cache'siz —
+// lib/api.ts fetchListingSettings / fetchListingPage / fetchSeoPage no-store varyantı ({ noStore: true }).
+test("Global listeleme okumaları no-store: lib/global/page.tsx ve lib/global/v80/data.ts hiçbir listeleme okumasını revalidate ile yapmaz", () => {
+  for (const rel of ["./global/page.tsx", "./global/v80/data.ts"]) {
+    const src = read(rel);
+    for (const fn of ["fetchListingSettings(", "fetchListingPage(", "fetchSeoPage("]) {
+      const calls = [...src.matchAll(new RegExp(fn.replace("(", "\\("), "g"))].filter((m) => !/\bimport\b/.test(src.slice(src.lastIndexOf("\n", m.index), m.index)));
+      for (const m of calls) {
+        const call = src.slice(m.index, src.indexOf(";", m.index));
+        assert.match(call, /\{ noStore: true \}/, `${rel}: no-store olmayan okuma: ${call.slice(0, 100)}`);
+      }
+    }
+  }
+  const api = read("./api.ts");
+  assert.match(api, /opts\?\.noStore\s*\? \{ headers: apiHeaders\(\), cache: "no-store" \}/, "fetchListingSettings/fetchListingPage no-store varyantı");
+  assert.match(api, /opts\?\.noStore \? \{ headers: apiHeaders\(\), cache: "no-store" \} : \{/, "fetchSeoPage no-store varyantı");
+});

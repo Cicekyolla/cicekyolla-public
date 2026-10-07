@@ -41,6 +41,12 @@ import { productCoverTileUrl } from "@/lib/productImageUrl";
 import { homeHreflangFamily } from "@/lib/global/hreflangFamily";
 import { fetchHomeLocaleVersions } from "@/lib/hreflangSources";
 
+/** product_showcase limiti (4/8/12) DTO config.rule.limit'ten; HomepageRenderer ile AYNI kural (normalizeLimit). */
+function showcaseLimitOf(config: Record<string, unknown> | null | undefined): number {
+  const n = Number((config?.rule as { limit?: unknown } | undefined)?.limit ?? 12);
+  return [4, 8, 12].includes(n) ? n : 12;
+}
+
 /**
  * Ana sayfa (/) — 8B-2.2 Homepage.
  *
@@ -257,11 +263,18 @@ export default async function HomePage() {
   const hasShowcases = publishedHomepage?.sections.some(
     (s) => s.enabled && s.type === "product_showcase"
   ) ?? false;
+  // EK (ADMİN TEK MERKEZ — sözleşme v2 §6): dolgu yalnız boş vitrinde değil, rule / hybrid (ya da modsuz) vitrinde de
+  // istenir (hybrid dolu vitrin limit'e kadar TAMAMLANIR). Tamamı manuel ve doluysa ürün isteği atılmaz (bugünkü).
+  // Her product_showcase bölümünün Admin seçimi (ürün id'leri) ve limiti dolguya sırayla geçer → tekrar yok.
+  // Modsuz (eski kayıt) dolu vitrinde DTO kazanır (admin üstünlüğü — bugünkü); rule her zaman, hybrid eksikse dolgu ister.
   const needsShowcaseProducts = publishedHomepage?.sections.some(
-    (s) => s.enabled && s.type === "product_showcase" && (!s.products || s.products.length === 0)
+    (s) => s.enabled && s.type === "product_showcase" && (!s.products || s.products.length === 0 || s.selection_mode === "rule" || (s.selection_mode === "hybrid" && s.products.length < showcaseLimitOf(s.config)))
   ) ?? false;
+  const showcaseSlots = (publishedHomepage?.sections ?? [])
+    .filter((s) => s.enabled && s.type === "product_showcase")
+    .map((s) => ({ pinnedIds: (s.products ?? []).map((p) => p.id), limit: showcaseLimitOf(s.config) }));
   const showcaseFills = needsShowcaseProducts
-    ? await buildShowcaseFills(tree)
+    ? await buildShowcaseFills(tree, showcaseSlots)
     : hasShowcases
       ? getShowcaseSlots()
       : [];

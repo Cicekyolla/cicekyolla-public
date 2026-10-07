@@ -1,7 +1,7 @@
 // Vitrin sayfalama — saf yardımcılar (Maltepe pilotu). Edge-safe: import yok.
 // Yol tabanlı: /maltepe-cicek-siparisi/sayfa/2. Sorgu dizesi KULLANILMAZ (ISR bozulmasın).
-
-export const SHOWCASE_PAGE_SIZE = 30;
+// Sayfa SAYISI / dilim hesabı burada DEĞİL: tek motor lib/listingEngine.ts (resolvedTotalPages, pageSlice);
+// eski SHOWCASE_PAGE_SIZE (30) ve totalPages() kullanılmadığı için kaldırıldı (ADMİN TEK MERKEZ).
 
 export type ShowcasePathInfo = { basePath: string; page: number | null };
 
@@ -19,11 +19,6 @@ export function isSafeInternalPath(path: string): boolean {
   if (typeof path !== "string" || path.length === 0 || path.length > 2048) return false;
   if (path[0] !== "/" || path[1] === "/" || path[1] === "\\") return false;
   return !/[\\\u0000-\u001f\u007f]/.test(path);
-}
-
-export function totalPages(total: number, pageSize: number = SHOWCASE_PAGE_SIZE): number {
-  if (!Number.isFinite(total) || total <= 0 || pageSize <= 0) return 0;
-  return Math.ceil(total / pageSize);
 }
 
 /** Sayfa 1 = taban yol; N≥2 = taban/sayfa/N. */
