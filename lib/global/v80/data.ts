@@ -13,7 +13,7 @@
 import type { GlobalLocale } from "../config";
 import { V80_DESTINATIONS, type V80Destination } from "./schema";
 import { fetchGlobalPage, fetchLocaleCatalog, fetchGlobalPagesInventory, fetchLiveDestinations, type LocaleCatalog } from "../api";
-import { fetchProductBySlug, type PublicProductDetail } from "@/lib/api";
+import { fetchListingPage, fetchListingSettings, fetchProductBySlug, listingRowsLocalized, type ListingRow, type PublicProductDetail } from "@/lib/api";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { buildV80Footer, type V80FooterModel, type V80Contact } from "./footer";
 import { resolveSiteIdentity } from "@/lib/siteIdentity";
@@ -118,6 +118,29 @@ async function fallbackSources(locale: GlobalLocale, catalog: LocaleCatalog, con
   return { products: products.slice(0, structure?.shop.mode === "manual" ? undefined : limit), categories };
 }
 
+/** Listeleme ucu satırı (locale) → vitrin kaynak ürünü (paket satırı varsa o kazanır: kategori bağı korunur). */
+function listingRowToV80Source(r: ListingRow & { locale_name: string; locale_slug: string }): V80SourceProduct {
+  return {
+    id: Number(r.id), tr_slug: r.slug, slug: r.locale_slug, name: r.locale_name, short_description: r.locale_description ?? null,
+    price_minor: Number(r.price_minor), sale_price_minor: r.sale_price_minor == null ? null : Number(r.sale_price_minor),
+    image: r.cover_image_url, blurhash: r.cover_blurhash ?? null, derivatives: r.cover_derivatives ?? null,
+    same_day_available: !!r.same_day_available, delivery_model_code: r.delivery_model_code ?? null,
+    is_new: !!r.is_new, is_bestseller: !!r.is_bestseller, category_slugs: [],
+  };
+}
+
+/** Otomatik havuz (shop.mode auto): listeleme ucu → null ise bugünkü yol. */
+async function autoPoolFromListing(locale: GlobalLocale, config: V80Config | null, bundleProducts: V80SourceProduct[]): Promise<V80SourceProduct[] | null> {
+  const settings = await fetchListingSettings({ noStore: true });
+  const limit = Math.max(1, Math.min(200, Math.trunc(config?.structure.shop.limit ?? 12) || 12));
+  const pinned_ids = config ? activeProductRefs(config.structure).map((r) => r.id) : [];
+  const listing = await fetchListingPage({ source: { kind: "catalog" }, locale, page: 1, per_page: limit, in_stock: settings.in_stock, sort: settings.sort, pinned_ids }, { noStore: true });
+  const rows = listing?.items ?? [];
+  if (!listing || !listingRowsLocalized(rows)) return null;
+  const byId = new Map(bundleProducts.map((p) => [p.id, p] as const));
+  return rows.map((r) => byId.get(Number(r.id)) ?? listingRowToV80Source(r));
+}
+
 export async function loadV80(locale: GlobalLocale): Promise<V80View> {
   const [home, catalog, bundle] = await Promise.all([
     fetchGlobalPage(locale, "home"),
@@ -145,10 +168,18 @@ export async function loadV80(locale: GlobalLocale): Promise<V80View> {
       // kartı sayı/görselleri API'de zaten Global katalog ∩ gerçek bağdır). API alanı yoksa değişmez.
       products = applyRealCategorySlugs(picked) ?? picked;
     } else {
-      const autoIds = bundle.auto_product_ids;
-      if (autoIds?.length) {
-        const order = new Map(autoIds.map((id, i) => [id, i]));
-        products = products.filter((p) => order.has(p.id)).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      // EK (ADMİN TEK MERKEZ — sözleşme v2 §7): otomatik havuz listeleme ucundan (source=catalog, locale, in_stock AYARDAN,
+      // pinned_ids = aktif referanslar → önce, tekrar yok; per_page = vitrin limiti). Uç locale'i tanımıyorsa (satırda
+      // locale_name yok) bugünkü auto_product_ids sırası AYNEN (fail-open). Okumalar no-store.
+      const listed = await autoPoolFromListing(locale, config, products);
+      if (listed) {
+        products = listed;
+      } else {
+        const autoIds = bundle.auto_product_ids;
+        if (autoIds?.length) {
+          const order = new Map(autoIds.map((id, i) => [id, i]));
+          products = products.filter((p) => order.has(p.id)).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+        }
       }
     }
   } else {

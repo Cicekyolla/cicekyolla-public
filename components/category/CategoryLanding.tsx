@@ -4,6 +4,8 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 import { fetchListingSettings, fetchProducts, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
 // EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan (varsayılan 50 — bugünkü); kaynak listeleme ucu → bugünkü uç.
 import { fetchCategoryListing } from "@/lib/listingSurface";
+// EK (ADMİN TEK MERKEZ): kategori seo_page showcase bloğu (Kategori Merkezi: elle seçim / öne çıkarma / sayfalama override).
+import { getShowcaseBlock } from "@/lib/showcaseBlocks";
 import { getCategoryTree } from "@/lib/categories";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
 import {
@@ -200,9 +202,11 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // Rota metadata'sı (mainSeriesState) AYNI yardımcıyı AYNI parametrelerle çağırır → istek içi tekilleştirme korunur.
   const settings = await fetchListingSettings();
   const perPage = settings.per_page;
+  // EK (ADMİN TEK MERKEZ — KATEGORİ TEK SERİ): sayfa 1, ?page=N ve sonsuz kaydırma AYNI yardımcı + AYNI blok + AYNI ayar.
+  const block = getShowcaseBlock(page);
   const productPage = categoryId
     ? await fetchCategoryListing({
-        categoryId, page: pageNum, sort, settings,
+        categoryId, page: pageNum, sort, settings, block,
         filters: { product_type: filterType || undefined, same_day_available: sameDay || undefined, is_bestseller: bestseller || undefined, is_new: isNew || undefined },
       })
     : null;
@@ -213,7 +217,8 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
   // sayfa ≥ 2, 1. sayfanın kopyası olarak 200 dönmez. Ağaç statik yedekse karar verilmez.
   if (isCategoryPageWithoutListing(pageNum, { liveTree: !!tree && tree !== CATEGORY_TREE_FALLBACK, categoryId })) notFound();
   if (isCategoryPageBeyondLast(pageNum, productPage?.pagination)) notFound();
-  const products = (productPage?.items ?? []).filter((p) => p.cover_image_url).map(toCardProduct);
+  // Kapak süzgeci YALNIZ fail-open (/api/products) yolunda; listeleme ucu kapaksız satır döndürmez (süzgeç SQL'de).
+  const products = (productPage?.source === "listing" ? productPage.items : (productPage?.items ?? []).filter((p) => p.cover_image_url)).map(toCardProduct);
   const totalPages = productPage?.pagination.total_pages ?? 1;
   const totalProducts = productPage?.pagination.total ?? 0;
   // EK (KATEGORİ YASASI): filtre uygulanmamışken API "bu kategoride ürün yok" dediyse (başarılı yanıt,
@@ -404,6 +409,7 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
               filters={{ type: filterType || undefined, sameDay, bestseller, isNew }}
               contextTag={contextTag}
               startPage={pagination.current}
+              path={path}
             />
             {/* EK (crawlable sayfalama): sayfa bağlantıları (yukarıda pageNav). Grid `key`'ine
                 sayfa eklendi ki bağlantıya tıklanınca liste o sayfadan yeniden kurulsun. */}

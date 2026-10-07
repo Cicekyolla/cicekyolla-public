@@ -17,9 +17,28 @@
 // Çip sayıları filtre-bağımsız toplamlardır (kategori listesi uzunluğu).
 // ============================================================================
 import type { GlobalLocale } from "./config";
+// EK (ADMİN TEK MERKEZ): sayfa sayısı / dilim tavanları (max_items, max_pages, pagination_enabled) TEK motordan — saf modül.
+import { capListing, resolvedPageSize, resolvedTotalPages } from "../listingEngine.ts";
 
-/** Tek sabit: lokasyon sayfasında sayfa başına ürün. */
+/** Yedek sabit: lokasyon sayfasında sayfa başına ürün (global ayar okunamadıysa). */
 export const LOCATION_PAGE_SIZE = 24;
+
+/** Global listeleme ayarından gelen tavanlar (null = sınırsız; eksik alan = motor varsayılanı). */
+export interface LocationPagingCaps {
+  maxItems?: number | null;
+  maxPages?: number | null;
+  /** false → tek sayfa (per_page yok sayılır). */
+  paginate?: boolean;
+}
+
+function pagingConfig(size: number, caps?: LocationPagingCaps) {
+  return {
+    perPage: Number.isFinite(size) && size >= 1 ? Math.floor(size) : LOCATION_PAGE_SIZE,
+    maxItems: caps?.maxItems === undefined ? null : caps.maxItems,
+    maxPages: caps?.maxPages === undefined ? null : caps.maxPages,
+    paginationEnabled: caps?.paginate !== false,
+  };
+}
 
 /** Next `searchParams` biçimi (Next 14: düz nesne). */
 export type LocationSearchParams = { [key: string]: string | string[] | undefined };
@@ -36,11 +55,14 @@ export function queryValue(v: unknown): string | undefined {
   return typeof first === "string" ? first : undefined;
 }
 
-/** Toplam sayfa sayısı (en az 1; ürünsüz liste de tek sayfadır). */
-export function locationTotalPages(count: number, size: number = LOCATION_PAGE_SIZE): number {
+/** Toplam sayfa sayısı (en az 1; ürünsüz liste de tek sayfadır). `caps` verilirse motor tavanları (max_items/max_pages/tek sayfa). */
+export function locationTotalPages(count: number, size: number = LOCATION_PAGE_SIZE, caps?: LocationPagingCaps): number {
   const n = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
-  const s = Number.isFinite(size) && size >= 1 ? Math.floor(size) : LOCATION_PAGE_SIZE;
-  return Math.max(1, Math.ceil(n / s));
+  if (!caps) {
+    const s = Number.isFinite(size) && size >= 1 ? Math.floor(size) : LOCATION_PAGE_SIZE;
+    return Math.max(1, Math.ceil(n / s));
+  }
+  return Math.max(1, resolvedTotalPages(pagingConfig(size, caps), n));
 }
 
 /** ?page ham değeri → 1..totalPages; geçersiz (sayı değil, tam sayı değil, < 1, > toplam) → 1. */
@@ -155,11 +177,16 @@ export function resolveLocationCatalog(
   basePath: string,
   allLabel: string,
   size: number = LOCATION_PAGE_SIZE,
+  /** EK (ADMİN TEK MERKEZ): max_items dilimde de uygulanır; max_pages / tek sayfa aynı motor hesabı. */
+  caps?: LocationPagingCaps,
 ): LocationCatalogView {
   const sp: LocationSearchParams = searchParams ?? {};
   const category = parseLocationCategory(sp.category, plan.categories);
-  const list = category ? plan.categories.find((c) => c.slug === category)?.ids ?? [] : plan.allOrder;
-  const totalPages = locationTotalPages(list.length, size);
+  const rawList = category ? plan.categories.find((c) => c.slug === category)?.ids ?? [] : plan.allOrder;
+  const cfg = pagingConfig(size, caps);
+  const list = caps ? capListing(rawList, cfg.maxItems) : rawList;
+  const pageSize = caps ? resolvedPageSize(cfg) : size;
+  const totalPages = locationTotalPages(list.length, size, caps);
   const page = parseLocationPage(sp.page, totalPages);
   const chips: LocationCatalogChip[] = [
     { key: null, label: allLabel, count: plan.allOrder.length, href: locationPageHref(basePath), active: category === null },
@@ -172,7 +199,7 @@ export function resolveLocationCatalog(
     page,
     totalPages,
     total: list.length,
-    ids: sliceLocationPage(list, page, size),
+    ids: sliceLocationPage(list, page, pageSize),
     chips,
     pagination: locationPagination(basePath, category, page, totalPages),
   };

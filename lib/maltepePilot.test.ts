@@ -2,10 +2,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  parseShowcasePath, totalPages, visiblePages, prevNext, showcasePageHref, titleWithPage, descriptionWithPage,
+  parseShowcasePath, visiblePages, prevNext, showcasePageHref, titleWithPage, descriptionWithPage,
 } from "./showcasePagination.ts";
 import { pillarBasePath, isPillarPageData } from "./pillar-paths.ts";
-import { getShowcaseItems, getLocationBlock, showcaseTotalPages, showcasePageIds, productDetailToListItem, isPillarPage } from "./showcaseBlocks.ts";
+import { getShowcaseItems, getLocationBlock, productDetailToListItem, isPillarPage } from "./showcaseBlocks.ts";
+// ADMİN TEK MERKEZ: sayfa hesabı tek motorda (eski showcaseTotalPages / showcasePageIds / totalPages kaldırıldı).
+import { listingTotalPages, pageSlice, resolvedTotalPages } from "./listingEngine.ts";
+const PILOT = { perPage: 30, maxItems: null, maxPages: null, paginationEnabled: true } as const;
+const totalPages = (n: number) => listingTotalPages(n, PILOT.perPage, PILOT.maxItems, PILOT.maxPages);
 import type { PublicProductDetail } from "./api.ts";
 import { hasOperatorLinks, skipAutoLinkInjection, introWrapperClass } from "./operatorLinks.ts";
 import { locationBreadcrumbJsonLd } from "./locationBreadcrumb.ts";
@@ -75,14 +79,15 @@ test("vitrin bloğu ayrıştırma", () => {
   assert.equal(getShowcaseItems(many).length, 500);
 });
 
-test("sayfa hesabı: aktif öğe sayısına göre", () => {
-  assert.equal(showcaseTotalPages(0), 0);
-  assert.equal(showcaseTotalPages(30), 1);
-  assert.equal(showcaseTotalPages(61), 3);
+test("sayfa hesabı: aktif öğe sayısına göre (listingEngine ile — tavansız 30'luk pilot)", () => {
+  assert.equal(resolvedTotalPages(PILOT, 0), 0);
+  assert.equal(resolvedTotalPages(PILOT, 30), 1);
+  assert.equal(resolvedTotalPages(PILOT, 61), 3);
   const ids = Array.from({ length: 65 }, (_, i) => i + 1);
-  assert.equal(showcasePageIds(ids, 1).length, 30);
-  assert.deepEqual(showcasePageIds(ids, 3), [61, 62, 63, 64, 65]);
-  assert.deepEqual(showcasePageIds(ids, 4), []);
+  const pageIds = (page: number) => { const { offset, limit } = pageSlice(page, PILOT.perPage); return ids.slice(offset, offset + limit); };
+  assert.equal(pageIds(1).length, 30);
+  assert.deepEqual(pageIds(3), [61, 62, 63, 64, 65]);
+  assert.deepEqual(pageIds(4), []);
 });
 
 test("ürün detayından kart eşleme", () => {

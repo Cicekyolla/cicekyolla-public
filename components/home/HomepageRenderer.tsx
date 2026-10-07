@@ -35,6 +35,8 @@ import { WorkshopToday } from "./WorkshopToday";
 import type { WorkshopSlot } from "./WorkshopToday";
 import { MoodPicker } from "./MoodPicker";
 import type { ShowcaseFill } from "@/lib/homepageShowcase";
+// EK (ADMİN TEK MERKEZ): pinned-önce sırası saf motordan (lib/listingEngine.ts) — tek tanım, test edilir.
+import { pinnedFirst } from "@/lib/listingEngine";
 
 export interface RenderCtx {
   collections: ComponentProps<typeof FloatingCategoryRail>["items"];
@@ -129,7 +131,9 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
       const limit = normalizeLimit(rule?.limit ?? 12);
       const mode = s.selection_mode as 'manual' | 'rule' | 'hybrid' | undefined;
 
-      let products = s.products ?? [];
+      // EK (ADMİN TEK MERKEZ — sözleşme v2 §6): ÖNE ÇIKARILAN (pinned) DTO ürünleri önce, kalan manuel sırada (kararlı sıra).
+      const dtoProducts = pinnedFirst(s.products ?? []);
+      let products = dtoProducts;
       // V65 görsel ailesi vitrin sırasına aittir; ürün kaynağına değil.
       // Böylece Admin'den manuel seçilen gerçek ürünler de Orkide/Fırsat/
       // Botanik/Premium atmosferini korur. Ürün ve sıra üstünlüğü yine DTO'dadır.
@@ -152,24 +156,26 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
       title ??= fill?.title;
       subtitle ??= fill?.subtitle;
 
-      // manual: sadece DTO ürünleri, limit kadar
+      // manual: sadece DTO ürünleri (pinned önce), limit kadar
       if (mode === 'manual') {
-        products = (s.products ?? []).slice(0, limit);
+        products = dtoProducts.slice(0, limit);
       }
-      // rule: sadece auto-fill, limit kadar
+      // rule: auto-fill, limit kadar — Admin'de pinned işaretli ürün varsa ÖNCE (sözleşme v2 §6 "pinned önce"), tekrar yok
       else if (mode === 'rule' && fill && fill.products.length > 0) {
-        products = fill.products.slice(0, limit);
+        const pinned = dtoProducts.filter((p) => p.pinned).slice(0, limit);
+        const seen = new Set(pinned.map((p) => p.id));
+        products = [...pinned, ...fill.products.filter((p) => !seen.has(p.id))].slice(0, limit);
         theme = fill.theme;
         title ??= fill.title;
         subtitle ??= fill.subtitle;
         ctaLabel = fill.ctaLabel;
         ctaHref = fill.ctaHref;
       }
-      // hybrid: manual first, then fill tamamlanır
+      // hybrid: manual (pinned önce) first, then fill ile limit'e kadar TAMAMLANIR (dolu vitrinde de) — tekrar yok
       else if (mode === 'hybrid' && fill && fill.products.length > 0) {
-        const seen = new Set((s.products ?? []).map(p => p.id));
-        const manual = (s.products ?? []).slice(0, limit);
-        const auto = fill.products.filter(p => !seen.has(p.id)).slice(0, limit - manual.length);
+        const seen = new Set(dtoProducts.map(p => p.id));
+        const manual = dtoProducts.slice(0, limit);
+        const auto = fill.products.filter(p => !seen.has(p.id)).slice(0, Math.max(0, limit - manual.length));
         products = [...manual, ...auto];
         theme = fill.theme;
         title ??= fill.title;

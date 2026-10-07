@@ -8,9 +8,19 @@
 // B) Orkide, C) Fırsat, D) Saksı, E) Premium olarak eşlenir. İlk genel
 // vitrindeki Admin ürünleri ve manuel sırası aynen korunur.
 // ============================================================================
-import { fetchListingPage, fetchProducts, type CategoryNode, type PublicProductListItem } from "./api";
+import { fetchListingPage, fetchListingSettings, fetchProducts, type CategoryNode, type ListingSettings, type PublicProductListItem } from "./api";
 import { findCategoryIdBySlug } from "./catalog";
 import type { HpProduct } from "./homepage";
+
+/**
+ * EK (ADMİN TEK MERKEZ — sözleşme v2 §6): vitrin bölümünün Admin'de seçili (manuel / pinned) ürün kimlikleri ve limiti.
+ * Dolgu isteği bu kimlikleri `pinned_ids` olarak geçer → uç onları havuzdan DIŞLAR (tekrar yok); eski uç tanımasa da
+ * HomepageRenderer id bazlı tekilleştirir. `limit` 4/8/12 DTO'dan; dolgu en az o kadar aday döndürmeye çalışır.
+ */
+export interface ShowcaseSlotInput {
+  pinnedIds: number[];
+  limit: number;
+}
 
 /** V65 cila: vitrin başına premium renk atmosferi (yalnız görsel — veri bağlantısına etkisi yok). */
 export type ShowcaseTheme = "orchid" | "deal" | "botanic" | "noir";
@@ -110,8 +120,8 @@ function toHpProduct(p: PublicProductListItem): HpProduct {
   };
 }
 
-async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promise<ShowcaseFill> {
-  const seen = new Set<number>();
+async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null, settings: ListingSettings, slot?: ShowcaseSlotInput): Promise<ShowcaseFill> {
+  const seen = new Set<number>(slot?.pinnedIds ?? []); // Admin'in seçtiği ürünler dolguda TEKRAR etmez (bölüm kendisi basar)
   const rows: PublicProductListItem[] = [];
   const push = (list: PublicProductListItem[]) => {
     for (const p of list) {
@@ -121,14 +131,17 @@ async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promi
       rows.push(p);
     }
   };
+  const pinned_ids = slot?.pinnedIds ?? [];
 
   for (const slug of spec.categorySlugs) {
     if (rows.length >= LIMIT) break;
     const categoryId = tree ? findCategoryIdBySlug(tree, slug) : null;
     if (!categoryId) continue; // slug canlı ağaçta yoksa sessizce sıradakine geç
-    // EK (GENEL LİSTELEME MOTORU — sözleşme §4 Homepage): aynı listeleme ucu (source=category, page 1, per_page=limit;
-    // stok/kapak/fiyat süzgeci SQL'de). Uç yok / hata → bugünkü dolgu (fetchProducts) BİREBİR. URL / canonical / LOCKED yapı değişmez.
-    const listed = await fetchListingPage({ source: { kind: "category", category_id: categoryId }, page: 1, per_page: LIMIT, sort: "created_at_desc" });
+    // EK (GENEL LİSTELEME MOTORU — sözleşme §4 Homepage / v2 §6): aynı listeleme ucu (source=category, page 1, per_page=limit;
+    // stok/kapak/fiyat süzgeci SQL'de; in_stock global AYARDAN; pinned_ids = Admin seçimi → havuzdan dışlanır, tekrar yok).
+    // Uç yok / hata → bugünkü dolgu (fetchProducts) BİREBİR. URL / canonical / LOCKED yapı değişmez.
+    const listed = await fetchListingPage({ source: { kind: "category", category_id: categoryId }, page: 1, per_page: LIMIT, sort: "created_at_desc", in_stock: settings.in_stock, pinned_ids });
+    // Uç pinned_ids'i tanıyorsa pinned satırlar ÖNCE gelir; bölüm onları zaten basar → dolgudan düşer (seen).
     push(listed ? listed.items : await fetchProducts({ category_id: categoryId, page_size: LIMIT * 2, sort: "created_at_desc" }));
   }
 
@@ -147,9 +160,13 @@ async function buildFill(spec: ShowcaseSpec, tree: CategoryNode[] | null): Promi
   return { title: spec.title, subtitle: spec.subtitle, ctaLabel: spec.ctaLabel, ctaHref: spec.ctaHref, theme: spec.theme, products: rows.map(toHpProduct) };
 }
 
-/** 5 vitrini paralel hazırlar. API hatasında ilgili vitrin boş kalır → gizlenir. */
-export async function buildShowcaseFills(tree: CategoryNode[] | null): Promise<ShowcaseFill[]> {
-  return Promise.all(SPECS.map((spec) => buildFill(spec, tree)));
+/**
+ * 5 vitrini paralel hazırlar. API hatasında ilgili vitrin boş kalır → gizlenir.
+ * `slots` (opsiyonel): product_showcase bölümleri sırasıyla (HomepageRenderer aynı sırayla eşler) — Admin seçimi dolguda tekrar etmez.
+ */
+export async function buildShowcaseFills(tree: CategoryNode[] | null, slots: ShowcaseSlotInput[] = []): Promise<ShowcaseFill[]> {
+  const settings = await fetchListingSettings(); // fail-open DEFAULTS (in_stock: true)
+  return Promise.all(SPECS.map((spec, i) => buildFill(spec, tree, settings, slots[i])));
 }
 
 /** Manuel vitrinlerde ürün sorgusu yapmadan V65 başlık/CTA/tema sırasını sağlar. */

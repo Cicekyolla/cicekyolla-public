@@ -269,15 +269,18 @@ test("KAYNAK: kategori sayfası listesiz / ötesi sayfada 404 verir, bilinmeyen 
   assert.ok(!/Sayfa \{pagination\.current\} \/ \{pagination\.total\}/.test(landing), "'Sayfa X / Y' yazısı yok (sonsuz kaydırmayla çelişmez)");
 
   const page = readFileSync(new URL("../app/kategori/[...slug]/page.tsx", import.meta.url), "utf8");
-  assert.ok(page.includes('const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo)) !== "ok" ? 1 : pageNo;'));
+  // EK (ADMİN TEK MERKEZ): ana seri durumu kategori bloğunu (manual / pinned) da gövdeyle AYNI okur → aynı istek.
+  assert.ok(page.includes("const block = getShowcaseBlock(page);"));
+  assert.ok(page.includes('const seoPage = pageNo > 1 && (await mainSeriesState(path, pageNo, block)) !== "ok" ? 1 : pageNo;'));
   assert.ok(page.includes("const title = categoryPageTitle(stripTrailingBrand(managedTitle(page) || page.title_tag), seoPage);"));
   assert.ok(page.includes("const canonicalPath = categoryCanonicalPath(path, seoPage);"));
   // Ana seri okuması CategoryLanding'in sıralamasız/filtresiz isteğiyle AYNI parametreler (istek içi tekilleştirme).
   // EK (TEK KATEGORİ SIRASI): ikisi de varsayılan sırayı (CATEGORY_DEFAULT_SORT) ister.
   // EK (GENEL LİSTELEME MOTORU): ikisi de AYNI yardımcıyı (lib/listingSurface.ts fetchCategoryListing) AYNI global ayarla
   // çağırır; page_size düz 50 değil settings.per_page (varsayılan 50 = bugünkü). Yardımcı: listeleme ucu → fetchProductsPaged (bugünkü).
-  assert.ok(page.includes("fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings })"));
-  assert.ok(landing.includes("categoryId, page: pageNum, sort, settings,"));
+  assert.ok(page.includes("fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings, block })"));
+  assert.ok(landing.includes("categoryId, page: pageNum, sort, settings, block,"));
+  assert.ok(landing.includes("const block = getShowcaseBlock(page);"), "gövde kategori bloğunu okur (Kategori Merkezi)");
   assert.ok(landing.includes("const perPage = settings.per_page;"));
   assert.ok(!/page_size: 50\b/.test(page) && !/page_size: 50\b/.test(landing), "düz 50 kalmadı");
   const listingSurface = readFileSync(new URL("./listingSurface.ts", import.meta.url), "utf8");
@@ -377,7 +380,7 @@ test("KURAL: kategori index durumunu KAYIT belirler — ürün sayısı tek baş
 
 test("KAYNAK: Türkçe kategori sayfası yeni kuralı uygular (kayıtlı sayfada ürün okuması yok); boş durum metni doğruyu söyler", () => {
   const page = readFileSync(new URL("../app/kategori/[...slug]/page.tsx", import.meta.url), "utf8");
-  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type, page.synthetic === true));"));
+  assert.ok(page.includes("const emptyCategory = SITE_INDEXABLE && page.index_state === \"index\" && (await isCategoryConfirmedEmpty(path, pageNo, page.page_type, page.synthetic === true, block));"));
   assert.ok(page.includes("robots: emptyCategory ? EMPTY_CATEGORY_ROBOTS : indexRobots(page.index_state),"), "karar yoksa bugünkü robots");
   assert.ok(page.includes("if (pageNo === 1 && page.index_state === \"index\" && !emptyCategory) {"), "noindex sayfa hreflang ailesine girmez");
   // Karar yalnız CANLI ağaç + başarılı ürün okumasıyla verilir; istek ana serinin isteğiyle aynı.
@@ -395,7 +398,7 @@ test("KAYNAK: Türkçe kategori sayfası yeni kuralı uygular (kayıtlı sayfada
   assert.ok(fn.includes("if (!categoryId) return isCategoryWithoutListing({ liveTree: true, categoryId, pageType });"));
   assert.ok(fn.includes("return isConfirmedEmptyCategory("));
   // EK (LİSTELEME MOTORU): CategoryLanding ile AYNI yardımcı + AYNI ayar (page_size = settings.per_page).
-  assert.ok(fn.includes("await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings }),"));
+  assert.ok(fn.includes("await fetchCategoryListing({ categoryId, page: pageNo, sort: CATEGORY_DEFAULT_SORT, settings, block }),"));
   assert.match(page, /^export const revalidate = 300;$/m, "rota ayarı değişmedi");
 
   const landing = readFileSync(new URL("../components/category/CategoryLanding.tsx", import.meta.url), "utf8");

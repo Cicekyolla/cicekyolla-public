@@ -3,7 +3,7 @@
 //   { type:"location", city:"istanbul", district:"maltepe" } — yalnız pillar (category_location)
 // Yeni tablo/uç YOK. Bu dosya runtime'da api.ts'e bağımlı değildir (yalnız tip).
 import type { PublicProductDetail, PublicProductListItem } from "./api.ts";
-import { SHOWCASE_PAGE_SIZE, totalPages } from "./showcasePagination.ts";
+// Sayfa hesabı (toplam sayfa / sayfa dilimi) TEK motorda: lib/listingEngine.ts (resolvedTotalPages / pageSlice).
 
 type WithBlocks = { body_blocks?: unknown } | null | undefined;
 export const MAX_SHOWCASE_ITEMS = 500;
@@ -48,17 +48,6 @@ export function getLocationBlock(page: WithBlocks): { city: string; district: st
 /** Konum bloğunun HİYERARŞİK yolu: /istanbul/maltepe veya /istanbul/maltepe/aydinevler-mah. */
 export function hierarchicalPathOf(loc: { city: string; district: string; neighborhood?: string }): string {
   return "/" + [loc.city, loc.district, loc.neighborhood].filter(Boolean).join("/");
-}
-
-/** Toplam sayfa = aktif öğe sayısına göre (ürün çözümlemesinden bağımsız). */
-export function showcaseTotalPages(activeCount: number): number {
-  return totalPages(activeCount, SHOWCASE_PAGE_SIZE);
-}
-
-/** Verilen sayfanın (1 tabanlı) ürün kimlikleri. */
-export function showcasePageIds(ids: number[], page: number): number[] {
-  const start = (page - 1) * SHOWCASE_PAGE_SIZE;
-  return start < 0 ? [] : ids.slice(start, start + SHOWCASE_PAGE_SIZE);
 }
 
 /** GET /api/products/:id yanıtı → toCardProduct'ın beklediği şekil. Aktif değil / stok 0 / kapak yok → null. */
