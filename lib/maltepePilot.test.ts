@@ -161,3 +161,45 @@ test("introWrapperClass: cy-intro yalnız pilot sayfada", () => {
   assert.equal(introWrapperClass({ page_type: "neighborhood", body_blocks: [{ type: "paragraph", text: "x" }] }), "space-y-6 text-lg leading-8");
   assert.equal(introWrapperClass(null), "space-y-6 text-lg leading-8");
 });
+
+// REGRESYON (10 Eki 2026): İstanbul yayılımının 995 kaydı otomatik (kategori kaynaklı, items boş) vitrin taşır.
+// İçerik gösterimi vitrinde ürün SEÇİLMİŞ olmasına bağlı olmamalı; ölçüt operatör-onaylı içerik kaynağıdır.
+test("operatör-onaylı içerik: vitrinde seçili ürün olmasa da pilot (otomatik bağ yok + cy-intro)", () => {
+  const withLink = "<p>Kardeş mahalle: <a href=\"/pendik/kurtkoy-cicek-siparisi\">Kurtköy</a></p><h2>Az ama yerinde</h2>";
+  const plain = "<p>İstanbul çiçek</p>";
+  const CY = "cy-intro space-y-6 text-lg leading-8";
+  const PLAIN = "space-y-6 text-lg leading-8";
+  // Yayılım kaydının gerçek biçimi: mode auto + kategori kaynağı + items boş.
+  const autoBlocks = [
+    { type: "paragraph", text: "Çamlık Mahallesi bölgesine aynı gün taze çiçek teslimatı." },
+    { type: "location", city: "istanbul", district: "pendik", neighborhood: "camlik-mah" },
+    { type: "showcase", mode: "auto", sort: null, items: [], source: { kind: "category", category_id: 130 }, in_stock: null, pagination: { enabled: null, per_page: null, max_items: null, max_pages: null } },
+  ];
+  for (const page_type of ["district", "neighborhood", "city"]) {
+    for (const content_source of ["seo-merkezi", "haiku-approved", "manual", "restore"]) {
+      const page = { page_type, content_source, intro_html: withLink, body_blocks: autoBlocks };
+      assert.equal(skipAutoLinkInjection(page), true, `${page_type}/${content_source}`);
+      assert.equal(introWrapperClass(page), CY, `${page_type}/${content_source}`);
+    }
+  }
+  // Vitrin bloğu hiç olmasa da operatör içeriği pilot sayılır (gösterim vitrine bağlı değil).
+  assert.equal(skipAutoLinkInjection({ page_type: "city", content_source: "seo-merkezi", intro_html: withLink }), true);
+  assert.equal(introWrapperClass({ page_type: "city", content_source: "seo-merkezi", intro_html: withLink }), CY);
+  // Operatör içeriği ama elle bağ yok → otomatik bağ bugünkü gibi çalışır (yalnız sarmalayıcı sınıfı gelir).
+  assert.equal(skipAutoLinkInjection({ page_type: "district", content_source: "seo-merkezi", intro_html: plain, body_blocks: autoBlocks }), false);
+  assert.equal(skipAutoLinkInjection({ page_type: "district", content_source: "haiku-approved", intro_html: null }), false);
+  // Kapı DIŞI kaynaklar (şablon = null, otomatik AI) → HİÇBİR ŞEY değişmez; otomatik vitrin bloğu tek başına pilot yapmaz.
+  for (const content_source of [null, undefined, "", "ai-content", "ai", "bilinmeyen"]) {
+    const page = { page_type: "neighborhood", content_source, intro_html: withLink, body_blocks: autoBlocks };
+    assert.equal(skipAutoLinkInjection(page), false, String(content_source));
+    assert.equal(introWrapperClass(page), PLAIN, String(content_source));
+  }
+  // Maltepe pilotu aynen: elle liste (mode yok) ve otomatik + öne çıkarılan — kaynak ne olursa olsun pilot.
+  const manual = [{ type: "showcase", items: [{ product_id: 1420, active: true }, { product_id: 1479, active: true }] }];
+  const autoPinned = [{ type: "showcase", mode: "auto", items: [{ product_id: 1514, active: true }] }];
+  for (const content_source of ["seo-merkezi", null]) {
+    assert.equal(skipAutoLinkInjection({ page_type: "neighborhood", content_source, intro_html: withLink, body_blocks: manual }), true);
+    assert.equal(skipAutoLinkInjection({ page_type: "district", content_source, intro_html: withLink, body_blocks: autoPinned }), true);
+    assert.equal(introWrapperClass({ page_type: "district", content_source, body_blocks: autoPinned }), CY);
+  }
+});
