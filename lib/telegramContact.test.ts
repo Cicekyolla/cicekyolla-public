@@ -83,13 +83,18 @@ test("ürün sayfası tespiti: TR /urun/ + 13 dilin ürün yolu (sticky Sipariş
   assert.equal(isProductPagePath(null), false);
 });
 
-test("açık pencere (çerez/teslimat/üye) varken iki buton da çizilmez — mevcut tek overlay kilidi", () => {
+test("çerez BANDI açıkken butonlar GİZLENMEZ, bandın üstüne kayar; diğer pencerelerde gizli (kalıcı gizleme yok)", () => {
   const hook = src("../components/useOverlayBusy.ts");
   assert.match(hook, /onOverlayChange\(refresh\)/);
-  assert.match(hook, /overlayBusy\(\)/);
+  assert.match(hook, /overlayBusy\("cookie"\)/, "kilit çerezdeyse ayrı ele alınır");
+  assert.match(hook, /\[data-cookie-banner\]/);
+  assert.match(hook, /return \{ hidden: false, lift: Math\.max/, "bant varken görünür + yukarı");
+  const cm = src("../components/consent/ConsentManager.tsx");
+  assert.equal((cm.match(/data-cookie-banner=""/g) || []).length, 2, "masaüstü + mobil bant işaretli");
   for (const f of ["../components/WhatsAppButton.tsx", "../components/TelegramButton.tsx"]) {
     const c = src(f);
-    assert.match(c, /useOverlayBusy\(\)/, f);
-    assert.match(c, /if \(overlayOpen\) return null;/, f);
+    assert.match(c, /const overlay = useOverlayBusy\(\);/, f);
+    assert.match(c, /if \(overlay\.hidden\) return null;/, f);
+    assert.match(c, /marginBottom: overlay\.lift \|\| undefined/, f);
   }
 });

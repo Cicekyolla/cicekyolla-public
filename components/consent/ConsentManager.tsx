@@ -485,6 +485,7 @@ function CookieConsent({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "110%", opacity: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              data-cookie-banner=""
               className="fixed bottom-0 left-0 right-0 z-[9999] hidden sm:block"
               style={{
                 background: "linear-gradient(180deg, #0E0620 0%, #0B041A 100%)",
@@ -544,6 +545,7 @@ function CookieConsent({
               animate={{ y: 0 }}
               exit={{ y: "110%" }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              data-cookie-banner=""
               className="fixed bottom-0 left-0 right-0 z-[9999] sm:hidden rounded-t-[24px] overflow-hidden"
               style={{
                 background: "linear-gradient(180deg, #0E0620 0%, #0B041A 100%)",

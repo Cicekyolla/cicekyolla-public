@@ -19,10 +19,10 @@ import { TELEGRAM_LABELS, isProductPagePath, telegramLocale, type TelegramContac
 
 export function TelegramButton({ enabled, url }: TelegramContact) {
   const pathname = usePathname();
-  const overlayOpen = useOverlayBusy();
+  const overlay = useOverlayBusy();
   if (!enabled) return null;
-  // Çerez bildirimi / teslimat adresi / üye penceresi açıkken çizilmez (WhatsApp ile aynı kural).
-  if (overlayOpen) return null;
+  // Teslimat adresi / üye paneli / çerez tercihleri açıkken çizilmez; çerez BANDI açıkken bandın üstüne çıkar.
+  if (overlay.hidden) return null;
 
   const labels = TELEGRAM_LABELS[telegramLocale(pathname)] ?? TELEGRAM_LABELS.tr;
   const position = isProductPagePath(pathname)
@@ -43,6 +43,7 @@ export function TelegramButton({ enabled, url }: TelegramContact) {
       data-telegram-button=""
       className={`fixed ${position} right-6 z-50 w-12 h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-full text-white`}
       style={{
+        marginBottom: overlay.lift || undefined,
         background: "linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)",
         boxShadow: "0 8px 32px rgba(34,158,217,0.35), 0 2px 8px rgba(0,0,0,0.1)",
       }}

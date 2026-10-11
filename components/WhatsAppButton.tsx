@@ -15,7 +15,7 @@ import { GLOBAL_WHATSAPP_URL, WHATSAPP_FLOAT_LABELS, isProductPagePath, telegram
 export function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
   const pathname = usePathname();
-  const overlayOpen = useOverlayBusy();
+  const overlay = useOverlayBusy();
 
   // Ürün detay sayfasında kendi sticky "Sipariş Ver" + WhatsApp CTA'sı var →
   // global yüzen buton mobilde onunla ÇAKIŞIYOR. O sayfalarda MOBİLDE gizle (çakışma + çift buton biter).
@@ -23,8 +23,8 @@ export function WhatsAppButton() {
   // Bu yüzden ürün sayfasında yüzen buton yalnız MASAÜSTÜNDE (lg) görünür: orada sticky çubuk yok ve
   // panel içindeki WhatsApp ilk ekranda kalmayabilir. Mobilde WhatsApp sticky çubukta (çift buton yok).
   const productPage = isProductPagePath(pathname);
-  // Çerez bildirimi / teslimat adresi / üye penceresi açıkken çizilmez (çakışma yok).
-  if (overlayOpen) return null;
+  // Teslimat adresi / üye paneli / çerez tercihleri açıkken çizilmez; çerez BANDI açıkken bandın üstüne çıkar.
+  if (overlay.hidden) return null;
 
   // Global 13 dil: aynı numara, Global vitrinin mevcut bağlantısı + sayfa dilinde etiket. TR: AYNEN.
   const lang = telegramLocale(pathname);
@@ -45,6 +45,7 @@ export function WhatsAppButton() {
       data-whatsapp-float=""
       className={`fixed bottom-6 right-6 z-50 ${productPage ? "hidden lg:flex" : "flex"} items-center rounded-full text-white overflow-hidden`}
       style={{
+        marginBottom: overlay.lift || undefined,
         background: "linear-gradient(135deg, #1DB954 0%, #128C7E 100%)",
         boxShadow: hovered
           ? "0 16px 48px rgba(37,211,102,0.5), 0 4px 16px rgba(0,0,0,0.15)"
