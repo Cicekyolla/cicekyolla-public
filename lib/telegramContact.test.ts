@@ -54,7 +54,8 @@ test("WhatsApp korunur: TR bağlantısı/etiketi AYNEN; Global bağlantı vitrin
   const wa = src("../components/WhatsAppButton.tsx");
   assert.ok(wa.includes('"https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"'), "TR bağlantısı değişmedi");
   assert.ok(wa.includes('"WhatsApp ile sipariş ver"') && wa.includes('"Sipariş Ver"'), "TR etiketleri değişmedi");
-  assert.match(wa, /isProductPagePath\(pathname\)\) return null/, "ürün sayfasında WA sticky çubukta/panelde kalır (ikinci akış yok)");
+  assert.match(wa, /const productPage = isProductPagePath\(pathname\);/);
+  assert.match(wa, /productPage \? "hidden lg:flex" : "flex"/, "ürün sayfasında mobilde yüzen WA yok (WA sticky çubukta); masaüstünde var");
   const view = src("./global/v80/view.ts");
   assert.ok(view.includes(`export const WHATSAPP_URL = "${GLOBAL_WHATSAPP_URL}";`), "Global bağlantı vitrinle birebir");
   const pdp = src("../components/product/ProductDetail.tsx");
@@ -64,7 +65,7 @@ test("WhatsApp korunur: TR bağlantısı/etiketi AYNEN; Global bağlantı vitrin
 
 test("yerleşim: ürün dışı sayfalarda Telegram WhatsApp'ın ÜSTÜNDE; ürün sayfasında sticky çubuğun ÜSTÜNDE", () => {
   const tg = src("../components/TelegramButton.tsx");
-  assert.match(tg, /isProductPagePath\(pathname\)\s*\?\s*"bottom-\[calc\(84px\+env\(safe-area-inset-bottom\)\)\] lg:bottom-6"\s*:\s*"bottom-\[84px\] lg:bottom-\[92px\]"/);
+  assert.match(tg, /isProductPagePath\(pathname\)\s*\?\s*"bottom-\[calc\(84px\+env\(safe-area-inset-bottom\)\)\] lg:bottom-\[92px\]"\s*:\s*"bottom-\[84px\] lg:bottom-\[92px\]"/);
   assert.match(src("../components/WhatsAppButton.tsx"), /fixed bottom-6 right-6 z-50/);
 });
 

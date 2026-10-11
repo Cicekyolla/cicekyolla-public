@@ -8,7 +8,7 @@
  * Yerleşim (birbirini ve satın alma düğmelerini kapatmaz):
  *  - TR sayfaları: WhatsApp (bottom-6) üstünde, 12px boşlukla.
  *  - Ürün sayfası (TR /urun/ ve 13 dil /<dil>/<ürün>/): mobilde sticky "Sipariş Ver / Order Now" çubuğunun
- *    ÜSTÜNDE, masaüstünde (çubuk yok) sağ-altta. TR'de yüzen WhatsApp burada zaten gizli.
+ *    ÜSTÜNDE (WhatsApp çubuğun içinde); masaüstünde yüzen WhatsApp'ın üstünde.
  *  - Global 13 dil diğer sayfalar: TR ile aynı — yüzen WhatsApp (bottom-6) üstünde.
  */
 
@@ -26,7 +26,7 @@ export function TelegramButton({ enabled, url }: TelegramContact) {
 
   const labels = TELEGRAM_LABELS[telegramLocale(pathname)] ?? TELEGRAM_LABELS.tr;
   const position = isProductPagePath(pathname)
-    ? "bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-6"
+    ? "bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-[92px]"
     : "bottom-[84px] lg:bottom-[92px]";
 
   return (
