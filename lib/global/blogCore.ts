@@ -47,6 +47,21 @@ export function homepageBlogPosts(posts: BlogPost[], limit = 3): BlogPost[] {
   return selectHomepagePosts(listedBlogPosts(posts), limit);
 }
 
+/**
+ * SATIŞ → REHBER DÖNÜŞ BAĞLANTISI (ADDITIVE, 11 Eki 2026): bir satış sayfasına (şehir/ilçe, niyet,
+ * kategori) o dilde YAYINDAKİ ve gövdesinde bu sayfaya bağlantı veren yazılar. Ek içerik alanı yok:
+ * yazı satış sayfasına link verdiği anda satış sayfası da yazıya geri bağlanır. Eşleşme tam yol
+ * (`](/de/istanbul)`, isteğe bağlı #… / ?…); `/de/istanbul` `/de/istanbul/kadikoy` ile eşleşmez.
+ * Sıra Admin'deki sıradır; yoksa boş (bölüm basılmaz).
+ */
+export function guidesLinkingTo(posts: BlogPost[], path: string, limit = 3): BlogPost[] {
+  const target = path.replace(/\/+$/, "");
+  if (!target.startsWith("/")) return [];
+  const esc = target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\]\\(${esc}\\/?(?:[#?][^)\\s]*)?\\)`);
+  return listedBlogPosts(posts).filter((p) => re.test(p.content ?? "")).slice(0, limit);
+}
+
 /** Canonical yolu: Admin'de girilen canonical (göreli ya da mutlak) yoksa kendi adresi. */
 export function blogPostCanonical(locale: GlobalLocale, post: BlogPost): string {
   const c = post.canonical?.trim();

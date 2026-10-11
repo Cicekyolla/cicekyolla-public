@@ -541,7 +541,7 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   // Ek istek yok: sayfa dalı yine aynı 4 çağrı
   const localePage = page.slice(page.indexOf("export async function LocalePage"));
   const pageBranch = localePage.slice(localePage.indexOf('if (parsed.kind === "page")'), localePage.indexOf('if (parsed.kind === "category")'));
-  assert.deepEqual([...new Set(pageBranch.match(/\b(fetch\w+|v80Contact)\(/g) ?? [])].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
+  assert.deepEqual([...new Set(pageBranch.match(/\b(fetch\w+|v80Contact)\(/g) ?? [])].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleBlogPosts(", "fetchLocaleCatalog(", "v80Contact("].sort()); // + SATIŞ → REHBER (11 Eki 2026): o dilin blog kaydı, ana sayfayla aynı 5 dk önbellekli okuma
   assert.ok(pageBranch.includes("searchParams={searchParams}"));
   // 404: pozitif tam sayı olmayan ?page — okumalardan ÖNCE (istek atılmaz).
   assert.ok(pageBranch.includes("if (parseListingPageParam(searchParams?.page) === null) notFound();"));

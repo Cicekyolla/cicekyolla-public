@@ -10,6 +10,7 @@ import {
   listedBlogPosts,
   reachableBlogPost,
   homepageBlogPosts,
+  guidesLinkingTo,
   blogPostCanonical,
   isSelfCanonical,
   localeBlogPostFamily,
@@ -178,4 +179,22 @@ test("V80 ana sayfa: rehber bölümü opsiyonel prop; TR blog sayfası hreflang'
   assert.match(page, /guide\?: ReactNode/);
   const tr = readFileSync(join(process.cwd(), "app", "blog", "[slug]", "page.tsx"), "utf8");
   assert.match(tr, /alternates:languages\?\{canonical:post\.canonical\|\|`\/blog\/\$\{post\.slug\}`,languages\}:\{canonical:post\.canonical\|\|`\/blog\/\$\{post\.slug\}`\}/);
+});
+
+test("satış → rehber: yalnız bu sayfaya bağlantı veren yayındaki yazılar, tam yol, Admin sırası, en fazla 3", () => {
+  const posts = localeBlogPostsFromBlocks([
+    block("a", { label: "Siehe [Istanbul](/de/istanbul) und mehr." }),
+    block("b", { label: "Nur [Kadıköy](/de/istanbul/kadikoy)." }),
+    block("c", { label: "[Rosen](/de/kategorie/rosen#top)", state: "draft" }),
+    block("d", { label: "[Rosen](/de/kategorie/rosen?page=2) und [Istanbul](/de/istanbul#zonen)" }),
+    block("e", { label: "Text /de/istanbul ohne Link" }),
+    block("f", { label: "[x](/de/istanbul)" }),
+    block("g", { label: "[y](/de/istanbul/)" }),
+  ]);
+  assert.deepEqual(guidesLinkingTo(posts, "/de/istanbul").map((p) => p.slug), ["a", "d", "f"]);
+  assert.deepEqual(guidesLinkingTo(posts, "/de/istanbul", 10).map((p) => p.slug), ["a", "d", "f", "g"]);
+  assert.deepEqual(guidesLinkingTo(posts, "/de/istanbul/kadikoy").map((p) => p.slug), ["b"]);
+  assert.deepEqual(guidesLinkingTo(posts, "/de/kategorie/rosen").map((p) => p.slug), ["d"]);
+  assert.deepEqual(guidesLinkingTo(posts, "/de/kategorie/tulpen"), []);
+  assert.deepEqual(guidesLinkingTo([], "/de/istanbul"), []);
 });
