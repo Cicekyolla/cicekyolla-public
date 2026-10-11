@@ -9,6 +9,8 @@ import { Footer, type FooterBrand } from "@/components/Footer";
 import { resolveSiteIdentity } from "@/lib/siteIdentity";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { TelegramButton } from "@/components/TelegramButton";
+import { resolveTelegram } from "@/lib/telegramContact";
 import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
@@ -81,6 +83,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let search: { name: string; href: string }[] = [];
   let footerBrand: FooterBrand | undefined;
   let headerColors: { bg: string; text: string; promoBar: string } | undefined;
+  // Telegram: aynı yayın sürümü hero.config (Admin) → TR + 13 dil. Okunamazsa yedek @cicekyolla.
+  let telegram = resolveTelegram(null);
   try {
     const tree = await getCategoryTree();
     const built = buildHeaderMenu(tree);
@@ -95,6 +99,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   try {
     const homepage = await getPublishedHomepage();
     const heroConfig = homepage?.sections.find((section) => section.type === "hero")?.config;
+    telegram = resolveTelegram(heroConfig);
     if (heroConfig) {
       footerBrand = {
         logoUrl: typeof heroConfig.logo_url === "string" && heroConfig.logo_url.trim() ? heroConfig.logo_url : undefined,
@@ -236,6 +241,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             V80Shell'in locale-aware alt bilgisidir. TR yollarında AYNEN (ChromeGate geçirir). */}
         <ChromeGate><Footer categories={footerOrUndef} brand={footerBrandLight} /></ChromeGate>
         <ChromeGate><WhatsAppButton /></ChromeGate>
+        {/* Telegram: ChromeGate DIŞINDA — TR ve Global 13 dilde aynı Admin ayarıyla görünür. */}
+        <TelegramButton {...telegram} />
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />
