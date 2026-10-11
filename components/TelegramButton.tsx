@@ -7,25 +7,25 @@
  *
  * Yerleşim (birbirini ve satın alma düğmelerini kapatmaz):
  *  - TR sayfaları: WhatsApp (bottom-6) üstünde, 12px boşlukla.
- *  - TR ürün sayfası (/urun/): WhatsApp yüzen butonu orada gizli (sticky "Sipariş Ver" çubuğu); mobilde
- *    çubuğun ÜSTÜNDE, masaüstünde (çubuk yok) sağ-altta.
- *  - Global 13 dil: yüzen WhatsApp yok (WhatsApp başlık/bölümlerde) → sağ-altta.
+ *  - Ürün sayfası (TR /urun/ ve 13 dil /<dil>/<ürün>/): mobilde sticky "Sipariş Ver / Order Now" çubuğunun
+ *    ÜSTÜNDE, masaüstünde (çubuk yok) sağ-altta. TR'de yüzen WhatsApp burada zaten gizli.
+ *  - Global 13 dil diğer sayfalar: yüzen WhatsApp yok (WhatsApp başlık/bölümlerde) → sağ-altta.
  */
 
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { isGlobalLocalePath } from "@/lib/global/config";
-import { TELEGRAM_LABELS, telegramLocale, type TelegramContact } from "@/lib/telegramContact";
+import { TELEGRAM_LABELS, isProductPagePath, telegramLocale, type TelegramContact } from "@/lib/telegramContact";
 
 export function TelegramButton({ enabled, url }: TelegramContact) {
   const pathname = usePathname();
   if (!enabled) return null;
 
   const labels = TELEGRAM_LABELS[telegramLocale(pathname)] ?? TELEGRAM_LABELS.tr;
-  const position = pathname && isGlobalLocalePath(pathname)
-    ? "bottom-6"
-    : pathname?.startsWith("/urun/")
-      ? "bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-6"
+  const position = isProductPagePath(pathname)
+    ? "bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-6"
+    : pathname && isGlobalLocalePath(pathname)
+      ? "bottom-6"
       : "bottom-[84px] lg:bottom-[92px]";
 
   return (

@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { resolveTelegram, TELEGRAM_FALLBACK, TELEGRAM_LABELS, telegramLocale } from "./telegramContact.ts";
-import { GLOBAL_LOCALES } from "./global/config.ts";
+import { resolveTelegram, TELEGRAM_FALLBACK, TELEGRAM_LABELS, telegramLocale, isProductPagePath } from "./telegramContact.ts";
+import { GLOBAL_LOCALES, SEGMENTS } from "./global/config.ts";
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 
@@ -47,4 +47,18 @@ test("kablolama: layout tek kaynaktan çizer, ChromeGate DIŞINDA (13 dilde de g
   assert.match(layout, /<TelegramButton \{\.\.\.telegram\} \/>/);
   assert.doesNotMatch(layout, /<ChromeGate><TelegramButton/);
   assert.match(layout, /<ChromeGate><WhatsAppButton \/><\/ChromeGate>/);
+});
+
+test("ürün sayfası tespiti: TR /urun/ + 13 dilin ürün yolu (sticky Sipariş Ver çubuğunun üstüne çıkmak için)", () => {
+  assert.equal(isProductPagePath("/urun/beyaz-zarafet-orkide-aranjmani"), true);
+  for (const l of GLOBAL_LOCALES) {
+    assert.equal(isProductPagePath(`/${l}/${SEGMENTS[l].product}/101-red-rose-bouquet`), true, l);
+    assert.equal(isProductPagePath(`/${l}/${SEGMENTS[l].category}/roses`), false, l);
+    assert.equal(isProductPagePath(`/${l}`), false, l);
+  }
+  assert.equal(isProductPagePath("/en/istanbul"), false);
+  assert.equal(isProductPagePath("/"), false);
+  assert.equal(isProductPagePath("/kategori/cicekler"), false);
+  assert.equal(isProductPagePath("/sepet"), false);
+  assert.equal(isProductPagePath(null), false);
 });

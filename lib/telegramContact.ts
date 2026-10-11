@@ -9,6 +9,8 @@
 // Admin alanı boşsa yedek: @cicekyolla. Aktif/pasif yalnız Admin'den (alan yoksa aktif).
 // SEO'ya (sameAs, JSON-LD, hreflang, canonical) yazılmaz.
 
+import { isGlobalLocale, parseLocalePath } from "./global/config.ts";
+
 export const TELEGRAM_FALLBACK = { username: "cicekyolla", url: "https://t.me/cicekyolla" } as const;
 
 export interface TelegramContact { enabled: boolean; username: string; url: string }
@@ -50,4 +52,15 @@ export const TELEGRAM_LABELS: Record<string, { aria: string; label: string }> = 
 export function telegramLocale(pathname: string | null | undefined): string {
   const seg = String(pathname || "").split("/")[1] || "";
   return seg !== "tr" && seg in TELEGRAM_LABELS ? seg : "tr";
+}
+
+/**
+ * Ürün sayfası mı? TR /urun/<slug> ve 13 dil /<dil>/<ürün-segmenti>/<slug> AYNI ProductDetail'i kullanır;
+ * mobilde alta sabit "Sipariş Ver / Order Now" çubuğu vardır → Telegram onun ÜSTÜNE çıkar.
+ */
+export function isProductPagePath(pathname: string | null | undefined): boolean {
+  const path = String(pathname || "");
+  if (path.startsWith("/urun/")) return true;
+  const [, locale, ...segs] = path.split("/");
+  return isGlobalLocale(locale) && parseLocalePath(locale, segs.filter(Boolean)).kind === "product";
 }
