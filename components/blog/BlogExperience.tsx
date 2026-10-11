@@ -15,6 +15,8 @@ export type BlogPost={
   publishedAt?:string;
   featured?:boolean;
   homeOrder?:number;
+  /** GLOBAL BLOG MERKEZİ (ADDITIVE): aynı yazının dil karşılıklarını eşleyen ortak anahtar (hreflang). */
+  translationKey?:string;
 };
 export function BlogExperience({posts}:{posts:BlogPost[]}){const cats=["Tümü",...Array.from(new Set(posts.map(p=>p.category)))];const [cat,setCat]=useState("Tümü");const shown=cat==="Tümü"?posts:posts.filter(p=>p.category===cat);const featured=shown[0];return <>
  <section className="relative overflow-hidden bg-[#0b0319] px-6 py-24 text-white lg:px-14 lg:py-32"><div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(168,85,247,.35),transparent_36%),radial-gradient(circle_at_20%_80%,rgba(76,29,149,.3),transparent_40%)]"/><div className="relative mx-auto max-w-[1320px]"><div className="inline-flex rounded-full border border-white/15 bg-white/10 px-5 py-2 text-xs font-bold uppercase tracking-[.24em] text-[#ddd6fe]">Blog</div><h1 className="mt-8 max-w-4xl font-serif text-5xl font-semibold leading-[.98] md:text-7xl lg:text-8xl">Çiçek Dünyasından<br/><span className="text-[#c084fc]">İlham & Bilgi</span></h1><p className="mt-8 max-w-2xl text-lg text-[#c4b5d4]">Bakım rehberleri, çiçeklerin anlamları, dekorasyon önerileri ve özel gün fikirleri.</p></div></section>

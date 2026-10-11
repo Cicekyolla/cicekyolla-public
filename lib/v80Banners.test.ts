@@ -443,7 +443,8 @@ test("V80Page 'banners' bölümünü yalnız banner varsa V80Banners ile basar; 
   const page = read("../components/global/v80/V80Page.tsx");
   assert.match(page, /import \{ V80Banners \} from "\.\/V80Banners";/);
   assert.match(page, /case "banners": return view\.banners\?\.length \? <V80Banners key=\{id\} view=\{view\} \/> : null;/);
-  assert.match(page, /<main id="main-content" lang=\{view\.locale\} dir=\{view\.dir\}>\s*\{view\.sections\.map\(render\)\}\s*<\/main>/, "bölümler ek sarmalayıcı olmadan doğrudan main içinde");
+  // GLOBAL BLOG MERKEZİ: bölümlerden sonra yalnız opsiyonel rehber bölümü (guide) gelir; ek sarmalayıcı yok.
+  assert.match(page, /<main id="main-content" lang=\{view\.locale\} dir=\{view\.dir\}>\s*\{view\.sections\.map\(render\)\}\s*(\{guide \?\? null\}\s*)?<\/main>/, "bölümler ek sarmalayıcı olmadan doğrudan main içinde");
   const banners = read("../components/global/v80/V80Banners.tsx");
   const fn = banners.slice(banners.indexOf("export function V80Banners"));
   assert.match(fn, /const items = \(view\.banners \?\? \[\]\)\.filter\(\(b\) => !!b\.image\);\s*(\/\/[^\n]*\s*)*if \(!items\.length\) return null;/);

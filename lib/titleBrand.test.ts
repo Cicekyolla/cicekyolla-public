@@ -69,8 +69,10 @@ test("bağlantı: ürün ve kategori başlıkları (TR + dil sayfaları) şablon
   const global = read("lib/global/page.tsx");
   assert.equal((global.match(/stripTrailingBrand\(surface\.seo_title \?\? surface\.name \?\? undefined\)/g) ?? []).length, 2, "dil ürün + dil kategori");
   assert.match(global, /stripTrailingBrand\(row\.seo_title \?\? row\.h1 \?\? undefined\)/);
-  // Şablona verilen değer her dalda titleForTemplate'ten geçer (TR ürün + TR kategori + 5 dil dalı).
+  // Şablona verilen değer her dalda titleForTemplate'ten geçer (TR ürün + TR kategori + 5 dil dalı + blog yazısı;
+  // blog listesi kendi dil metniyle: titleForTemplate(t.title)).
   assert.match(read("app/urun/[slug]/page.tsx"), /title: titleForTemplate\(title\),/);
   assert.match(read("app/kategori/[...slug]/page.tsx"), /title: titleForTemplate\(title\),/);
-  assert.equal((global.match(/title: titleForTemplate\(title\)/g) ?? []).length, 5);
+  assert.equal((global.match(/title: titleForTemplate\(title\)/g) ?? []).length, 6);
+  assert.match(global, /title: titleForTemplate\(t\.title\),/);
 });
