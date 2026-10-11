@@ -79,7 +79,7 @@ import {
 } from "./config";
 // GLOBAL BLOG MERKEZİ (11 Eki 2026, ADDITIVE): /<dil>/blog liste + detay + ana sayfa rehber bölümü.
 import { fetchAllLocaleBlogDocs, fetchLocaleBlogPosts } from "./blog";
-import { blogPostCanonical, blogPostingJsonLd, homepageBlogPosts, listedBlogPosts, localeBlogIndexFamily, localeBlogPostFamily, reachableBlogPost } from "./blogCore";
+import { blogPostCanonical, blogPostingJsonLd, guidesLinkingTo, homepageBlogPosts, listedBlogPosts, localeBlogIndexFamily, localeBlogPostFamily, reachableBlogPost } from "./blogCore";
 import { BLOG_COPY } from "./blogCopy";
 import { isIndexable as isBlogIndexable } from "@/lib/blogMerge";
 import { getManagedBlogPosts } from "@/lib/blog";
@@ -1177,7 +1177,7 @@ export async function LocalePage({ locale, path, searchParams }: {
     // EK (SEO YAYIN ZİNCİRİ): ?page pozitif tam sayı değilse (0, -1, abc, 1.5 …) 1. sayfanın kopyası
     // 200 ile sunulmaz → 404. Son sayfanın ötesi kontrolü katalog görünümünün kurulduğu yerde: GlobalPageBody.
     if (parseListingPageParam(searchParams?.page) === null) notFound();
-    const [row, catalog, contact, catalogResp] = await Promise.all([
+    const [row, catalog, contact, catalogResp, blogPosts] = await Promise.all([
       fetchGlobalPage(locale, parsed.key),
       fetchLocaleCatalog(locale),
       v80Contact(),
@@ -1190,6 +1190,8 @@ export async function LocalePage({ locale, path, searchParams }: {
         : intent
           ? fetchGlobalCatalog(locale, { city: DESTINATION_ROOT })
           : Promise.resolve(null),
+      // SATIŞ → REHBER: bu sayfaya bağlantı veren yayındaki yazılar (5 dk önbellekli aynı kayıt; hata → bölüm yok).
+      fetchLocaleBlogPosts(locale).catch(() => []),
     ]);
     if (!row) notFound();
     const source = locKey || intent ? catalogDecision(catalogResp, true) : undefined;
@@ -1202,6 +1204,7 @@ export async function LocalePage({ locale, path, searchParams }: {
     return (
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
         <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} sections={sections} searchParams={searchParams} intent={intent} cutoffs={cutoffs} />
+        <GlobalBlogRail locale={locale} posts={guidesLinkingTo(blogPosts, `/${locale}/${parsed.key}`)} />
       </V80Shell>
     );
   }
@@ -1213,11 +1216,12 @@ export async function LocalePage({ locale, path, searchParams }: {
     if (parseListingPageParam(searchParams?.page) === null) notFound();
     // Katalog, sayfa altındaki "ilgili kategoriler" iç bağlantıları için; yüzeyle
     // PARALEL çekilir (ek gecikme yok). Ayar fail-open (uç yoksa DEFAULTS).
-    const [surface, catalog, contact, listingSettings] = await Promise.all([
+    const [surface, catalog, contact, listingSettings, blogPosts] = await Promise.all([
       fetchCategorySurface(locale, parsed.slug),
       fetchLocaleCatalog(locale),
       v80Contact(),
       fetchListingSettings({ noStore: true }),
+      fetchLocaleBlogPosts(locale).catch(() => []),
     ]);
     if (!surface) notFound();
     const categoryPage = parseListingPageParam(searchParams?.page) ?? 1;
@@ -1321,6 +1325,8 @@ export async function LocalePage({ locale, path, searchParams }: {
         <TrustStrip locale={locale} />
         <ConciergeSection locale={locale} />
       </main>
+      {/* SATIŞ → REHBER: bu kategoriye bağlantı veren yayındaki yazılar (yoksa basılmaz). */}
+      <GlobalBlogRail locale={locale} posts={guidesLinkingTo(blogPosts, categoryBase)} />
       </V80Shell>
     );
   }

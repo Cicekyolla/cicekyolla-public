@@ -160,7 +160,7 @@ test("KAYNAK: TEK plan paylaşılır (commerce + categories + emotion); ek istek
   const localePage = page.slice(page.indexOf("export async function LocalePage"));
   const pageBranch = localePage.slice(localePage.indexOf('if (parsed.kind === "page")'), localePage.indexOf('if (parsed.kind === "category")'));
   const fetchers = pageBranch.match(/\b(fetch\w+|v80Contact)\(/g) ?? [];
-  assert.deepEqual([...new Set(fetchers)].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
+  assert.deepEqual([...new Set(fetchers)].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleBlogPosts(", "fetchLocaleCatalog(", "v80Contact("].sort()); // + SATIŞ → REHBER (11 Eki 2026): o dilin blog kaydı, ana sayfayla aynı 5 dk önbellekli okuma
   // Yedek yol kaynak testi ve animasyon tavanı korunur
   assert.ok(page.includes("tiles = fallbackCategoryCards(catalog.categories)"));
   assert.ok(!/<ProductCard[^>]*idx=\{idx\}/.test(page));
