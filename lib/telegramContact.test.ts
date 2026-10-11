@@ -98,3 +98,9 @@ test("çerez BANDI açıkken butonlar GİZLENMEZ, bandın üstüne kayar; diğer
     assert.match(c, /marginBottom: overlay\.lift \|\| undefined/, f);
   }
 });
+
+test("dil seçici bulunulan alan adında kalır (preview'den production'a atlamaz); hreflang etiketleri aynı", () => {
+  const ls = src("../components/LanguageSelector.tsx");
+  assert.match(ls, /const u = new URL\(alt\.href, window\.location\.href\); window\.location\.assign\(u\.pathname \+ u\.search \+ u\.hash\)/);
+  assert.doesNotMatch(ls, /window\.location\.assign\(alt\.href\)/);
+});
