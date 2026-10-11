@@ -116,7 +116,9 @@ export function LanguageSelector() {
       return;
     }
     const alt = document.querySelector(`link[rel="alternate"][hreflang="${code}"]`) as HTMLLinkElement | null;
-    if (alt?.href) { setLocale(code); window.location.assign(alt.href); return; }
+    // hreflang etiketleri SEO gereği mutlak production adresidir (www.cicekyolla.com.tr). Gezinme
+    // BULUNULAN alan adında kalır (preview/production): yalnız yol alınır; production'da hedef aynı.
+    if (alt?.href) { setLocale(code); const u = new URL(alt.href, window.location.href); window.location.assign(u.pathname + u.search + u.hash); return; }
     if (availableLocales.includes(code)) { setLocale(code); window.location.assign(`/${code}`); return; }
     setLocale(code); // vitrin hazır değil: mevcut sunum-çevirisi davranışı
   };

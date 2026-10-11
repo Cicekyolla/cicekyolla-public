@@ -9,18 +9,30 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
+import { useOverlayBusy } from "@/components/useOverlayBusy";
+import { GLOBAL_WHATSAPP_URL, WHATSAPP_FLOAT_LABELS, isProductPagePath, telegramLocale } from "@/lib/telegramContact";
 
 export function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
   const pathname = usePathname();
+  const overlay = useOverlayBusy();
 
   // Ürün detay sayfasında kendi sticky "Sipariş Ver" + WhatsApp CTA'sı var →
-  // global yüzen buton mobilde onunla ÇAKIŞIYOR. O sayfalarda gizle (çakışma + çift buton biter).
-  if (pathname?.startsWith("/urun/")) return null;
+  // global yüzen buton mobilde onunla ÇAKIŞIYOR. O sayfalarda MOBİLDE gizle (çakışma + çift buton biter).
+  // 13 dil ürün sayfaları da AYNI ProductDetail'i (aynı WhatsApp sipariş bağlantısı) kullanır.
+  // Bu yüzden ürün sayfasında yüzen buton yalnız MASAÜSTÜNDE (lg) görünür: orada sticky çubuk yok ve
+  // panel içindeki WhatsApp ilk ekranda kalmayabilir. Mobilde WhatsApp sticky çubukta (çift buton yok).
+  const productPage = isProductPagePath(pathname);
+  // Teslimat adresi / üye paneli / çerez tercihleri açıkken çizilmez; çerez BANDI açıkken bandın üstüne çıkar.
+  if (overlay.hidden) return null;
+
+  // Global 13 dil: aynı numara, Global vitrinin mevcut bağlantısı + sayfa dilinde etiket. TR: AYNEN.
+  const lang = telegramLocale(pathname);
+  const global = lang !== "tr" ? WHATSAPP_FLOAT_LABELS[lang] : undefined;
 
   return (
     <motion.a
-      href="https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"
+      href={global ? GLOBAL_WHATSAPP_URL : "https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"}
       target="_blank"
       rel="nofollow noopener noreferrer"
       initial={{ scale: 0, opacity: 0, y: 20 }}
@@ -29,9 +41,11 @@ export function WhatsAppButton() {
       whileTap={{ scale: 0.93 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      aria-label="WhatsApp ile sipariş ver"
-      className="fixed bottom-6 right-6 z-50 flex items-center rounded-full text-white overflow-hidden"
+      aria-label={global ? global.aria : "WhatsApp ile sipariş ver"}
+      data-whatsapp-float=""
+      className={`fixed bottom-6 right-6 z-50 ${productPage ? "hidden lg:flex" : "flex"} items-center rounded-full text-white overflow-hidden`}
       style={{
+        marginBottom: overlay.lift || undefined,
         background: "linear-gradient(135deg, #1DB954 0%, #128C7E 100%)",
         boxShadow: hovered
           ? "0 16px 48px rgba(37,211,102,0.5), 0 4px 16px rgba(0,0,0,0.15)"
@@ -52,7 +66,7 @@ export function WhatsAppButton() {
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
         className="text-sm font-bold whitespace-nowrap overflow-hidden"
       >
-        Sipariş Ver
+        {global ? global.label : "Sipariş Ver"}
       </motion.span>
     </motion.a>
   );
