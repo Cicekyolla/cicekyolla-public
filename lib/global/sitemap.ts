@@ -14,6 +14,9 @@ import {
   fetchGlobalPagesInventoryChecked,
   type LocaleInventory,
 } from "./api";
+// GLOBAL BLOG MERKEZİ (ADDITIVE): o dilin indexlenebilir blog yazıları (+ liste sayfası).
+import { fetchLocaleBlogPosts, fetchLocaleBlogPostsChecked } from "./blog";
+import { blogSitemapEntries } from "./blogCore";
 // EK (TEK GÖRSEL KAYNAĞI): <image:loc> görünür ürün görseliyle AYNI karardan gelir.
 import { servedProductImageUrl } from "@/lib/productImageUrl";
 
@@ -62,7 +65,8 @@ function productNode(path: string, updatedAt: string | null, image: string | nul
 function localeSitemapXml(
   locale: GlobalLocale,
   inv: LocaleInventory,
-  pages: { page_key: string; updated_at: string }[] | null
+  pages: { page_key: string; updated_at: string }[] | null,
+  blog: { path: string; lastmod: string | null }[] = [],
 ): string {
   const seg = SEGMENTS[locale];
   const nodes = [
@@ -72,6 +76,8 @@ function localeSitemapXml(
     ),
     ...inv.products.map((p) => productNode(`/${locale}/${seg.product}/${p.slug}`, p.updated_at, p.image)),
     ...inv.categories.map((c) => node(`/${locale}/${seg.category}/${c.slug}`, c.updated_at)),
+    // Blog: yayında yazı yoksa hiçbir düğüm eklenmez → çıktı bugünküyle bayt bayt aynı.
+    ...blog.map((b) => node(b.path, b.lastmod)),
   ];
   // Görsel ad alanı yalnız en az bir görsel düğümü varken bildirilir → API henüz
   // `image` vermiyorken çıktı bugünküyle bayt bayt aynı kalır.
@@ -80,11 +86,12 @@ function localeSitemapXml(
 }
 
 export async function renderLocaleSitemap(locale: GlobalLocale): Promise<string> {
-  const [inv, pages] = await Promise.all([
+  const [inv, pages, blogPosts] = await Promise.all([
     fetchLocaleInventory(locale),
     fetchGlobalPagesInventory(locale),
+    fetchLocaleBlogPosts(locale).catch(() => []),
   ]);
-  return localeSitemapXml(locale, inv, pages);
+  return localeSitemapXml(locale, inv, pages, blogSitemapEntries(locale, blogPosts));
 }
 
 /**
@@ -94,13 +101,16 @@ export async function renderLocaleSitemap(locale: GlobalLocale): Promise<string>
  * eksik olur. Yanıt geldi ama liste boşsa bu MEŞRU boşluktur (200 boş urlset).
  */
 export async function renderLocaleSitemapOrNull(locale: GlobalLocale): Promise<string | null> {
-  const [inv, pages] = await Promise.all([
+  const [inv, pages, blog] = await Promise.all([
     fetchLocaleInventoryChecked(locale),
     fetchGlobalPagesInventoryChecked(locale),
+    fetchLocaleBlogPostsChecked(locale),
   ]);
+  // Blog FAIL-OPEN: blog kaydı okunamazsa ürün/kategori/sayfa sitemap'i bugünkü gibi sunulur, yalnız blog
+  // düğümleri o turda eksik kalır (mevcut Global sitemap'in 503 olma koşulları DEĞİŞMEZ).
   if (!inv.ok || !pages.ok) return null;
   // 200 geldi ama zarf beklenen biçimde değilse (liste yok) bu da "okunamadı"dır.
   if (!inv.data || !Array.isArray(inv.data.products) || !Array.isArray(inv.data.categories)) return null;
   if (!Array.isArray(pages.data)) return null;
-  return localeSitemapXml(locale, inv.data, pages.data);
+  return localeSitemapXml(locale, inv.data, pages.data, blog.ok ? blogSitemapEntries(locale, blog.posts) : []);
 }

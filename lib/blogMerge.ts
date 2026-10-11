@@ -63,6 +63,9 @@ export function fromBlock(b: ManagedBlock): BlogPost | null {
   if (b.featured === true || str(b.featured).trim().toLowerCase() === "true") post.featured = true;
   const homeOrder = toNumber(b.homeOrder);
   if (homeOrder !== null) post.homeOrder = homeOrder;
+  // GLOBAL BLOG MERKEZİ (ADDITIVE): alan yoksa çıktı bugünküyle birebir aynı.
+  const translationKey = str(b.translationKey).trim();
+  if (translationKey) post.translationKey = translationKey;
 
   return post;
 }

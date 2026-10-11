@@ -55,7 +55,21 @@ export type ParsedLocalePath =
   | { kind: "product"; slug: string }
   | { kind: "category"; slug: string }
   | { kind: "page"; key: string } // global_pages: istanbul, istanbul/<ilçe>[/<mahalle>]
+  | { kind: "blog" } // GLOBAL BLOG MERKEZİ: /<dil>/blog
+  | { kind: "blog-post"; slug: string } // GLOBAL BLOG MERKEZİ: /<dil>/blog/<slug>
   | { kind: "unknown" };
+
+/**
+ * GLOBAL BLOG MERKEZİ (11 Eki 2026, ADDITIVE): 13 dilde ortak, ASCII "blog" bölümü.
+ * İçerik kaynağı TR blogla AYNI motor: seo_page("/<dil>/blog").body_blocks "blog-post"
+ * blokları (dil başına ayrı kayıt → bir dilin yayını diğerine dokunmaz). Route tek başına
+ * vitrin açmaz: o dilde yayında yazı yoksa liste 404, taslak/çöp yazı 404.
+ */
+export const BLOG_SEGMENT = "blog";
+
+export function localeBlogPath(locale: GlobalLocale, slug?: string): string {
+  return slug ? `/${locale}/${BLOG_SEGMENT}/${slug}` : `/${locale}/${BLOG_SEGMENT}`;
+}
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -110,6 +124,12 @@ export function parseLocalePath(locale: GlobalLocale, segs: string[]): ParsedLoc
   if (segs.length === 2 && SLUG_RE.test(segs[1])) {
     if (segs[0] === seg.product) return { kind: "product", slug: segs[1] };
     if (segs[0] === seg.category) return { kind: "category", slug: segs[1] };
+  }
+  // GLOBAL BLOG MERKEZİ: /xx/blog ve /xx/blog/<slug> (slug ASCII; destinasyon/niyet anahtarı değildir).
+  if (segs[0] === BLOG_SEGMENT) {
+    if (segs.length === 1) return { kind: "blog" };
+    if (segs.length === 2 && SLUG_RE.test(segs[1])) return { kind: "blog-post", slug: segs[1] };
+    return { kind: "unknown" };
   }
   // Lokasyon yüzeyleri: /xx/<şehir>, /xx/<şehir>/<ilçe>, /xx/<şehir>/<ilçe>/<mahalle>
   // — şehir DESTINATION_ROOTS'tan biri (coğrafi adlar korunur — kanun §8;

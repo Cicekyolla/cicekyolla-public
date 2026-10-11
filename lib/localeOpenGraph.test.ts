@@ -63,7 +63,9 @@ test("KAYNAK: site adı ve varsayılan görsel kök layout'takiyle AYNI ('bugün
 test("KAYNAK: localeMetadata'nın gerçek sayfa dönen HER dalı kendi openGraph'ını kurar (5 dal); PDP'de kapak geçer", () => {
   const motor = oku("./global/page.tsx");
   const meta = motor.slice(motor.indexOf("export async function localeMetadata"), motor.indexOf("// ---- Ortak parçalar"));
-  assert.equal(meta.split("openGraph: localeOpenGraph(locale, {").length - 1, 5, "ana sayfa (yedek + satır) + sayfa + kategori + ürün");
+  assert.equal(meta.split("openGraph: localeOpenGraph(locale, {").length - 1, 6, "ana sayfa (yedek + satır) + sayfa + kategori + ürün + blog listesi");
+  // GLOBAL BLOG MERKEZİ: blog yazısı dalı aynı kurucuyu makale türüyle genişletir.
+  assert.ok(meta.includes('openGraph: { ...localeOpenGraph(locale, { url: self, title, description, image }), type: "article" as const },'));
   assert.ok(meta.includes("openGraph: localeOpenGraph(locale, { url: self, title, description: surface.meta_description, image: cover }),"));
   // EK (TEK GÖRSEL KAYNAĞI): kapak, vitrinin sunduğu dosyaya çözülür (lib/productImageUrl.ts); aday sırası aynı.
   assert.ok(meta.includes('const cover = firstServedProductImageUrl([detail?.images.find((i) => i.role === "cover")?.url, detail?.images[0]?.url]);'));

@@ -14,7 +14,13 @@ import { V80Reviews } from "./V80Reviews";
 import { V80Banners } from "./V80Banners";
 import { V80Categories, V80Delivery, V80Collections, V80Destinations, V80Journey, V80Cta, V80TrustStrip, V80Content } from "./V80Sections";
 
-export function V80Page({ view }: { view: V80View }) {
+import type { ReactNode } from "react";
+
+/**
+ * GLOBAL BLOG MERKEZİ (ADDITIVE): `guide` = sayfanın en altındaki rehber bölümü (o dilin
+ * yayındaki blog yazıları). Verilmezse / boşsa çıktı bugünküyle birebir aynı.
+ */
+export function V80Page({ view, guide }: { view: V80View; guide?: ReactNode }) {
   const render = (id: V80SectionId) => {
     switch (id) {
       case "hero": return <V80Hero key={id} view={view} />;
@@ -40,6 +46,7 @@ export function V80Page({ view }: { view: V80View }) {
   return (
     <main id="main-content" lang={view.locale} dir={view.dir}>
       {view.sections.map(render)}
+      {guide ?? null}
     </main>
   );
 }

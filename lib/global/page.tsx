@@ -75,7 +75,15 @@ import {
   isIntentPageKey,
   INTENT_PAGE_CATEGORY,
   type IntentPageKey,
+  localeBlogPath,
 } from "./config";
+// GLOBAL BLOG MERKEZİ (11 Eki 2026, ADDITIVE): /<dil>/blog liste + detay + ana sayfa rehber bölümü.
+import { fetchAllLocaleBlogDocs, fetchLocaleBlogPosts } from "./blog";
+import { blogPostCanonical, blogPostingJsonLd, homepageBlogPosts, listedBlogPosts, localeBlogIndexFamily, localeBlogPostFamily, reachableBlogPost } from "./blogCore";
+import { BLOG_COPY } from "./blogCopy";
+import { isIndexable as isBlogIndexable } from "@/lib/blogMerge";
+import { getManagedBlogPosts } from "@/lib/blog";
+import { GlobalBlogArticle, GlobalBlogList, GlobalBlogRail } from "@/components/global/blog/GlobalBlog";
 import {
   fetchProductSurface,
   fetchProductLocaleCluster,
@@ -412,6 +420,45 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
       robots: row.indexable ? undefined : NOINDEX,
       alternates: languages ? { canonical: self, languages } : { canonical: self },
       openGraph: localeOpenGraph(locale, { url: self, title, description: row.meta_description }),
+    };
+  }
+
+  if (parsed.kind === "blog") {
+    // Yayında yazı yoksa sayfa 404 (LocalePage) → metadata da index dışı. Aile: indexlenebilir yazısı olan diller.
+    const posts = listedBlogPosts(await fetchLocaleBlogPosts(locale));
+    if (posts.length === 0) return { robots: NOINDEX };
+    const self = absoluteUrl(localeBlogPath(locale));
+    const t = BLOG_COPY[locale];
+    const indexable = posts.some(isBlogIndexable);
+    const languages = indexable ? localeBlogIndexFamily(await fetchAllLocaleBlogDocs(), absoluteUrl) : null;
+    return {
+      title: titleForTemplate(t.title),
+      description: t.description,
+      robots: indexable ? undefined : NOINDEX,
+      alternates: languages ? { canonical: self, languages } : { canonical: self },
+      openGraph: localeOpenGraph(locale, { url: self, title: t.title, description: t.description }),
+    };
+  }
+
+  if (parsed.kind === "blog-post") {
+    const post = reachableBlogPost(await fetchLocaleBlogPosts(locale), parsed.slug);
+    if (!post) return { robots: NOINDEX };
+    const canonical = blogPostCanonical(locale, post);
+    const self = /^https?:\/\//i.test(canonical) ? canonical : absoluteUrl(canonical);
+    const indexable = isBlogIndexable(post);
+    // Aile yalnız anahtarlı + indexlenebilir + kendine canonical yazıda kurulur (TR karşılığı dahil).
+    const languages = indexable && post.translationKey
+      ? localeBlogPostFamily(locale, post, await fetchAllLocaleBlogDocs(), await getManagedBlogPosts().catch(() => null), absoluteUrl)
+      : null;
+    const title = post.seoTitle || post.title;
+    const description = post.metaDescription || post.excerpt;
+    const image = post.image ? (/^https?:\/\//i.test(post.image) ? post.image : absoluteUrl(post.image)) : null;
+    return {
+      title: titleForTemplate(title),
+      description,
+      robots: indexable ? undefined : NOINDEX,
+      alternates: languages ? { canonical: self, languages } : { canonical: self },
+      openGraph: { ...localeOpenGraph(locale, { url: self, title, description, image }), type: "article" as const },
     };
   }
 
@@ -1079,7 +1126,10 @@ export async function LocalePage({ locale, path, searchParams }: {
   if (parsed.kind === "home") {
     // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;
     // approved 'home' yoksa da vitrin varsayılan kopyayla çizilir (metadata NOINDEX kalır).
-    const [view, contact, identity] = await Promise.all([loadV80(locale), v80Contact(), siteIdentity()]);
+    // GLOBAL BLOG MERKEZİ: rehber bölümü o dilin YAYINDAKİ yazılarından (yoksa bölüm basılmaz).
+    const [view, contact, identity, blogPosts] = await Promise.all([
+      loadV80(locale), v80Contact(), siteIdentity(), fetchLocaleBlogPosts(locale).catch(() => []),
+    ]);
     const header = {
       locale,
       nav: view.nav,
@@ -1091,7 +1141,29 @@ export async function LocalePage({ locale, path, searchParams }: {
       <V80Shell locale={locale} header={header} footer={v80FooterFromView(view, contact)}>
         {/* Release 1: locale ana sayfada da işletme şeması (TR ana sayfa ile aynı kaynak/düğüm). */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localeHomeJsonLd(identity, locale)) }} />
-        <V80Page view={view} />
+        <V80Page view={view} guide={<GlobalBlogRail locale={locale} posts={homepageBlogPosts(blogPosts)} />} />
+      </V80Shell>
+    );
+  }
+
+  if (parsed.kind === "blog" || parsed.kind === "blog-post") {
+    const [posts, catalog, contact] = await Promise.all([fetchLocaleBlogPosts(locale), fetchLocaleCatalog(locale), v80Contact()]);
+    const footer = await v80FooterFromCatalog(locale, catalog, contact);
+    if (parsed.kind === "blog") {
+      const listed = listedBlogPosts(posts);
+      if (listed.length === 0) notFound();
+      return (
+        <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
+          <GlobalBlogList locale={locale} posts={listed} />
+        </V80Shell>
+      );
+    }
+    const post = reachableBlogPost(posts, parsed.slug);
+    if (!post) notFound();
+    return (
+      <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(JSON.stringify(blogPostingJsonLd(locale, post, absoluteUrl))) }} />
+        <GlobalBlogArticle locale={locale} post={post} />
       </V80Shell>
     );
   }

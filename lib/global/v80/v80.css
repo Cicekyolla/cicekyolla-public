@@ -301,3 +301,36 @@
   .v80 .v80-footer-brand, .v80 .v80-footer-contact { grid-column: 1 / -1; }
   .v80 .v80-footer-journey { white-space: normal; line-height: 1.7; }
 }
+
+/* ============================================================================
+   GLOBAL BLOG MERKEZİ (11 Eki 2026, ADDITIVE) — /<dil>/blog liste + detay +
+   ana sayfa rehber bölümü. Yalnız V80 token'ları; TR blog stilleri değişmez.
+   ========================================================================== */
+.v80 .v80-blog-head { max-width: 760px; margin-bottom: 32px; }
+.v80 .v80-blog-title { font-family: var(--v80-font-serif); font-weight: 300; font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -0.03em; line-height: 1.05; color: var(--v80-ink); margin: 0; }
+.v80 .v80-blog-lead { margin-top: 14px; font-size: 1rem; line-height: 1.75; color: var(--v80-ink-muted); }
+.v80 .v80-blog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--v80-gap-card); }
+.v80 .v80-blog-card { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--v80-border); border-radius: var(--v80-radius-md); overflow: hidden; text-decoration: none; color: inherit; transition: transform var(--v80-motion-base) var(--v80-ease), box-shadow var(--v80-motion-base) var(--v80-ease); }
+.v80 .v80-blog-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(29, 20, 48, 0.08); }
+.v80 .v80-blog-card:focus-visible { outline: 2px solid var(--v80-primary); outline-offset: 3px; }
+.v80 .v80-blog-card .v80-frame { aspect-ratio: 16 / 10; }
+.v80 .v80-blog-card-body { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px 20px; flex: 1; }
+.v80 .v80-blog-chip { align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: var(--v80-primary-soft); color: var(--v80-primary-strong); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; }
+.v80 .v80-blog-card-title { font-family: var(--v80-font-serif); font-weight: 400; font-size: 1.25rem; line-height: 1.25; color: var(--v80-ink); margin: 0; }
+.v80 .v80-blog-excerpt { font-size: 0.875rem; line-height: 1.65; color: var(--v80-ink-muted); margin: 0; flex: 1; }
+.v80 .v80-blog-meta { font-size: 0.75rem; color: var(--v80-ink-subtle); }
+.v80 .v80-blog-link { font-size: 0.8125rem; font-weight: 600; color: var(--v80-primary-strong); }
+.v80 .v80-blog-rail-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.v80 .v80-blog-article { max-width: 760px; margin: 0 auto; }
+.v80 .v80-blog-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--v80-primary-strong); text-decoration: none; }
+.v80 .v80-blog-back:focus-visible { outline: 2px solid var(--v80-primary); outline-offset: 3px; border-radius: 4px; }
+.v80 .v80-blog-cover { margin: 28px 0 32px; aspect-ratio: 16 / 9; border-radius: var(--v80-radius-lg); }
+.v80 .v80-blog-cta { margin-top: 48px; padding: 32px; border-radius: var(--v80-radius-lg); background: var(--v80-dark); color: var(--v80-bg); }
+.v80 .v80-blog-cta h2 { font-family: var(--v80-font-serif); font-weight: 300; font-size: 1.75rem; margin: 0 0 18px; color: var(--v80-bg); }
+@media (max-width: 1024px) {
+  .v80 .v80-blog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .v80 .v80-blog-grid { grid-template-columns: 1fr; }
+  .v80 .v80-blog-cta { padding: 24px; }
+}
