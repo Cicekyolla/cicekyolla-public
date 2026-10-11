@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { resolveTelegram, TELEGRAM_FALLBACK, TELEGRAM_LABELS, telegramLocale, isProductPagePath } from "./telegramContact.ts";
+import { resolveTelegram, TELEGRAM_FALLBACK, TELEGRAM_LABELS, telegramLocale, isProductPagePath, GLOBAL_WHATSAPP_URL, WHATSAPP_FLOAT_LABELS } from "./telegramContact.ts";
 import { GLOBAL_LOCALES, SEGMENTS } from "./global/config.ts";
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
@@ -41,12 +41,31 @@ test("TR + 13 Global dilin hepsinde dil uygun erişilebilir ad var; bağlantı d
   assert.equal(telegramLocale(null), "tr");
 });
 
-test("kablolama: layout tek kaynaktan çizer, ChromeGate DIŞINDA (13 dilde de görünür); WhatsApp korunur", () => {
+test("kablolama: layout tek kaynaktan çizer; WhatsApp + Telegram ChromeGate DIŞINDA (TR + 13 dilde görünür)", () => {
   const layout = src("../app/layout.tsx");
   assert.match(layout, /resolveTelegram\(heroConfig\)/);
   assert.match(layout, /<TelegramButton \{\.\.\.telegram\} \/>/);
+  assert.match(layout, /\n\s*<WhatsAppButton \/>\n/);
   assert.doesNotMatch(layout, /<ChromeGate><TelegramButton/);
-  assert.match(layout, /<ChromeGate><WhatsAppButton \/><\/ChromeGate>/);
+  assert.doesNotMatch(layout, /<ChromeGate><WhatsAppButton/);
+});
+
+test("WhatsApp korunur: TR bağlantısı/etiketi AYNEN; Global bağlantı vitrinin mevcut WHATSAPP_URL'i; numara tek", async () => {
+  const wa = src("../components/WhatsAppButton.tsx");
+  assert.ok(wa.includes('"https://wa.me/905458813450?text=Merhaba%2C%20sipari%C5%9F%20vermek%20istiyorum"'), "TR bağlantısı değişmedi");
+  assert.ok(wa.includes('"WhatsApp ile sipariş ver"') && wa.includes('"Sipariş Ver"'), "TR etiketleri değişmedi");
+  assert.match(wa, /isProductPagePath\(pathname\)\) return null/, "ürün sayfasında WA sticky çubukta/panelde kalır (ikinci akış yok)");
+  const view = src("./global/v80/view.ts");
+  assert.ok(view.includes(`export const WHATSAPP_URL = "${GLOBAL_WHATSAPP_URL}";`), "Global bağlantı vitrinle birebir");
+  const pdp = src("../components/product/ProductDetail.tsx");
+  assert.ok(pdp.includes('const WHATSAPP = "905458813450";'), "aynı numara");
+  for (const l of GLOBAL_LOCALES) assert.ok(WHATSAPP_FLOAT_LABELS[l]?.aria.includes("ÇiçekYolla"), l);
+});
+
+test("yerleşim: ürün dışı sayfalarda Telegram WhatsApp'ın ÜSTÜNDE; ürün sayfasında sticky çubuğun ÜSTÜNDE", () => {
+  const tg = src("../components/TelegramButton.tsx");
+  assert.match(tg, /isProductPagePath\(pathname\)\s*\?\s*"bottom-\[calc\(84px\+env\(safe-area-inset-bottom\)\)\] lg:bottom-6"\s*:\s*"bottom-\[84px\] lg:bottom-\[92px\]"/);
+  assert.match(src("../components/WhatsAppButton.tsx"), /fixed bottom-6 right-6 z-50/);
 });
 
 test("ürün sayfası tespiti: TR /urun/ + 13 dilin ürün yolu (sticky Sipariş Ver çubuğunun üstüne çıkmak için)", () => {
@@ -61,4 +80,15 @@ test("ürün sayfası tespiti: TR /urun/ + 13 dilin ürün yolu (sticky Sipariş
   assert.equal(isProductPagePath("/kategori/cicekler"), false);
   assert.equal(isProductPagePath("/sepet"), false);
   assert.equal(isProductPagePath(null), false);
+});
+
+test("açık pencere (çerez/teslimat/üye) varken iki buton da çizilmez — mevcut tek overlay kilidi", () => {
+  const hook = src("../components/useOverlayBusy.ts");
+  assert.match(hook, /onOverlayChange\(refresh\)/);
+  assert.match(hook, /overlayBusy\(\)/);
+  for (const f of ["../components/WhatsAppButton.tsx", "../components/TelegramButton.tsx"]) {
+    const c = src(f);
+    assert.match(c, /useOverlayBusy\(\)/, f);
+    assert.match(c, /if \(overlayOpen\) return null;/, f);
+  }
 });

@@ -9,24 +9,25 @@
  *  - TR sayfaları: WhatsApp (bottom-6) üstünde, 12px boşlukla.
  *  - Ürün sayfası (TR /urun/ ve 13 dil /<dil>/<ürün>/): mobilde sticky "Sipariş Ver / Order Now" çubuğunun
  *    ÜSTÜNDE, masaüstünde (çubuk yok) sağ-altta. TR'de yüzen WhatsApp burada zaten gizli.
- *  - Global 13 dil diğer sayfalar: yüzen WhatsApp yok (WhatsApp başlık/bölümlerde) → sağ-altta.
+ *  - Global 13 dil diğer sayfalar: TR ile aynı — yüzen WhatsApp (bottom-6) üstünde.
  */
 
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { isGlobalLocalePath } from "@/lib/global/config";
+import { useOverlayBusy } from "@/components/useOverlayBusy";
 import { TELEGRAM_LABELS, isProductPagePath, telegramLocale, type TelegramContact } from "@/lib/telegramContact";
 
 export function TelegramButton({ enabled, url }: TelegramContact) {
   const pathname = usePathname();
+  const overlayOpen = useOverlayBusy();
   if (!enabled) return null;
+  // Çerez bildirimi / teslimat adresi / üye penceresi açıkken çizilmez (WhatsApp ile aynı kural).
+  if (overlayOpen) return null;
 
   const labels = TELEGRAM_LABELS[telegramLocale(pathname)] ?? TELEGRAM_LABELS.tr;
   const position = isProductPagePath(pathname)
     ? "bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-6"
-    : pathname && isGlobalLocalePath(pathname)
-      ? "bottom-6"
-      : "bottom-[84px] lg:bottom-[92px]";
+    : "bottom-[84px] lg:bottom-[92px]";
 
   return (
     <motion.a

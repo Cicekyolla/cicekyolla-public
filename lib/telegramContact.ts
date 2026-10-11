@@ -64,3 +64,26 @@ export function isProductPagePath(pathname: string | null | undefined): boolean 
   const [, locale, ...segs] = path.split("/");
   return isGlobalLocale(locale) && parseLocalePath(locale, segs.filter(Boolean)).kind === "product";
 }
+
+/**
+ * Yüzen WhatsApp butonu — Global 13 dil (TR'deki buton metni/bağlantısı AYNEN kalır).
+ * Bağlantı Global vitrinin mevcut WHATSAPP_URL'i ile birebir (lib/global/v80/view.ts; test eşitliği korur):
+ * aynı numara, hazır metin yok — yeni sipariş akışı DEĞİL, mevcut iletişim hattı.
+ */
+export const GLOBAL_WHATSAPP_URL = "https://wa.me/905458813450";
+
+export const WHATSAPP_FLOAT_LABELS: Record<string, { aria: string; label: string }> = {
+  de: { aria: "ÇiçekYolla auf WhatsApp schreiben", label: "WhatsApp" },
+  en: { aria: "Message ÇiçekYolla on WhatsApp", label: "WhatsApp" },
+  fr: { aria: "Écrire à ÇiçekYolla sur WhatsApp", label: "WhatsApp" },
+  nl: { aria: "Stuur ÇiçekYolla een bericht via WhatsApp", label: "WhatsApp" },
+  it: { aria: "Scrivi a ÇiçekYolla su WhatsApp", label: "WhatsApp" },
+  es: { aria: "Escribe a ÇiçekYolla por WhatsApp", label: "WhatsApp" },
+  pt: { aria: "Fale com a ÇiçekYolla no WhatsApp", label: "WhatsApp" },
+  az: { aria: "ÇiçekYolla-ya WhatsApp-da yazın", label: "WhatsApp" },
+  ru: { aria: "Написать ÇiçekYolla в WhatsApp", label: "WhatsApp" },
+  ar: { aria: "راسل ÇiçekYolla عبر واتساب", label: "واتساب" },
+  zh: { aria: "通过 WhatsApp 联系 ÇiçekYolla", label: "WhatsApp" },
+  ja: { aria: "WhatsApp で ÇiçekYolla にメッセージを送る", label: "WhatsApp" },
+  ko: { aria: "WhatsApp으로 ÇiçekYolla에 문의하기", label: "WhatsApp" },
+};

@@ -240,8 +240,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {/* GLOBAL VERSION 80: TR footer locale rotalarında çizilmez — orada footer
             V80Shell'in locale-aware alt bilgisidir. TR yollarında AYNEN (ChromeGate geçirir). */}
         <ChromeGate><Footer categories={footerOrUndef} brand={footerBrandLight} /></ChromeGate>
-        <ChromeGate><WhatsAppButton /></ChromeGate>
-        {/* Telegram: ChromeGate DIŞINDA — TR ve Global 13 dilde aynı Admin ayarıyla görünür. */}
+        {/* Yüzen WhatsApp + Telegram: ChromeGate DIŞINDA — TR ve Global 13 dilde görünür (WhatsApp Global'de
+            vitrinin mevcut bağlantısı + dil etiketi; Telegram aynı Admin ayarı). Ürün sayfalarında WhatsApp
+            sticky çubukta/panelde kalır. */}
+        <WhatsAppButton />
         <TelegramButton {...telegram} />
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
