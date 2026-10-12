@@ -34,6 +34,7 @@ import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
 import { cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
 import { clearPendingCoupon, readPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
 import { attemptField, newAttemptKey } from "@/lib/checkoutAttempt";
+import { isValidSenderPhone, senderPhoneForApi } from "@/lib/senderPhone";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
@@ -58,16 +59,7 @@ const CARD_ENABLED = process.env.NEXT_PUBLIC_PAYTR_ENABLED === "true";
 // --- Doğrulama (API sözleşmesiyle uyumlu) ---
 // E-posta: backend Zod .email() ile birebir (Response "Invalid email" = Zod default).
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-// Telefon: TR formatı. Rakamları al; 10 hane (5xx...) veya 11 hane (05xx) veya +90'lı 12 hane kabul.
-const phoneDigits = (v: string) => v.replace(/\D/g, "");
-const isValidTRPhone = (v: string) => {
-  const d = phoneDigits(v);
-  // 5xxxxxxxxx (10) | 05xxxxxxxxx (11) | 905xxxxxxxxx (12)
-  if (d.length === 10) return d.startsWith("5");
-  if (d.length === 11) return d.startsWith("05");
-  if (d.length === 12) return d.startsWith("905");
-  return false;
-};
+// Telefon (gönderen): TR biçimleri aynen + yurt dışı "+ülke kodu" (P0-1). Kurallar lib/senderPhone.
 function fmtDate(d?: string, intl = "tr-TR"): string | null {
   if (!d) return null;
   const dt = new Date(d + "T00:00:00");
@@ -326,7 +318,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
     if (stepKey === "alici") return recipientName.trim().length > 0;
     if (stepKey === "gonderen")
       return senderName.trim().length > 0
-        && isValidTRPhone(senderPhone)
+        && isValidSenderPhone(senderPhone)
         && isValidEmail(senderEmail);
     return true;
   }, [stepKey, recipientName, senderName, senderPhone, senderEmail]);
@@ -345,7 +337,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
     if (!senderName.trim() || !recipientName.trim()) {
       setError(t("co.err.names")); return;
     }
-    if (!isValidTRPhone(senderPhone)) {
+    if (!isValidSenderPhone(senderPhone)) {
       setError(t("co.err.phone")); return;
     }
     if (!isValidEmail(senderEmail)) {
@@ -389,7 +381,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       const adsAttr = readAdsAttribution();
       const metaAttr = readMetaAttribution();
       const orderBody = {
-        customer_name: senderName, customer_phone: senderPhone,
+        customer_name: senderName, customer_phone: senderPhoneForApi(senderPhone),
         customer_email: senderEmail || null,
         recipient_name: recipientName, recipient_phone: recipientPhone || null,
         delivery_address: address || null, delivery_district: pd?.district || null,
@@ -1078,7 +1070,7 @@ function StepGonderen(p: {
   const { t } = useI18n();
   // Hata yalnız alan ilk kez terk edilince (blur) gösterilir; düzeltilince anında kalkar.
   const [touched, setTouched] = useState<{ phone?: boolean; email?: boolean }>({});
-  const phoneErr = touched.phone && !isValidTRPhone(p.phone);
+  const phoneErr = touched.phone && !isValidSenderPhone(p.phone);
   const emailErr = touched.email && !isValidEmail(p.email);
   const errInput = "w-full px-4 py-3.5 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] text-[15px] text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#F87171] focus:bg-white focus:ring-4 focus:ring-[#FEE2E2] transition-all";
   const opts: { id: "show" | "anonymous" | "hidden"; title: string; desc: string }[] = [
@@ -1099,7 +1091,7 @@ function StepGonderen(p: {
               inputMode="tel"
               onChange={(e) => p.setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-              placeholder="05xx xxx xx xx"
+              placeholder={t("co.phonePh")}
             />
             {phoneErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">{t("co.phoneErr")}</p>}
           </div>
