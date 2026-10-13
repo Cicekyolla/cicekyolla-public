@@ -14,6 +14,7 @@ import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
+import { foreignOriginHost } from "@/lib/originGuard";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
    statik listeden (/kategori/{eski-slug}) üretir. Kategori Merkezi'nden onaylı
@@ -26,6 +27,19 @@ async function flattenManagedTarget(target: string): Promise<string> {
   return managed?.to ?? target;
 }
 export async function middleware(req: NextRequest, event?: NextFetchEvent) {
+  /* EK (GÜVENLİK, 14 Eki 2026 — yetkisiz ayna/ters proxy): /api istekleri middleware'e
+     YALNIZ Origin başlığı taşıyorsa ulaşır (matcher'daki has koşulu). Durum değiştiren
+     istek başka bir sitenin Origin'iyle geldiyse reddedilir; diğer her /api isteği
+     bugünkü gibi hemen devam eder — aşağıdaki yönlendirme kuralları /api'ye GİRMEZ.
+     Günlüğe yalnız alan adı, yöntem ve yol yazılır (gövde, çerez, kişisel veri YOK). */
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    const foreign = foreignOriginHost(req.method, req.headers);
+    if (foreign) {
+      console.warn(`[origin-guard] blocked ${req.method} ${req.nextUrl.pathname} origin=${foreign}`);
+      return NextResponse.json({ error: "origin_not_allowed" }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
   // GLOBAL Faz 1: /de ve /en locale yüzeyleri legacy redirect/location
   // resolver'larına GİRMEZ (kanun: locale path'leri yutulmamalı).
   if (isGlobalLocalePath(req.nextUrl.pathname)) {
@@ -198,5 +212,8 @@ export const config = {
        Genel önek dışlaması (sepet/giris/hesabim...) bu PR'da ELE ALINMIYOR. */
     "/:slug([a-z-]+)-cicekleri",
     "/:slug([a-z-]+)-cicekleri-:id(\\d+)",
+    /* EK (GÜVENLİK): /api yalnız Origin başlığı varken kapsanır — tarayıcı bu başlığı yazma
+       isteklerinde gönderir; Origin'siz okuma istekleri middleware maliyeti üretmez. */
+    { source: "/api/:path*", has: [{ type: "header", key: "origin" }] },
   ],
 };
