@@ -76,7 +76,7 @@ async function getJson<T>(path: string): Promise<T | null> {
 // API (Render) kısa süre yavaşladığında / yeniden başladığında Global ürün, kategori ve lokasyon sayfaları gerçek
 // 404 ile cevap veriyordu (404 tekrarlandıkça Google URL'yi dizinden düşürür; 5xx ise geçici sayılır).
 // Aşağıdaki "require*" sürümleri YALNIZ sayfanın ana kaydında kullanılır: 2xx → veri (null = gerçekten yok → 404);
-// 4xx (408 / 429 hariç) → null (yok); ağ hatası / 408 / 429 / 5xx / bozuk gövde → bir kez yeniden denenir, yine olmazsa GlobalApiUnavailableError
+// 404 ve diğer 4xx → null (yok); ağ hatası / süre aşımı / 401 / 403 / 408 / 429 / 5xx / bozuk gövde → bir kez yeniden denenir, yine olmazsa GlobalApiUnavailableError
 // fırlatılır → Next 5xx (geçici) döner, URL dizinde kalır. getJson ve diğer tüm çağıranlar DEĞİŞMEDİ.
 export class GlobalApiUnavailableError extends Error {
   constructor(path: string) {
@@ -85,19 +85,44 @@ export class GlobalApiUnavailableError extends Error {
   }
 }
 
-/** Ana kayıt okuması: veri | null (kesin yok) | fırlatır (okunamadı). fetchFn yalnız birim testi içindir. */
-export async function getJsonOrThrow<T>(path: string, fetchFn: typeof fetch = fetch, attempts = 2): Promise<T | null> {
+/** Ana kayıt okuması süre sınırı (deneme başına). İki deneme → en kötü ~2 × bu süre, sonra 5xx. */
+export const GLOBAL_PRIMARY_DEADLINE_MS = 8_000;
+
+/**
+ * HTTP durumunun anlamı (saf; testli):
+ *  • "data"        2xx
+ *  • "missing"     404 / 410 ve diğer 4xx: kayıt yok ya da istek geçersiz → sayfa 404 (bugünkü davranış)
+ *  • "transient"   401 / 403 (kimlik / yapılandırma sorunu — sayfa yok DEMEK DEĞİL), 408, 429, 5xx → 5xx
+ */
+export function classifyPrimaryStatus(status: number): "data" | "missing" | "transient" {
+  if (status >= 200 && status < 300) return "data";
+  if (status === 401 || status === 403 || status === 408 || status === 429) return "transient";
+  if (status >= 400 && status < 500) return "missing";
+  return "transient";
+}
+
+/** Ana kayıt okuması: veri | null (kesin yok) | fırlatır (okunamadı). fetchFn / timeoutMs yalnız birim testi içindir. */
+export async function getJsonOrThrow<T>(
+  path: string,
+  fetchFn: typeof fetch = fetch,
+  attempts = 2,
+  timeoutMs = GLOBAL_PRIMARY_DEADLINE_MS,
+): Promise<T | null> {
   for (let i = 0; i < attempts; i++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const resp = await fetchFn(`${API_ORIGIN}${path}`, { cache: "no-store" });
-      // 4xx = istek / kayıt kararı (yok, geçersiz) → bugünkü gibi 404. Yalnız 408 / 429 / 5xx geçicidir.
-      if (resp.status >= 400 && resp.status < 500 && resp.status !== 408 && resp.status !== 429) return null;
-      if (resp.ok) {
+      const resp = await fetchFn(`${API_ORIGIN}${path}`, { cache: "no-store", signal: controller.signal });
+      const kind = classifyPrimaryStatus(resp.status);
+      if (kind === "missing") return null;
+      if (kind === "data") {
         const body = (await resp.json()) as { data?: T } | null;
         return body?.data ?? null;
       }
     } catch {
-      // ağ hatası / bozuk gövde → yeniden dene
+      // ağ hatası / süre doldu / bozuk gövde → yeniden dene
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw new GlobalApiUnavailableError(path);
@@ -111,6 +136,13 @@ export function requireCategorySurface(locale: GlobalLocale, slug: string): Prom
 }
 export function requireProductSurface(locale: GlobalLocale, slug: string): Promise<ProductSurface | null> {
   return getJsonOrThrow<ProductSurface>(`/api/public/translations/surface/product/${encodeURIComponent(slug)}?locale=${locale}`);
+}
+
+/** EK (13 Eki 2026): Global lokasyon anahtarı → TR kaydın kendi location bloğundan çözülen yol (API /global/tr-location).
+ *  Uç yok / hata / belirsiz → null (çağıran 301 haritasına düşer). */
+export async function fetchTrLocationPath(key: string): Promise<string | null> {
+  const data = await getJson<{ url_path?: string | null }>(`/api/public/global/tr-location?key=${encodeURIComponent(key)}`);
+  return typeof data?.url_path === "string" ? data.url_path : null;
 }
 
 export function fetchProductSurface(locale: GlobalLocale, slug: string): Promise<ProductSurface | null> {

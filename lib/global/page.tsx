@@ -87,10 +87,10 @@ import { getManagedBlogPosts } from "@/lib/blog";
 import { GlobalBlogArticle, GlobalBlogList, GlobalBlogRail } from "@/components/global/blog/GlobalBlog";
 import {
   fetchProductLocaleCluster,
-  fetchGlobalPage,
   fetchLocaleCatalog,
   fetchGlobalCatalog,
   fetchDistrictReach,
+  fetchTrLocationPath,
   requireGlobalPage,
   requireCategorySurface,
   requireProductSurface,
@@ -373,7 +373,8 @@ function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, st
 async function istanbulLocationLanguages(row: GlobalPage): Promise<Record<string, string> | null> {
   if (!row.indexable) return null;
   try {
-    const trPath = trLocationCandidatePath(row.page_key, await fetchRedirectMap());
+    const [redirects, fromRecord] = await Promise.all([fetchRedirectMap(), fetchTrLocationPath(row.page_key)]);
+    const trPath = trLocationCandidatePath(row.page_key, redirects, fromRecord);
     if (!trPath) return null;
     // Global yüzey tazelik sözleşmesi: no-store (globalNoStore.test.ts) — yayından kaldırma anında yansır.
     const trPage = await fetchSeoPage(trPath, { noStore: true });
@@ -427,7 +428,8 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
   const parsed = parseLocalePath(locale, path);
 
   if (parsed.kind === "home") {
-    const row = await fetchGlobalPage(locale, "home");
+    // EK (13 Eki 2026): API okunamazsa noindex BASILMAZ (geçici 5xx); onaylı satır yoksa (null) bugünkü gibi noindex.
+    const row = await requireGlobalPage(locale, "home");
     const self = absoluteUrl(`/${locale}`);
     if (!row) {
       const title = HOME_FALLBACK[locale].title;
@@ -1018,7 +1020,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
     // yönetilen 301 ile taşındı; o yol artık seo_page DEĞİL (API 404) → blok hiç okunamıyor, Admin vitrini Global'e
     // ulaşmıyordu. Blok, 301 haritasının gösterdiği Türkçe adresten okunur; haritada yoksa / İstanbul değilse bugünkü yol.
     // Uç yine locale ile çağrılır → yalnız o dilde yayında (çevrilmiş) Global ürünler listelenir; katalog genişlemez.
-    const showcasePath = trLocationCandidatePath(row.page_key, await fetchRedirectMap().catch(() => new Map<string, string>())) ?? `/${row.page_key}`;
+    const [showRedirects, showFromRecord] = await Promise.all([fetchRedirectMap().catch(() => new Map<string, string>()), fetchTrLocationPath(row.page_key)]);
+    const showcasePath = trLocationCandidatePath(row.page_key, showRedirects, showFromRecord) ?? `/${row.page_key}`;
     const block = getShowcaseBlock(await fetchSeoPage(showcasePath, { noStore: true }).catch(() => null));
     const cfg = (block && resolveShowcaseConfig(block, listingSettings, { pageType: loc.kind, location })) ?? defaultShowcaseConfig(listingSettings, { kind: "location", ...location });
     const wantedPage = parseListingPageParam(rawSearchParams?.page) ?? 1;

@@ -18,6 +18,7 @@ import {
   trCategoryPath,
   trProductPath,
   TR_LOCATION_CITY,
+  trLocationKeyCandidate,
   locationHreflangFamily,
   trLocationCandidatePath,
   trLocationConfirmed,
@@ -259,7 +260,8 @@ test("KAYNAK: niyet / İstanbul dışı lokasyon sayfalarına TR EKLENMEZ (pageL
   assert.ok(!/trProductPath|trCategoryPath|homeHreflangFamily|categoryHreflangFamily|productHreflangFamily/.test(page), "lokasyon dalında ürün/kategori/ana sayfa kurucusu kullanılmaz");
   const ist = motor.slice(motor.indexOf("async function istanbulLocationLanguages("), motor.indexOf("export async function localeMetadata"));
   assert.ok(ist.includes("if (!row.indexable) return null;"), "noindex Global sayfa küme basmaz");
-  assert.ok(ist.includes("trLocationCandidatePath(row.page_key, await fetchRedirectMap())"), "TR aday yalnız yönetilen 301 haritasından");
+  assert.ok(ist.includes("const [redirects, fromRecord] = await Promise.all([fetchRedirectMap(), fetchTrLocationPath(row.page_key)]);"), "TR aday: kalıcı kaynak (TR kaydın location bloğu) + yedek 301 haritası");
+  assert.ok(ist.includes("trLocationCandidatePath(row.page_key, redirects, fromRecord)"));
   assert.ok(ist.includes("fetchSeoPage(trPath, { noStore: true })"), "Global tazelik sözleşmesi (no-store)");
   assert.ok(ist.includes("if (!trLocationConfirmed(trPage, trPath, row.page_key)) return null;"), "TR kayıt doğrulanmadan tr eklenmez");
   assert.ok(ist.includes("locationHreflangFamily(row.page_key, trPath, row.locales, absoluteUrl)"));
@@ -437,7 +439,33 @@ test("KAYNAK: Türkçe lokasyon sayfası kümeyi yalnız 1. sayfada, self-canoni
   assert.ok(src.includes("const languages = pageNumber === 1 && canonicalPath === path ? await trLocationLanguages(page, path) : null;"));
   const fn = src.slice(src.indexOf("async function trLocationLanguages("), src.indexOf("function renderBlock("));
   assert.ok(fn.includes('if (page.synthetic === true || page.index_state !== "index") return null;'));
-  assert.ok(fn.includes("trLocationKeyOf(page, path, await fetchRedirectMap())"));
+  assert.ok(fn.includes("const [redirects, fromRecord] = await Promise.all([fetchRedirectMap(), fetchTrLocationPathCached(candidate)]);"));
+  assert.ok(fn.includes("trLocationKeyOf(page, path, redirects, fromRecord)"));
   assert.ok(fn.includes("locationHreflangFamily(key, path, await fetchLocationLocaleVersions(key), absoluteUrl)"));
   assert.ok(!/no-store|noStore/.test(fn), "ISR rotasında no-store okuma YOK (71.406 URL önbellekten düşmez)");
+});
+
+test("İSTANBUL: kalıcı kaynak (TR kaydın location bloğu) 301 sözlüğü OLMADAN eşleşmeyi kurar; iki taraf yine birebir", () => {
+  const key = "istanbul/kadikoy/caferaga-mah";
+  const trPath = "/kadikoy/caferaga-cicek-siparisi";
+  const bos = new Map<string, string>();
+  assert.equal(trLocationKeyCandidate(trMahalle, trPath), key);
+  assert.equal(trLocationCandidatePath(key, bos, trPath), trPath, "Global taraf: harita yok, kayıt kaynağı var");
+  assert.equal(trLocationKeyOf(trMahalle, trPath, bos, trPath), key, "TR taraf: harita yok, kayıt kaynağı var");
+  assert.deepEqual(
+    locationHreflangFamily(key, trPath, TUM_DILLER, mutlak),
+    locationHreflangFamily(trLocationKeyOf(trMahalle, trPath, bos, trPath)!, trPath, TUM_DILLER, mutlak),
+  );
+});
+
+test("İSTANBUL: öncelik kalıcı kaynakta; uç yoksa (null) harita yedek; ikisi farklı yolu gösterirse TR yalnız Global'in seçtiğini kabul eder", () => {
+  const key = "istanbul/kadikoy";
+  assert.equal(trLocationCandidatePath(key, HARITA, null), "/kadikoy-cicek-siparisi", "uç yok → harita");
+  assert.equal(trLocationCandidatePath(key, HARITA, "/kadikoy-cicekci"), "/kadikoy-cicekci", "kayıt kaynağı önce");
+  assert.equal(trLocationCandidatePath(key, HARITA, "//evil"), "/kadikoy-cicek-siparisi", "güvensiz yol yok sayılır");
+  // Global "/kadikoy-cicekci"yi seçtiyse /kadikoy-cicek-siparisi tr kümesi BASMAZ (tek yönlü bağ olmaz).
+  assert.equal(trLocationKeyOf(trIlce, "/kadikoy-cicek-siparisi", HARITA, "/kadikoy-cicekci"), null);
+  assert.equal(trLocationKeyOf(trIlce, "/kadikoy-cicek-siparisi", HARITA, null), "istanbul/kadikoy");
+  assert.equal(trLocationKeyCandidate(trIl, "/istanbul"), "istanbul");
+  assert.equal(trLocationKeyCandidate({ ...trIlce, body_blocks: [] }, "/kadikoy-cicek-siparisi"), null);
 });

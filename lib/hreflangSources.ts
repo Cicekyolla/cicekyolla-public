@@ -190,3 +190,13 @@ export async function readLocationLocaleVersions(r: HreflangReader, key: string)
 export function fetchLocationLocaleVersions(key: string): Promise<LocaleVersion[] | null> {
   return readLocationLocaleVersions(reader, key);
 }
+
+/** EK (13 Eki 2026): Türkçe sayfa (ISR) için aynı uç — önbellekli okuma (revalidate 300). Yok / hata → null. */
+export async function readTrLocationPath(r: HreflangReader, key: string): Promise<string | null> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*){0,2}$/.test(key)) return null;
+  const data = await r.read<{ url_path?: string | null }>("tr-location", `/api/public/global/tr-location?key=${encodeURIComponent(key)}`);
+  return typeof data?.url_path === "string" ? data.url_path : null;
+}
+export function fetchTrLocationPathCached(key: string): Promise<string | null> {
+  return readTrLocationPath(reader, key);
+}

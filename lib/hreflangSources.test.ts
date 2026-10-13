@@ -15,6 +15,7 @@ import {
   fetchProductLocaleVersions,
   readHomeLocaleVersions,
   readLocationLocaleVersions,
+  readTrLocationPath,
 } from "./hreflangSources.ts";
 
 const ORIGIN = "http://api.test";
@@ -234,4 +235,16 @@ test("İSTANBUL lokasyon: geçersiz anahtarda ağ isteği yok; çapa okunamazsa 
   const kesik = sahte(() => json(502, { error: "boom" }));
   assert.equal(await readLocationLocaleVersions(createHreflangReader(kesik.fn, () => 0, ORIGIN), "istanbul"), null);
   assert.equal(kesik.calls.length, 1);
+});
+
+test("TR lokasyon kaynağı (tr-location): önbellekli okuma; yol döner; uç yok (404) / geçersiz anahtar → null", async () => {
+  const ok = sahte(() => json(200, { data: { key: "istanbul/kadikoy", url_path: "/kadikoy-cicek-siparisi" } }));
+  const r = createHreflangReader(ok.fn, () => 0, ORIGIN);
+  assert.equal(await readTrLocationPath(r, "istanbul/kadikoy"), "/kadikoy-cicek-siparisi");
+  assert.equal(ok.calls[0].url, `${ORIGIN}/api/public/global/tr-location?key=istanbul%2Fkadikoy`);
+  assert.equal(ok.calls[0].init.next?.revalidate, HREFLANG_REVALIDATE_S);
+  const yok = sahte(() => json(404, { error: "not_found" }));
+  assert.equal(await readTrLocationPath(createHreflangReader(yok.fn, () => 0, ORIGIN), "istanbul/kadikoy"), null);
+  assert.equal(await readTrLocationPath(r, "../x"), null);
+  assert.equal(ok.calls.length, 1);
 });

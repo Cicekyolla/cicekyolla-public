@@ -190,12 +190,27 @@ type RedirectLookup = { get(from: string): string | undefined };
  * "/istanbul/{ilçe}[/{mahalle}]" kaynağının hedefi (taşınmış Türkçe adres). Haritada yoksa / İstanbul
  * değilse null (aday YOK → tr eklenmez; slug'tan adres TAHMİN EDİLMEZ).
  */
-export function trLocationCandidatePath(key: string, redirects: RedirectLookup): string | null {
+export function trLocationCandidatePath(key: string, redirects: RedirectLookup, fromRecord?: string | null): string | null {
   const loc = parseLocationKey(key);
   if (!loc || loc.city !== TR_LOCATION_CITY) return null;
   if (loc.kind === "city") return `/${TR_LOCATION_CITY}`;
+  // EK (13 Eki 2026): KALICI kaynak önce — TR kaydın kendi location bloğundan çözülen yol (API /global/tr-location).
+  // Uç yoksa / belirsizse (null) yönetilen 301 haritası yedektir. Her iki aday da trLocationConfirmed'dan geçmelidir.
+  if (isSafePath(fromRecord)) return fromRecord;
   const to = redirects.get(`/${key}`);
-  return typeof to === "string" && to.startsWith("/") && !to.startsWith("//") ? to : null;
+  return isSafePath(to) ? to : null;
+}
+
+function isSafePath(p: unknown): p is string {
+  return typeof p === "string" && p.startsWith("/") && !p.startsWith("//");
+}
+
+/** TR sayfanın location bloğundan (İstanbul) Global anahtar ADAYI; doğrulama trLocationKeyOf'ta. */
+export function trLocationKeyCandidate(page: TrLocationPage | null | undefined, path: string): string | null {
+  if (!page) return null;
+  if (path === `/${TR_LOCATION_CITY}`) return page.page_type === "city" ? TR_LOCATION_CITY : null;
+  const block = getLocationBlock(page as { body_blocks?: unknown });
+  return block && block.city === TR_LOCATION_CITY ? hierarchicalPathOf(block).slice(1) : null;
 }
 
 /**
@@ -219,14 +234,20 @@ export function trLocationConfirmed(page: TrLocationPage | null | undefined, trP
  * İlçe / mahalle: location bloğu (İstanbul) VE yönetilen 301 haritası bloğun hiyerarşik yolunu
  * BU sayfaya taşıyor olmalı — Global tarafın aday kuralıyla birebir aynı koşul (tek yönlü bağ yok).
  */
-export function trLocationKeyOf(page: TrLocationPage | null | undefined, path: string, redirects: RedirectLookup): string | null {
+export function trLocationKeyOf(
+  page: TrLocationPage | null | undefined,
+  path: string,
+  redirects: RedirectLookup,
+  fromRecord?: string | null,
+): string | null {
   if (!page) return null;
   if (path === `/${TR_LOCATION_CITY}`) return trLocationConfirmed(page, path, TR_LOCATION_CITY) ? TR_LOCATION_CITY : null;
-  const block = getLocationBlock(page as { body_blocks?: unknown });
-  if (!block || block.city !== TR_LOCATION_CITY) return null;
-  const hier = hierarchicalPathOf(block);
-  if (redirects.get(hier) !== path) return null;
-  const key = hier.slice(1);
+  const key = trLocationKeyCandidate(page, path);
+  if (!key) return null;
+  // Global taraf bu sayfayı AYNI kaynaklardan seçmeli: kalıcı kaynak (API) bu yolu gösteriyor YA DA (API yoksa) 301 haritası.
+  // Global tarafın seçimi: fromRecord varsa o, yoksa harita → burada da aynı öncelik (tek yönlü bağ yok).
+  const globalPick = isSafePath(fromRecord) ? fromRecord : redirects.get(`/${key}`);
+  if (globalPick !== path) return null;
   return trLocationConfirmed(page, path, key) ? key : null;
 }
 

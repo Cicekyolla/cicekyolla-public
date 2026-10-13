@@ -24,9 +24,9 @@ import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
 import { istanbulDistrictJsonLd, resolveSiteIdentity } from "@/lib/siteIdentity";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { getLinkData } from "@/lib/linkData";
-import { locationHreflangFamily, trLocationKeyOf } from "@/lib/global/hreflangFamily";
+import { locationHreflangFamily, trLocationKeyCandidate, trLocationKeyOf } from "@/lib/global/hreflangFamily";
 import { withMovedHtmlHrefs } from "@/lib/internalHref";
-import { fetchLocationLocaleVersions } from "@/lib/hreflangSources";
+import { fetchLocationLocaleVersions, fetchTrLocationPathCached } from "@/lib/hreflangSources";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 
 const DELIVERY_CITIES = new Set(["istanbul", "ankara", "izmir", "bursa"]);
@@ -723,7 +723,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 async function trLocationLanguages(page: SeoPublicPage, path: string): Promise<Record<string, string> | null> {
   if (page.synthetic === true || page.index_state !== "index") return null;
   try {
-    const key = trLocationKeyOf(page, path, await fetchRedirectMap());
+    const candidate = trLocationKeyCandidate(page, path);
+    if (!candidate) return null;
+    const [redirects, fromRecord] = await Promise.all([fetchRedirectMap(), fetchTrLocationPathCached(candidate)]);
+    const key = trLocationKeyOf(page, path, redirects, fromRecord);
     if (!key) return null;
     return locationHreflangFamily(key, path, await fetchLocationLocaleVersions(key), absoluteUrl);
   } catch {
