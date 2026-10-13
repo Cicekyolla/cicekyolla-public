@@ -10,8 +10,8 @@
 // KURAL (SEO yayın zinciri ile güncellendi): TR artık AİLENİN ÜYESİDİR — ama yalnız
 // Türkçe sayfanın da AYNI kümeyi karşılıklı bastığı yüzeylerde: ÜRÜN (/urun/<slug>),
 // ANA SAYFA (/) ve KATEGORİ (/kategori/<slug>; yalnız Türkçe sayfa indexlenebilirken,
-// 1. sayfada). LOKASYON ve NİYET sayfalarında TR küme DIŞINDA kalır (Türkçe lokasyon
-// URL'leri taşınıyor; tek yönlü bağ Google tarafından yok sayılır).
+// 1. sayfada) ve (13 Eki 2026) İSTANBUL LOKASYONU (il / ilçe / mahalle; Türkçe karşılık yönetilen
+// 301 haritasından doğrulanır). NİYET sayfalarında ve diğer şehirlerde TR küme DIŞINDA kalır.
 // TR'yi kümeye ekleyen yer bu modül DEĞİLDİR: lib/global/hreflangFamily.ts. Bu modül
 // yalnız x-default ekler ve x-default kuralı DEĞİŞMEDİ — aday YALNIZ locale sürümleridir
 // (EN, yoksa alfabetik ilk); TR hiçbir zaman x-default olmaz, Türkçe sayfa da locale

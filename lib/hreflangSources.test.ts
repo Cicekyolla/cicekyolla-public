@@ -14,6 +14,7 @@ import {
   fetchHomeLocaleVersions,
   fetchProductLocaleVersions,
   readHomeLocaleVersions,
+  readLocationLocaleVersions,
 } from "./hreflangSources.ts";
 
 const ORIGIN = "http://api.test";
@@ -208,4 +209,29 @@ test("KAYNAK: okumalar lib/global/api.ts (no-store) dışında; uç yolları sö
   assert.ok(src.includes("`/api/public/translations/surface/category-locales/${id}`"));
   assert.ok(src.includes("`/api/public/global/page?locale=${locale}&key=home`"));
   assert.ok(src.includes("fetchFn ?? fetch"), "global fetch çağrı anında çözülür (Next'in önbellekli fetch'i)");
+});
+
+test("İSTANBUL lokasyon: çapa EN tek istek (anahtar URL-kodlu); canlı biçim {data:null} → diğer dillere bakılır; önbellekli okuma", async () => {
+  const satir = { locale: "en", page_key: "istanbul/kadikoy", indexable: true, locales: [{ locale: "de", indexable: true }, { locale: "en", indexable: true }] };
+  const tek = sahte(() => json(200, { data: satir }));
+  assert.deepEqual(await readLocationLocaleVersions(createHreflangReader(tek.fn, () => 0, ORIGIN), "istanbul/kadikoy"), satir.locales);
+  assert.equal(tek.calls.length, 1);
+  assert.equal(tek.calls[0].url, `${ORIGIN}/api/public/global/page?locale=en&key=istanbul%2Fkadikoy`);
+  assert.equal(tek.calls[0].init.next?.revalidate, HREFLANG_REVALIDATE_S, "ISR rotası: revalidate 300, no-store değil");
+  // Canlı API onaysız satırda 200 + {data:null} döner (404 değil) → yine diğer diller.
+  const yok = sahte((url) => url.includes("locale=ru&") ? json(200, { data: { ...satir, locale: "ru" } }) : json(200, { data: null }));
+  assert.deepEqual(await readLocationLocaleVersions(createHreflangReader(yok.fn, () => 0, ORIGIN), "istanbul/kadikoy"), satir.locales);
+  assert.equal(yok.calls.length, 13);
+});
+
+test("İSTANBUL lokasyon: geçersiz anahtarda ağ isteği yok; çapa okunamazsa başka dile sorulmaz", async () => {
+  const { fn, calls } = sahte(() => json(200, { data: null }));
+  const r = createHreflangReader(fn, () => 0, ORIGIN);
+  for (const k of ["", "../x", "istanbul/kadikoy/caferaga-mah/extra", "Istanbul", "istanbul//x", "istanbul/k?x=1"]) {
+    assert.equal(await readLocationLocaleVersions(r, k), null, k);
+  }
+  assert.equal(calls.length, 0);
+  const kesik = sahte(() => json(502, { error: "boom" }));
+  assert.equal(await readLocationLocaleVersions(createHreflangReader(kesik.fn, () => 0, ORIGIN), "istanbul"), null);
+  assert.equal(kesik.calls.length, 1);
 });

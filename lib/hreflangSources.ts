@@ -168,3 +168,25 @@ export async function readHomeLocaleVersions(r: HreflangReader): Promise<LocaleV
 export function fetchHomeLocaleVersions(): Promise<LocaleVersion[] | null> {
   return readHomeLocaleVersions(reader);
 }
+
+/**
+ * EK (13 Eki 2026) — İSTANBUL LOKASYON: Türkçe il / ilçe / mahalle sayfasının locale kardeşleri.
+ * Ana sayfa ile AYNI desen ve AYNI uç (global/page?key=<lokasyon anahtarı>): onaylı tek satırın
+ * `locales` alanı kümenin tamamını taşır; çapa EN, EN satırı yoksa diğer diller paralel. Çapa
+ * okunamadıysa (5xx / zaman aşımı / ağ) diğer dillere sorulmaz. Anahtar yalnız güvenli slug
+ * parçalarından oluşmalı (yol enjeksiyonu yok); aksi hâlde null → Türkçe sayfa hreflang basmaz.
+ */
+export async function readLocationLocaleVersions(r: HreflangReader, key: string): Promise<LocaleVersion[] | null> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*){0,2}$/.test(key)) return null;
+  const path = (locale: string) => `/api/public/global/page?locale=${locale}&key=${encodeURIComponent(key)}`;
+  const ask = (locale: string) => r.read<{ locales?: LocaleVersion[] | null }>("global-location", path(locale));
+  const anchor = await r.readChecked<{ locales?: LocaleVersion[] | null }>("global-location", path(X_DEFAULT_LOCALE));
+  if (!anchor.ok) return null;
+  if (anchor.data) return Array.isArray(anchor.data.locales) ? anchor.data.locales : null;
+  const rows = await Promise.all(GLOBAL_LOCALES.filter((l) => l !== X_DEFAULT_LOCALE).map(ask));
+  return rows.find((row) => Array.isArray(row?.locales))?.locales ?? null;
+}
+
+export function fetchLocationLocaleVersions(key: string): Promise<LocaleVersion[] | null> {
+  return readLocationLocaleVersions(reader, key);
+}

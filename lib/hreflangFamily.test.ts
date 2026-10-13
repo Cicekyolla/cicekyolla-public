@@ -17,6 +17,11 @@ import {
   trCategoryConfirmedIndexable,
   trCategoryPath,
   trProductPath,
+  TR_LOCATION_CITY,
+  locationHreflangFamily,
+  trLocationCandidatePath,
+  trLocationConfirmed,
+  trLocationKeyOf,
   type LocaleVersion,
 } from "./global/hreflangFamily.ts";
 
@@ -248,10 +253,16 @@ test("KAYNAK: locale ana sayfa / kategori / ürün kümeleri aile kurucusundan g
   assert.ok(product.includes("productHreflangFamily(trSlug ? trProductPath(trSlug) : null, cluster.locales, absoluteUrl)"));
 });
 
-test("KAYNAK: lokasyon / niyet sayfalarına TR EKLENMEZ (pageLanguages değişmedi; aile kurucusu o dalda yok)", () => {
+test("KAYNAK: niyet / İstanbul dışı lokasyon sayfalarına TR EKLENMEZ (pageLanguages değişmedi); İstanbul lokasyonu yalnız doğrulanmış kurucudan", () => {
   const page = dal("page", 'if (parsed.kind === "category")');
-  assert.ok(page.includes("pageLanguages(locale, row)"));
-  assert.ok(!/HreflangFamily|trProductPath|trCategoryPath/.test(page), "lokasyon dalında aile kurucusu kullanılmaz");
+  assert.ok(page.includes("((await istanbulLocationLanguages(row)) ?? pageLanguages(locale, row))"));
+  assert.ok(!/trProductPath|trCategoryPath|homeHreflangFamily|categoryHreflangFamily|productHreflangFamily/.test(page), "lokasyon dalında ürün/kategori/ana sayfa kurucusu kullanılmaz");
+  const ist = motor.slice(motor.indexOf("async function istanbulLocationLanguages("), motor.indexOf("export async function localeMetadata"));
+  assert.ok(ist.includes("if (!row.indexable) return null;"), "noindex Global sayfa küme basmaz");
+  assert.ok(ist.includes("trLocationCandidatePath(row.page_key, await fetchRedirectMap())"), "TR aday yalnız yönetilen 301 haritasından");
+  assert.ok(ist.includes("fetchSeoPage(trPath, { noStore: true })"), "Global tazelik sözleşmesi (no-store)");
+  assert.ok(ist.includes("if (!trLocationConfirmed(trPage, trPath, row.page_key)) return null;"), "TR kayıt doğrulanmadan tr eklenmez");
+  assert.ok(ist.includes("locationHreflangFamily(row.page_key, trPath, row.locales, absoluteUrl)"));
   const fn = motor.slice(motor.indexOf("function pageLanguages("), motor.indexOf("export async function localeMetadata"));
   assert.ok(fn.includes("return Object.keys(languages).length > 1 ? withXDefault(languages) : null;"));
   assert.ok(!/["'`]tr["'`]|TR_HREFLANG/.test(fn), "pageLanguages tr eklemez");
@@ -347,4 +358,86 @@ test("KAYNAK: kendi statik rotasından sunulan Türkçe kategori listesi app/kat
   for (const slug of TR_CATEGORY_DEDICATED_ROUTES) {
     assert.ok(!/alternates[\s\S]{0,200}languages/.test(oku(`../app/kategori/${slug}/page.tsx`)), slug);
   }
+});
+
+// ---------------------------------------------------------------------------
+// 8) İSTANBUL LOKASYON — TR ↔ 13 dil (13 Eki 2026). Canlı veri şekli (API 13 Eki): 301 haritası
+//    /istanbul/{ilçe}[/{mahalle}] → Türkçe adres (1.014 kayıt, zincirsiz); Türkçe kayıt location bloğu taşır.
+// ---------------------------------------------------------------------------
+
+const HARITA = new Map<string, string>([
+  ["/istanbul/kadikoy", "/kadikoy-cicek-siparisi"],
+  ["/istanbul/kadikoy/caferaga-mah", "/kadikoy/caferaga-cicek-siparisi"],
+  ["/istanbul/maltepe", "/maltepe-cicek-siparisi"],
+]);
+const TUM_DILLER: LocaleVersion[] = GLOBAL_LOCALES.map((locale) => ({ locale, indexable: true }));
+const trIlce = {
+  url_path: "/kadikoy-cicek-siparisi", page_type: "district", index_state: "index", canonical_url: "/kadikoy-cicek-siparisi",
+  body_blocks: [{ type: "keywords", items: [] }, { type: "location", city: "istanbul", district: "kadikoy" }],
+};
+const trMahalle = {
+  url_path: "/kadikoy/caferaga-cicek-siparisi", page_type: "neighborhood", index_state: "index", canonical_url: "/kadikoy/caferaga-cicek-siparisi",
+  body_blocks: [{ type: "location", city: "istanbul", district: "kadikoy", neighborhood: "caferaga-mah" }],
+};
+const trIl = { url_path: "/istanbul", page_type: "city", index_state: "index", canonical_url: "/istanbul", body_blocks: [] };
+
+test("İSTANBUL: TR aday yalnız 301 haritasından; il kökü sabit; diğer şehir / niyet / bilinmeyen → null (slug tahmini yok)", () => {
+  assert.equal(TR_LOCATION_CITY, "istanbul");
+  assert.equal(trLocationCandidatePath("istanbul", HARITA), "/istanbul");
+  assert.equal(trLocationCandidatePath("istanbul/kadikoy", HARITA), "/kadikoy-cicek-siparisi");
+  assert.equal(trLocationCandidatePath("istanbul/kadikoy/caferaga-mah", HARITA), "/kadikoy/caferaga-cicek-siparisi");
+  assert.equal(trLocationCandidatePath("istanbul/besiktas", HARITA), null, "haritada yok → tahmin üretilmez");
+  assert.equal(trLocationCandidatePath("antalya/muratpasa", new Map([["/antalya/muratpasa", "/x"]])), null);
+  assert.equal(trLocationCandidatePath("hotel-delivery", HARITA), null);
+  assert.equal(trLocationCandidatePath("istanbul/kadikoy", new Map([["/istanbul/kadikoy", "//evil.example"]])), null, "site dışı hedef");
+});
+
+test("İSTANBUL: TR doğrulama — yayın yolu, index, self-canonical ve location bloğu kimliği şart", () => {
+  assert.equal(trLocationConfirmed(trIlce, "/kadikoy-cicek-siparisi", "istanbul/kadikoy"), true);
+  assert.equal(trLocationConfirmed(trMahalle, "/kadikoy/caferaga-cicek-siparisi", "istanbul/kadikoy/caferaga-mah"), true);
+  assert.equal(trLocationConfirmed(trIl, "/istanbul", "istanbul"), true);
+  assert.equal(trLocationConfirmed(null, "/kadikoy-cicek-siparisi", "istanbul/kadikoy"), false);
+  assert.equal(trLocationConfirmed({ ...trIlce, index_state: "noindex" }, "/kadikoy-cicek-siparisi", "istanbul/kadikoy"), false);
+  assert.equal(trLocationConfirmed({ ...trIlce, canonical_url: "/istanbul" }, "/kadikoy-cicek-siparisi", "istanbul/kadikoy"), false);
+  assert.equal(trLocationConfirmed({ ...trIlce, canonical_url: "" }, "/kadikoy-cicek-siparisi", "istanbul/kadikoy"), true, "boş canonical = kendi yolu");
+  assert.equal(trLocationConfirmed(trIlce, "/kadikoy-cicek-siparisi", "istanbul/maltepe"), false, "başka ilçenin kaydı eşleşmez");
+  assert.equal(trLocationConfirmed(trIlce, "/maltepe-cicek-siparisi", "istanbul/kadikoy"), false, "kayıt yolu aday yol değil");
+  assert.equal(trLocationConfirmed({ ...trIlce, body_blocks: [] }, "/kadikoy-cicek-siparisi", "istanbul/kadikoy"), false, "blok yoksa kimlik yok");
+  assert.equal(trLocationConfirmed({ ...trIl, page_type: "district" }, "/istanbul", "istanbul"), false);
+});
+
+test("İSTANBUL: Türkçe sayfa → anahtar; harita bu sayfayı göstermiyorsa (tek yönlü) null", () => {
+  assert.equal(trLocationKeyOf(trIlce, "/kadikoy-cicek-siparisi", HARITA), "istanbul/kadikoy");
+  assert.equal(trLocationKeyOf(trMahalle, "/kadikoy/caferaga-cicek-siparisi", HARITA), "istanbul/kadikoy/caferaga-mah");
+  assert.equal(trLocationKeyOf(trIl, "/istanbul", HARITA), "istanbul");
+  assert.equal(trLocationKeyOf(trIlce, "/kadikoy-cicek-siparisi", new Map()), null, "harita yok → tr kümeye girmez");
+  assert.equal(trLocationKeyOf({ ...trIlce, body_blocks: [{ type: "location", city: "ankara", district: "cankaya" }] }, "/kadikoy-cicek-siparisi", HARITA), null);
+  assert.equal(trLocationKeyOf({ ...trIlce, index_state: "noindex" }, "/kadikoy-cicek-siparisi", HARITA), null);
+  assert.equal(trLocationKeyOf(null, "/istanbul", HARITA), null);
+});
+
+test("İSTANBUL: iki tarafın kümesi BİREBİR eşit (karşılıklılık), tr dahil, x-default = EN; noindex dil listelenmez", () => {
+  const key = "istanbul/kadikoy/caferaga-mah";
+  const trPath = "/kadikoy/caferaga-cicek-siparisi";
+  const trTarafi = locationHreflangFamily(trLocationKeyOf(trMahalle, trPath, HARITA)!, trPath, TUM_DILLER, mutlak)!;
+  const globalTarafi = locationHreflangFamily(key, trLocationCandidatePath(key, HARITA), TUM_DILLER, mutlak)!;
+  assert.deepEqual(trTarafi, globalTarafi);
+  assert.equal(trTarafi[TR_HREFLANG], mutlak(trPath));
+  assert.equal(Object.keys(trTarafi).length, 1 + GLOBAL_LOCALES.length + 1, "tr + 13 dil + x-default");
+  for (const l of GLOBAL_LOCALES) assert.equal(trTarafi[l], mutlak(`/${l}/${key}`));
+  assert.equal(trTarafi[X_DEFAULT_KEY], mutlak(`/en/${key}`));
+  const kismi = locationHreflangFamily(key, trPath, [{ locale: "en", indexable: true }, { locale: "de", indexable: false }], mutlak)!;
+  assert.deepEqual(Object.keys(kismi).sort(), ["en", "tr", "x-default"]);
+  assert.equal(locationHreflangFamily(key, trPath, [], mutlak), null, "yalnız TR → küme yok");
+  assert.equal(locationHreflangFamily(key, null, [{ locale: "en", indexable: true }], mutlak), null, "tek locale, TR yok → küme yok");
+});
+
+test("KAYNAK: Türkçe lokasyon sayfası kümeyi yalnız 1. sayfada, self-canonical'da, kayıtlı + index sayfada basar (ISR korunur)", () => {
+  const src = oku("../app/[...slug]/page.tsx");
+  assert.ok(src.includes("const languages = pageNumber === 1 && canonicalPath === path ? await trLocationLanguages(page, path) : null;"));
+  const fn = src.slice(src.indexOf("async function trLocationLanguages("), src.indexOf("function renderBlock("));
+  assert.ok(fn.includes('if (page.synthetic === true || page.index_state !== "index") return null;'));
+  assert.ok(fn.includes("trLocationKeyOf(page, path, await fetchRedirectMap())"));
+  assert.ok(fn.includes("locationHreflangFamily(key, path, await fetchLocationLocaleVersions(key), absoluteUrl)"));
+  assert.ok(!/no-store|noStore/.test(fn), "ISR rotasında no-store okuma YOK (71.406 URL önbellekten düşmez)");
 });

@@ -71,6 +71,48 @@ async function getJson<T>(path: string): Promise<T | null> {
   }
 }
 
+// ---- EK (13 Eki 2026 — GLOBAL İNDEKS KAYBI): "kayıt yok" ≠ "API'ye ulaşılamadı" ------------------------------
+// getJson her ağ hatası / 5xx / zaman aşımında null döner; sayfa bunu "yok" sayıp notFound() → Googlebot'a 404.
+// API (Render) kısa süre yavaşladığında / yeniden başladığında Global ürün, kategori ve lokasyon sayfaları gerçek
+// 404 ile cevap veriyordu (404 tekrarlandıkça Google URL'yi dizinden düşürür; 5xx ise geçici sayılır).
+// Aşağıdaki "require*" sürümleri YALNIZ sayfanın ana kaydında kullanılır: 2xx → veri (null = gerçekten yok → 404);
+// 4xx (408 / 429 hariç) → null (yok); ağ hatası / 408 / 429 / 5xx / bozuk gövde → bir kez yeniden denenir, yine olmazsa GlobalApiUnavailableError
+// fırlatılır → Next 5xx (geçici) döner, URL dizinde kalır. getJson ve diğer tüm çağıranlar DEĞİŞMEDİ.
+export class GlobalApiUnavailableError extends Error {
+  constructor(path: string) {
+    super(`global_api_unavailable: ${path}`);
+    this.name = "GlobalApiUnavailableError";
+  }
+}
+
+/** Ana kayıt okuması: veri | null (kesin yok) | fırlatır (okunamadı). fetchFn yalnız birim testi içindir. */
+export async function getJsonOrThrow<T>(path: string, fetchFn: typeof fetch = fetch, attempts = 2): Promise<T | null> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const resp = await fetchFn(`${API_ORIGIN}${path}`, { cache: "no-store" });
+      // 4xx = istek / kayıt kararı (yok, geçersiz) → bugünkü gibi 404. Yalnız 408 / 429 / 5xx geçicidir.
+      if (resp.status >= 400 && resp.status < 500 && resp.status !== 408 && resp.status !== 429) return null;
+      if (resp.ok) {
+        const body = (await resp.json()) as { data?: T } | null;
+        return body?.data ?? null;
+      }
+    } catch {
+      // ağ hatası / bozuk gövde → yeniden dene
+    }
+  }
+  throw new GlobalApiUnavailableError(path);
+}
+
+export function requireGlobalPage(locale: GlobalLocale, key: string): Promise<GlobalPage | null> {
+  return getJsonOrThrow<GlobalPage>(`/api/public/global/page?locale=${locale}&key=${encodeURIComponent(key)}`);
+}
+export function requireCategorySurface(locale: GlobalLocale, slug: string): Promise<CategorySurface | null> {
+  return getJsonOrThrow<CategorySurface>(`/api/public/translations/surface/category/${encodeURIComponent(slug)}?locale=${locale}`);
+}
+export function requireProductSurface(locale: GlobalLocale, slug: string): Promise<ProductSurface | null> {
+  return getJsonOrThrow<ProductSurface>(`/api/public/translations/surface/product/${encodeURIComponent(slug)}?locale=${locale}`);
+}
+
 export function fetchProductSurface(locale: GlobalLocale, slug: string): Promise<ProductSurface | null> {
   return getJson<ProductSurface>(
     `/api/public/translations/surface/product/${encodeURIComponent(slug)}?locale=${locale}`

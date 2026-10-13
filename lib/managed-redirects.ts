@@ -322,3 +322,63 @@ export function managedRedirectSearch(to: string, search: string): string {
   const out = kept.join('&');
   return out ? `?${out}` : '';
 }
+
+// ============================================================================
+// EK (13 Eki 2026 — İSTANBUL ESKİ SEMT/MAHALLE ADRESLERİ) — ADDITIVE.
+//
+// SORUN (canlı ölçüm): il öneki OLMAYAN eski İstanbul adresleri (eski sitede İstanbul il önekisiz yazılırdı:
+// /kartal-cicekci-91, /maltepe-cicekci-30 → ilçe; aynı kalıpta mahalle: /levent-cicekci-41, /mecidiyekoy-cicekci-29)
+// legacy konum kuralında hedef bulamayıp ANA SAYFAYA 301 alıyordu (soft 404). Oysa doğru eşdeğer mahalle sayfası
+// yayındadır: /besiktas/levent-cicek-siparisi, /sisli/mecidiyekoy-cicek-siparisi.
+//
+// KURAL (tahmin YOK; kaynak = yönetilen 301 haritasının /istanbul/{ilçe}/{mahalle}-mah kayıtları):
+//   • "{ilçe}-{mahalle}" (ör. gaziosmanpasa-fevzi-cakmak) → o ilçenin o mahallesi varsa onun Türkçe adresi.
+//   • çıplak "{mahalle}" → İstanbul'un mahalleleri içinde TEK eşleşme varsa onun Türkçe adresi.
+//     Birden çok ilçede aynı ad (ör. 19-mayis: Kadıköy / Şişli / Büyükçekmece) → null (sahte 301 YOK).
+//   • Yazım hatası / mahalle olmayan semt (taksim, yenibosna) → null. Çağıran bugünkü davranışına devam eder.
+// FAIL-SAFE: harita boş / okunamadı → null.
+// ============================================================================
+
+type Lookup = ReadonlyMap<string, { to: string }>;
+const ISTANBUL_NBH = /^\/istanbul\/([a-z0-9-]+)\/([a-z0-9-]+)-mah$/;
+
+/** Saf: haritadan İstanbul mahalle dizini — mahalle adı → [{ilçe, hedef}]. */
+export function istanbulNeighborhoodIndex(map: Lookup): Map<string, { district: string; to: string }[]> {
+  const index = new Map<string, { district: string; to: string }[]>();
+  for (const [from, entry] of map) {
+    const m = ISTANBUL_NBH.exec(from);
+    if (!m) continue;
+    const list = index.get(m[2]) ?? [];
+    list.push({ district: m[1], to: entry.to });
+    index.set(m[2], list);
+  }
+  return index;
+}
+
+/** Saf: legacy çözümleyicinin normalize ettiği taban ("levent", "gaziosmanpasa-fevzi-cakmak") → tek hedef ya da null. */
+export function istanbulLegacyNeighborhoodTarget(base: string, map: Lookup, index = istanbulNeighborhoodIndex(map)): string | null {
+  const b = (base || "").replace(/-(mahallesi|mahalle|mah|mh)$/, "");
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(b)) return null;
+  const parts = b.split("-");
+  for (let i = 1; i < parts.length; i++) {
+    const district = parts.slice(0, i).join("-");
+    const hit = map.get(`/istanbul/${district}/${parts.slice(i).join("-")}-mah`);
+    if (hit && map.has(`/istanbul/${district}`)) return hit.to;
+  }
+  const candidates = index.get(b) ?? [];
+  return candidates.length === 1 ? candidates[0].to : null;
+}
+
+let nbhIndexCache: { map: Map<string, Entry>; index: Map<string, { district: string; to: string }[]> } | null = null;
+
+/** Middleware: önbellekli haritayla (ek ağ isteği yok) eski İstanbul semt/mahalle tabanını çözer; yoksa null. */
+export async function resolveIstanbulLegacyNeighborhood(base: string): Promise<string | null> {
+  try {
+    const map = await getMap();
+    if (map.size === 0) return null;
+    if (!nbhIndexCache || nbhIndexCache.map !== map) nbhIndexCache = { map, index: istanbulNeighborhoodIndex(map) };
+    return istanbulLegacyNeighborhoodTarget(base, map, nbhIndexCache.index);
+  } catch {
+    return null;
+  }
+}
