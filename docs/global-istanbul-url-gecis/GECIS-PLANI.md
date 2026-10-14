@@ -1,6 +1,7 @@
 # İstanbul Global (13 dil) Ticari URL Geçiş Planı
 
-Durum: **ÖNERİ.** Kod, rota, veri ve 301 değişikliği yapılmadı. Bu belge karar verilmesi için hazırlandı.
+Durum (14 Eki 2026): **UYGULANDI, bayrak arkasında.** Kod bu PR'da (#255). Production'da bayrak boş olduğu için davranış değişmez.
+Pilot (EN, DE, FR) yalnız bu dalın Vercel preview'ında açıldı ve test edildi (bölüm 8).
 
 Tarih: 13 Ekim 2026.
 
@@ -100,3 +101,36 @@ Bunlar içerik işi; Admin'den yapılır, kod değişikliği gerektirmez.
 - Google indeks durumu (13 dilin her birinde kaç İstanbul URL'si indeksli): **bilinmiyor.** Search Console verisi gerekiyor.
 - Rakip canonical ve hreflang etiketleri: sayfalar bu ortamdan çekilemedi, **gözlenmedi.**
 - Sorgu hacimleri: **ölçülmedi, tahmin edilmedi.**
+
+## 8. Uygulama (14 Ekim 2026) — tek mekanizma
+
+- **Tek kaynak:** `lib/global/commercialUrl.ts`. Canonical, hreflang (TR sayfası dahil), sitemap, kırıntı (görsel ve JSON-LD), ilçe/mahalle ızgarası, sayfalama, v80 şehir kartları, v80 footer, site footer'ı ve içerik bağlantıları buradan geçer.
+- **Bayrak:** `NEXT_PUBLIC_GLOBAL_COMMERCIAL_URL_LOCALES` (ör. `en,de,fr`). Kalıbı olmayan dil yok sayılır. Boşken çıktı bugünküyle aynı (13.195 satır testle doğrulandı).
+- **Rota:** `/<dil>/<ticari-slug>` o dilin yayındaki envanterinden ileri yönde eşleştirilir; tahmin yok. Eşleşme yoksa 404, envanter okunamazsa 5xx.
+- **301 (middleware, tek adım):**
+  - Açık dilde `/<dil>/istanbul[/ilçe[/mahalle]]` → ticari adres.
+  - Kapalı dilde ticari adres → eski adres (geri alma).
+  - Yalnız yayındaki (approved + indexable) anahtarlar yönlendirilir; envanter okunamazsa yönlendirme yapılmaz (fail-open).
+  - Yönetilen 301'den sonra bakılır. Sorgu dizesi (gclid) korunur.
+- **Noindex satır** ticari adrese taşınmaz; eski adreste kendi canonical'ıyla kalır.
+
+### Dil kapsamı
+
+| Durum | Diller | URL sayısı |
+|---|---|---|
+| Pilot (açılacak) | en, de, fr | 3.045 |
+| Hazır (kalıp var, bayrakla açılır) | it, nl, es, pt | 4.060 |
+| Dilsel doğrulama bekliyor (adres değişmez) | ru, ar, ja, ko, zh, az | 6.090 |
+| **Toplam** | 13 | 13.195 |
+
+### Release sırası
+
+1. API #255 deploy edilir: `tr-location` ucu, 301 tavanı, teşhis düzeltmesi. Public tarafa bağımlılığı yok.
+2. Public #255 production'a **bayrak boş** deploy edilir. Hreflang, 5xx ve soft-404 düzeltmeleri devreye girer; URL'ler değişmez.
+3. Production ortamına `NEXT_PUBLIC_GLOBAL_COMMERCIAL_URL_LOCALES=en,de,fr` eklenip yeniden deploy edilir; pilot başlar.
+   - Search Console'da EN/DE/FR sitemap'leri yeniden gönderilir.
+   - 4–8 hafta ülke × sorgu izlenir.
+4. Pilot başarılıysa değer `en,de,fr,it,nl,es,pt` yapılır (+4.060 URL).
+5. ru, ar, ja, ko, zh, az için önce dil kanıtı toplanır; sonra kalıp eklenir (kod değişikliği).
+
+**Geri alma:** Değişken boşaltılıp yeniden deploy edilir. Ticari adresler tek adım 301 ile eski adreslere döner; kayıt silinmez.
