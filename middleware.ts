@@ -11,10 +11,10 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
+import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
 import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch, resolveIstanbulLegacyNeighborhood } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
-import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
    statik listeden (/kategori/{eski-slug}) üretir. Kategori Merkezi'nden onaylı
