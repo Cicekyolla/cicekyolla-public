@@ -14,7 +14,8 @@
 //  - hreflang: yalnız GERÇEK yayınlanmış (approved+indexable) karşılıklar arasında,
 //    en az 2 üye varsa. EK (SEO yayın zinciri): ürün, ana sayfa ve kategoride Türkçe sürüm
 //    ailenin üyesidir (Türkçe sayfa aynı kümeyi karşılıklı basar — lib/global/hreflangFamily.ts);
-//    lokasyon / niyet sayfalarında TR küme dışında kalır.
+//    İstanbul lokasyonunda (13 Eki 2026) Türkçe sürüm doğrulanmış 301 haritasından kümeye girer
+//    (istanbulLocationLanguages); niyet sayfaları ve diğer şehirlerde TR küme dışında kalır.
 //  - İç bağlantı zinciri locale ailesi İÇİNDE kalır (DE sayfadan TR yüzeyine düşme yok).
 // ============================================================================
 import type { Metadata } from "next";
@@ -33,13 +34,15 @@ import { getPublishedHomepage } from "@/lib/homepage";
 import { toPlainText } from "@/lib/richText";
 import { withXDefault } from "./hreflang";
 // EK (SEO YAYIN ZİNCİRİ): hreflang ailesi (TR + locale sürümleri) ve locale openGraph'ı — saf modüller.
-import { categoryHreflangFamily, homeHreflangFamily, listsLocaleVersion, productHreflangFamily, trCategoryPath, trProductPath } from "./hreflangFamily";
+import { categoryHreflangFamily, homeHreflangFamily, listsLocaleVersion, productHreflangFamily, trCategoryPath, trProductPath, locationHreflangFamily, trLocationCandidatePath, trLocationConfirmed } from "./hreflangFamily";
 import { localeOpenGraph } from "./localeOpenGraph";
+// EK (14 Eki 2026): İstanbul ticari lokasyon adresleri — tek kaynak (lib/global/commercialUrl.ts).
+import { COMMERCIAL_LOCALES, commercialKeyFromSlug, isCommercialSlugCandidate, localeLocationPath, rewriteLocaleLocationHrefs } from "./commercialUrl";
 import { isCategoryPageConfirmedIndexable } from "@/lib/categoryPage";
 import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
 import { LABELS } from "./locationLabels";
-import { fetchListingPage, fetchListingSettings, fetchProductBySlug, fetchProducts, fetchProductsPaged, fetchSeoPage, formatMinorTRY, listingRowsLocalized, type ListingRow, type ListingSettings, type PublicProductDetail } from "@/lib/api";
+import { fetchListingPage, fetchListingSettings, fetchProductBySlug, fetchProducts, fetchProductsPaged, fetchRedirectMap, fetchSeoPage, formatMinorTRY, listingRowsLocalized, type ListingRow, type ListingSettings, type PublicProductDetail } from "@/lib/api";
 // EK (ADMİN TEK MERKEZ): dil kategori / lokasyon serileri listeleme ucundan (locale, pinned_ids) — tek sayfa hesabı; uç locale'i
 // tanımıyorsa (locale_name yok) bugünkü surface / catalog yolu (fail-open). Okumalar no-store (globalNoStore sözleşmesi).
 import { capListing, defaultShowcaseConfig, listingQueryFor, mergePinnedFirst, resolveShowcaseConfig, resolvedPageSize, resolvedTotalPages, resolvedTotalPagesFrom, type ResolvedShowcase } from "@/lib/listingEngine";
@@ -85,13 +88,16 @@ import { isIndexable as isBlogIndexable } from "@/lib/blogMerge";
 import { getManagedBlogPosts } from "@/lib/blog";
 import { GlobalBlogArticle, GlobalBlogList, GlobalBlogRail } from "@/components/global/blog/GlobalBlog";
 import {
-  fetchProductSurface,
   fetchProductLocaleCluster,
-  fetchGlobalPage,
-  fetchCategorySurface,
   fetchLocaleCatalog,
   fetchGlobalCatalog,
   fetchDistrictReach,
+  fetchGlobalPagesInventory,
+  GlobalApiUnavailableError,
+  fetchTrLocationPath,
+  requireGlobalPage,
+  requireCategorySurface,
+  requireProductSurface,
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
@@ -349,17 +355,57 @@ function localeHomeJsonLd(identity: SiteIdentity, locale: GlobalLocale): string 
 
 // ---- Metadata -------------------------------------------------------------
 
+/** EK (14 Eki 2026 — İSTANBUL TİCARİ URL): sayfanın kanonik yolu. İndexlenebilir satır localeLocationPath'ten
+ *  (dil açıksa /<dil>/<ticari-slug>); noindex satır envanterde olmadığı için ticari adrese taşınmaz → bugünkü yol. */
+function canonicalLocationPath(locale: GlobalLocale, row: GlobalPage): string {
+  return row.indexable ? localeLocationPath(locale, row.page_key) : `/${locale}/${row.page_key}`;
+}
+
+/**
+ * EK (14 Eki 2026): tek segmentli ticari adres (/en/flower-delivery-kadikoy-istanbul) → lokasyon segmentleri.
+ * Yalnız dil AÇIKKEN; anahtar o dilin yayındaki envanterinden ileri yönde eşleştirilir (tahmin yok). Envanter
+ * okunamazsa geçici hata (5xx) — gerçek bir ticari adres 404'e düşmez. Eşleşme yoksa segmentler aynen (→ 404).
+ */
+async function resolveCommercialSegments(locale: GlobalLocale, path: string[]): Promise<string[]> {
+  if (path.length !== 1 || !COMMERCIAL_LOCALES.has(locale) || !isCommercialSlugCandidate(locale, path[0])) return path;
+  const inv = await fetchGlobalPagesInventory(locale);
+  if (!inv) throw new GlobalApiUnavailableError(`/api/public/global/pages-inventory?locale=${locale}`);
+  const key = commercialKeyFromSlug(locale, path[0], inv.map((r) => r.page_key));
+  return key ? key.split("/") : path;
+}
+
 function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, string> | null {
   if (!row.indexable) return null;
   const languages: Record<string, string> = {};
   for (const alt of row.locales ?? []) {
     if (alt.indexable && isGlobalLocale(alt.locale)) {
-      const path = row.page_key === "home" ? `/${alt.locale}` : `/${alt.locale}/${row.page_key}`;
+      const path = row.page_key === "home" ? `/${alt.locale}` : localeLocationPath(alt.locale, row.page_key);
       languages[alt.locale] = absoluteUrl(path);
     }
   }
   // ADDITIVE (24 Eyl 2026): x-default = kümedeki EN (yoksa alfabetik ilk) — lib/global/hreflang.ts
   return Object.keys(languages).length > 1 ? withXDefault(languages) : null;
+}
+
+/**
+ * EK (İSTANBUL TR ↔ 13 DİL, 13 Eki 2026): İstanbul lokasyon sayfasının hreflang ailesi Türkçe sürümle.
+ * Türkçe aday yönetilen 301 haritasından (slug tahmini yok); Türkçe kayıt yayında + index + kendine canonical +
+ * location bloğu aynı anahtar olmalı (lib/global/hreflangFamily.ts trLocationConfirmed). Türkçe sayfa AYNI koşulla
+ * ve AYNI `locales` kaynağıyla kümeyi basar → iki taraf birebir eşit. Kesin değilse null → çağıran pageLanguages.
+ */
+async function istanbulLocationLanguages(row: GlobalPage): Promise<Record<string, string> | null> {
+  if (!row.indexable) return null;
+  try {
+    const [redirects, fromRecord] = await Promise.all([fetchRedirectMap(), fetchTrLocationPath(row.page_key)]);
+    const trPath = trLocationCandidatePath(row.page_key, redirects, fromRecord);
+    if (!trPath) return null;
+    // Global yüzey tazelik sözleşmesi: no-store (globalNoStore.test.ts) — yayından kaldırma anında yansır.
+    const trPage = await fetchSeoPage(trPath, { noStore: true });
+    if (!trLocationConfirmed(trPage, trPath, row.page_key)) return null;
+    return locationHreflangFamily(row.page_key, trPath, row.locales, absoluteUrl);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -402,10 +448,11 @@ async function listingSeoFor(
  *    (lib/global/locationPaging.ts locationListingSeo — sorgu yalnız oradaki saf yardımcılarla okunur).
  */
 export async function localeMetadata(locale: GlobalLocale, path: string[], listing?: LocationSearchParams): Promise<Metadata> {
-  const parsed = parseLocalePath(locale, path);
+  const parsed = parseLocalePath(locale, await resolveCommercialSegments(locale, path));
 
   if (parsed.kind === "home") {
-    const row = await fetchGlobalPage(locale, "home");
+    // EK (13 Eki 2026): API okunamazsa noindex BASILMAZ (geçici 5xx); onaylı satır yoksa (null) bugünkü gibi noindex.
+    const row = await requireGlobalPage(locale, "home");
     const self = absoluteUrl(`/${locale}`);
     if (!row) {
       const title = HOME_FALLBACK[locale].title;
@@ -466,14 +513,17 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     // Pozitif tam sayı olmayan sayfa numarası: sayfa 404 verir (LocalePage) → metadata da index dışı.
     const listingPage = parseListingPageParam(listing?.page);
     if (listingPage === null) return { robots: NOINDEX };
-    const row = await fetchGlobalPage(locale, parsed.key);
+    const row = await requireGlobalPage(locale, parsed.key);
     if (!row) return { robots: NOINDEX };
     // EK: sayfa ≥ 2'de canonical + başlık eki HAM sorgudan değil ÇÖZÜLMÜŞ katalog görünümünden gelir
     // (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola — locationListingSeo). Sayfa 1 aynen.
-    const basePath = `/${locale}/${row.page_key}`;
+    // EK (14 Eki 2026): kanonik taban yol — İstanbul ticari adres açık dilde yeni adres (noindex satır eski adreste kalır).
+    const basePath = canonicalLocationPath(locale, row);
     const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };
     const self = absoluteUrl(seo.canonicalPath);
-    const languages = listingPage > 1 ? null : pageLanguages(locale, row);
+    // EK (İSTANBUL TR ↔ 13 DİL): İstanbul il / ilçe / mahalle sayfası doğrulanmış Türkçe karşılığını kümeye alır;
+    // diğer şehirler / niyet sayfaları ve doğrulanamayan her durum pageLanguages ile bugünkü gibi (yalnız locale).
+    const languages = listingPage > 1 ? null : ((await istanbulLocationLanguages(row)) ?? pageLanguages(locale, row));
     const title = locationPageTitle(locale, stripTrailingBrand(row.seo_title ?? row.h1 ?? undefined), seo.titlePage);
     return {
       title: titleForTemplate(title),
@@ -490,7 +540,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     // (toplam sayfa = min(ceil(min(ürün, max_items)/per_page), max_pages)) → LocalePage 404 verir, metadata index dışı.
     const listingPage = parseListingPageParam(listing?.page);
     if (listingPage === null) return { robots: NOINDEX };
-    const surface = await fetchCategorySurface(locale, parsed.slug);
+    const surface = await requireCategorySurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const listingSettings = await fetchListingSettings({ noStore: true });
     // Gövdeyle AYNI yardımcı + AYNI istek (istek içi tekilleştirme) → aynı sayfa sayısı.
@@ -537,7 +587,7 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
   }
 
   if (parsed.kind === "product") {
-    const surface = await fetchProductSurface(locale, parsed.slug);
+    const surface = await requireProductSurface(locale, parsed.slug);
     if (!surface) return { robots: NOINDEX };
     const self = absoluteUrl(localeProductPath(locale, surface.slug));
     // Paylaşım görseli = ürün kapağı (sayfanın da okuduğu aynı ürün isteği); küme okumasıyla paralel.
@@ -930,7 +980,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       if (loc.city === "istanbul") {
         const identity = await siteIdentity();
         localLd = istanbulDistrictJsonLd(identity, {
-          path: `/${locale}/${row.page_key}`, areaName: districtName, pageName: row.h1 ?? "",
+          path: canonicalLocationPath(locale, row), areaName: districtName, pageName: row.h1 ?? "",
           serviceType: SERVICE_TYPE[locale], cityLabel: cityName,
         });
       }
@@ -984,13 +1034,19 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   const listingSize = listingSettings?.per_page;
   const listingCaps = listingSettings ? { maxItems: listingSettings.max_items, maxPages: listingSettings.max_pages, paginate: listingSettings.pagination_enabled } : undefined;
   let view: LocationCatalogView | null = plan
-    ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all, listingSize, listingCaps)
+    ? resolveLocationCatalog(plan, searchParams, canonicalLocationPath(locale, row), SHOP[locale].all, listingSize, listingCaps)
     : null;
   if (plan && view && listingSettings && view.category === null && loc) {
     // İl / ilçe / mahalle AYNI blok + AYNI uç (sözleşme v2 §5): TR seo_page showcase bloğu (manual → ids; auto+pinned → pinned_ids)
     // no-store okunur; yoksa yalnız global ayar. Uç locale'i tanımıyorsa (locale_name yok) plan (katalog) aynen.
     const location = { city: loc.city, ...(loc.kind !== "city" ? { district: loc.district } : {}), ...(loc.kind === "neighborhood" ? { neighborhood: loc.neighborhood } : {}) };
-    const block = getShowcaseBlock(await fetchSeoPage(`/${row.page_key}`, { noStore: true }).catch(() => null));
+    // EK (İSTANBUL TR ↔ 13 DİL): İstanbul ilçe / mahalle TR kayıtları hiyerarşik yoldan (/istanbul/{ilçe}[/{mahalle}])
+    // yönetilen 301 ile taşındı; o yol artık seo_page DEĞİL (API 404) → blok hiç okunamıyor, Admin vitrini Global'e
+    // ulaşmıyordu. Blok, 301 haritasının gösterdiği Türkçe adresten okunur; haritada yoksa / İstanbul değilse bugünkü yol.
+    // Uç yine locale ile çağrılır → yalnız o dilde yayında (çevrilmiş) Global ürünler listelenir; katalog genişlemez.
+    const [showRedirects, showFromRecord] = await Promise.all([fetchRedirectMap().catch(() => new Map<string, string>()), fetchTrLocationPath(row.page_key)]);
+    const showcasePath = trLocationCandidatePath(row.page_key, showRedirects, showFromRecord) ?? `/${row.page_key}`;
+    const block = getShowcaseBlock(await fetchSeoPage(showcasePath, { noStore: true }).catch(() => null));
     const cfg = (block && resolveShowcaseConfig(block, listingSettings, { pageType: loc.kind, location })) ?? defaultShowcaseConfig(listingSettings, { kind: "location", ...location });
     const wantedPage = parseListingPageParam(rawSearchParams?.page) ?? 1;
     const listing = await fetchListingPage(listingQueryFor(cfg, wantedPage, { locale }), { noStore: true });
@@ -1003,7 +1059,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       const rows = cfg.mode === "manual" ? (cfg.paginationEnabled ? all.slice((page - 1) * size, page * size) : all.slice(0, size)) : all;
       const total = cfg.mode === "manual" ? all.length : listing.pagination.total;
       for (const r of listing.items) if (!plan.byId.has(r.id)) plan.byId.set(r.id, localeRowToCatalogProduct(r));
-      const basePath = `/${locale}/${row.page_key}`;
+      const basePath = canonicalLocationPath(locale, row);
       view = {
         ...view, page, totalPages, total, ids: rows.map((r) => r.id),
         chips: view.chips.map((c) => (c.key === null ? { ...c, count: total } : c)),
@@ -1070,7 +1126,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
           <>
             {row.content_html ? (
               <section style={{ marginTop: 40, maxWidth: 720 }}>
-                <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: row.content_html }} />
+                <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: rewriteLocaleLocationHrefs(row.content_html) }} />
               </section>
             ) : null}
             <div style={{ maxWidth: 720 }}><FaqSection locale={locale} faq={row.faq} /></div>
@@ -1104,7 +1160,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
-        {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
+        {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: rewriteLocaleLocationHrefs(row.intro_html) }} /> : null}
         {/* RELEASE 3: niyet sayfasında girişten hemen sonra gerçek kesme saati şeridi (yalnız motor verisi varsa). */}
         {intent && cutoffs && cutoffs.length > 0 ? <CutoffStrip locale={locale} rows={cutoffs} /> : null}
       </div>
@@ -1121,7 +1177,7 @@ export async function LocalePage({ locale, path, searchParams }: {
   /** Rota sorgusu (yalnız lokasyon sayfası kataloğu kullanır: ?category, ?page). Sayfa ≥ 2 canonical'ı aynı sorgudan: localeMetadata. */
   searchParams?: LocationSearchParams;
 }) {
-  const parsed = parseLocalePath(locale, path);
+  const parsed = parseLocalePath(locale, await resolveCommercialSegments(locale, path));
 
   if (parsed.kind === "home") {
     // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;
@@ -1178,7 +1234,7 @@ export async function LocalePage({ locale, path, searchParams }: {
     // 200 ile sunulmaz → 404. Son sayfanın ötesi kontrolü katalog görünümünün kurulduğu yerde: GlobalPageBody.
     if (parseListingPageParam(searchParams?.page) === null) notFound();
     const [row, catalog, contact, catalogResp] = await Promise.all([
-      fetchGlobalPage(locale, parsed.key),
+      requireGlobalPage(locale, parsed.key),
       fetchLocaleCatalog(locale),
       v80Contact(),
       locKey
@@ -1214,7 +1270,7 @@ export async function LocalePage({ locale, path, searchParams }: {
     // Katalog, sayfa altındaki "ilgili kategoriler" iç bağlantıları için; yüzeyle
     // PARALEL çekilir (ek gecikme yok). Ayar fail-open (uç yoksa DEFAULTS).
     const [surface, catalog, contact, listingSettings] = await Promise.all([
-      fetchCategorySurface(locale, parsed.slug),
+      requireCategorySurface(locale, parsed.slug),
       fetchLocaleCatalog(locale),
       v80Contact(),
       fetchListingSettings({ noStore: true }),
@@ -1326,7 +1382,7 @@ export async function LocalePage({ locale, path, searchParams }: {
   }
 
   if (parsed.kind === "product") {
-    const surface = await fetchProductSurface(locale, parsed.slug);
+    const surface = await requireProductSurface(locale, parsed.slug);
     if (!surface) notFound();
     const data = await fetchProductBySlug(surface.tr_slug);
     if (!data) notFound();

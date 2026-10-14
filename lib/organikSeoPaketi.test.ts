@@ -28,12 +28,16 @@ test("il vitrini artık 4 üründe kalmıyor — ilçe sayfasıyla aynı sayıda
 });
 
 test("footer il hub'ına bağlanır ve locale yolunda da gösterir", () => {
-  assert.match(FOOTER, /\{ label: "İstanbul", href: "\/istanbul" \}/);
-  // Locale süzgeci "/istanbul/" ile başlıyordu; hub bu testten geçemiyordu.
-  assert.match(FOOTER, /l\.href === "\/istanbul" \|\| l\.href\.startsWith\("\/istanbul\/"\)/);
-  // Mevcut ilçe/il kısayolları korunur.
-  for (const h of ["/istanbul/kadikoy", "/istanbul/besiktas", "/istanbul/sisli", "/ankara/cankaya", "/izmir/konak"]) {
+  assert.match(FOOTER, /\{ label: "İstanbul", href: "\/istanbul", globalPath: "\/istanbul" \}/);
+  // Locale süzgeci "/istanbul/" ile başlıyordu; hub bu testten geçemiyordu. 13 Eki 2026: süzgeç globalPath'ten
+  // (İstanbul ilçe TR adresleri taşındı) — hub ve 3 ilçe locale yolunda aynen gösterilir.
+  assert.match(FOOTER, /FOOTER_DELIVERY_LINKS\.flatMap\(\(l\) => \(l\.globalPath \?/);
+  // Mevcut ilçe/il kısayolları korunur (İstanbul ilçeleri bugünkü 200 adresleriyle; Global yolları aynı).
+  for (const h of ["/kadikoy-cicek-siparisi", "/besiktas-cicek-siparisi", "/sisli-cicek-siparisi", "/ankara/cankaya", "/izmir/konak"]) {
     assert.ok(FOOTER.includes(`href: "${h}"`), `${h} footer'dan düşmüş`);
+  }
+  for (const g of ["/istanbul/kadikoy", "/istanbul/besiktas", "/istanbul/sisli"]) {
+    assert.ok(FOOTER.includes(`globalPath: "${g}"`), `${g} locale kısayolu düşmüş`);
   }
 });
 

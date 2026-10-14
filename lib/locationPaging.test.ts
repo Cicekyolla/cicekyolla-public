@@ -479,7 +479,8 @@ test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam ka
   assert.equal(page.split("planLocationPage(").length - 1, 1);
   // EK (LİSTELEME MOTORU): 5. parametre = global ayardan sayfa boyutu (settings.per_page); taban yol ve etiket aynen.
   // EK (ADMİN TEK MERKEZ): 6. parametre = motor tavanları (max_items dilimde de, max_pages, tek sayfa); ayar no-store okunur.
-  assert.match(page, /resolveLocationCatalog\(plan, searchParams, `\/\$\{locale\}\/\$\{row\.page_key\}`, SHOP\[locale\]\.all, listingSize, listingCaps\)/, "linkler canonical sorgusuz yoldan");
+  // EK (14 Eki 2026): taban yol = metadata'daki kanonik yol (canonicalLocationPath; İstanbul ticari adres açık dilde yeni adres).
+  assert.match(page, /resolveLocationCatalog\(plan, searchParams, canonicalLocationPath\(locale, row\), SHOP\[locale\]\.all, listingSize, listingCaps\)/, "linkler canonical sorgusuz yoldan");
   assert.ok(page.includes("const listingSettings = plan ? await fetchListingSettings({ noStore: true }) : null;"), "ayar global + no-store (fail-open DEFAULTS)");
   assert.ok(page.includes("const listingSize = listingSettings?.per_page;"), "sayfa boyutu global ayardan");
   assert.ok(page.includes("const listingCaps = listingSettings ? { maxItems: listingSettings.max_items, maxPages: listingSettings.max_pages, paginate: listingSettings.pagination_enabled } : undefined;"));
@@ -513,10 +514,10 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(meta.includes("const listingPage = parseListingPageParam(listing?.page);"));
   assert.ok(meta.includes("if (listingPage === null) return { robots: NOINDEX };"));
   // EK: sayfa ≥ 2'de canonical + başlık eki ÇÖZÜLMÜŞ listeden (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola).
-  assert.ok(meta.includes("const basePath = `/${locale}/${row.page_key}`;"));
+  assert.ok(meta.includes("const basePath = canonicalLocationPath(locale, row);"));
   assert.ok(meta.includes("const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };"));
   assert.ok(meta.includes("const self = absoluteUrl(seo.canonicalPath);"));
-  assert.ok(meta.includes("const languages = listingPage > 1 ? null : pageLanguages(locale, row);"));
+  assert.ok(meta.includes("const languages = listingPage > 1 ? null : ((await istanbulLocationLanguages(row)) ?? pageLanguages(locale, row));"));
   assert.ok(meta.includes("const title = locationPageTitle(locale, stripTrailingBrand(row.seo_title ?? row.h1 ?? undefined), seo.titlePage);"));
   // Karar yardımcısı planı / görünümü YENİDEN kurmaz (tek plan kuralı); okumaları LocalePage'inkilerle aynı çağrılardır
   // ve niyet sayfasında GlobalPageBody ile aynı varsayılan kategori eklemesini kullanır.
@@ -541,7 +542,7 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   // Ek istek yok: sayfa dalı yine aynı 4 çağrı
   const localePage = page.slice(page.indexOf("export async function LocalePage"));
   const pageBranch = localePage.slice(localePage.indexOf('if (parsed.kind === "page")'), localePage.indexOf('if (parsed.kind === "category")'));
-  assert.deepEqual([...new Set(pageBranch.match(/\b(fetch\w+|v80Contact)\(/g) ?? [])].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
+  assert.deepEqual([...new Set(pageBranch.match(/\b(fetch\w+|require\w+|v80Contact)\(/g) ?? [])].sort(), ["fetchGlobalCatalog(", "requireGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
   assert.ok(pageBranch.includes("searchParams={searchParams}"));
   // 404: pozitif tam sayı olmayan ?page — okumalardan ÖNCE (istek atılmaz).
   assert.ok(pageBranch.includes("if (parseListingPageParam(searchParams?.page) === null) notFound();"));
@@ -609,7 +610,7 @@ test("kaynak koruması: kategori dalı kapıyı hem metadata'da hem render'da y�
   const gate = metaBlock.indexOf("if (listingPage === null) return { robots: NOINDEX };");
   assert.ok(gate > 0, "localeMetadata kategori dalında kapı olmalı");
   assert.ok(metaBlock.indexOf("const listingPage = parseListingPageParam(listing?.page);") < gate);
-  assert.ok(gate < metaBlock.indexOf("fetchCategorySurface("), "kapı yüzey okumasından önce (geçersiz istek upstream'e gitmez)");
+  assert.ok(gate < metaBlock.indexOf("requireCategorySurface("), "kapı yüzey okumasından önce (geçersiz istek upstream'e gitmez)");
   assert.ok(/isCategoryListingNotFound\(listing, categoryTotalPages\)\) return \{ robots: NOINDEX \}/.test(metaBlock), "404'e giden isteğin metadata'sı index dışı");
   // EK (ADMİN TEK MERKEZ): toplam sayfa TEK yardımcıdan (localeCategorySeries: listeleme ucu → surface + motor tavanları); gövdeyle aynı.
   assert.ok(metaBlock.includes("const categoryTotalPages = (await localeCategorySeries(locale, surface, listingSettings, listingPage)).totalPages;"), "toplam sayfa motor kuralından");
@@ -623,7 +624,7 @@ test("kaynak koruması: kategori dalı kapıyı hem metadata'da hem render'da y�
   const renderBlock = page.slice(renderStart, page.indexOf('if (parsed.kind === "product") {', renderStart));
   const rgate = renderBlock.indexOf("if (parseListingPageParam(searchParams?.page) === null) notFound();");
   assert.ok(rgate > 0, "LocalePage kategori dalında notFound kapısı olmalı");
-  assert.ok(rgate < renderBlock.indexOf("fetchCategorySurface("), "kapı yüzey okumasından önce");
+  assert.ok(rgate < renderBlock.indexOf("requireCategorySurface("), "kapı yüzey okumasından önce");
   assert.ok(renderBlock.includes("if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();"), "son sayfanın ötesi 404");
   assert.ok(renderBlock.includes("const series = await localeCategorySeries(locale, surface, listingSettings, categoryPage);"), "gövde aynı yardımcı");
   assert.ok(page.includes("const members = cfg.paginationEnabled ? sliceLocationPage(pool, page, resolvedPageSize(cfg)) : pool;"), "yalnız dilim basılır");

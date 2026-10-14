@@ -9,6 +9,8 @@ import { MapPin } from "lucide-react";
 import { DIR, type GlobalLocale } from "./config";
 import type { LocationNode } from "./locationTree";
 import { LABELS } from "./locationLabels";
+// EK (14 Eki 2026): lokasyon bağlantıları kanonik yoldan (İstanbul ticari adres açık dilde tek adres, 301'e bağlantı yok).
+import { localeLocationPath } from "./commercialUrl";
 
 export { CITY_NAMES, cityDisplayName, ilceBasligi, mahalleBasligi } from "./locationLabels";
 
@@ -38,7 +40,7 @@ export function LocationBreadcrumb({
   return (
     <nav aria-label={LABELS[locale].yol} className="mb-4 text-[13px] text-[#6B7280]">
       {district ? (
-        <Link href={`/${locale}/${city}`} className={link}>
+        <Link href={localeLocationPath(locale, city)} className={link}>
           {cityName}
         </Link>
       ) : (
@@ -48,7 +50,7 @@ export function LocationBreadcrumb({
         <>
           {ayrac}
           {neighborhoodName ? (
-            <Link href={`/${locale}/${city}/${district}`} className={link}>
+            <Link href={localeLocationPath(locale, `${city}/${district}`)} className={link}>
               {districtName}
             </Link>
           ) : (
@@ -100,7 +102,7 @@ export function LocationGrid({
         {items.map((it) => (
           <Link
             key={it.slug}
-            href={`${baseHref}/${it.slug}`}
+            href={localeLocationPath(locale, `${baseHref.slice(locale.length + 2)}/${it.slug}`)}
             className="truncate rounded-[14px] border border-[#EDE9FE] bg-white px-3.5 py-2.5 text-[13.5px] font-medium text-[#111827] transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:text-[#6D28D9]"
           >
             {it.name}

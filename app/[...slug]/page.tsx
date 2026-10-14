@@ -24,6 +24,9 @@ import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
 import { istanbulDistrictJsonLd, resolveSiteIdentity } from "@/lib/siteIdentity";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { getLinkData } from "@/lib/linkData";
+import { locationHreflangFamily, trLocationKeyCandidate, trLocationKeyOf } from "@/lib/global/hreflangFamily";
+import { withMovedHtmlHrefs } from "@/lib/internalHref";
+import { fetchLocationLocaleVersions, fetchTrLocationPathCached } from "@/lib/hreflangSources";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 
 const DELIVERY_CITIES = new Set(["istanbul", "ankara", "izmir", "bursa"]);
@@ -477,6 +480,10 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
     console.error('[linkInjection] Error:', err instanceof Error ? err.message : err);
     // Hata durumunda orijinal HTML/blocks kullan
   }
+  // EK (İSTANBUL TR ↔ 13 DİL): metin içi iç bağlar taşınmış adrese (yönetilen 301 kaynağı) gidiyorsa SON adrese
+  // çözülür — kayıt değişmez, yalnız çıktı (lib/internalHref.ts withMovedHtmlHrefs). Harita boşsa çıktı aynen.
+  if (injectedIntroHtml) injectedIntroHtml = withMovedHtmlHrefs(injectedIntroHtml, redirects);
+  if (injectedBodyBlocks) injectedBodyBlocks = injectedBodyBlocks.map((b) => (b.text ? { ...b, text: withMovedHtmlHrefs(b.text, redirects) } : b));
   // (cargoMode yukarıda, PERF bloğunda tanımlanır — iş kuralı aynı.)
   // Saat vaadi statik veriden yazılmaz: kesin saat yalnız Delivery Engine'den
   // (HeroDeliveryBar / DeliveryPlanner) gelir. DELIVERY_DATA.cutoff render edilmez.
@@ -705,7 +712,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // may still point at retired /cicekler/* paths that now return 404.
   // Sayfa ≥2: canonical o sayfanın KENDİ yolu.
   const canonicalPath = pageNumber >= 2 ? requestedPath : path.startsWith("/kategori/") ? path : (page.canonical_url || path);
-  return { title, description, alternates: { canonical: absoluteUrl(canonicalPath) }, robots: indexRobots(page.index_state), openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
+  // EK (İSTANBUL TR ↔ 13 DİL): yalnız 1. sayfada, kendine canonical veren, index ve kimliği doğrulanmış İstanbul
+  // il / ilçe / mahalle sayfası locale kardeşleriyle karşılıklı hreflang basar (lib/global/hreflangFamily.ts —
+  // Global sayfa AYNI koşul ve AYNI kaynakla tr'yi listeler). Okunamazsa / eşleşme yoksa yalnız canonical (bugünkü).
+  const languages = pageNumber === 1 && canonicalPath === path ? await trLocationLanguages(page, path) : null;
+  return { title, description, alternates: languages ? { canonical: absoluteUrl(canonicalPath), languages } : { canonical: absoluteUrl(canonicalPath) }, robots: indexRobots(page.index_state), openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
+}
+
+/** Türkçe İstanbul lokasyon sayfasının hreflang ailesi (tr + indexlenebilir locale sürümleri + x-default); yoksa null. Fırlatmaz. */
+async function trLocationLanguages(page: SeoPublicPage, path: string): Promise<Record<string, string> | null> {
+  if (page.synthetic === true || page.index_state !== "index") return null;
+  try {
+    const candidate = trLocationKeyCandidate(page, path);
+    if (!candidate) return null;
+    const [redirects, fromRecord] = await Promise.all([fetchRedirectMap(), fetchTrLocationPathCached(candidate)]);
+    const key = trLocationKeyOf(page, path, redirects, fromRecord);
+    if (!key) return null;
+    return locationHreflangFamily(key, path, await fetchLocationLocaleVersions(key), absoluteUrl);
+  } catch {
+    return null;
+  }
 }
 
 function renderBlock(block: BodyBlock, i: number) {

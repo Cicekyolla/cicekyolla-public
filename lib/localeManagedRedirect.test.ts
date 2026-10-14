@@ -420,7 +420,11 @@ test("kaynak nöbeti: TR yönetilen 301 dalı sorguyu saf karardan (managedRedir
   assert.ok(trDal.includes("target.search = managedRedirectSearch(managed.to, req.nextUrl.search);"));
   assert.ok(!trDal.includes("target.search = req.nextUrl.search;"), "TR dalı sorguyu süzmeden kopyalamaz");
   assert.ok(trDal.includes("return NextResponse.redirect(target, managed.code);"));
-  assert.equal(src.split("target.search = req.nextUrl.search;").length - 1, 1, "yalnız locale dalı (hedefi zaten site içi doğrulanmış; yalnız slug değişimi)");
+  // EK (14 Eki 2026): ikinci kullanım İstanbul ticari URL 301'i — hedef koddan hesaplanan site içi yol (commercialRedirectTarget),
+  // sorgu (gclid, ?page) aynen taşınır. İkisi de locale dalında; TR dalı yine süzgeçten geçer (yukarıdaki kontrol).
+  assert.equal(src.split("target.search = req.nextUrl.search;").length - 1, 2, "yalnız locale dalı: yönetilen locale 301 + ticari İstanbul 301");
+  const localeDal = src.slice(src.indexOf("if (isGlobalLocalePath(req.nextUrl.pathname)) {"), src.indexOf("/* EK (DÖNGÜ GUARD)"));
+  assert.equal(localeDal.split("target.search = req.nextUrl.search;").length - 1, 2, "ikisi de locale dalında");
 });
 
 // ---------------------------------------------------------------------------

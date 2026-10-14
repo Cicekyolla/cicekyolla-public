@@ -20,12 +20,19 @@
 //    kategori sayfası `tr`yi yalnız karşılığı KESİNKEN ekler: Türkçe sayfa kesin indexlenebilir
 //    (trCategoryConfirmedIndexable) VE Türkçe sayfanın küme kaynağı o locale sayfasını listeliyor
 //    (listsLocaleVersion). Bilinmeyen / okunamayan her durumda tr eklenmez.
-//  • KAPSAM: ürün, ana sayfa, kategori. Lokasyon ve niyet sayfalarına TR EKLENMEZ
-//    (Türkçe lokasyon URL'leri taşınıyor) — onlar lib/global/page.tsx pageLanguages
-//    ile bugünkü gibi yalnız locale kümesini basar.
+//  • KAPSAM: ürün, ana sayfa, kategori + (13 Eki 2026) İSTANBUL LOKASYON (il / ilçe / mahalle).
+//    İstanbul TR lokasyon taşınması tamamlandı (/istanbul, /{ilçe}-cicek-siparisi,
+//    /{ilçe}/{mahalle}-cicek-siparisi). Ortak lokasyon kimliği = global_pages page_key
+//    (istanbul[/ilçe[/mahalle]]); Türkçe karşılık YÖNETİLEN 301 haritasından okunur
+//    (/istanbul/{ilçe}[/{mahalle}] → Türkçe adres; slug tahmini YOK) ve Türkçe kaydın
+//    location bloğu AYNI kimliği taşımalıdır (çift yönlü doğrulama). Diğer şehirler ve niyet
+//    sayfaları bugünkü gibi yalnız locale kümesini basar (lib/global/page.tsx pageLanguages).
 // ============================================================================
 import { isGlobalLocale, localeProductPath, SEGMENTS } from "./config.ts";
 import { withXDefault } from "./hreflang.ts";
+import { parseLocationKey } from "./locationKey.ts";
+import { localeLocationPath } from "./commercialUrl.ts";
+import { getLocationBlock, hierarchicalPathOf } from "../showcaseBlocks.ts";
 
 export const TR_HREFLANG = "tr";
 
@@ -158,4 +165,104 @@ export function trCategoryConfirmedIndexable(input: {
   indexState: string | null | undefined;
 }): boolean {
   return input.seoRead && input.treeRead && input.nodeFound && !input.hidden && input.indexState === "index";
+}
+
+// ---------------------------------------------------------------------------
+// İSTANBUL LOKASYON AİLESİ (13 Eki 2026, ADDITIVE) — TR ↔ 13 dil.
+// Aynı girdiden (global_pages `locales` + doğrulanmış Türkçe yol) iki tarafta da aynı küme kurulur.
+// ---------------------------------------------------------------------------
+
+/** Türkçe lokasyon kümesine alınan şehir kökü (TR adresleri taşınmış ve doğrulanmış tek şehir). */
+export const TR_LOCATION_CITY = "istanbul";
+
+/** Türkçe lokasyon kaydının asgari şekli (SeoPublicPage alt kümesi; saf modül API tipine bağlanmaz). */
+export interface TrLocationPage {
+  url_path?: string | null;
+  page_type?: string | null;
+  index_state?: string | null;
+  canonical_url?: string | null;
+  body_blocks?: unknown;
+}
+
+type RedirectLookup = { get(from: string): string | undefined };
+
+/**
+ * Global page_key → Türkçe ADAY yol. İl: "/istanbul". İlçe / mahalle: yönetilen 301 haritasında
+ * "/istanbul/{ilçe}[/{mahalle}]" kaynağının hedefi (taşınmış Türkçe adres). Haritada yoksa / İstanbul
+ * değilse null (aday YOK → tr eklenmez; slug'tan adres TAHMİN EDİLMEZ).
+ */
+export function trLocationCandidatePath(key: string, redirects: RedirectLookup, fromRecord?: string | null): string | null {
+  const loc = parseLocationKey(key);
+  if (!loc || loc.city !== TR_LOCATION_CITY) return null;
+  if (loc.kind === "city") return `/${TR_LOCATION_CITY}`;
+  // EK (13 Eki 2026): KALICI kaynak önce — TR kaydın kendi location bloğundan çözülen yol (API /global/tr-location).
+  // Uç yoksa / belirsizse (null) yönetilen 301 haritası yedektir. Her iki aday da trLocationConfirmed'dan geçmelidir.
+  if (isSafePath(fromRecord)) return fromRecord;
+  const to = redirects.get(`/${key}`);
+  return isSafePath(to) ? to : null;
+}
+
+function isSafePath(p: unknown): p is string {
+  return typeof p === "string" && p.startsWith("/") && !p.startsWith("//");
+}
+
+/** TR sayfanın location bloğundan (İstanbul) Global anahtar ADAYI; doğrulama trLocationKeyOf'ta. */
+export function trLocationKeyCandidate(page: TrLocationPage | null | undefined, path: string): string | null {
+  if (!page) return null;
+  if (path === `/${TR_LOCATION_CITY}`) return page.page_type === "city" ? TR_LOCATION_CITY : null;
+  const block = getLocationBlock(page as { body_blocks?: unknown });
+  return block && block.city === TR_LOCATION_CITY ? hierarchicalPathOf(block).slice(1) : null;
+}
+
+/**
+ * Türkçe sayfa bu Global anahtarın KESİN karşılığı ve indexlenebilir mi? Hepsi gerekli:
+ * kayıt aday yolda yayında, index, canonical kendisi (boşsa kendi yolu), ve kimlik eşleşiyor —
+ * il: page_type "city"; ilçe / mahalle: location bloğunun hiyerarşik yolu "/"+key.
+ */
+export function trLocationConfirmed(page: TrLocationPage | null | undefined, trPath: string, key: string): boolean {
+  if (!page || page.url_path !== trPath) return false;
+  if (page.index_state !== "index") return false;
+  if ((page.canonical_url || trPath) !== trPath) return false;
+  const loc = parseLocationKey(key);
+  if (!loc || loc.city !== TR_LOCATION_CITY) return false;
+  if (loc.kind === "city") return page.page_type === "city" && trPath === `/${TR_LOCATION_CITY}`;
+  const block = getLocationBlock(page as { body_blocks?: unknown });
+  return !!block && hierarchicalPathOf(block) === `/${key}`;
+}
+
+/**
+ * Türkçe sayfa → Global anahtar (Türkçe tarafın kümesi için). İl: "/istanbul" + page_type city.
+ * İlçe / mahalle: location bloğu (İstanbul) VE yönetilen 301 haritası bloğun hiyerarşik yolunu
+ * BU sayfaya taşıyor olmalı — Global tarafın aday kuralıyla birebir aynı koşul (tek yönlü bağ yok).
+ */
+export function trLocationKeyOf(
+  page: TrLocationPage | null | undefined,
+  path: string,
+  redirects: RedirectLookup,
+  fromRecord?: string | null,
+): string | null {
+  if (!page) return null;
+  if (path === `/${TR_LOCATION_CITY}`) return trLocationConfirmed(page, path, TR_LOCATION_CITY) ? TR_LOCATION_CITY : null;
+  const key = trLocationKeyCandidate(page, path);
+  if (!key) return null;
+  // Global taraf bu sayfayı AYNI kaynaklardan seçmeli: kalıcı kaynak (API) bu yolu gösteriyor YA DA (API yoksa) 301 haritası.
+  // Global tarafın seçimi: fromRecord varsa o, yoksa harita → burada da aynı öncelik (tek yönlü bağ yok).
+  const globalPick = isSafePath(fromRecord) ? fromRecord : redirects.get(`/${key}`);
+  if (globalPick !== path) return null;
+  return trLocationConfirmed(page, path, key) ? key : null;
+}
+
+/** LOKASYON ailesi: locale sürümleri /<locale>/<key> (yalnız indexlenebilir) + doğrulanmış Türkçe yol. */
+export function locationHreflangFamily(
+  key: string,
+  trPath: string | null | undefined,
+  locales: readonly LocaleVersion[] | null | undefined,
+  absolute: Absolute,
+): Record<string, string> | null {
+  const urls: Record<string, string> = {};
+  for (const alt of versionRows(locales)) {
+    // EK (14 Eki 2026): her dilin KENDİ kanonik yolu (ticari adres açık dilde yeni adres; kapalı dilde bugünkü).
+    if (alt.indexable && isGlobalLocale(alt.locale)) urls[alt.locale] = absolute(localeLocationPath(alt.locale, key));
+  }
+  return hreflangFamily(trPath ? absolute(trPath) : null, urls);
 }

@@ -29,3 +29,18 @@ export function withMovedDistrictHrefs(zones: DeliveryZoneCity[], redirects: Red
     }),
   }));
 }
+
+/**
+ * EK (13 Eki 2026 — İSTANBUL TR ↔ 13 DİL): operatör HTML'indeki (intro_html / blok metni) site içi `href`'ler
+ * yönetilen 301 kaynağıysa SON adrese çözülür. Kayıt DEĞİŞMEZ (yalnız çıktı): ör. Kadıköy metnindeki
+ * href="/istanbul/uskudar" → "/uskudar-cicek-siparisi" (her tıklamada / taramada bir 301 sıçraması eksilir).
+ * Yalnız "/" ile başlayan göreli yollar ("//dış-site" hariç); sorgu ve parça (#) korunur; haritada yoksa
+ * ya da harita boşsa HTML bayt bayt aynı döner.
+ */
+export function withMovedHtmlHrefs(html: string, redirects: RedirectMap): string {
+  if (!html || redirects.size === 0) return html;
+  return html.replace(/(\bhref\s*=\s*)(["'])(\/(?!\/)[^"'?#\s]*)([?#][^"']*)?\2/gi, (all, attr: string, q: string, path: string, rest?: string) => {
+    const to = redirects.get(normalizeInternalPath(path));
+    return to && to !== normalizeInternalPath(path) ? `${attr}${q}${to}${rest ?? ""}${q}` : all;
+  });
+}

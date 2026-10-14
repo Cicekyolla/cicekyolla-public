@@ -401,7 +401,7 @@ test("KAYNAK: global — locale kategori / lokasyon / storefront autoPool listel
   assert.ok(src.includes("const listing = await fetchListingPage(listingQueryFor(cfg, page, { locale }), { noStore: true });"), "kategori: locale + no-store");
   assert.ok(src.includes("if (listing && listingRowsLocalized(listing.items)) {"), "locale_name yoksa surface yolu");
   assert.ok(src.includes("getShowcaseBlock(await fetchSeoPage(`/kategori/${surface.tr_slug}`, { noStore: true }).catch(() => null))"), "kategori bloğu (pinned/manual) no-store");
-  assert.ok(src.includes("resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all, listingSize, listingCaps)"), "lokasyon tavanları");
+  assert.ok(src.includes("resolveLocationCatalog(plan, searchParams, canonicalLocationPath(locale, row), SHOP[locale].all, listingSize, listingCaps)"), "lokasyon tavanları");
   assert.ok(src.includes("const listing = await fetchListingPage(listingQueryFor(cfg, wantedPage, { locale }), { noStore: true });"), "lokasyon: Tümü listesi uçtan");
   assert.ok(src.includes("if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();"));
   assert.ok(src.includes("<GlobalPagination locale={locale} pagination={locationPagination("));

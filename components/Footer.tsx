@@ -1,6 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { GLOBAL_LOCALES } from "@/lib/global/config";
+import { localeLocationPath } from "@/lib/global/commercialUrl";
 import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 import Link from "next/link";
@@ -21,17 +22,21 @@ export interface FooterBrand {
   identity?: SiteIdentity;
 }
 
-const FOOTER_DELIVERY_LINKS = [
+const FOOTER_DELIVERY_LINKS: { label: string; href: string; globalPath?: string }[] = [
   // 23 Eyl 2026 — İL HUB'I YETİMDİ.
   // Ölçüm: ana sayfa, /teslimat-bolgeleri, /site-haritasi, /kurumsal ve /blog'un
   // HİÇBİRİNDE href="/istanbul" yok; /istanbul yalnız kendi 39 ilçesinden link
   // alıyordu (GSC 90g: 57 gösterim, 0 tıklama). Footer sitedeki her sayfada
   // olduğu için hub'a kalıcı bir üst-seviye bağlantı veren en ucuz yüzey.
   // Teslimat vaadi TAŞIMAZ — yalnız bağlantı. Diğer satırlar aynen korundu.
-  { label: "İstanbul", href: "/istanbul" },
-  { label: "Kadıköy", href: "/istanbul/kadikoy" },
-  { label: "Beşiktaş", href: "/istanbul/besiktas" },
-  { label: "Şişli", href: "/istanbul/sisli" },
+  // 13 Eki 2026 — İSTANBUL İLÇE ADRESLERİ TAŞINDI: /istanbul/{ilçe} artık yönetilen 301 KAYNAĞI
+  // (hedef /{ilçe}-cicek-siparisi; canlı 301 haritası 13 Eki: 1.014 kayıt, zincirsiz). Footer her TR
+  // sayfasında olduğu için eski adres her sayfadan 3 iç bağlantıyı 301'den geçiriyordu. TR href = bugünkü
+  // 200 adres; `globalPath` = Global karşılığın lokasyon anahtarı (locale modunda /<dil>{globalPath}, bugünkü gibi).
+  { label: "İstanbul", href: "/istanbul", globalPath: "/istanbul" },
+  { label: "Kadıköy", href: "/kadikoy-cicek-siparisi", globalPath: "/istanbul/kadikoy" },
+  { label: "Beşiktaş", href: "/besiktas-cicek-siparisi", globalPath: "/istanbul/besiktas" },
+  { label: "Şişli", href: "/sisli-cicek-siparisi", globalPath: "/istanbul/sisli" },
   { label: "Ankara", href: "/ankara/cankaya" },
   { label: "İzmir", href: "/izmir/konak" },
 ];
@@ -49,10 +54,9 @@ function teslimatLinkleri(pathname: string | null) {
   // 23 Eyl 2026: süzgeç "/istanbul/" idi, il hub'ı "/istanbul" bu testten
   // geçemiyordu. /en/istanbul, /ru/istanbul canlıda 200 döndüğü ölçüldü —
   // hub locale yolunda da gösterilebilir. Diğer iller aynen gizli kalır.
-  return FOOTER_DELIVERY_LINKS.filter((l) => l.href === "/istanbul" || l.href.startsWith("/istanbul/")).map((l) => ({
-    ...l,
-    href: `/${locale}${l.href}`,
-  }));
+  // 13 Eki 2026: süzgeç ve yol `globalPath`'ten (TR href'leri taşındı); çıktı bugünküyle birebir aynı.
+  // EK (14 Eki 2026): Global yol kanonik çözücüden (ticari adres açık dilde yeni adres, 301'e bağlantı yok).
+  return FOOTER_DELIVERY_LINKS.flatMap((l) => (l.globalPath ? [{ label: l.label, href: localeLocationPath(locale, l.globalPath.slice(1)) }] : []));
 }
 
 const FALLBACK_COLLECTION_LINKS = [

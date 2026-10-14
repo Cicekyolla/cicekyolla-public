@@ -159,8 +159,8 @@ test("KAYNAK: TEK plan paylaşılır (commerce + categories + emotion); ek istek
   assert.ok(!/fetchGlobalPage\(\s*locale\s*,\s*["']storefront/.test(page), "storefront belgesi için ek istek yok");
   const localePage = page.slice(page.indexOf("export async function LocalePage"));
   const pageBranch = localePage.slice(localePage.indexOf('if (parsed.kind === "page")'), localePage.indexOf('if (parsed.kind === "category")'));
-  const fetchers = pageBranch.match(/\b(fetch\w+|v80Contact)\(/g) ?? [];
-  assert.deepEqual([...new Set(fetchers)].sort(), ["fetchGlobalCatalog(", "fetchGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
+  const fetchers = pageBranch.match(/\b(fetch\w+|require\w+|v80Contact)\(/g) ?? [];
+  assert.deepEqual([...new Set(fetchers)].sort(), ["fetchGlobalCatalog(", "requireGlobalPage(", "fetchLocaleCatalog(", "v80Contact("].sort());
   // Yedek yol kaynak testi ve animasyon tavanı korunur
   assert.ok(page.includes("tiles = fallbackCategoryCards(catalog.categories)"));
   assert.ok(!/<ProductCard[^>]*idx=\{idx\}/.test(page));
@@ -183,7 +183,7 @@ test("KAYNAK: ürün alanı (commerce) kategori kartı taşımaz; kartlar kompak
 test("KAYNAK: şehir sayfasında da kırıntı (şehir geçerli sayfa, link değil)", () => {
   assert.match(body, /kirinti = <LocationBreadcrumb locale=\{locale\} city=\{loc\.city\} cityName=\{cityDisplayName\(locale, loc\.city\)\} \/>;/);
   const nav = oku("./global/locationNav.tsx");
-  assert.match(nav, /\{district \? \(\s*<Link href=\{`\/\$\{locale\}\/\$\{city\}`\}/);
+  assert.match(nav, /\{district \? \(\s*<Link href=\{localeLocationPath\(locale, city\)\}/);
   assert.match(nav, /<span aria-current="page" className="font-semibold text-\[#1F2937\]">\{cityName\}<\/span>/);
 });
 

@@ -11,7 +11,8 @@ import {
   guardedCategoryTarget,
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
-import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch } from "@/lib/managed-redirects";
+import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
+import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch, resolveIstanbulLegacyNeighborhood } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
 const categorySlugs = new Set(legacyCategorySlugs);
@@ -47,6 +48,17 @@ export async function middleware(req: NextRequest, event?: NextFetchEvent) {
       const target = new URL(localeManaged.to, req.nextUrl.origin);
       target.search = req.nextUrl.search;
       return NextResponse.redirect(target, localeManaged.code);
+    }
+    /* EK (14 Eki 2026 — İSTANBUL TİCARİ URL): ticari adres açık dilde eski /<dil>/istanbul[/ilçe[/mahalle]] → tek adım
+       301 → /<dil>/<ticari-slug>; kapalı dilde ticari adres → eski adres (geri alma). Yalnız o dilde YAYINDAKİ
+       (approved + indexable) anahtarlar yönlendirilir (301 → 404 yok). Yönetilen yönlendirmeden SONRA bakılır.
+       Bayrak boşken yalnız ticari slug kalıbındaki tek segmentli yollar (ör. /en/flower-delivery-…-istanbul) envantere
+       bakar (geri alma); diğer tüm locale istekleri ağ isteği yapmadan bugünkü gibi devam eder (commercialRedirect.ts). */
+    const commercial = await resolveCommercialRedirect(req.nextUrl.pathname, (refresh) => event?.waitUntil(refresh));
+    if (commercial) {
+      const target = new URL(commercial, req.nextUrl.origin);
+      target.search = req.nextUrl.search;
+      return NextResponse.redirect(target, 301);
     }
     return NextResponse.next();
   }
@@ -128,6 +140,13 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
   // Doğal 404'e düşmek yerine güvenli konum hedefine 301 (il sayfası ya da
   // /urunler). Backend il/ilçe sayfalarını yayınlayıp whitelist genişleyince
   // bu URL'ler otomatik olarak yukarıdaki /il/ilce dalından geçer.
+  // EK (13 Eki 2026 — İSTANBUL ESKİ SEMT/MAHALLE): il önekisiz eski İstanbul mahalle adresi (/levent-cicekci-41,
+  // /gaziosmanpasa-fevzi-cakmak-cicek) ana sayfaya düşmeden önce KESİN eşdeğerine (tek eşleşme) tek adımda gider.
+  // Eşleşme yoksa / belirsizse null → aşağıdaki mevcut davranış birebir (lib/managed-redirects.ts).
+  if (legacyLocation.matched && !legacyLocation.destination && legacyLocation.normalizedBase) {
+    const istanbulNbh = await resolveIstanbulLegacyNeighborhood(legacyLocation.normalizedBase);
+    if (istanbulNbh) return NextResponse.redirect(new URL(istanbulNbh, req.nextUrl.origin), 301);
+  }
   if (legacyLocation.matched && !legacyLocation.destination) {
     return NextResponse.redirect(
       new URL(locationFallback(legacyLocation.normalizedBase), req.nextUrl.origin),
