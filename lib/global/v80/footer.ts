@@ -11,6 +11,7 @@
 // ============================================================================
 import { DIR, type GlobalLocale } from "../config.ts";
 import { CITY_NAMES } from "../locationLabels.ts";
+import { localeLocationPath } from "../commercialUrl.ts";
 import { V80_DESTINATIONS, type V80Destination } from "./schema.ts";
 import { interp } from "./text.ts";
 
@@ -87,7 +88,8 @@ export function buildV80Footer(input: V80FooterInput): V80FooterModel {
   const live = new Set(input.liveDestinations);
   const deliver: V80FooterLink[] = (V80_DESTINATIONS as readonly V80Destination[])
     .filter((c) => live.has(c))
-    .map((c) => ({ key: c, label: CITY_NAMES[locale][c], href: `${home}/${c}` }));
+    // EK (14 Eki 2026): şehir bağlantısı kanonik çözücüden (İstanbul ticari adres açık dilde yeni adres, 301'e bağlantı yok).
+    .map((c) => ({ key: c, label: CITY_NAMES[locale][c], href: localeLocationPath(locale, c) }));
 
   const follow: V80FooterLink[] = V80_SOCIAL.map((s) => ({ key: s.key, label: s.label, href: s.href, external: true }));
 

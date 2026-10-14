@@ -147,6 +147,7 @@ test("KAYNAK: Global İstanbul lokasyon adresi üreten her yer tek çözücüden
   assert.ok(!/`\/\$\{locale\}\/\$\{row\.page_key\}`/.test(page.replace("return row.indexable ? localeLocationPath(locale, row.page_key) : `/${locale}/${row.page_key}`;", "")), "ham /<dil>/<page_key> kalmadı");
   assert.ok(oku("./global/sitemap.ts").includes("localeLocationPath(locale, g.page_key)"));
   assert.ok(oku("./global/hreflangFamily.ts").includes("absolute(localeLocationPath(alt.locale, key))"));
+  assert.ok(oku("./global/v80/footer.ts").includes("href: localeLocationPath(locale, c)"), "v80 footer Teslimat sütunu (pilotta bulunan 301 iç bağı)");
   assert.ok(oku("./global/locationNav.tsx").includes("localeLocationPath(locale, `${baseHref.slice(locale.length + 2)}/${it.slug}`)"));
   assert.ok(oku("../middleware.ts").includes("await resolveCommercialRedirect(req.nextUrl.pathname"));
   const mw = oku("../middleware.ts");
