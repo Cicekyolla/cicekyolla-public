@@ -43,7 +43,7 @@ test("FOOTER: TR teslimat bağlantıları 301 kaynağına gitmez; locale modunda
   for (const yeni of ['href: "/kadikoy-cicek-siparisi", globalPath: "/istanbul/kadikoy"', 'href: "/besiktas-cicek-siparisi", globalPath: "/istanbul/besiktas"', 'href: "/sisli-cicek-siparisi", globalPath: "/istanbul/sisli"', 'href: "/istanbul", globalPath: "/istanbul"']) {
     assert.ok(blok.includes(yeni), yeni);
   }
-  assert.ok(src.includes("FOOTER_DELIVERY_LINKS.flatMap((l) => (l.globalPath ? [{ label: l.label, href: `/${locale}${l.globalPath}` }] : []));"));
+  assert.ok(src.includes("FOOTER_DELIVERY_LINKS.flatMap((l) => (l.globalPath ? [{ label: l.label, href: localeLocationPath(locale, l.globalPath.slice(1)) }] : []));"), "Global yol kanonik çözücüden (bayrak kapalı → bugünkü /<dil>/istanbul/...)");
 });
 
 // ---------------------------------------------------------------------------

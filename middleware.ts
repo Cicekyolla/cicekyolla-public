@@ -14,6 +14,7 @@ import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch, resolveIstanbulLegacyNeighborhood } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
+import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
    statik listeden (/kategori/{eski-slug}) üretir. Kategori Merkezi'nden onaylı
@@ -47,6 +48,17 @@ export async function middleware(req: NextRequest, event?: NextFetchEvent) {
       const target = new URL(localeManaged.to, req.nextUrl.origin);
       target.search = req.nextUrl.search;
       return NextResponse.redirect(target, localeManaged.code);
+    }
+    /* EK (14 Eki 2026 — İSTANBUL TİCARİ URL): ticari adres açık dilde eski /<dil>/istanbul[/ilçe[/mahalle]] → tek adım
+       301 → /<dil>/<ticari-slug>; kapalı dilde ticari adres → eski adres (geri alma). Yalnız o dilde YAYINDAKİ
+       (approved + indexable) anahtarlar yönlendirilir (301 → 404 yok). Yönetilen yönlendirmeden SONRA bakılır.
+       Bayrak boşken yalnız ticari slug kalıbındaki tek segmentli yollar (ör. /en/flower-delivery-…-istanbul) envantere
+       bakar (geri alma); diğer tüm locale istekleri ağ isteği yapmadan bugünkü gibi devam eder (commercialRedirect.ts). */
+    const commercial = await resolveCommercialRedirect(req.nextUrl.pathname, (refresh) => event?.waitUntil(refresh));
+    if (commercial) {
+      const target = new URL(commercial, req.nextUrl.origin);
+      target.search = req.nextUrl.search;
+      return NextResponse.redirect(target, 301);
     }
     return NextResponse.next();
   }

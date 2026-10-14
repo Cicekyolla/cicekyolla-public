@@ -22,6 +22,8 @@
 // (ör. locationSections, categoryOrder ya da ileride eklenecek alanlar) HAM olarak
 // korunur; ayrıştırıcı onları atmaz. Public bilinmeyen bölüm id'sini basmaz.
 // ============================================================================
+// EK (14 Eki 2026): şehir / lokasyon hedefleri kanonik yoldan (İstanbul ticari adres — commercialUrl.ts).
+import { localeLocationPath } from "../commercialUrl.ts";
 
 /** 2: banners bölümü + ileri uyumluluk (bilinmeyen anahtarlar korunur). Ayrıştırıcı v1 ve v2 belgeleri okur. */
 export const V80_SCHEMA_VERSION = 2;
@@ -530,10 +532,10 @@ export function targetHref(
     }
     case "destination":
       if (ctx.livePages && !ctx.livePages.has(target.city)) return null;
-      return `/${ctx.locale}/${target.city}`;
+      return localeLocationPath(ctx.locale, target.city);
     case "page":
       if (ctx.livePages && !ctx.livePages.has(target.key)) return null;
-      return `/${ctx.locale}/${target.key}`;
+      return localeLocationPath(ctx.locale, target.key);
     case "url":
       return target.href;
     case "whatsapp":

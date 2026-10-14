@@ -183,7 +183,7 @@ test("KAYNAK: ürün alanı (commerce) kategori kartı taşımaz; kartlar kompak
 test("KAYNAK: şehir sayfasında da kırıntı (şehir geçerli sayfa, link değil)", () => {
   assert.match(body, /kirinti = <LocationBreadcrumb locale=\{locale\} city=\{loc\.city\} cityName=\{cityDisplayName\(locale, loc\.city\)\} \/>;/);
   const nav = oku("./global/locationNav.tsx");
-  assert.match(nav, /\{district \? \(\s*<Link href=\{`\/\$\{locale\}\/\$\{city\}`\}/);
+  assert.match(nav, /\{district \? \(\s*<Link href=\{localeLocationPath\(locale, city\)\}/);
   assert.match(nav, /<span aria-current="page" className="font-semibold text-\[#1F2937\]">\{cityName\}<\/span>/);
 });
 

@@ -10,7 +10,10 @@
 // adlardan üretilir; ad yoksa o basamak ve altı yazılmaz. Ana sayfa basamağı
 // o dilin locale kökü (/en, /de …) ve o dilin "Ana sayfa" etiketidir.
 // Kanonik host absoluteUrl() ile gelir — burada elle kurulmaz.
+// EK (14 Eki 2026): basamak yolları localeLocationPath'ten (İstanbul ticari adres açık dilde aynı kanonik yol).
 // ============================================================================
+import { localeLocationPath } from "./commercialUrl.ts";
+
 
 export type LocaleKirintiBasamak = { ad: string; yol: string };
 
@@ -24,7 +27,7 @@ export function localeKirintiBasamaklari(
     const segment = (parts[i] ?? "").trim();
     const ad = (adlar[i] ?? "").trim();
     if (!segment || !ad) break; // bir basamak eksikse alt basamaklar da yazılmaz
-    out.push({ ad, yol: `/${locale}/` + parts.slice(0, i + 1).join("/") });
+    out.push({ ad, yol: localeLocationPath(locale, parts.slice(0, i + 1).join("/")) });
   }
   return out;
 }

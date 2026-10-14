@@ -10,6 +10,7 @@
 // ============================================================================
 import { DIR, SEGMENTS, type GlobalLocale } from "../config.ts";
 import { CITY_NAMES } from "../locationLabels.ts";
+import { localeLocationPath } from "../commercialUrl.ts";
 import type { GlobalPage } from "../api";
 import { mergedTexts, interp } from "./copy.ts";
 import {
@@ -264,7 +265,7 @@ export function resolveV80(input: V80Input): V80View {
       } else if (g.auto === "destinations") {
         chips = s.destinations.items
           .filter((d) => d.enabled)
-          .map((d) => ({ key: d.city, label: CITY_NAMES[locale][d.city], filter: { kind: "destination" as const, city: d.city, label: CITY_NAMES[locale][d.city] }, href: input.livePages.has(d.city) ? `/${locale}/${d.city}` : null }));
+          .map((d) => ({ key: d.city, label: CITY_NAMES[locale][d.city], filter: { kind: "destination" as const, city: d.city, label: CITY_NAMES[locale][d.city] }, href: input.livePages.has(d.city) ? localeLocationPath(locale, d.city) : null }));
       } else {
         chips = g.chips
           .filter((c) => c.enabled)
@@ -345,7 +346,7 @@ export function resolveV80(input: V80Input): V80View {
       name: CITY_NAMES[locale][d.city],
       sub: texts[`destinations.subs.${d.city}`] ?? "",
       image: d.image,
-      href: input.livePages.has(d.city) ? `/${locale}/${d.city}` : null,
+      href: input.livePages.has(d.city) ? localeLocationPath(locale, d.city) : null,
       sameDay: d.city === "istanbul",
       districts: input.districtCounts?.[d.city] ?? null,
     }));

@@ -1,6 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { GLOBAL_LOCALES } from "@/lib/global/config";
+import { localeLocationPath } from "@/lib/global/commercialUrl";
 import { useCategoryTranslations, slugFromHref } from "@/lib/i18n/content";
 
 import Link from "next/link";
@@ -54,7 +55,8 @@ function teslimatLinkleri(pathname: string | null) {
   // geçemiyordu. /en/istanbul, /ru/istanbul canlıda 200 döndüğü ölçüldü —
   // hub locale yolunda da gösterilebilir. Diğer iller aynen gizli kalır.
   // 13 Eki 2026: süzgeç ve yol `globalPath`'ten (TR href'leri taşındı); çıktı bugünküyle birebir aynı.
-  return FOOTER_DELIVERY_LINKS.flatMap((l) => (l.globalPath ? [{ label: l.label, href: `/${locale}${l.globalPath}` }] : []));
+  // EK (14 Eki 2026): Global yol kanonik çözücüden (ticari adres açık dilde yeni adres, 301'e bağlantı yok).
+  return FOOTER_DELIVERY_LINKS.flatMap((l) => (l.globalPath ? [{ label: l.label, href: localeLocationPath(locale, l.globalPath.slice(1)) }] : []));
 }
 
 const FALLBACK_COLLECTION_LINKS = [

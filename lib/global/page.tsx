@@ -36,6 +36,8 @@ import { withXDefault } from "./hreflang";
 // EK (SEO YAYIN ZİNCİRİ): hreflang ailesi (TR + locale sürümleri) ve locale openGraph'ı — saf modüller.
 import { categoryHreflangFamily, homeHreflangFamily, listsLocaleVersion, productHreflangFamily, trCategoryPath, trProductPath, locationHreflangFamily, trLocationCandidatePath, trLocationConfirmed } from "./hreflangFamily";
 import { localeOpenGraph } from "./localeOpenGraph";
+// EK (14 Eki 2026): İstanbul ticari lokasyon adresleri — tek kaynak (lib/global/commercialUrl.ts).
+import { COMMERCIAL_LOCALES, commercialKeyFromSlug, isCommercialSlugCandidate, localeLocationPath, rewriteLocaleLocationHrefs } from "./commercialUrl";
 import { isCategoryPageConfirmedIndexable } from "@/lib/categoryPage";
 import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
@@ -90,6 +92,8 @@ import {
   fetchLocaleCatalog,
   fetchGlobalCatalog,
   fetchDistrictReach,
+  fetchGlobalPagesInventory,
+  GlobalApiUnavailableError,
   fetchTrLocationPath,
   requireGlobalPage,
   requireCategorySurface,
@@ -351,12 +355,31 @@ function localeHomeJsonLd(identity: SiteIdentity, locale: GlobalLocale): string 
 
 // ---- Metadata -------------------------------------------------------------
 
+/** EK (14 Eki 2026 — İSTANBUL TİCARİ URL): sayfanın kanonik yolu. İndexlenebilir satır localeLocationPath'ten
+ *  (dil açıksa /<dil>/<ticari-slug>); noindex satır envanterde olmadığı için ticari adrese taşınmaz → bugünkü yol. */
+function canonicalLocationPath(locale: GlobalLocale, row: GlobalPage): string {
+  return row.indexable ? localeLocationPath(locale, row.page_key) : `/${locale}/${row.page_key}`;
+}
+
+/**
+ * EK (14 Eki 2026): tek segmentli ticari adres (/en/flower-delivery-kadikoy-istanbul) → lokasyon segmentleri.
+ * Yalnız dil AÇIKKEN; anahtar o dilin yayındaki envanterinden ileri yönde eşleştirilir (tahmin yok). Envanter
+ * okunamazsa geçici hata (5xx) — gerçek bir ticari adres 404'e düşmez. Eşleşme yoksa segmentler aynen (→ 404).
+ */
+async function resolveCommercialSegments(locale: GlobalLocale, path: string[]): Promise<string[]> {
+  if (path.length !== 1 || !COMMERCIAL_LOCALES.has(locale) || !isCommercialSlugCandidate(locale, path[0])) return path;
+  const inv = await fetchGlobalPagesInventory(locale);
+  if (!inv) throw new GlobalApiUnavailableError(`/api/public/global/pages-inventory?locale=${locale}`);
+  const key = commercialKeyFromSlug(locale, path[0], inv.map((r) => r.page_key));
+  return key ? key.split("/") : path;
+}
+
 function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, string> | null {
   if (!row.indexable) return null;
   const languages: Record<string, string> = {};
   for (const alt of row.locales ?? []) {
     if (alt.indexable && isGlobalLocale(alt.locale)) {
-      const path = row.page_key === "home" ? `/${alt.locale}` : `/${alt.locale}/${row.page_key}`;
+      const path = row.page_key === "home" ? `/${alt.locale}` : localeLocationPath(alt.locale, row.page_key);
       languages[alt.locale] = absoluteUrl(path);
     }
   }
@@ -425,7 +448,7 @@ async function listingSeoFor(
  *    (lib/global/locationPaging.ts locationListingSeo — sorgu yalnız oradaki saf yardımcılarla okunur).
  */
 export async function localeMetadata(locale: GlobalLocale, path: string[], listing?: LocationSearchParams): Promise<Metadata> {
-  const parsed = parseLocalePath(locale, path);
+  const parsed = parseLocalePath(locale, await resolveCommercialSegments(locale, path));
 
   if (parsed.kind === "home") {
     // EK (13 Eki 2026): API okunamazsa noindex BASILMAZ (geçici 5xx); onaylı satır yoksa (null) bugünkü gibi noindex.
@@ -494,7 +517,8 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     if (!row) return { robots: NOINDEX };
     // EK: sayfa ≥ 2'de canonical + başlık eki HAM sorgudan değil ÇÖZÜLMÜŞ katalog görünümünden gelir
     // (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola — locationListingSeo). Sayfa 1 aynen.
-    const basePath = `/${locale}/${row.page_key}`;
+    // EK (14 Eki 2026): kanonik taban yol — İstanbul ticari adres açık dilde yeni adres (noindex satır eski adreste kalır).
+    const basePath = canonicalLocationPath(locale, row);
     const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };
     const self = absoluteUrl(seo.canonicalPath);
     // EK (İSTANBUL TR ↔ 13 DİL): İstanbul il / ilçe / mahalle sayfası doğrulanmış Türkçe karşılığını kümeye alır;
@@ -956,7 +980,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       if (loc.city === "istanbul") {
         const identity = await siteIdentity();
         localLd = istanbulDistrictJsonLd(identity, {
-          path: `/${locale}/${row.page_key}`, areaName: districtName, pageName: row.h1 ?? "",
+          path: canonicalLocationPath(locale, row), areaName: districtName, pageName: row.h1 ?? "",
           serviceType: SERVICE_TYPE[locale], cityLabel: cityName,
         });
       }
@@ -1010,7 +1034,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   const listingSize = listingSettings?.per_page;
   const listingCaps = listingSettings ? { maxItems: listingSettings.max_items, maxPages: listingSettings.max_pages, paginate: listingSettings.pagination_enabled } : undefined;
   let view: LocationCatalogView | null = plan
-    ? resolveLocationCatalog(plan, searchParams, `/${locale}/${row.page_key}`, SHOP[locale].all, listingSize, listingCaps)
+    ? resolveLocationCatalog(plan, searchParams, canonicalLocationPath(locale, row), SHOP[locale].all, listingSize, listingCaps)
     : null;
   if (plan && view && listingSettings && view.category === null && loc) {
     // İl / ilçe / mahalle AYNI blok + AYNI uç (sözleşme v2 §5): TR seo_page showcase bloğu (manual → ids; auto+pinned → pinned_ids)
@@ -1035,7 +1059,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       const rows = cfg.mode === "manual" ? (cfg.paginationEnabled ? all.slice((page - 1) * size, page * size) : all.slice(0, size)) : all;
       const total = cfg.mode === "manual" ? all.length : listing.pagination.total;
       for (const r of listing.items) if (!plan.byId.has(r.id)) plan.byId.set(r.id, localeRowToCatalogProduct(r));
-      const basePath = `/${locale}/${row.page_key}`;
+      const basePath = canonicalLocationPath(locale, row);
       view = {
         ...view, page, totalPages, total, ids: rows.map((r) => r.id),
         chips: view.chips.map((c) => (c.key === null ? { ...c, count: total } : c)),
@@ -1102,7 +1126,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
           <>
             {row.content_html ? (
               <section style={{ marginTop: 40, maxWidth: 720 }}>
-                <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: row.content_html }} />
+                <div style={{ fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: rewriteLocaleLocationHrefs(row.content_html) }} />
               </section>
             ) : null}
             <div style={{ maxWidth: 720 }}><FaqSection locale={locale} faq={row.faq} /></div>
@@ -1136,7 +1160,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
-        {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: row.intro_html }} /> : null}
+        {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: rewriteLocaleLocationHrefs(row.intro_html) }} /> : null}
         {/* RELEASE 3: niyet sayfasında girişten hemen sonra gerçek kesme saati şeridi (yalnız motor verisi varsa). */}
         {intent && cutoffs && cutoffs.length > 0 ? <CutoffStrip locale={locale} rows={cutoffs} /> : null}
       </div>
@@ -1153,7 +1177,7 @@ export async function LocalePage({ locale, path, searchParams }: {
   /** Rota sorgusu (yalnız lokasyon sayfası kataloğu kullanır: ?category, ?page). Sayfa ≥ 2 canonical'ı aynı sorgudan: localeMetadata. */
   searchParams?: LocationSearchParams;
 }) {
-  const parsed = parseLocalePath(locale, path);
+  const parsed = parseLocalePath(locale, await resolveCommercialSegments(locale, path));
 
   if (parsed.kind === "home") {
     // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;

@@ -7,6 +7,7 @@
 // ============================================================================
 import { absoluteUrl } from "@/lib/site-config";
 import { GLOBAL_LOCALES, SEGMENTS, type GlobalLocale } from "./config";
+import { localeLocationPath } from "./commercialUrl";
 import {
   fetchLocaleInventory,
   fetchGlobalPagesInventory,
@@ -72,7 +73,8 @@ function localeSitemapXml(
   const nodes = [
     // global_pages (yalnız approved+indexable döner): home → /de, diğerleri → /de/<page_key>
     ...(pages ?? []).map((g) =>
-      node(g.page_key === "home" ? `/${locale}` : `/${locale}/${g.page_key}`, g.updated_at)
+      // EK (14 Eki 2026): lokasyon yolu kanonik çözücüden — ticari adres açık dilde YALNIZ yeni adres listelenir.
+      node(g.page_key === "home" ? `/${locale}` : localeLocationPath(locale, g.page_key), g.updated_at)
     ),
     ...inv.products.map((p) => productNode(`/${locale}/${seg.product}/${p.slug}`, p.updated_at, p.image)),
     ...inv.categories.map((c) => node(`/${locale}/${seg.category}/${c.slug}`, c.updated_at)),

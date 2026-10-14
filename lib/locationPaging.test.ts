@@ -479,7 +479,8 @@ test("KAYNAK: page.tsx dilimi kart modeline çevirir (İstanbul + kargo); tam ka
   assert.equal(page.split("planLocationPage(").length - 1, 1);
   // EK (LİSTELEME MOTORU): 5. parametre = global ayardan sayfa boyutu (settings.per_page); taban yol ve etiket aynen.
   // EK (ADMİN TEK MERKEZ): 6. parametre = motor tavanları (max_items dilimde de, max_pages, tek sayfa); ayar no-store okunur.
-  assert.match(page, /resolveLocationCatalog\(plan, searchParams, `\/\$\{locale\}\/\$\{row\.page_key\}`, SHOP\[locale\]\.all, listingSize, listingCaps\)/, "linkler canonical sorgusuz yoldan");
+  // EK (14 Eki 2026): taban yol = metadata'daki kanonik yol (canonicalLocationPath; İstanbul ticari adres açık dilde yeni adres).
+  assert.match(page, /resolveLocationCatalog\(plan, searchParams, canonicalLocationPath\(locale, row\), SHOP\[locale\]\.all, listingSize, listingCaps\)/, "linkler canonical sorgusuz yoldan");
   assert.ok(page.includes("const listingSettings = plan ? await fetchListingSettings({ noStore: true }) : null;"), "ayar global + no-store (fail-open DEFAULTS)");
   assert.ok(page.includes("const listingSize = listingSettings?.per_page;"), "sayfa boyutu global ayardan");
   assert.ok(page.includes("const listingCaps = listingSettings ? { maxItems: listingSettings.max_items, maxPages: listingSettings.max_pages, paginate: listingSettings.pagination_enabled } : undefined;"));
@@ -513,7 +514,7 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(meta.includes("const listingPage = parseListingPageParam(listing?.page);"));
   assert.ok(meta.includes("if (listingPage === null) return { robots: NOINDEX };"));
   // EK: sayfa ≥ 2'de canonical + başlık eki ÇÖZÜLMÜŞ listeden (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola).
-  assert.ok(meta.includes("const basePath = `/${locale}/${row.page_key}`;"));
+  assert.ok(meta.includes("const basePath = canonicalLocationPath(locale, row);"));
   assert.ok(meta.includes("const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };"));
   assert.ok(meta.includes("const self = absoluteUrl(seo.canonicalPath);"));
   assert.ok(meta.includes("const languages = listingPage > 1 ? null : ((await istanbulLocationLanguages(row)) ?? pageLanguages(locale, row));"));

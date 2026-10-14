@@ -31,6 +31,7 @@
 import { isGlobalLocale, localeProductPath, SEGMENTS } from "./config.ts";
 import { withXDefault } from "./hreflang.ts";
 import { parseLocationKey } from "./locationKey.ts";
+import { localeLocationPath } from "./commercialUrl.ts";
 import { getLocationBlock, hierarchicalPathOf } from "../showcaseBlocks.ts";
 
 export const TR_HREFLANG = "tr";
@@ -260,7 +261,8 @@ export function locationHreflangFamily(
 ): Record<string, string> | null {
   const urls: Record<string, string> = {};
   for (const alt of versionRows(locales)) {
-    if (alt.indexable && isGlobalLocale(alt.locale)) urls[alt.locale] = absolute(`/${alt.locale}/${key}`);
+    // EK (14 Eki 2026): her dilin KENDİ kanonik yolu (ticari adres açık dilde yeni adres; kapalı dilde bugünkü).
+    if (alt.indexable && isGlobalLocale(alt.locale)) urls[alt.locale] = absolute(localeLocationPath(alt.locale, key));
   }
   return hreflangFamily(trPath ? absolute(trPath) : null, urls);
 }
