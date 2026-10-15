@@ -47,3 +47,20 @@
 - **Hacim kanıtı yok:** GSC veya Wordstat ile doğrulanmalı. Gerekirse kalıp tek satırda değiştirilir; RU bayrağı kapalıyken etkisizdir.
 - **Dil onayı:** anadili Rusça bir editörün "доставка цветов" + `stambul` translitini onaylaması önerilir.
 - **Rakip formatı karışık:** RU rakipleri arasında `istanbul` (ASCII İngilizce) kullananlar da var. Translit `stambul` bilinçli bir seçimdir.
+
+## 6. Entegrasyon doğrulaması (15 Eki 2026)
+- **Harita (`ru-gecis-haritasi.csv`):** yeniden üretilmedi, olduğu gibi doğrulandı. 1.015 satır (il 1, ilçe 39, mahalle 975); 0 hata, 0 çakışma. Kalıp, sözlük, canonical ve 301 alanları tutarlı.
+- **TR ↔ RU:** 1.015/1.015 kayıt canlı 301 haritasıyla (`/api/public/redirects`) birebir.
+  - Canlı `tr-location` API'si ile 144/144 eşleşme (örneklem).
+  - Kalan 871 adres kullanıcı kararıyla API'den ayrıca sorgulanmadı (kullanım/rate-limit maliyeti).
+- **301:** `lib/ruCommercialMiddleware.test.ts` middleware'i gerçekten çalıştırır.
+  - 1.015 eski adresin her biri tek 301 ile ticari adrese gidiyor.
+  - `gclid`/`utm` bayt bayt korunuyor; hedef yeniden yönlendirilmiyor (döngü yok).
+  - Uydurma slug yönlendirilmiyor.
+- **Preview (`dpl_5NT1cjXp…`):**
+  - RU il, ilçe ve mahalle sayfaları: 200, self-canonical, 15 hreflang, kırıntı yeni adreslerle, 50 ürün.
+  - RU sitemap 1.015 ticari / 0 eski.
+  - `/ru` ana sayfasında eski `/ru/istanbul` bağlantısı 0.
+  - Ürün sayfasında sepet var; `/sepet` ve `/checkout` 200.
+  - Uydurma slug 404.
+- **İçerik:** `ru-icerik-denetimi.md`. CMS ve ürün kayıtlarına dokunulmadı; düzeltmeler ayrı onaya sunulacak.
