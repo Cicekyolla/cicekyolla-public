@@ -64,3 +64,17 @@ Durum: **BAŞARILI. Hiçbir canlı veri değiştirilmedi.**
 | 39 | `istanbul/zeytinburnu` | GÜNCELLE | approved/index | 2026-08-25 | Доставка цветов в Zeytinburnu (Стамбул) | Доставка цветов в Зейтинбурну, Стамбул |
 | 40 | `hotel-delivery` | YENİ | yok | - | — | Доставка цветов в отель в Стамбуле |
 | 41 | `hospital-delivery` | YENİ | yok | - | — | Доставка цветов в больницу в Стамбуле |
+
+## Tekrar kontrol (07:56 UTC)
+
+- **İlçeler:** 39 ilçenin `updated_at` değeri yedekle aynı; ilk okumadan beri değişiklik yok.
+- **Niyet sayfaları:** `hotel-delivery` ve `hospital-delivery` hâlâ yok.
+
+## Engeller
+
+1. **Otel ve hastane sayfaları için Admin ekranı yok.**
+   - Admin'deki Global Merkezi → Lokasyonlar düzenleyicisi yalnız şehir, ilçe ve mahalle sayfalarını açıyor.
+   - API bu kayıtları kabul ediyor (`PUT /api/admin/global/pages/one`), ancak bugün bunu yalnız Console betiği yapabiliyor.
+2. **İçerik yazma ucunda yerleşik dry-run yok.** API'de dry-run yalnız toplu yayın ve indeks uçlarında var. Bu yüzden dry-run "salt okuma + yedek + plan" olarak yapıldı.
+3. **Canlı yazma editör girişi gerektiriyor.** Claude'un bu yetkisi yok; yazma işlemini Admin'de giriş yapmış kişi yapmalı.
+4. **İlçe kayıtları mevcut ekranla yazılabiliyor.** Global Merkezi → Lokasyonlar → İstanbul → ilçe → Düzenle → RU → «Kaydet (canlı sayfa)». Metinler `PILOT-KOPYALA.md` dosyasında.
