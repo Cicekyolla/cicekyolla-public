@@ -19,7 +19,7 @@
 //  - İç bağlantı zinciri locale ailesi İÇİNDE kalır (DE sayfadan TR yüzeyine düşme yok).
 // ============================================================================
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
@@ -76,8 +76,8 @@ import {
   DIR,
   DESTINATION_ROOT,
   isIntentPageKey,
+  type ParsedLocalePath,
   INTENT_PAGE_CATEGORY,
-  type IntentPageKey,
   localeBlogPath,
 } from "./config";
 // GLOBAL BLOG MERKEZİ (11 Eki 2026, ADDITIVE): /<dil>/blog liste + detay + ana sayfa rehber bölümü.
@@ -96,11 +96,14 @@ import {
   GlobalApiUnavailableError,
   fetchTrLocationPath,
   requireGlobalPage,
+  requireGlobalSalesPage,
+  fetchLiveSalesPages,
   requireCategorySurface,
   requireProductSurface,
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
+import { curateCatalog, isSalesPageRow, isSalesSegment, salesPagePath, salesProductIds, salesRedirectTarget } from "./salesPages";
 import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, deliveryPresentation, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
 import { REACH, FAR, formatThresholdTl } from "./reachCopy";
 import {
@@ -358,6 +361,8 @@ function localeHomeJsonLd(identity: SiteIdentity, locale: GlobalLocale): string 
 /** EK (14 Eki 2026 — İSTANBUL TİCARİ URL): sayfanın kanonik yolu. İndexlenebilir satır localeLocationPath'ten
  *  (dil açıksa /<dil>/<ticari-slug>); noindex satır envanterde olmadığı için ticari adrese taşınmaz → bugünkü yol. */
 function canonicalLocationPath(locale: GlobalLocale, row: GlobalPage): string {
+  // EK (15 Eki 2026 — SATIŞ SAYFALARI): satış sayfasının tek kanonik adresi dilin url_slug'ı (yoksa anahtar).
+  if (isSalesPageRow(row)) return salesPagePath(locale, row.page_key, row.url_slug);
   return row.indexable ? localeLocationPath(locale, row.page_key) : `/${locale}/${row.page_key}`;
 }
 
@@ -374,12 +379,46 @@ async function resolveCommercialSegments(locale: GlobalLocale, path: string[]): 
   return key ? key.split("/") : path;
 }
 
+/**
+ * EK (15 Eki 2026 — SATIŞ SAYFALARI): tek segmentli satış sayfası isteği.
+ *  • yerleşik niyet anahtarı (/xx/hotel-delivery) → bugünkü gibi anahtarla okunur
+ *  • başka tek segment (bugün 404) → dilin url_slug'ı / Admin'den açılmış satış anahtarı olarak (?slug=) okunur
+ * Satırın kanonik adresi istenen segment değilse (anahtarla gelinip url_slug tanımlı) 301 hedefi döner.
+ * Satış isteği değilse null (bugünkü akış aynen).
+ */
+async function resolveSalesRequest(
+  locale: GlobalLocale, segs: string[], parsed: ParsedLocalePath,
+): Promise<{ row: GlobalPage | null; redirect: string | null } | null> {
+  if (segs.length !== 1) return null;
+  const seg = segs[0];
+  let row: GlobalPage | null;
+  if (parsed.kind === "page" && isIntentPageKey(parsed.key)) row = await requireGlobalPage(locale, seg);
+  else if (parsed.kind === "unknown" && isSalesSegment(seg)) row = await requireGlobalSalesPage(locale, seg);
+  else return null;
+  if (row && !isSalesPageRow(row)) row = null;
+  return { row, redirect: row ? salesRedirectTarget(locale, seg, row) : null };
+}
+
+/** 301 hedefine istek sorgusu (gclid/utm…) aynen taşınır. */
+function withQuery(path: string, searchParams?: Record<string, string | string[] | undefined>): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(searchParams ?? {})) {
+    if (typeof v === "string") q.append(k, v);
+    else if (Array.isArray(v)) v.forEach((x) => q.append(k, x));
+  }
+  const qs = q.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 function pageLanguages(locale: GlobalLocale, row: GlobalPage): Record<string, string> | null {
   if (!row.indexable) return null;
   const languages: Record<string, string> = {};
   for (const alt of row.locales ?? []) {
     if (alt.indexable && isGlobalLocale(alt.locale)) {
-      const path = row.page_key === "home" ? `/${alt.locale}` : localeLocationPath(alt.locale, row.page_key);
+      const path = row.page_key === "home" ? `/${alt.locale}`
+        // EK (SATIŞ SAYFALARI): her dil karşılığı KENDİ url_slug adresiyle (yoksa anahtar).
+        : isSalesPageRow(row) ? salesPagePath(alt.locale, row.page_key, alt.url_slug)
+        : localeLocationPath(alt.locale, row.page_key);
       languages[alt.locale] = absoluteUrl(path);
     }
   }
@@ -416,11 +455,12 @@ async function istanbulLocationLanguages(row: GlobalPage): Promise<Record<string
  * bilinmiyor → locationListingSeo filtresiz yola canonical verir (kopya içerik kendi adresiyle önerilmez).
  */
 async function listingSeoFor(
-  locale: GlobalLocale, pageKey: string, basePath: string, listing: LocationSearchParams | undefined,
+  locale: GlobalLocale, pageKey: string, basePath: string, listing: LocationSearchParams | undefined, productIds: readonly number[] = [],
 ): Promise<{ canonicalPath: string; titlePage: number }> {
   const locKey = parseLocationKey(pageKey);
-  const intent = isIntentPageKey(pageKey) ? pageKey : null;
-  const catalogResp = locKey
+  // EK (SATIŞ SAYFALARI): her satış sayfası (yerleşik niyet + Admin'den açılan) aynı İstanbul katalog akışı.
+  const intent = isSalesPageRow({ page_key: pageKey }) ? pageKey : null;
+  const rawCatalogResp = locKey
     ? await fetchGlobalCatalog(locale, {
         city: locKey.city,
         district: locKey.kind === "city" ? undefined : locKey.district,
@@ -429,9 +469,12 @@ async function listingSeoFor(
     : intent
       ? await fetchGlobalCatalog(locale, { city: DESTINATION_ROOT })
       : null;
+  // EK (SATIŞ SAYFALARI): Admin ürün seçimi varsa seri = seçim (LocalePage ile aynı indirgeme).
+  const catalogResp = productIds.length ? curateCatalog(rawCatalogResp, productIds) : rawCatalogResp;
   const readable = (locKey || intent) ? catalogDecision(catalogResp, true).mode === "catalog" : false;
   // Niyet sayfasının ana serisi = varsayılan kategori (o dilde canlı ürünü varsa; yoksa "Tümü").
-  const mainCategory = intent ? INTENT_PAGE_CATEGORY[intent] : null;
+  // Admin ürün seçimi varsa seri = seçim (kategori varsayılanı uygulanmaz).
+  const mainCategory = intent && isIntentPageKey(intent) && !productIds.length ? INTENT_PAGE_CATEGORY[intent] : null;
   const effective = readable && intent ? withIntentCategory(listing, await fetchLocaleCatalog(locale), mainCategory) : listing;
   return locationListingSeo(basePath, listing, readable ? { category: listingCategoryParam(effective?.category) } : null, mainCategory);
 }
@@ -448,7 +491,13 @@ async function listingSeoFor(
  *    (lib/global/locationPaging.ts locationListingSeo — sorgu yalnız oradaki saf yardımcılarla okunur).
  */
 export async function localeMetadata(locale: GlobalLocale, path: string[], listing?: LocationSearchParams): Promise<Metadata> {
-  const parsed = parseLocalePath(locale, await resolveCommercialSegments(locale, path));
+  const segs = await resolveCommercialSegments(locale, path);
+  const parsedPath = parseLocalePath(locale, segs);
+  // EK (15 Eki 2026 — SATIŞ SAYFALARI): url_slug adresi / Admin'den açılan satış anahtarı → aynı "page" akışı.
+  // 301 hedefi ya da yayında olmayan satış adresi → index dışı (LocalePage 301 / 404 verir).
+  const sales = await resolveSalesRequest(locale, segs, parsedPath);
+  if (sales && (!sales.row || sales.redirect)) return { robots: NOINDEX };
+  const parsed: ParsedLocalePath = sales?.row ? { kind: "page", key: sales.row.page_key } : parsedPath;
 
   if (parsed.kind === "home") {
     // EK (13 Eki 2026): API okunamazsa noindex BASILMAZ (geçici 5xx); onaylı satır yoksa (null) bugünkü gibi noindex.
@@ -513,13 +562,13 @@ export async function localeMetadata(locale: GlobalLocale, path: string[], listi
     // Pozitif tam sayı olmayan sayfa numarası: sayfa 404 verir (LocalePage) → metadata da index dışı.
     const listingPage = parseListingPageParam(listing?.page);
     if (listingPage === null) return { robots: NOINDEX };
-    const row = await requireGlobalPage(locale, parsed.key);
+    const row = sales?.row ?? await requireGlobalPage(locale, parsed.key);
     if (!row) return { robots: NOINDEX };
     // EK: sayfa ≥ 2'de canonical + başlık eki HAM sorgudan değil ÇÖZÜLMÜŞ katalog görünümünden gelir
     // (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola — locationListingSeo). Sayfa 1 aynen.
     // EK (14 Eki 2026): kanonik taban yol — İstanbul ticari adres açık dilde yeni adres (noindex satır eski adreste kalır).
     const basePath = canonicalLocationPath(locale, row);
-    const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };
+    const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing, salesProductIds(row)) : { canonicalPath: basePath, titlePage: 1 };
     const self = absoluteUrl(seo.canonicalPath);
     // EK (İSTANBUL TR ↔ 13 DİL): İstanbul il / ilçe / mahalle sayfası doğrulanmış Türkçe karşılığını kümeye alır;
     // diğer şehirler / niyet sayfaları ve doğrulanamayan her durum pageLanguages ile bugünkü gibi (yalnız locale).
@@ -893,6 +942,13 @@ function FaqSection({ locale, faq }: { locale: GlobalLocale; faq: { q: string; a
   );
 }
 
+/** EK (SATIŞ SAYFALARI): iç bağlantı listesi başlığı (13 dil). */
+const SALES_LINKS_TITLE: Record<GlobalLocale, string> = {
+  de: "Beliebte Anlässe", en: "Popular occasions", fr: "Occasions populaires", nl: "Populaire gelegenheden",
+  it: "Occasioni più richieste", es: "Ocasiones populares", pt: "Ocasiões populares", az: "Populyar sifarişlər",
+  ru: "Популярные поводы", ar: "مناسبات شائعة", zh: "热门场合", ja: "人気のシーン", ko: "인기 선물 상황",
+};
+
 /** RELEASE 3: niyet sayfasında ?category yoksa varsayılan kategori (yalnız o dilde canlı ürünü varsa; yoksa süzgeçsiz). */
 function withIntentCategory(searchParams: LocationSearchParams | undefined, catalog: LocaleCatalog, categorySlug: string | null): LocationSearchParams | undefined {
   if (!categorySlug || searchParams?.category) return searchParams;
@@ -924,19 +980,23 @@ function faqJsonLd(faq: { q: string; a: string }[] | null | undefined): string |
   });
 }
 
-async function GlobalPageBody({ locale, row, catalog, source, sections, searchParams: rawSearchParams, intent, cutoffs }: {
+async function GlobalPageBody({ locale, row, catalog, source, sections, searchParams: rawSearchParams, intent, intentCategory, cutoffs }: {
   locale: GlobalLocale; row: GlobalPage; catalog: LocaleCatalog; source?: CatalogDecision;
   /** Bölüm sırası/görünürlüğü (catalog yanıtı location_sections → parseLocationSections); yoksa varsayılan. */
   sections?: readonly Readonly<LocationSection>[];
   /** İstek sorgusu: ?category=<slug> + ?page=<N> (lokasyon kataloğu sayfalaması). 1. sayfanın canonical'ı sorgusuz yol; sayfa ≥ 2 → localeMetadata. */
   searchParams?: LocationSearchParams;
   /** RELEASE 3: niyet sayfası anahtarı (kırıntı ana sayfa → sayfa; FAQPage; WhatsApp ön-metni = H1). */
-  intent?: IntentPageKey | null;
+  intent?: string | null;
+  /** RELEASE 3 + SATIŞ SAYFALARI: ürün bloğunun varsayılan kategorisi (yerleşik niyette, ürün seçimi yokken). */
+  intentCategory?: string | null;
   /** RELEASE 3: merkez ilçelerin gerçek kesme saati satırları (Delivery Motor); yoksa şerit basılmaz. */
   cutoffs?: CutoffRow[] | null;
 }) {
+  // EK (SATIŞ SAYFALARI): iç bağlantı listesi — bu sayfa hariç, en fazla 12 (yalnız 1. sayfada basılır).
+  const salesLinks = (await fetchLiveSalesPages(locale)).filter((l) => l.page_key !== row.page_key).slice(0, 12);
   // RELEASE 3: niyet sayfasında ?category yoksa varsayılan kategori (lokasyon sayfalarında sorgu aynen geçer).
-  const searchParams = intent ? withIntentCategory(rawSearchParams, catalog, INTENT_PAGE_CATEGORY[intent]) : rawSearchParams;
+  const searchParams = intent ? withIntentCategory(rawSearchParams, catalog, intentCategory ?? null) : rawSearchParams;
   // Lokasyon yüzeyi ise: üst hiyerarşi (crawlable kırıntı) + bir alt seviyenin
   // GERÇEK listesi. Veri TR location core ∩ o dilde yayında olan yüzeyler.
   const loc = parseLocationKey(row.page_key);
@@ -958,7 +1018,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         <span aria-current="page" className="font-semibold text-[#1F2937]">{row.h1}</span>
       </nav>
     );
-    kirintiLd = localeBreadcrumbJsonLd(locale, [row.page_key], [row.h1], absoluteUrl, LABELS[locale].ana);
+    // EK (SATIŞ SAYFALARI): kırıntı yolu sayfanın kanonik adresi (url_slug; yoksa anahtar).
+    kirintiLd = localeBreadcrumbJsonLd(locale, [row.url_slug || row.page_key], [row.h1], absoluteUrl, LABELS[locale].ana);
   }
   if (loc) {
     if (loc.kind === "city") {
@@ -1166,6 +1227,13 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
       </div>
       {/* Bölümler Admin sırasında (varsayılan: güven → ürünler → kategoriler → duygu → yorumlar → hikâye → lokasyonlar → içerik → CTA). */}
       {order.map(block)}
+      {/* EK (15 Eki 2026 — SATIŞ SAYFALARI): o dilde yayındaki satış sayfalarına gerçek <a href> (lokasyon + satış sayfalarından iç bağ). */}
+      {!continuation && salesLinks.length > 0 ? (
+        <nav aria-label={SALES_LINKS_TITLE[locale]} data-sales-links className="mt-10 border-t border-[#E9E5F5] pt-6">
+          <h2 style={S.h2}>{SALES_LINKS_TITLE[locale]}</h2>
+          {salesLinks.map((l) => <Link key={l.page_key} href={salesPagePath(locale, l.page_key, l.url_slug)} style={S.chip}>{l.h1}</Link>)}
+        </nav>
+      ) : null}
     </main>
   );
 }
@@ -1177,7 +1245,14 @@ export async function LocalePage({ locale, path, searchParams }: {
   /** Rota sorgusu (yalnız lokasyon sayfası kataloğu kullanır: ?category, ?page). Sayfa ≥ 2 canonical'ı aynı sorgudan: localeMetadata. */
   searchParams?: LocationSearchParams;
 }) {
-  const parsed = parseLocalePath(locale, await resolveCommercialSegments(locale, path));
+  const segs = await resolveCommercialSegments(locale, path);
+  const parsedPath = parseLocalePath(locale, segs);
+  // EK (15 Eki 2026 — SATIŞ SAYFALARI): url_slug adresi / Admin'den açılan satış anahtarı → "page" akışı;
+  // anahtarla gelinip url_slug tanımlıysa tek kanonik adrese 301 (sorgu korunur); yayında değilse 404.
+  const sales = await resolveSalesRequest(locale, segs, parsedPath);
+  if (sales?.redirect) permanentRedirect(withQuery(sales.redirect, searchParams as Record<string, string | string[] | undefined>));
+  if (sales && !sales.row) notFound();
+  const parsed: ParsedLocalePath = sales?.row ? { kind: "page", key: sales.row.page_key } : parsedPath;
 
   if (parsed.kind === "home") {
     // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;
@@ -1230,11 +1305,14 @@ export async function LocalePage({ locale, path, searchParams }: {
     // RELEASE 3: niyet sayfası (hotel-delivery / hospital-delivery / delivery-without-address) — İstanbul
     // şehir kataloğuyla (aynı gün destinasyonu) ürün alanı; varsayılan kategori süzgeci INTENT_PAGE_CATEGORY.
     const intent = isIntentPageKey(parsed.key) ? parsed.key : null;
+    // EK (15 Eki 2026 — SATIŞ SAYFALARI): Admin'den açılan satış sayfası niyet sayfasıyla AYNI akış (İstanbul kataloğu,
+    // kırıntı, SSS, kesme saati); ürün seçimi varsa katalog seçime indirgenir, varsayılan kategori uygulanmaz.
+    const salesKey = isSalesPageRow({ page_key: parsed.key }) ? parsed.key : null;
     // EK (SEO YAYIN ZİNCİRİ): ?page pozitif tam sayı değilse (0, -1, abc, 1.5 …) 1. sayfanın kopyası
     // 200 ile sunulmaz → 404. Son sayfanın ötesi kontrolü katalog görünümünün kurulduğu yerde: GlobalPageBody.
     if (parseListingPageParam(searchParams?.page) === null) notFound();
-    const [row, catalog, contact, catalogResp] = await Promise.all([
-      requireGlobalPage(locale, parsed.key),
+    const [row, catalog, contact, rawCatalogResp] = await Promise.all([
+      sales?.row ? Promise.resolve(sales.row) : requireGlobalPage(locale, parsed.key),
       fetchLocaleCatalog(locale),
       v80Contact(),
       locKey
@@ -1243,21 +1321,25 @@ export async function LocalePage({ locale, path, searchParams }: {
             district: locKey.kind === "city" ? undefined : locKey.district,
             neighborhood: locKey.kind === "neighborhood" ? locKey.neighborhood : undefined,
           })
-        : intent
+        : salesKey
           ? fetchGlobalCatalog(locale, { city: DESTINATION_ROOT })
           : Promise.resolve(null),
     ]);
     if (!row) notFound();
-    const source = locKey || intent ? catalogDecision(catalogResp, true) : undefined;
+    const pickedIds = salesKey ? salesProductIds(row) : [];
+    const catalogResp = pickedIds.length ? curateCatalog(rawCatalogResp, pickedIds) : rawCatalogResp;
+    const source = locKey || salesKey ? catalogDecision(catalogResp, true) : undefined;
     // Bölüm sırası AYNI katalog yanıtından (ek istek YOK); eski API / alan yok → varsayılan sıra.
     const sections = parseLocationSections(catalogResp?.location_sections);
     // Bu sayfanın şehir kökü kesinlikle yayımlı (satır var) → uç yoksa bile footer'da basılır.
-    const footer = await v80FooterFromCatalog(locale, catalog, contact, [intent ? DESTINATION_ROOT : parsed.key.split("/")[0]]);
-    // Kesme saati şeridi: otel/hastane sayfalarında (adressiz teslimat sayfası WhatsApp öncelikli; kurye vaadi taşımaz).
-    const cutoffs = intent && intent !== "delivery-without-address" ? await intentCutoffRows(locale) : null;
+    const footer = await v80FooterFromCatalog(locale, catalog, contact, [salesKey ? DESTINATION_ROOT : parsed.key.split("/")[0]]);
+    // Kesme saati şeridi: satış sayfalarında (adressiz teslimat sayfası WhatsApp öncelikli; kurye vaadi taşımaz).
+    const cutoffs = salesKey && salesKey !== "delivery-without-address" ? await intentCutoffRows(locale) : null;
+    // Varsayılan kategori yalnız yerleşik niyette ve ürün seçimi yokken (seçim = sayfanın serisi).
+    const intentCategory = intent && !pickedIds.length ? INTENT_PAGE_CATEGORY[intent] : null;
     return (
       <V80Shell locale={locale} header={v80HeaderFromCatalog(locale, catalog)} footer={footer}>
-        <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} sections={sections} searchParams={searchParams} intent={intent} cutoffs={cutoffs} />
+        <GlobalPageBody locale={locale} row={row} catalog={catalog} source={source} sections={sections} searchParams={searchParams} intent={salesKey} intentCategory={intentCategory} cutoffs={cutoffs} />
       </V80Shell>
     );
   }

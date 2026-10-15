@@ -147,7 +147,9 @@ test("KAYNAK: Global İstanbul lokasyon adresi üreten her yer tek çözücüden
   const page = oku("./global/page.tsx");
   assert.ok(page.includes("const basePath = canonicalLocationPath(locale, row);"));
   assert.ok(page.includes("localeLocationPath(alt.locale, row.page_key)"), "pageLanguages");
-  assert.equal(page.split("parseLocalePath(locale, await resolveCommercialSegments(locale, path))").length - 1, 2, "metadata + sayfa aynı çözüm");
+  // EK (15 Eki 2026 — satış sayfaları): çözülmüş segmentler satış adresi çözümüne de verilir; çözüm yine tek ve iki yerde aynı.
+  assert.equal(page.split("const segs = await resolveCommercialSegments(locale, path);").length - 1, 2, "metadata + sayfa aynı çözüm");
+  assert.equal(page.split("const parsedPath = parseLocalePath(locale, segs);").length - 1, 2, "metadata + sayfa aynı ayrıştırma");
   assert.ok(!/`\/\$\{locale\}\/\$\{row\.page_key\}`/.test(page.replace("return row.indexable ? localeLocationPath(locale, row.page_key) : `/${locale}/${row.page_key}`;", "")), "ham /<dil>/<page_key> kalmadı");
   assert.ok(oku("./global/sitemap.ts").includes("localeLocationPath(locale, g.page_key)"));
   assert.ok(oku("./global/hreflangFamily.ts").includes("absolute(localeLocationPath(alt.locale, key))"));

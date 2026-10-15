@@ -515,7 +515,7 @@ test("KAYNAK: devam sayfası (?page ≥ 2) hero'da giriş yok, yalnız ürün al
   assert.ok(meta.includes("if (listingPage === null) return { robots: NOINDEX };"));
   // EK: sayfa ≥ 2'de canonical + başlık eki ÇÖZÜLMÜŞ listeden (ana seri kendine; filtreli seri / okunamayan katalog filtresiz yola).
   assert.ok(meta.includes("const basePath = canonicalLocationPath(locale, row);"));
-  assert.ok(meta.includes("const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing) : { canonicalPath: basePath, titlePage: 1 };"));
+  assert.ok(meta.includes("const seo = listingPage > 1 ? await listingSeoFor(locale, parsed.key, basePath, listing, salesProductIds(row)) : { canonicalPath: basePath, titlePage: 1 };"));
   assert.ok(meta.includes("const self = absoluteUrl(seo.canonicalPath);"));
   assert.ok(meta.includes("const languages = listingPage > 1 ? null : ((await istanbulLocationLanguages(row)) ?? pageLanguages(locale, row));"));
   assert.ok(meta.includes("const title = locationPageTitle(locale, stripTrailingBrand(row.seo_title ?? row.h1 ?? undefined), seo.titlePage);"));

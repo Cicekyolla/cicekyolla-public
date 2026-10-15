@@ -37,11 +37,13 @@ test("KAYNAK: sayfa motoru niyet sayfasında İstanbul kataloğu + varsayılan k
   const src = read("./global/page.tsx");
   assert.match(src, /const intent = isIntentPageKey\(parsed\.key\) \? parsed\.key : null;/);
   assert.match(src, /fetchGlobalCatalog\(locale, \{ city: DESTINATION_ROOT \}\)/);
-  assert.match(src, /withIntentCategory\(rawSearchParams, catalog, INTENT_PAGE_CATEGORY\[intent\]\)/);
-  assert.match(src, /searchParams=\{searchParams\} intent=\{intent\} cutoffs=\{cutoffs\}/, "lokasyon sayfası sorgusu değişmeden geçer");
+  // EK (15 Eki 2026 — satış sayfaları): varsayılan kategori yalnız yerleşik niyette ve Admin ürün seçimi yokken.
+  assert.match(src, /const intentCategory = intent && !pickedIds\.length \? INTENT_PAGE_CATEGORY\[intent\] : null;/);
+  assert.match(src, /withIntentCategory\(rawSearchParams, catalog, intentCategory \?\? null\)/);
+  assert.match(src, /searchParams=\{searchParams\} intent=\{salesKey\} intentCategory=\{intentCategory\} cutoffs=\{cutoffs\}/, "lokasyon sayfası sorgusu değişmeden geçer");
   assert.match(src, /function faqJsonLd\(faq/);
   assert.match(src, /"@type": "FAQPage"/);
-  assert.match(src, /localeBreadcrumbJsonLd\(locale, \[row\.page_key\], \[row\.h1\], absoluteUrl, LABELS\[locale\]\.ana\)/);
+  assert.match(src, /localeBreadcrumbJsonLd\(locale, \[row\.url_slug \|\| row\.page_key\], \[row\.h1\], absoluteUrl, LABELS\[locale\]\.ana\)/);
   assert.match(src, /const waText = intent && row\.h1 \? row\.h1 : undefined;/);
   // Uydurma puan/yorum şeması yok
   const intentBlock = src.slice(src.indexOf("function faqJsonLd"), src.indexOf("async function GlobalPageBody"));
@@ -53,7 +55,7 @@ test("KAYNAK: sayfa motoru niyet sayfasında İstanbul kataloğu + varsayılan k
 
 test("KAYNAK: kesme saati şeridi yalnız Delivery Motor verisinden; adressiz teslimat sayfasında basılmaz; 13 dilde metin", () => {
   const src = read("./global/page.tsx");
-  assert.match(src, /const cutoffs = intent && intent !== "delivery-without-address" \? await intentCutoffRows\(locale\) : null;/);
+  assert.match(src, /const cutoffs = salesKey && salesKey !== "delivery-without-address" \? await intentCutoffRows\(locale\) : null;/);
   assert.match(src, /fetchDistrictReach\(locale, DESTINATION_ROOT, d\.slug\)/);
   assert.match(src, /\{intent && cutoffs && cutoffs\.length > 0 \? <CutoffStrip locale=\{locale\} rows=\{cutoffs\} \/> : null\}/);
   const sections = read("./global/sections.tsx");
