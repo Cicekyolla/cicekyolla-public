@@ -9,6 +9,8 @@ Durum: **ONAY TASLAĞI.** CMS'e yazılmadı; yayın, merge veya production deplo
 | `niyet-sayfalari.json` | `/ru/hotel-delivery` ve `/ru/hospital-delivery` taslakları; düğün notu |
 | `teslimat-motor-kararlari.tsv` | 39 ilçe için canlı motor kararı (`/api/public/global/reach`) |
 | `../ru-yer-adlari.csv` | 39 ilçe + İstanbul Kiril yazımı |
+| `sehir-sayfasi-onerisi.json` | 42. kayıt önerisi: RU İstanbul şehir sayfası. 41 kaydın DIŞINDA, ayrı onay ister |
+| `uygula/PILOT-CALISTIRMA.md` | dry → pilot (3) → rest (38) çalıştırma talimatı, canlı temel durum, geri alma |
 
 ## 1. Arama niyeti kanıtı (dürüst sınır)
 - WebSearch (ABD dizini, Google/Yandex değil) ile aranan sorgular:
@@ -141,4 +143,35 @@ Uygulama yolu (onaydan sonra):
 - **Teslimat teyidi:** Adalar ve Beykoz için aynı gün iddiası operasyon teyidi istiyor.
 - **Otel garantisi yok:** resepsiyonun kabul ve odaya teslim politikası otele bağlı. Metinler bunu açıkça söylüyor.
 - **Düğün:** RU'da düğün kategorisi yok. Gelin buketi veya mekân süslemesi vaat edilmedi.
-- **Ödeme:** TRY tahsilat ve yurt dışı kart ifadeleri EN otel sayfasıyla uyumlu; ödeme ekibi teyit etmeli.
+- **Ödeme:** yurt dışı kart kabulü vaadi tümüyle kaldırıldı (bkz. bölüm 10). Kalan ifade yalnız doğrulanmış olgular: PayTR güvenli sayfası, 3-D Secure, TRY tahsilat, kur dönüşümünü banka yapar, yalnız o an açık yöntemler gösterilir.
+
+## 10. 10 satış anahtar kelimesi: yerleşim (sayfa amacına göre, doldurma yok)
+Arama hacmi uydurulmadı. İfadeler dil bilgisi ve ticari niyet açısından kontrol edildi; her ifade, amacı ona uyan sayfaya kondu. Yeni URL, mimari veya CMS alanı açılmadı.
+
+| # | İfade | Ana sayfa (h1/title) | Destek (metin/SSS) | Satış linki |
+|---|---|---|---|---|
+| 1 | доставка цветов в Стамбуле | Şehir sayfası önerisi: h1, title | Şehir giriş/SSS; ilçe h1'leri «Доставка цветов в …» kalıbında | Kategoriler + ilçe linkleri |
+| 2 | заказать цветы в Стамбуле | Şehir: meta | Şehir SSS; otel title «Заказать цветы в отель…» | Kategoriler |
+| 3 | доставка цветов в отель Стамбул | **Otel: h1** «Доставка цветов в отель в Стамбуле» | Otel giriş; şehir «Цветы в отель» bölümü | `/ru/hotel-delivery` → vitrin, sepet, ödeme |
+| 4 | заказать цветы в отель Стамбул | **Otel: title** «Заказать цветы в отель в Стамбуле» | Otel giriş | `/ru/hotel-delivery` |
+| 5 | отправить цветы в Стамбул | Şehir: giriş, SSS | Otel meta; 9 ilçe | Ödeme adımı |
+| 6 | доставка роз в Стамбуле | Şehir «Розы» bölümü | Otel sürpriz bölümü; 12 ilçe | `/ru/category/rozy`, `rozy-v-korobke` |
+| 7 | доставка цветов девушке в Стамбуле | Otel: meta, giriş, «Сюрприз девушке…», SSS | Şehir; 20 ilçe | `tsvety-dlya-lyubimogo-cheloveka`, `rozy-v-korobke` |
+| 8 | доставка цветов в больницу Стамбул | **Hastane: h1, title, meta** | Hastane SSS; şehir; 13 ilçe | `tsvety-vyzdoravlivaite`, `rasteniya-v-gorshkah` |
+| 9 | заказать цветы на свадьбу в Стамбуле | Şehir metni (salon süslemesi alınmaz, açıkça yazılı) | Otel; 3 ilçe | `premium-bukety` |
+| 10 | доставка цветов в Стамбуле с оплатой из-за границы | Şehir «Оплата из-за границы» | Otel ödeme bölümü + SSS; 6 ilçe | Ödeme adımı (PayTR) |
+
+### Doğrulanmamış ödeme vaatleri kaldırıldı
+`ilceler.json` içinde 18 yerde «Visa/Mastercard из любой страны» türü ifade vardı. Hepsi doğrulanmış PayTR ifadesine çevrildi: «банковской картой на защищённой странице PayTR, в турецких лирах».
+
+«Оплата из-за границы» SSS'leri şunu der: «Примет ли платёж конкретная карта, решает банк-эмитент; если оплата не проходит, напишите нам в WhatsApp».
+
+Otomatik tarama yurt dışı kart vaadi bulmadı. Tek eşleşme Bağcılar'daki «иностранный номер» ifadesi; telefon numarasıyla ilgili.
+
+### Uyumluluk
+- **Değişmeyenler:** 1.015 URL, canonical, hreflang, sitemap ve 301 mantığı.
+- **Etkilenen kayıtlar:** yalnız `locale=ru` kayıtları değişir. TR ve 7 canlı dil etkilenmez.
+- **QA:**
+  - 39 title, h1 ve meta benzersiz.
+  - Uzak ilçelerde aynı gün vaadi yok: Beylikdüzü ve Çatalca'daki eşleşmeler olumsuz cümleler («не обещаем доставку в день заказа»).
+  - Otel title 46 / meta 153; hastane title 50 / meta 154; şehir title 57 / meta 144 karakter.
