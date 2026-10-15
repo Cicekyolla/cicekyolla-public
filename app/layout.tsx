@@ -30,6 +30,7 @@ import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/catego
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
+import { hostGuardScript } from "@/lib/originGuard";
 
 const GTM_ID = "GTM-54FJNMT2";
 
@@ -164,6 +165,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         */}
         {/* NOT: Şablon dizesinde "\/" kaçışı yutulur ("/^/(de|…" → SyntaxError: Unexpected
             token '?'); regex kaçışları "\\/" olarak yazılır, tarayıcıya "\/" ulaşır. */}
+        {/* EK (GÜVENLİK, 14 Eki 2026): yetkisiz ayna alan adında açılan sayfayı resmî siteye
+            taşır. Yalnız production'da basılır; preview/localhost etkilenmez. Ayrıntı:
+            lib/originGuard.ts. */}
+        {process.env.VERCEL_ENV === "production" ? (
+          <Script id="cy-host-guard" strategy="beforeInteractive">
+            {hostGuardScript()}
+          </Script>
+        ) : null}
         <Script id="cy-lang-dir" strategy="beforeInteractive">
           {`(function(){try{var pm=/^\\/(de|en|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?:\\/|$)/.exec(location.pathname);var m=/(?:^|;[ ]*)cy_lang=([a-z]{2})/.exec(document.cookie);var l=pm?pm[1]:(m&&m[1]);if(l&&/^(tr|en|ar|zh|nl|de|it|ja|pt|ko|ru|es|az|fr)$/.test(l)){document.documentElement.lang=l;document.documentElement.dir=l==="ar"?"rtl":"ltr";}}catch(e){}})();`}
         </Script>
