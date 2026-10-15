@@ -5,6 +5,7 @@
 // sitemap.xml TR index'ine BİLEREK eklenmedi: kontrollü index açılışı (Faz 11)
 // GSC'ye elle submit ile yapılır; TR index dosyası birebir aynı kalır.
 // ============================================================================
+import { isSalesPageRow, salesPagePath } from "./salesPages";
 import { absoluteUrl } from "@/lib/site-config";
 import { GLOBAL_LOCALES, SEGMENTS, type GlobalLocale } from "./config";
 import { localeLocationPath } from "./commercialUrl";
@@ -66,7 +67,7 @@ function productNode(path: string, updatedAt: string | null, image: string | nul
 function localeSitemapXml(
   locale: GlobalLocale,
   inv: LocaleInventory,
-  pages: { page_key: string; updated_at: string }[] | null,
+  pages: { page_key: string; updated_at: string; url_slug?: string | null }[] | null,
   blog: { path: string; lastmod: string | null }[] = [],
 ): string {
   const seg = SEGMENTS[locale];
@@ -74,7 +75,8 @@ function localeSitemapXml(
     // global_pages (yalnız approved+indexable döner): home → /de, diğerleri → /de/<page_key>
     ...(pages ?? []).map((g) =>
       // EK (14 Eki 2026): lokasyon yolu kanonik çözücüden — ticari adres açık dilde YALNIZ yeni adres listelenir.
-      node(g.page_key === "home" ? `/${locale}` : localeLocationPath(locale, g.page_key), g.updated_at)
+      // EK (15 Eki 2026 — SATIŞ SAYFALARI): satış sayfası dilin url_slug adresiyle (yoksa anahtarla) — tek kanonik adres.
+      node(g.page_key === "home" ? `/${locale}` : isSalesPageRow(g) ? salesPagePath(locale, g.page_key, g.url_slug) : localeLocationPath(locale, g.page_key), g.updated_at)
     ),
     ...inv.products.map((p) => productNode(`/${locale}/${seg.product}/${p.slug}`, p.updated_at, p.image)),
     ...inv.categories.map((c) => node(`/${locale}/${seg.category}/${c.slug}`, c.updated_at)),

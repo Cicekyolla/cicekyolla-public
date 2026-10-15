@@ -3,6 +3,7 @@
 // Cache YOK (no-store): yayından kaldırma anında yansımalı (23 Ağu #161 dersi).
 // API erişilemezse null/boş döner — locale sayfası 404'e düşer, TR etkilenmez.
 // ============================================================================
+import { isSalesPageRow } from "./salesPages.ts";
 import type { GlobalLocale } from "./config";
 import type { GlobalCatalogResponse } from "./globalCatalog";
 import { fetchWithDeadline } from "../fetchWithDeadline.ts";
@@ -131,6 +132,10 @@ export async function getJsonOrThrow<T>(
 export function requireGlobalPage(locale: GlobalLocale, key: string): Promise<GlobalPage | null> {
   return getJsonOrThrow<GlobalPage>(`/api/public/global/page?locale=${locale}&key=${encodeURIComponent(key)}`);
 }
+/** 115 (ADDITIVE): satış sayfası adres çözümü — tek segment url_slug ya da anahtar. Eski API ?slug= tanımaz → 400 → null (bugünkü 404). */
+export function requireGlobalSalesPage(locale: GlobalLocale, seg: string): Promise<GlobalPage | null> {
+  return getJsonOrThrow<GlobalPage>(`/api/public/global/page?locale=${locale}&slug=${encodeURIComponent(seg)}`);
+}
 export function requireCategorySurface(locale: GlobalLocale, slug: string): Promise<CategorySurface | null> {
   return getJsonOrThrow<CategorySurface>(`/api/public/translations/surface/category/${encodeURIComponent(slug)}?locale=${locale}`);
 }
@@ -170,7 +175,13 @@ export interface GlobalPage {
   faq: { q: string; a: string }[] | null;
   indexable: boolean;
   updated_at: string;
-  locales: { locale: string; indexable: boolean }[];
+  /** 115 (ADDITIVE, satış sayfaları): url_slug her dil karşılığında da gelir; eski API'de yok. */
+  locales: { locale: string; indexable: boolean; url_slug?: string | null }[];
+  /** 115: dilin SEO adresi (/{dil}/{url_slug}); yoksa /{dil}/{page_key}. */
+  url_slug?: string | null;
+  focus_keyword?: string | null;
+  /** 115: Global Merkezi'nde sıralanan ürün seçimi; boş/yok → otomatik katalog. */
+  product_ids?: number[] | null;
 }
 
 export interface CategorySurface {
@@ -231,10 +242,21 @@ export function fetchGlobalCatalog(
   return getJson<GlobalCatalogResponse>(`/api/public/global/catalog?${q.toString()}`);
 }
 
-export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string }[] | null> {
-  return getJson<{ page_key: string; updated_at: string }[]>(
+export function fetchGlobalPagesInventory(locale: GlobalLocale): Promise<{ page_key: string; updated_at: string; url_slug?: string | null }[] | null> {
+  return getJson<{ page_key: string; updated_at: string; url_slug?: string | null }[]>(
     `/api/public/global/pages-inventory?locale=${locale}`
   );
+}
+
+/** 115 (ADDITIVE): o dilde yayında + indexlenebilir satış sayfaları (iç bağlantı listesi). Eski API ?kind'i tanımaz ve h1
+ *  vermez → yalnız h1'li satış satırları alınır (eski API'de liste boş kalır; sahte bağlantı yok). */
+export async function fetchLiveSalesPages(locale: GlobalLocale): Promise<{ page_key: string; url_slug: string | null; h1: string }[]> {
+  const rows = await getJson<{ page_key: string; url_slug?: string | null; h1?: string | null }[]>(
+    `/api/public/global/pages-inventory?locale=${locale}&kind=sales`
+  ).catch(() => null);
+  return (rows ?? [])
+    .filter((r) => typeof r.h1 === "string" && r.h1.trim() !== "" && isSalesPageRow(r))
+    .map((r) => ({ page_key: r.page_key, url_slug: r.url_slug ?? null, h1: (r.h1 as string).trim() }));
 }
 
 export function fetchCategorySurface(locale: GlobalLocale, slug: string): Promise<CategorySurface | null> {
@@ -290,8 +312,8 @@ export function fetchLocaleInventoryChecked(locale: GlobalLocale): Promise<Check
 
 export function fetchGlobalPagesInventoryChecked(
   locale: GlobalLocale
-): Promise<CheckedRead<{ page_key: string; updated_at: string }[]>> {
-  return getJsonChecked<{ page_key: string; updated_at: string }[]>(
+): Promise<CheckedRead<{ page_key: string; updated_at: string; url_slug?: string | null }[]>> {
+  return getJsonChecked<{ page_key: string; updated_at: string; url_slug?: string | null }[]>(
     `/api/public/global/pages-inventory?locale=${locale}`
   );
 }

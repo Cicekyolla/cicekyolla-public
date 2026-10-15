@@ -4,7 +4,8 @@
 // AMAÇ (14 Eki 2026): yurt dışındaki müşterinin kendi dilindeki satın alma ifadesiyle eşleşen tek segmentli adres:
 //   /en/istanbul/kadikoy/caferaga-mah  →  /en/flower-delivery-caferaga-kadikoy-istanbul
 // Kalıplar dil bazında docs/global-istanbul-url-gecis/ araştırmasından (rakip başlık/URL gözlemi). Kanıt olmayan
-// diller (ru, ar, ja, ko, zh, az) için KALIP YOK → adresleri değişmez ("dilsel doğrulama bekliyor").
+// diller (ar, ja, ko, zh, az) için KALIP YOK → adresleri değişmez ("dilsel doğrulama bekliyor"). RU kalıbı 14 Eki'de
+// eklendi; bayrakta olmadıkça RU adresleri değişmez.
 //
 // TEK KAYNAK: Global İstanbul lokasyon adresinin her üretildiği yer (canonical, hreflang — TR sayfası dahil —, sitemap,
 // kırıntı, ilçe/mahalle ızgarası, vitrin sayfalaması, v80 şehir kartları, footer) localeLocationPath'ten geçer.
@@ -32,6 +33,9 @@ export const COMMERCIAL_URL_PATTERNS: Partial<Record<GlobalLocale, CommercialPat
   nl: { prefix: "bloemen-bezorgen", city: "istanbul", evidence: "medium" },
   es: { prefix: "envio-de-flores", city: "estambul", evidence: "low" },
   pt: { prefix: "entrega-de-flores", city: "istambul", evidence: "low" },
+  // RU (14 Eki 2026, docs/global-istanbul-url-gecis/ru-arastirma.md): "доставка цветов (в) Стамбул(е)" Latin
+  // translit (ц → ts); şehir "Стамбул" → stambul (florafox /ru/stambul-…, flori1, s-fl). İlçe/mahalle TR ASCII anahtarı.
+  ru: { prefix: "dostavka-tsvetov", city: "stambul", evidence: "low-medium" },
 };
 
 /** Ticari adres yalnız bu şehir kökü için üretilir (TR adresleri doğrulanmış tek şehir). */

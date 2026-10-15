@@ -1,0 +1,40 @@
+district	reach	same_day	distance_km	band	cutoff	min_price_tl
+adalar	in	true	7	Yakın 0-7	20:00	
+arnavutkoy	far	null	59.2	Uzak Bölge Özel Araç 45-150	12:00	2500
+atasehir	in	true	9.6	Orta 7-15	19:00	
+avcilar	mixed	null	47.2	Uzak Bölge Özel Araç 45-150	12:00	
+bagcilar	in	true	35.4	Çok Uzak 25-45	17:00	
+bahcelievler	in	true	33.1	Çok Uzak 25-45	17:00	
+bakirkoy	in	true	30.1	Çok Uzak 25-45	17:00	
+basaksehir	mixed	null	45.2	Uzak Bölge Özel Araç 45-150	12:00	
+bayrampasa	in	true	31	Çok Uzak 25-45	17:00	
+besiktas	in	true	22.9	Uzak 15-25	18:00	
+beykoz	in	true	31.4	Çok Uzak 25-45	17:00	
+beylikduzu	far	null	56.8	Uzak Bölge Özel Araç 45-150	12:00	2500
+beyoglu	in	true	24.1	Uzak 15-25	18:00	
+buyukcekmece	far	null	63.6	Uzak Bölge Özel Araç 45-150	12:00	2500
+catalca	far	null	82.7	Uzak Bölge Özel Araç 45-150	12:00	2500
+cekmekoy	in	true	18.4	Uzak 15-25	18:00	
+esenler	in	true	34.2	Çok Uzak 25-45	17:00	
+esenyurt	mixed	null	54.3	Uzak Bölge Özel Araç 45-150	12:00	
+eyupsultan	in	true	29.2	Çok Uzak 25-45	17:00	
+fatih	in	true	25	Çok Uzak 25-45	17:00	
+gaziosmanpasa	in	true	32.1	Çok Uzak 25-45	17:00	
+gungoren	in	true	33	Çok Uzak 25-45	17:00	
+kadikoy	in	true	12.2	Orta 7-15	19:00	
+kagithane	in	true	30.1	Çok Uzak 25-45	17:00	
+kartal	in	true	7.6	Orta 7-15	19:00	
+kucukcekmece	mixed	null	41.4	Çok Uzak 25-45	17:00	
+maltepe	in	true	3.3	Yakın 0-7	20:00	
+pendik	in	true	13.6	Orta 7-15	19:00	
+sancaktepe	in	true	16.9	Uzak 15-25	18:00	
+sariyer	in	true	37.7	Çok Uzak 25-45	17:00	
+sile	far	null	66.5	Uzak Bölge Özel Araç 45-150	12:00	2500
+silivri	far	null	102.7	Uzak Bölge Özel Araç 45-150	12:00	2500
+sisli	in	true	26.3	Çok Uzak 25-45	17:00	
+sultanbeyli	in	true	16.7	Uzak 15-25	18:00	
+sultangazi	mixed	null	40.6	Çok Uzak 25-45	17:00	
+tuzla	in	true	25	Uzak 15-25	18:00	
+umraniye	in	true	16	Uzak 15-25	18:00	
+uskudar	in	true	20	Uzak 15-25	18:00	
+zeytinburnu	in	true	27.8	Çok Uzak 25-45	17:00	
