@@ -15,11 +15,28 @@ function normalizeSiteUrl(value: string | undefined): string {
 
 export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
-// Domain cutover onayı: yalnız gerçek Vercel production + kesin kanonik domain
-// birlikteyse indeksleme açılır. Preview/branch/local ortamları noindex kalır.
-export const SITE_INDEXABLE =
-  process.env.VERCEL_ENV === "production" &&
-  process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") === PRODUCTION_SITE_URL;
+export const PRODUCTION_HOST = new URL(PRODUCTION_SITE_URL).host;
+
+export interface IndexingEnv {
+  VERCEL_ENV?: string;
+  SITE_INDEXABLE?: string;
+  NEXT_PUBLIC_SITE_URL?: string;
+}
+
+// İndeksleme yalnız production + kesin kanonik domain birlikteyse açılır.
+// Production işareti platformdan bağımsız: Vercel'de VERCEL_ENV=production,
+// diğer barındırmalarda açık SITE_INDEXABLE=true. Kanonik olmayan host'lar
+// (önizleme alan adları) next.config.js'te ayrıca noindex alır.
+export function computeSiteIndexable(env: IndexingEnv): boolean {
+  const isProduction = env.VERCEL_ENV === "production" || env.SITE_INDEXABLE?.trim() === "true";
+  return isProduction && env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") === PRODUCTION_SITE_URL;
+}
+
+export const SITE_INDEXABLE = computeSiteIndexable({
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  SITE_INDEXABLE: process.env.SITE_INDEXABLE,
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+});
 
 export function absoluteUrl(path = "/"): string {
   if (/^https?:\/\//i.test(path)) {

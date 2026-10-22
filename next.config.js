@@ -15,6 +15,12 @@ const R2_PUBLIC_BASE =
   process.env.NEXT_PUBLIC_R2_PUBLIC_BASE ??
   "https://pub-34f640508a014b148011844b087a4e48.r2.dev";
 
+// Kanonik alan adı (lib/site-config.ts PRODUCTION_SITE_URL ile aynı; test eşitliği doğrular).
+// Değerler regex olarak eşlenir, noktalar kaçışlı.
+const CANONICAL_HOST = "www.cicekyolla.com.tr";
+const CANONICAL_HOST_RE = "www\\.cicekyolla\\.com\\.tr";
+const APEX_HOST_RE = "cicekyolla\\.com\\.tr";
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -33,6 +39,13 @@ const nextConfig = {
 
   async headers() {
     return [
+      {
+        // Kanonik olmayan her host (önizleme/platform alan adları) arama motoruna kapalı.
+        // Middleware matcher'ın dışladığı yolları (sitemap, robots, api, statik) da kapsar.
+        source: "/:path*",
+        missing: [{ type: "host", value: CANONICAL_HOST_RE }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+      },
       {
         // Yükleme adları zaman damgalı ve değişmezdir. Vercel edge ile tarayıcı
         // bir kez alınan medyayı kalıcı saklar; R2 geçici olarak yavaşlasa bile
@@ -97,6 +110,13 @@ const nextConfig = {
   // ═══════════════════════════════════════════════════════════════
   async redirects() {
     return [
+      // Apex → www (platformdan bağımsız; Vercel bunu alan adı ayarıyla zaten önce yapar).
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: APEX_HOST_RE }],
+        destination: `https://${CANONICAL_HOST}/:path*`,
+        permanent: true,
+      },
       // ÜRÜN: /52604-Renkli-Lavantali.html → /urun/renkli-lavantali
       // Burada KALIR: middleware matcher noktalı yolları (.*\..*) dışladığı için
       // ".html" adresleri middleware'e hiç ulaşmaz.
