@@ -219,6 +219,9 @@ export default function AddressAutocomplete({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  // Google Maps (~600 ms ana iş parçacığı) sayfa açılışında değil, alana ilk dokunuşta yüklenir.
+  const [wantMaps, setWantMaps] = useState(false);
+  const typedBeforeReady = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AddressResult | null>(null);
 
@@ -240,8 +243,9 @@ export default function AddressAutocomplete({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValue]);
 
-  // --- Init: Google Maps + kütüphaneleri yükle -----------------------------
+  // --- Init: Google Maps + kütüphaneleri yükle (ilk etkileşimde) ----------
   useEffect(() => {
+    if (!wantMaps) return;
     let cancelled = false;
     (async () => {
       try {
@@ -286,7 +290,7 @@ export default function AddressAutocomplete({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [wantMaps]);
 
   // --- Öneri getir ----------------------------------------------------------
   const fetchSuggestions = useCallback(
@@ -371,8 +375,18 @@ export default function AddressAutocomplete({
     [ready, regionCodes]
   );
 
+  // Maps hazır olmadan yazılmış metin varsa, hazır olunca önerileri getir.
+  useEffect(() => {
+    if (!ready || !typedBeforeReady.current) return;
+    typedBeforeReady.current = false;
+    if (!selected && query.trim().length >= 3) fetchSuggestions(query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
   // --- Input değişimi (debounce) -------------------------------------------
   const onInputChange = (v: string) => {
+    if (!wantMaps) setWantMaps(true);
+    if (!ready) typedBeforeReady.current = true;
     setQuery(v);
     setSelected(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -475,7 +489,8 @@ export default function AddressAutocomplete({
           type="text"
           value={query}
           onChange={(e) => onInputChange(e.target.value)}
-          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          onFocus={() => { if (!wantMaps) setWantMaps(true); if (suggestions.length > 0) setOpen(true); }}
+          onPointerDown={() => { if (!wantMaps) setWantMaps(true); }}
           placeholder={effectivePlaceholder}
           autoComplete="off"
           spellCheck={false}

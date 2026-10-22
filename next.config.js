@@ -23,6 +23,10 @@ const APEX_HOST_RE = "cicekyolla\\.com\\.tr";
 
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    // /_next/image çıktısı: R2 anahtarları zaman damgalı ve değişmez → uzun önbellek.
+    minimumCacheTTL: 2592000,
+  },
 
   async rewrites() {
     return [

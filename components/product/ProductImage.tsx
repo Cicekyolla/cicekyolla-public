@@ -19,6 +19,7 @@ import { resolveProductImage, isStudioImage, type ImageSourceLike } from "@/lib/
 import { mediaDerivatives } from "@/lib/media";
 import { blurhashToDataURL } from "@/lib/blurhash";
 import { pictureSources } from "@/lib/avifPolicy";
+import { optimizedImageSrcSet } from "@/lib/imageOptimizer";
 
 export interface MediaDerivativesLike {
   webp?: string;
@@ -136,6 +137,9 @@ export function ProductImage({
     srcSet ||
     (respEntries.length ? respEntries.map(([w, u]) => `${u} ${w}w`).join(", ") : deriv?.webp || null);
   const webpType = respEntries.length || deriv?.webp ? "image/webp" : null;
+  // Türev yoksa orijinal yerine sunucuda küçültülmüş sürümler (açılmazsa orijinale düşer).
+  const [optimizerFailed, setOptimizerFailed] = useState(false);
+  const fallbackSrcSet = !webpType && !optimizerFailed ? optimizedImageSrcSet(resolved, [384, 640, 828, 1080]) : undefined;
 
   const imgStyle: React.CSSProperties = {
     objectPosition: "center",
@@ -160,6 +164,8 @@ export function ProductImage({
       <img
         ref={imgRef}
         src={resolved!}
+        srcSet={fallbackSrcSet}
+        sizes={fallbackSrcSet ? sizes : undefined}
         alt={alt}
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
@@ -168,7 +174,7 @@ export function ProductImage({
         decoding="async"
         fetchPriority={priority ? "high" : "auto"}
         onLoad={() => setLoaded(true)}
-        onError={() => setFailed(true)}
+        onError={() => (fallbackSrcSet ? setOptimizerFailed(true) : setFailed(true))}
         className={`w-full h-full object-contain ${hoverZoom ? "group-hover:scale-105" : ""} ${imgClassName}`}
         style={imgStyle}
       />

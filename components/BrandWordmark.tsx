@@ -1,4 +1,6 @@
 import { mediaUrl } from "@/lib/media";
+import { optimizedImageSrc } from "@/lib/imageOptimizer";
+import { FallbackImg } from "@/components/FallbackImg";
 
 /** Footer rozet logosu (yuvarlak altın ÇiçekYolla). Operatör varlığı: public/brand/ */
 const BADGE_LOGO = "/brand/cicekyolla-badge.webp";
@@ -20,8 +22,9 @@ export function BrandWordmark({
   if (size === "badge") {
     return (
       <div className="flex w-fit flex-col items-center" aria-label={alt}>
-        <img
-          src={mediaUrl(logoUrl || BADGE_LOGO)}
+        <FallbackImg
+          src={optimizedImageSrc(mediaUrl(logoUrl || BADGE_LOGO), 384)}
+          fallbackSrc={mediaUrl(logoUrl || BADGE_LOGO)}
           alt={alt}
           className="block h-[112px] w-[112px] xl:h-[124px] xl:w-[124px] rounded-full object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
           decoding="async"
@@ -59,8 +62,9 @@ export function BrandWordmark({
   return (
     <div className="flex w-fit flex-col" aria-label={alt}>
       <div className={`${frameClass} relative overflow-hidden`}>
-        <img
-          src={mediaUrl(logoUrl || "/brand-logo")}
+        <FallbackImg
+          src={optimizedImageSrc(mediaUrl(logoUrl || "/brand-logo"), isFooter ? 828 : 640)}
+          fallbackSrc={mediaUrl(logoUrl || "/brand-logo")}
           alt={alt}
           className={`${imageClass} absolute block w-auto max-w-none object-contain`}
           decoding="async"

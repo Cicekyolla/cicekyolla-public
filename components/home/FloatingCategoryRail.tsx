@@ -21,6 +21,7 @@ import { motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { categoryBadges, type CategoryItem } from "./homeData";
 import { isLegacyPleskMedia } from "@/lib/media";
+import { optimizedImageSrc } from "@/lib/imageOptimizer";
 
 export function FloatingCategoryRail({
   items,
@@ -70,6 +71,8 @@ export function FloatingCategoryRail({
   // kırık <img>/alt metni göstermesin. Yalnız hatalı kart premium placeholder'a
   // düşer; geçerli görseller, kategori sırası, linkler ve canlı veri aynen korunur.
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
+  // Küçültülmüş görsel açılmazsa önce orijinale düşülür; o da açılmazsa yer tutucu.
+  const [rawFallback, setRawFallback] = useState<Set<string>>(() => new Set());
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, dragFree: true, align: "start", containScroll: "trimSnaps" });
   const router = useRouter();
   const [canPrev, setCanPrev] = useState(false);
@@ -177,13 +180,17 @@ export function FloatingCategoryRail({
                   >
                     {showImage ? (
                       <img
-                        src={cat.image}
+                        src={rawFallback.has(cat.id) ? cat.image : optimizedImageSrc(cat.image, 256)}
                         alt={cat.name}
                         className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-112"
                         loading="lazy"
                         decoding="async"
                         draggable={false}
                         onError={() => {
+                          if (!rawFallback.has(cat.id) && optimizedImageSrc(cat.image, 256) !== cat.image) {
+                            setRawFallback((s) => new Set(s).add(cat.id));
+                            return;
+                          }
                           setFailedImages((current) => {
                             if (current.has(cat.id)) return current;
                             const next = new Set(current);
