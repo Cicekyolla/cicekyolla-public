@@ -24,6 +24,10 @@ const APEX_HOST_RE = "cicekyolla\\.com\\.tr";
 const nextConfig = {
   reactStrictMode: true,
 
+  // Boyut sınırlı ISR / Data Cache (cache-handler.js): Next'in FileSystemCache'i + en eskiyi silme.
+  // Varsayılan davranış hiç silmediği için 71.406 lokasyon adresi diski ~40 GB'a çıkarıyordu.
+  cacheHandler: require.resolve("./cache-handler.js"),
+
   async rewrites() {
     return [
       {
