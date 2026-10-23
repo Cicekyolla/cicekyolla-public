@@ -112,6 +112,19 @@ export function buildAggregateRating(
   };
 }
 
+// Google Satıcı girişleri: sku en fazla 50 karakter, boşluksuz. Eski siteden gelen
+// kurala uymayan değerler (boşluklu / 50+ karakter / Türkçe-ASCII dışı karakterli)
+// sitenin kendi kuralıyla değiştirilir: CY-<6 haneli ürün no>. SKU hiç yoksa alan
+// yine YAZILMAZ (uydurma SKU yok); sayısal olmayan ürün no ile de üretilmez.
+const VALID_SKU = /^[\x21-\x7E]{1,50}$/;
+export function schemaSku(sku: string | null | undefined, productId: number | string): string | null {
+  const raw = sku == null ? "" : String(sku).trim();
+  if (!raw) return null;
+  if (VALID_SKU.test(raw)) return raw;
+  const id = String(productId).trim();
+  return /^\d+$/.test(id) ? `CY-${id.padStart(6, "0")}` : null;
+}
+
 /** Ürün sayfasının Product JSON-LD nesnesi. */
 export function buildProductJsonLd(input: ProductSchemaInput, deps: SchemaDeps): Record<string, unknown> {
   const productUrl = deps.absolute(input.path || `/urun/${input.slug}`);
@@ -124,6 +137,7 @@ export function buildProductJsonLd(input: ProductSchemaInput, deps: SchemaDeps):
 
   const priceMinor = Number(input.priceMinor);
   const rating = buildAggregateRating(input.ratingAvg, input.ratingCount);
+  const sku = schemaSku(input.sku, input.productId);
 
   return {
     "@context": "https://schema.org",
@@ -133,7 +147,7 @@ export function buildProductJsonLd(input: ProductSchemaInput, deps: SchemaDeps):
     // Tek görsel varsa da dizi bırakılır: Google birden çok en-boy oranını sever
     // ve dizi tek/çok ayrımı yapmaz.
     ...(images.length ? { image: images } : {}),
-    ...(input.sku ? { sku: String(input.sku) } : {}),
+    ...(sku ? { sku } : {}),
     productID: String(input.productId),
     url: productUrl,
     brand: { "@type": "Brand", name: BRAND_NAME },

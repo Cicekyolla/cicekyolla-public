@@ -258,3 +258,20 @@ test("Google Product için gereken alanlar tam (yorumsuz ürün senaryosu)", () 
     assert.ok(k in o, `offers.${k} eksik`);
   }
 });
+
+test("geçersiz SKU (boşluk / 50+ karakter / ASCII dışı) CY-<6 haneli ürün no> olur", async () => {
+  const { schemaSku } = await import("./productSchema.ts");
+  assert.equal(schemaSku("SKU-2CRT649D", 1474), "SKU-2CRT649D");
+  assert.equal(schemaSku("CY-001474", "1474"), "CY-001474");
+  assert.equal(schemaSku("  CY-001474  ", 1474), "CY-001474");
+  assert.equal(schemaSku("8596745fgüiğsafd", 112), "CY-000112");
+  assert.equal(schemaSku("Huuı34567", 15), "CY-000015");
+  assert.equal(schemaSku("ABC 123", 7), "CY-000007");
+  assert.equal(schemaSku("X".repeat(51), 1234567), "CY-1234567");
+  assert.equal(schemaSku("X".repeat(50), 9), "X".repeat(50));
+  assert.equal(schemaSku(null, 9), null);
+  assert.equal(schemaSku("", 9), null);
+  assert.equal(schemaSku("   ", 9), null);
+  assert.equal(schemaSku("bad sku", "abc"), null);
+  assert.equal(buildProductJsonLd({ ...GERCEK, sku: "8596745fgüiğsafd", ratingCount: 0 }, DEPS).sku, `CY-${String(GERCEK.productId).padStart(6, "0")}`);
+});
