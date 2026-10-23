@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { absoluteUrl } from "@/lib/site-config";
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 // İşletme kaydı ve API anahtarı yalnız ortam değişkenlerinden okunur.
 const GOOGLE_PLACE_ID = process.env.GOOGLE_PLACE_ID;

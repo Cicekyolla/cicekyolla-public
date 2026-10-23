@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Sonuç sayfası için ödeme durumu → backend /api/public/payment/paytr/status/:oid.
 // Sipariş numarası yalnız ödeme onaylıysa döner.
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export async function GET(_request: NextRequest, { params }: { params: { oid: string } }) {
   try {

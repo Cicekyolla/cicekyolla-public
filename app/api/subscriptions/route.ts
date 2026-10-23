@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 // Gövde OLDUĞU GİBİ iletilir; doğrulama, takvim hesabı ve fiyat kontrolü
 // backend'in işidir — burada iş kuralı UYGULANMAZ, ikinci bir doğrulama
 // katmanı kurulmaz.
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://cicekyolla-api.onrender.com';
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://cicekyolla-api.skyversal.xyz';
 
 export const revalidate = 0;
 

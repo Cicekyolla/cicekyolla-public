@@ -13,7 +13,7 @@
 // =============================================================================
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.onrender.com';
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.skyversal.xyz';
 
 const TTL_MS = 10 * 60_000;
 const ERROR_TTL_MS = 10_000;

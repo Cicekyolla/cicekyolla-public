@@ -11,7 +11,7 @@ import { resolveUpstream } from "@/lib/i18n/proxy";
  * unapprove ~10 dk, approve ~5 dk gecikiyordu). API origin zaten dinamik; yanıtlar küçük;
  * istemci tarafında oturum içi bellek cache (lib/i18n/content.tsx) tekrarlı isteği önler.
  */
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

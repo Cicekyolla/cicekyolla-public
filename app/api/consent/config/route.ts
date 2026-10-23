@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 /** Popup içerikleri + hoş geldin TEKLİFİ + VAPID public key. Kupon kodu BURADA GELMEZ. */
 export async function GET() {

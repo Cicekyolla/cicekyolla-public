@@ -127,7 +127,7 @@ export function upstreamHeaders(
 
 /* ───────────────────── Tek proxy yolu (üye uçları) ───────────────────── */
 
-export const DEFAULT_API_ORIGIN = "https://cicekyolla-api.onrender.com";
+export const DEFAULT_API_ORIGIN = "https://cicekyolla-api.skyversal.xyz";
 
 export function apiOrigin(
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,

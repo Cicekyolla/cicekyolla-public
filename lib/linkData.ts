@@ -33,7 +33,7 @@ let memo: { words: LinkWord[]; expiresAt: number } | null = null;
 let inflight: Promise<LinkWord[]> | null = null;
 
 async function fetchLinkWords(): Promise<LinkWord[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://cicekyolla-api.onrender.com';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://cicekyolla-api.skyversal.xyz';
   const url = `${apiUrl}/api/public/link-dictionary`;
   console.log('[linkData] Fetching from:', url);
   const controller = new AbortController();

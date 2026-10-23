@@ -4,7 +4,7 @@
 // boş liste döner ve sayfa "planlar yakında" der. Hardcoded business data yok.
 
 const API =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://cicekyolla-api.onrender.com';
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://cicekyolla-api.skyversal.xyz';
 
 export interface PublicPlan {
   id: string;

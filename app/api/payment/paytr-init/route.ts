@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // PayTR kart ödemesi başlat → backend /api/public/payment/paytr/init.
 // Sipariş 'ödeme bekliyor' oluşur (numara müşteriye dönmez), iframe token döner.
 // Müşteri IP'si backend'e iletilir (x-forwarded-for) — PayTR user_ip için gerekir.
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export async function POST(request: NextRequest) {
   try {

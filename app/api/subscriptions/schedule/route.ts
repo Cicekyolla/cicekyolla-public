@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 // 30 Ağustos'ta gerçek tarayıcıda doğrulandı). Sitenin mevcut deseni de
 // budur — app/api/* altındaki tüm proxy'ler aynı işi yapar. Yeni bir CORS
 // politikası açmak yerine kurulu desen kullanılır.
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://cicekyolla-api.onrender.com';
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'https://cicekyolla-api.skyversal.xyz';
 
 export const revalidate = 0;
 

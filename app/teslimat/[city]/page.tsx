@@ -24,7 +24,7 @@ const CITY_CARD_AVIF_MEDIA = avifMediaFromSizes(CITY_CARD_SIZES);
 // Admin Kargo Merkezi kararı ANINDA yansısın: sayfa dinamik, ürün sorguları önbelleksiz.
 export const dynamic = "force-dynamic";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 interface RecConfig { title: string; max_items: number; is_active: boolean; }
 async function loadConfig(): Promise<RecConfig | null> {

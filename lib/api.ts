@@ -20,7 +20,7 @@ export { finalPathOf, normalizeInternalPath, withMovedDistrictHrefs, type Redire
 
 // Backend origin (Render). Env ile override edilebilir.
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 // Sunucu-tarafı okuma auth'u. Backend production'da authenticate + requireRole('viewer')
 // istiyor → token'sız 401 → kategori/ürün ağacı boş kalır. Token SUNUCU-ONLY env'de

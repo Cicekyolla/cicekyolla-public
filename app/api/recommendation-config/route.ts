@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export const revalidate = 120;
 

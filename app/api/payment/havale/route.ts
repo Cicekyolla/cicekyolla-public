@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Havale/EFT ile sipariş oluştur → backend /api/public/payment/havale.
 // Sipariş 'ödeme bekliyor' oluşur; dönen order_number havale referansıdır.
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export async function POST(request: NextRequest) {
   try {

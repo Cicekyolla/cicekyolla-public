@@ -22,7 +22,7 @@
 // ============================================================================
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_URL ?? "https://cicekyolla-api.skyversal.xyz";
 
 /** Hedefler statik (tek seferlik üretim) — uzun TTL güvenli. */
 const TTL_MS = 24 * 60 * 60_000;

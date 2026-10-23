@@ -7,7 +7,7 @@
 // ============================================================================
 import { parseShowcasePath } from "./showcasePagination.ts";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? "https://cicekyolla-api.skyversal.xyz";
 const TTL_MS = 60_000;
 const ERROR_TTL_MS = 15_000;
 const TIMEOUT_MS = 1500;

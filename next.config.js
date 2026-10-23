@@ -4,7 +4,7 @@
 // servis edilebilir; farklı origin (Vercel) olduğundan relative "/uploads/..."
 // istekleri proxy'lenir. (Legacy uploads yolu için korunur.)
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 // Cloudflare R2 public "dev" URL'i (pub-*.r2.dev) Türkiye ağlarında bağlantı
 // reset'i (ERR_CONNECTION_RESET) aldığı için, medya same-origin /r2/... yoluna

@@ -9,7 +9,7 @@ import type { GlobalCatalogResponse } from "./globalCatalog";
 import { fetchWithDeadline } from "../fetchWithDeadline.ts";
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export interface ProductSurface {
   product_id: number | string;

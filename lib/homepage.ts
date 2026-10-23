@@ -7,7 +7,7 @@
 import type { MediaDerivatives } from "./api";
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export type HpSectionType =
   | 'collection_rail' | 'hero_delivery_bar' | 'hero' | 'trust_bar' | 'manifesto'

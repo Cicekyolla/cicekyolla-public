@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 const SLUG_RE = /^[a-z0-9-]{1,80}$/;
 const PASS_PARAMS = ["neighborhood", "page", "page_size", "is_bestseller", "is_new", "is_featured", "category_id"] as const;

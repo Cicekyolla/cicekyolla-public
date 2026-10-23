@@ -18,7 +18,7 @@ import {
 } from "./commercialUrl";
 import { isGlobalLocale } from "./config";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 const TTL_MS = 5 * 60_000;
 const ERROR_TTL_MS = 10_000;
 const TIMEOUT_MS = 1_500;

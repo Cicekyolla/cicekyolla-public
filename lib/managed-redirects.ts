@@ -15,7 +15,7 @@
 import { parseShowcasePath, isSafeInternalPath } from './showcasePagination.ts';
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.onrender.com';
+  process.env.NEXT_PUBLIC_API_URL ?? 'https://cicekyolla-api.skyversal.xyz';
 
 /** Önbellek ömrü. API tarafı da Cache-Control: max-age=300 veriyor. */
 const TTL_MS = 5 * 60_000;

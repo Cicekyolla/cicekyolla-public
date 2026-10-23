@@ -30,7 +30,7 @@ import { X_DEFAULT_LOCALE } from "./global/hreflang.ts";
 import type { LocaleVersion } from "./global/hreflangFamily.ts";
 
 const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 export const HREFLANG_REVALIDATE_S = 300;
 export const HREFLANG_DEADLINE_MS = 2_500;

@@ -25,7 +25,7 @@ import { applyRealCategorySlugs, fallbackCategoryCards } from "../globalCatalog"
 import { SEGMENTS } from "../config";
 import type { V80HeaderProps } from "@/components/global/v80/V80Header";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.onrender.com";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
 
 interface StorefrontBundle {
   config: unknown;
