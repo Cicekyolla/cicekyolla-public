@@ -17,6 +17,18 @@
 // =============================================================================
 import { staticGenerationAsyncStorage } from "next/dist/client/components/static-generation-async-storage.external";
 
+/**
+ * Bu çizim statik/ISR üretimi mi? (Aynı depo, aynı pasif okuma.) Dinamik çizimde, depo yokken
+ * ya da okuma hata verirse false → çağıran bugünkü (dinamik) davranışı sürdürür.
+ */
+export function isStaticRender(): boolean {
+  try {
+    return staticGenerationAsyncStorage.getStore()?.isStaticGeneration === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Çizilen isteğin yolu (sorgu dizesi içerebilir); okunamazsa null. */
 export function currentRequestPath(): string | null {
   try {

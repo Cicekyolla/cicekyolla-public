@@ -164,10 +164,14 @@ test("kaynak nöbeti: /urun sayfası canonical/og:url/JSON-LD'yi kayıtlı slug'
   assert.match(src, /alternates: \{ canonical: absoluteUrl\(canonicalPath\) \}/);
   assert.match(src, /url: absoluteUrl\(canonicalPath\)/);
   assert.match(src, /productSlugRedirectPath\(params\.slug, data\.product\.slug\)/);
-  // EK: yönlendirme isteğin sorgu dizesini (gclid, utm_*) taşır.
-  assert.match(src, /if \(slugRedirect\) permanentRedirect\(withRequestQuery\(slugRedirect, searchParams\)\);/);
+  // EK: yönlendirme isteğin sorgu dizesini (gclid, utm_*) taşır — yalnız dinamik çizimde. ISR çiziminde
+  // searchParams okunmaz (ilk üretimde 500) ve önbelleğe alınmış yönlendirme Location'sız servis edilir.
+  assert.match(src, /if \(slugRedirect && !isStaticRender\(\)\) permanentRedirect\(withRequestQuery\(slugRedirect, searchParams\)\);/);
   assert.ok(src.includes("export default async function ProductPage({ params, searchParams }: PageProps) {"));
-  assert.ok(!/generateStaticParams|export const revalidate|force-static/.test(src), "rota istek başına çizilir (searchParams render türünü değiştirmez)");
+  // ISR (23 Eki 2026): boş generateStaticParams + 120 sn — rota ilk istekte üretilir, önbellekten servis edilir.
+  assert.match(src, /export const revalidate = 120;/);
+  assert.match(src, /export function generateStaticParams\(\): \{ slug: string \}\[\] \{\n  return \[\];\n\}/, "build'de ürün üretilmez (boş dizi)");
+  assert.ok(!/force-static|force-dynamic/.test(src));
   assert.match(src, /serializeJsonLd\(breadcrumbJsonLd\)/, "BreadcrumbList sunucuda basılır");
   assert.match(src, /<ProductDetail data=\{data\} sizeProducts=\{sizeProducts\} breadcrumbCategory=\{breadcrumbCategory\} \/>/);
 });

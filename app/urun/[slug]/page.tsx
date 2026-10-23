@@ -31,6 +31,7 @@ import { productHreflangFamily } from "@/lib/global/hreflangFamily";
 import { fetchProductLocaleVersions } from "@/lib/hreflangSources";
 import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
 import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
+import { isStaticRender } from "@/lib/requestPath";
 
 /* ============================================================================
    CICEKYOLLA PUBLIC — Ürün Detay Route  /urun/[slug]
@@ -41,6 +42,17 @@ import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
    ============================================================================ */
 
 type PageProps = { params: { slug: string }; searchParams?: { [key: string]: string | string[] | undefined } };
+
+// ISR (CPU olayı, 23 Eki 2026): generateStaticParams export edilmeyen dinamik segment Next 14'te
+// TAMAMEN dinamik sayılır — her ürün isteği `private, no-store` ile baştan çizilir, CDN önbelleğe
+// alamaz. Lokasyon rotasındaki (app/[...slug]/page.tsx) kanıtlı çözümün aynısı: boş dizi build'de
+// hiçbir sayfa üretmez; her ürün ilk istekte üretilir ve fetch'lerle aynı 120 sn ISR ile servis edilir.
+// Yönlendirme dalında searchParams okunur → yalnız o istek dinamik çizilir (sorgu dizesi korunur).
+export const revalidate = 120;
+export const dynamicParams = true;
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
 
 type ProductFaq = { question: string; answer: string };
 
@@ -191,9 +203,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   // döndürmez (422 → 404). Yalnız API'nin farklı yazımla ürün döndürdüğü bir durumda (ör. yüzde
   // kodlaması) çalışan bir emniyet kuralıdır; "büyük harf → 308" beklentisi yanlıştı.
   // EK: isteğin sorgu dizesi (gclid, utm_* …) hedefe taşınır → tıklama ilişkilendirmesi
-  // yönlendirmede kaybolmaz. (Rota zaten istek başına çizilir; `searchParams` bunu değiştirmez.)
+  // yönlendirmede kaybolmaz.
+  // ISR (23 Eki 2026): bu dal yalnız DİNAMİK çizimde yönlendirir. Statik/ISR çiziminde searchParams
+  // okumak ilk üretimde 500 verir; önbelleğe alınan yönlendirme de Next 14.2.5'te Location başlığı
+  // olmadan (yalnız istemci JS'iyle) servis edilir. Orada sayfa çizilir, canonical zaten kayıtlı
+  // slug'ı gösterir. Ürün slug değişikliklerinin 301'i bu dala değil, redirect motoruna bağlıdır
+  // (API products/slugRedirect.ts → middleware).
   const slugRedirect = productSlugRedirectPath(params.slug, data.product.slug);
-  if (slugRedirect) permanentRedirect(withRequestQuery(slugRedirect, searchParams));
+  if (slugRedirect && !isStaticRender()) permanentRedirect(withRequestQuery(slugRedirect, searchParams));
 
   const { product, images } = data;
   const canonicalSlug = product.slug || params.slug;

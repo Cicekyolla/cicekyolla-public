@@ -9,6 +9,11 @@ import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { fetchAllLocaleBlogDocs } from "@/lib/global/blog";
 import { trBlogPostFamily } from "@/lib/global/blogCore";
 type Props={params:{slug:string}};
+// ISR (CPU olayı, 23 Eki 2026): generateStaticParams olmadan bu rota her istekte `private, no-store`
+// ile çiziliyordu. Boş dizi = build'de üretim yok, ilk istekte üretilip 300 sn ISR (blog listesiyle aynı).
+export const revalidate = 300;
+export const dynamicParams = true;
+export function generateStaticParams(): { slug: string }[] { return []; }
 // GLOBAL BLOG MERKEZİ (ADDITIVE): yazının yayındaki dil karşılıkları varsa hreflang ailesi (tr + diller + x-default).
 // Karşılık yoksa languages basılmaz → çıktı bugünküyle birebir aynı.
 async function trLanguages(post:Awaited<ReturnType<typeof getBlogPostBySlug>>){if(!post)return null;try{return trBlogPostFamily(post,await fetchAllLocaleBlogDocs(),absoluteUrl);}catch{return null;}}

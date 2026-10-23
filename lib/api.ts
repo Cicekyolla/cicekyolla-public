@@ -10,6 +10,7 @@
 import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
+import { lastResortInit } from "./fetchFallback";
 import { fetchWithDeadline } from "./fetchWithDeadline";
 import { isPillarPage, productDetailToListItem } from "./showcaseBlocks.ts";
 import { normalizeInternalPath, type RedirectMap } from "./internalHref.ts";
@@ -25,6 +26,16 @@ const API_ORIGIN =
 // istiyor → token'sız 401 → kategori/ürün ağacı boş kalır. Token SUNUCU-ONLY env'de
 // tutulur (NEXT_PUBLIC değil → tarayıcıya sızmaz; tüm fetch'ler Server Component'te).
 // API_READ_TOKEN set edilmezse header gönderilmez (auth kapalıysa yine çalışır).
+// ISR çizimi mi? lib/requestPath.ts Next'in iç deposunu okur; modül TEMBEL yüklenir → bu dosyayı
+// içe aktaran düz Node testleri Next iç yolunu çözmek zorunda kalmaz. Yüklenemezse false (bugünkü davranış).
+async function staticRender(): Promise<boolean> {
+  try {
+    return (await import("./requestPath")).isStaticRender();
+  } catch {
+    return false;
+  }
+}
+
 function apiHeaders(): Record<string, string> {
   const h: Record<string, string> = {};
   const token = process.env.API_READ_TOKEN;
@@ -523,7 +534,11 @@ export function isCategoryVisible(node: { status?: unknown }): boolean {
 export async function fetchCategoryTree(): Promise<CategoryNode[] | null> {
   // Deneme sırası ve dayanıklılık kuralı lib/categoryTreeFetch.ts'te (saf, testli):
   // hafif uç (revalidate 300) → tam ağaç (revalidate 300) → tam ağaç no-store.
-  return fetchTreeViaAttempts<CategoryNode>(categoryTreeAttempts(API_ORIGIN, CATEGORIES_PATH, apiHeaders()));
+  // Son çare (3. deneme) ISR çiziminde no-store değil, önbellekli tekrar (lib/fetchFallback.ts).
+  const attempts = categoryTreeAttempts(API_ORIGIN, CATEGORIES_PATH, apiHeaders());
+  const last = attempts[attempts.length - 1];
+  last.init = lastResortInit(await staticRender(), apiHeaders(), 300);
+  return fetchTreeViaAttempts<CategoryNode>(attempts);
 }
 
 /**
@@ -582,9 +597,9 @@ export interface PublicProductSeoContent {
 /** Tek ürünü slug ile çeker. 404/hata veya 'active' değilse null (public gizler). */
 export async function fetchProductBySlug(slug: string): Promise<PublicProductDetail | null> {
   const url = `${API_ORIGIN}/api/products/slug/${encodeURIComponent(slug)}`;
-  const attempts = [
-    { headers: apiHeaders(), next: { revalidate: 120 } },
-    { headers: apiHeaders(), cache: "no-store" as const },
+  const attempts: RequestInit[] = [
+    { headers: apiHeaders(), next: { revalidate: 120 } } as RequestInit,
+    lastResortInit(await staticRender(), apiHeaders(), 120),
   ];
   for (const init of attempts) {
     try {
@@ -707,8 +722,9 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
   const attempts = params.fresh
     ? [{ headers: apiHeaders(), cache: "no-store" as const }]
     : [
-      { headers: apiHeaders(), next: { revalidate: 120 } },
-      { headers: apiHeaders(), cache: "no-store" as const },
+      { headers: apiHeaders(), next: { revalidate: 120 } } as RequestInit,
+      // Son çare ISR çiziminde no-store değil, önbellekli tekrar (lib/fetchFallback.ts).
+      lastResortInit(await staticRender(), apiHeaders(), 120),
     ];
   for (const init of attempts) {
     try {
