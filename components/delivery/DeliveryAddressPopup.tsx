@@ -91,13 +91,8 @@ export function DeliveryAddressPopup() {
     };
     window.addEventListener(OPEN_ADDRESS_POPUP_EVENT, openOnDemand);
 
-    // Pencere ilk yüklemeyle yarışmasın: sayfa "load" olduktan sonra SHOW_DELAY_MS.
-    const start = () => { if (eligible()) timer = setTimeout(tryShow, SHOW_DELAY_MS); };
-    const onLoad = () => start();
-    if (document.readyState === "complete") start();
-    else window.addEventListener("load", onLoad, { once: true });
+    if (eligible()) timer = setTimeout(tryShow, SHOW_DELAY_MS);
     return () => {
-      window.removeEventListener("load", onLoad);
       window.removeEventListener(OPEN_ADDRESS_POPUP_EVENT, openOnDemand);
       if (timer) clearTimeout(timer);
       if (retry) clearTimeout(retry);
