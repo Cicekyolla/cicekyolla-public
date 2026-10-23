@@ -100,9 +100,11 @@ import {
   fetchLiveSalesPages,
   requireCategorySurface,
   requireProductSurface,
+  fetchLocaleInventory,
   type GlobalPage,
   type LocaleCatalog,
 } from "./api";
+import { findRenamedLocaleSlug } from "./renamedSlug";
 import { curateCatalog, isSalesPageRow, isSalesSegment, salesPagePath, salesProductIds, salesRedirectTarget } from "./salesPages";
 import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, deliveryPresentation, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
 import { REACH, FAR, formatThresholdTl } from "./reachCopy";
@@ -1465,7 +1467,15 @@ export async function LocalePage({ locale, path, searchParams }: {
 
   if (parsed.kind === "product") {
     const surface = await requireProductSurface(locale, parsed.slug);
-    if (!surface) notFound();
+    if (!surface) {
+      // EK (GSC 404 KURTARMA, 23 Eki 2026): çeviri slug'ı değişmiş ürünün eski adresi → yeni adres.
+      // Yalnız eski slug'ın kelimeleri TEK bir yayındaki ürünle birebir örtüşürse (lib/global/renamedSlug.ts).
+      // Rota force-dynamic → yönlendirme Location başlığıyla döner.
+      const moved = await findRenamedLocaleSlug(locale, parsed.slug, async () =>
+        (await fetchLocaleInventory(locale)).products.map((p) => p.slug));
+      if (moved) permanentRedirect(withQuery(localeProductPath(locale, moved), searchParams as Record<string, string | string[] | undefined>));
+      notFound();
+    }
     const data = await fetchProductBySlug(surface.tr_slug);
     if (!data) notFound();
     const { product } = data;

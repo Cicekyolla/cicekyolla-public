@@ -15,6 +15,7 @@ import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
 import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch, resolveIstanbulLegacyNeighborhood } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
+import { resolveRootProductRedirect } from "@/lib/rootProductRedirect";
 const categorySlugs = new Set(legacyCategorySlugs);
 /* ADDITIVE (Kategori Merkezi URL Kararı): legacy kategori kuralları hedefi
    statik listeden (/kategori/{eski-slug}) üretir. Kategori Merkezi'nden onaylı
@@ -188,6 +189,16 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
     const target = new URL(managed.to, req.nextUrl.origin);
     target.search = managedRedirectSearch(managed.to, req.nextUrl.search);
     return NextResponse.redirect(target, managed.code);
+  }
+  // EK (GSC 404 KURTARMA, 23 Eki 2026): başında /urun/ olmayan ürün adresi (dışarıda paylaşılmış
+  // eski kök linkler). Yalnız tek segmentli ≥3 kelimelik slug ve API'de AYNI slug'la aktif ürün
+  // varsa 308; sorgu dizesi (gclid, utm_*) yönetilen 301'lerle aynı süzgeçten geçer. En sonda bakılır; API yanıt vermezse istek
+  // bugünkü gibi devam eder (lib/rootProductRedirect.ts).
+  const rootProduct = await resolveRootProductRedirect(req.nextUrl.pathname);
+  if (rootProduct) {
+    const target = new URL(rootProduct, req.nextUrl.origin);
+    target.search = managedRedirectSearch(rootProduct, req.nextUrl.search);
+    return NextResponse.redirect(target, 308);
   }
 
   const res = NextResponse.next();
