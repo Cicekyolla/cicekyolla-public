@@ -448,6 +448,17 @@ const ja: Dict = {
   "pdp.waText": "こんにちは。「{name}」を注文したいです。{url}",
   "trust.waText": "こんにちは。お支払いとご注文について教えてください。",
   "cart.rowNeedsDelivery": "配達が未選択です — タップして選択",
+  "co.bundleAdd": "セットを追加",
+  "co.bundleRemove": "セットを外す",
+  "co.offerAddedToday": "今日 {n} 人が追加",
+  "co.offerAcceptRate": "お客様の {n}% が追加",
+  "co.offerCat.delivery": "配送",
+  "co.offerCat.gifts": "ギフト",
+  "co.offerCat.flowers": "花",
+  "co.offerCat.experience": "体験",
+  "co.offerCat.corporate": "法人",
+  "co.offerFloristPick": "フローリストのおすすめ",
+  "co.offerAlsoAdded": "よく一緒に購入",
 };
 
 export default ja;

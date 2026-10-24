@@ -347,7 +347,9 @@ function PreferencesPanel({
             <div>
               <p className="text-white/80 text-sm font-semibold mb-0.5">Analiz Çerezleri</p>
               <p className="text-white/35 text-xs leading-relaxed">
-                Siteyi nasıl kullandığınızı anlamamıza yardımcı olur.
+                Siteyi nasıl kullandığınızı anlamamız için Google Analytics'i ve kendi ölçüm
+                sistemimizi kullanır; tekrar ziyaretinizi tanımak için cihazınızda rastgele bir
+                numara saklar (en çok 13 ay). Ad, telefon, adres ve IP adresi bu ölçüme girmez.
               </p>
             </div>
             <div className="flex-shrink-0 mt-0.5">

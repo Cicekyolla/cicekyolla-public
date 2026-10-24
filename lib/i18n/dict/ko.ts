@@ -448,6 +448,17 @@ const ko: Dict = {
   "pdp.waText": "안녕하세요, \"{name}\" 상품을 주문하고 싶습니다. {url}",
   "trust.waText": "안녕하세요, 결제와 주문에 대해 안내받고 싶습니다.",
   "cart.rowNeedsDelivery": "배송이 선택되지 않았습니다 — 눌러서 선택",
+  "co.bundleAdd": "세트 추가",
+  "co.bundleRemove": "세트 제거",
+  "co.offerAddedToday": "오늘 {n}명이 추가",
+  "co.offerAcceptRate": "고객의 {n}%가 추가",
+  "co.offerCat.delivery": "배송",
+  "co.offerCat.gifts": "선물",
+  "co.offerCat.flowers": "꽃",
+  "co.offerCat.experience": "경험",
+  "co.offerCat.corporate": "기업",
+  "co.offerFloristPick": "플로리스트 추천",
+  "co.offerAlsoAdded": "자주 함께 구매",
 };
 
 export default ko;

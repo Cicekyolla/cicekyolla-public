@@ -449,6 +449,17 @@ const ar: Dict = {
   "pdp.waText": "مرحباً، أود طلب \"{name}\". {url}",
   "trust.waText": "مرحباً، أود الحصول على معلومات حول الدفع والطلب.",
   "cart.rowNeedsDelivery": "لم يتم اختيار التوصيل — اضغط للاختيار",
+  "co.bundleAdd": "أضف الباقة",
+  "co.bundleRemove": "أزل الباقة",
+  "co.offerAddedToday": "أضافه {n} أشخاص اليوم",
+  "co.offerAcceptRate": "أضافه {n}% من العملاء",
+  "co.offerCat.delivery": "التوصيل",
+  "co.offerCat.gifts": "هدية",
+  "co.offerCat.flowers": "زهور",
+  "co.offerCat.experience": "تجربة",
+  "co.offerCat.corporate": "للشركات",
+  "co.offerFloristPick": "اختيار منسق الزهور",
+  "co.offerAlsoAdded": "يُشترى معه غالبًا",
 };
 
 export default ar;

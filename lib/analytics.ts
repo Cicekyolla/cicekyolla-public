@@ -1,3 +1,5 @@
+import { trackFromEcommerce } from "./visitTracker.ts";
+
 export type EcommerceItem = {
   item_id: string;
   item_name: string;
@@ -25,6 +27,8 @@ export function pushEcommerceEvent(
   // `extra` yalnız purchase'ta verilir (hash'li kullanıcı verisi); diğer
   // olayların gövdesi birebir aynı kalır.
   window.dataLayer.push(extra ? { event, ecommerce, ...extra } : { event, ecommerce });
+  // Panelin kendi ziyaretçi ölçümü (migration 118) — GA4 gövdesi değişmez.
+  trackFromEcommerce(event, ecommerce);
 }
 
 /**

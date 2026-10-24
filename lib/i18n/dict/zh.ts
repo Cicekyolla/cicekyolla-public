@@ -448,6 +448,17 @@ const zh: Dict = {
   "pdp.waText": "您好，我想订购“{name}”。{url}",
   "trust.waText": "您好，我想了解付款和订购方面的信息。",
   "cart.rowNeedsDelivery": "尚未选择配送 — 点击选择",
+  "co.bundleAdd": "添加套装",
+  "co.bundleRemove": "移除套装",
+  "co.offerAddedToday": "今天有 {n} 人添加",
+  "co.offerAcceptRate": "{n}% 的顾客添加了",
+  "co.offerCat.delivery": "配送",
+  "co.offerCat.gifts": "礼品",
+  "co.offerCat.flowers": "鲜花",
+  "co.offerCat.experience": "体验",
+  "co.offerCat.corporate": "企业",
+  "co.offerFloristPick": "花艺师推荐",
+  "co.offerAlsoAdded": "常一起购买",
 };
 
 export default zh;

@@ -13,6 +13,7 @@ import { TelegramButton } from "@/components/TelegramButton";
 import { resolveTelegram } from "@/lib/telegramContact";
 import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
+import { VisitPageTracker } from "@/components/analytics/VisitPageTracker";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
 import { DeliveryLocationBadge } from "@/components/delivery/DeliveryLocationBadge";
@@ -248,6 +249,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />
+        {/* Görünmez: panelin kendi ziyaretçi ölçümü (Checkout Analytics / Revenue Optimizer). */}
+        <VisitPageTracker />
         <NewMemberPopup />
         <DeliveryAddressPopup />
         </CurrencyProvider>

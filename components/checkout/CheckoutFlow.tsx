@@ -11,7 +11,17 @@ import AccountGate from "./AccountGate";
 import CheckoutWizard from "./CheckoutWizard";
 import type { PendingDelivery } from "@/lib/pendingDelivery";
 
-export interface CheckoutAddon { id: number; productId?: number; variantId?: number | null; name: string; priceMinor: number; image: string | null; category: string }
+export interface CheckoutAddon {
+  id: number; productId?: number; variantId?: number | null; name: string; priceMinor: number; image: string | null; category: string;
+  /** Revenue Optimizer önerisi: paneldeki GERÇEK rozet (yoksa rozet gösterilmez). */
+  badge?: string | null;
+  /** Gerçek sayıdan üretilmiş kısa not (ör. "Bugün 5 kişi ekledi"); yoksa null. */
+  note?: string | null;
+  /** Panelden gelen öneri mi (sepet ürünü değil). */
+  offer?: boolean;
+}
+/** Panelde açık paket: ürünler CheckoutAddon olarak da listededir (productId ile eşlenir). */
+export interface CheckoutBundle { id: number; name: string; description: string | null; productIds: number[]; totalMinor: number; names: string[] }
 
 type Props = {
   productName: string;
@@ -21,6 +31,7 @@ type Props = {
   productSlug: string;
   coverUrl?: string | null;
   addons?: CheckoutAddon[];
+  bundles?: CheckoutBundle[];
   quantity?: number;
   initialAddonQty?: Record<number, number>;
   totalMinor?: number;
@@ -33,7 +44,7 @@ type Props = {
   onCardPaymentStarted?: (info: { merchantOid: string; draftKey: string }) => void;
 };
 
-export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete, onDeliveryChange, onCardPaymentStarted }: Props) {
+export default function CheckoutFlow({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons, bundles, quantity = 1, initialAddonQty, totalMinor, returnPath, delivery, onComplete, onDeliveryChange, onCardPaymentStarted }: Props) {
   const [phase, setPhase] = useState<"gate" | "form">("gate");
   // Hesap adımındaki "Düzenle" ile gelindiyse sihirbaz teslimat panelini açık başlatır.
   const [openDeliveryEditor, setOpenDeliveryEditor] = useState(false);
@@ -57,5 +68,5 @@ export default function CheckoutFlow({ productName, productId, variantId, priceM
   }
 
   // Premium sipariş hazırlama deneyimi (Alıcı → Kart → Gönderen → Özet).
-  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} onDeliveryChange={onDeliveryChange} initialEditDelivery={openDeliveryEditor} onCardPaymentStarted={onCardPaymentStarted} />;
+  return <CheckoutWizard productName={productName} productId={productId} variantId={variantId} priceMinor={priceMinor} productSlug={productSlug} coverUrl={coverUrl} addons={addons} bundles={bundles} quantity={quantity} initialAddonQty={initialAddonQty} delivery={delivery} onComplete={onComplete} onDeliveryChange={onDeliveryChange} initialEditDelivery={openDeliveryEditor} onCardPaymentStarted={onCardPaymentStarted} />;
 }

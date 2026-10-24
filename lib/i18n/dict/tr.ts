@@ -461,6 +461,17 @@ const tr = {
   "pdp.waText": "Merhaba, \"{name}\" ürününü sipariş vermek istiyorum. {url}",
   "trust.waText": "Merhaba, ödeme ve sipariş hakkında bilgi almak istiyorum.",
   "cart.rowNeedsDelivery": "Teslimat seçilmedi — seçmek için dokunun",
+  "co.bundleAdd": "Paketi ekle",
+  "co.bundleRemove": "Paketi çıkar",
+  "co.offerAddedToday": "Bugün {n} kişi ekledi",
+  "co.offerAcceptRate": "Müşterilerin %{n} kadarı ekledi",
+  "co.offerCat.delivery": "Teslimat",
+  "co.offerCat.gifts": "Hediye",
+  "co.offerCat.flowers": "Çiçek",
+  "co.offerCat.experience": "Deneyim",
+  "co.offerCat.corporate": "Kurumsal",
+  "co.offerFloristPick": "Florist Seçimi",
+  "co.offerAlsoAdded": "Bununla birlikte alındı",
 };
 
 export type Dict = typeof tr;
