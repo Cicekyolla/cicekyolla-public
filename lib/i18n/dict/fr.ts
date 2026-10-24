@@ -448,6 +448,17 @@ const fr: Dict = {
   "pdp.waText": "Bonjour, je souhaite commander « {name} ». {url}",
   "trust.waText": "Bonjour, je souhaite obtenir des informations sur le paiement et la commande.",
   "cart.rowNeedsDelivery": "Livraison non sélectionnée — touchez pour choisir",
+  "co.bundleAdd": "Ajouter le lot",
+  "co.bundleRemove": "Retirer le lot",
+  "co.offerAddedToday": "Ajouté par {n} personnes aujourd'hui",
+  "co.offerAcceptRate": "Ajouté par {n} % des clients",
+  "co.offerCat.delivery": "Livraison",
+  "co.offerCat.gifts": "Cadeau",
+  "co.offerCat.flowers": "Fleurs",
+  "co.offerCat.experience": "Expérience",
+  "co.offerCat.corporate": "Entreprises",
+  "co.offerFloristPick": "Choix du fleuriste",
+  "co.offerAlsoAdded": "Souvent achetés ensemble",
 };
 
 export default fr;

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ShoppingBag } from "lucide-react";
-import CheckoutFlow, { type CheckoutAddon } from "@/components/checkout/CheckoutFlow";
+import CheckoutFlow, { type CheckoutAddon, type CheckoutBundle } from "@/components/checkout/CheckoutFlow";
+import { useCheckoutOffers } from "@/lib/checkoutOffers";
 import { useCart, type CartItem } from "@/lib/cart";
 import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useI18n } from "@/lib/i18n";
@@ -54,12 +55,16 @@ export default function CartCheckoutPage() {
   const frozen = useRef<{
     first: CartItem;
     addons: CheckoutAddon[];
+    bundles: CheckoutBundle[];
     initialAddonQty: Record<number, number>;
     subtotalMinor: number;
     delivery?: PendingDelivery;
   } | null>(null);
 
-  const { addons, initialAddonQty } = useMemo(() => {
+  // Revenue Optimizer: panelde AÇIK öneri/paketler (kapalıysa boş → bugünkü davranış).
+  const offers = useCheckoutOffers(hydrated && !ordered ? items.map((item) => item.productId) : null);
+
+  const { addons, initialAddonQty, bundles } = useMemo(() => {
     const mapped: CheckoutAddon[] = [];
     const quantities: Record<number, number> = {};
     items.slice(1).forEach((item, index) => {
@@ -67,8 +72,15 @@ export default function CartCheckoutPage() {
       mapped.push({ id: key, productId: item.productId, variantId: item.variantId, name: item.variantTitle ? `${item.name} · ${item.variantTitle}` : item.name, priceMinor: item.unitPriceMinor, image: item.image, category: "Sepet ürünü" });
       quantities[key] = item.quantity;
     });
-    return { addons: mapped, initialAddonQty: quantities };
-  }, [items]);
+    // Öneriler sepet satırlarından SONRA, adet 0 ile eklenir (id 1000+ → çakışma yok).
+    const inCart = new Set(items.map((item) => item.productId));
+    offers.addons.forEach((offer, index) => {
+      if (offer.productId && inCart.has(offer.productId)) return;
+      mapped.push({ ...offer, id: 1000 + index });
+    });
+    const bundleList: CheckoutBundle[] = offers.bundles.filter((b) => b.productIds.every((pid) => mapped.some((a) => a.productId === pid)));
+    return { addons: mapped, initialAddonQty: quantities, bundles: bundleList };
+  }, [items, offers]);
 
   // KART: PayTR'ye giderken sepet TUTULUR (red → geri dönüş). Hangi satırların
   // ödemeye gittiği bu sekmeye not edilir; /checkout/sonuc yalnız sunucu
@@ -79,17 +91,18 @@ export default function CartCheckoutPage() {
 
   // Sepet doluyken son geçerli görünümü tazele (render sırasında ref'e yazma yok).
   useEffect(() => {
-    if (first) frozen.current = { first, addons, initialAddonQty, subtotalMinor, delivery: firstDelivery };
-  }, [first, addons, initialAddonQty, subtotalMinor, firstDelivery]);
+    if (first) frozen.current = { first, addons, bundles, initialAddonQty, subtotalMinor, delivery: firstDelivery };
+  }, [first, addons, bundles, initialAddonQty, subtotalMinor, firstDelivery]);
 
   // Sepet doluyken canlı veri; sipariş verilip sepet boşaldığında dondurulmuş kopya.
   const view = first
-    ? { first, addons, initialAddonQty, subtotalMinor, delivery: firstDelivery }
+    ? { first, addons, bundles, initialAddonQty, subtotalMinor, delivery: firstDelivery }
     : ordered
       ? frozen.current
       : null;
 
-  if (!hydrated) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center text-muted-foreground">{t("co.preparing")}</main>;
+  // Öneriler en çok 1,5 sn beklenir (adım listesi sonradan kaymasın); hata/kapalı → hemen devam.
+  if (!hydrated || (!ordered && !offers.ready)) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center text-muted-foreground">{t("co.preparing")}</main>;
   // view yoksa sepet gerçekten boştur. Sipariş tamamlandıysa view dolu kalır ve
   // başarı ekranı (sipariş numarası) ekranda durmaya devam eder.
   // Tek satır süresi geçtiği için sepet boşaldıysa müşteri NEDENİNİ görmeli.
@@ -102,5 +115,5 @@ export default function CartCheckoutPage() {
   // Tüm alanlar view'dan okunur: sepet temizlendikten sonra da başarı ekranının
   // ihtiyaç duyduğu ana ürün verisi (ad, görsel, fiyat, adet) elde kalır.
   const v = view;
-  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><ExpiredDeliveryNotice className="mb-5" /><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} onCardPaymentStarted={rememberCardCheckout} /></div></main>;
+  return <main className="min-h-screen bg-background"><div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12"><ExpiredDeliveryNotice className="mb-5" /><CheckoutFlow productName={v.first.variantTitle ? `${v.first.name} · ${v.first.variantTitle}` : v.first.name} productId={v.first.productId} variantId={v.first.variantId} priceMinor={v.first.unitPriceMinor} productSlug={v.first.productSlug} coverUrl={v.first.image} addons={v.addons} bundles={v.bundles} quantity={v.first.quantity} initialAddonQty={v.initialAddonQty} totalMinor={v.subtotalMinor} returnPath="/checkout" delivery={v.delivery} onComplete={() => { setOrdered(true); clearCart(); }} onDeliveryChange={updateAllDelivery} onCardPaymentStarted={rememberCardCheckout} /></div></main>;
 }

@@ -27,7 +27,7 @@ import { readPendingDelivery, clearPendingDelivery, savePendingDelivery, type Pe
 import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/DeliveryPlanner";
 import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
-import type { CheckoutAddon } from "./CheckoutFlow";
+import type { CheckoutAddon, CheckoutBundle } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
 import { buildCouponRequestBody, buildOrderRegionFields, readCouponPreview, readServerTotalMinor } from "@/lib/couponState";
 import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
@@ -38,6 +38,7 @@ import { isValidSenderPhone, senderPhoneForApi } from "@/lib/senderPhone";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
+import { orderNumberFromOid, trackVisit } from "@/lib/visitTracker";
 import { buildHashedUserData, stashCardPurchaseUserData } from "@/lib/enhancedConversionUserData";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
@@ -76,7 +77,7 @@ function mapToSlot(start?: string, label?: string): string {
   return SLOTS[0];
 }
 
-type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; quantity?: number; initialAddonQty?: Record<number, number>; delivery?: PendingDelivery; onComplete?: () => void;
+type Props = { productName: string; productId: number | null; variantId?: number | null; priceMinor: number; productSlug?: string; coverUrl?: string | null; addons?: CheckoutAddon[]; bundles?: CheckoutBundle[]; quantity?: number; initialAddonQty?: Record<number, number>; delivery?: PendingDelivery; onComplete?: () => void;
   /** Teslimat checkout içinde düzenlenince sepete geri yazar (tek kaynak sepettir). */
   onDeliveryChange?: (delivery: PendingDelivery) => void;
   /** Hesap adımındaki "Düzenle" ile gelindiyse panel açık başlar. */
@@ -85,7 +86,7 @@ type Props = { productName: string; productId: number | null; variantId?: number
    *  /checkout/sonuc sunucu onayını görünce düşer (lib/cardCheckoutSettle.ts). */
   onCardPaymentStarted?: (info: { merchantOid: string; draftKey: string }) => void };
 
-export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false, onCardPaymentStarted }: Props) {
+export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], bundles = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false, onCardPaymentStarted }: Props) {
   // approx → "≈ $73"  ·  moneyTRY → gerçek tahsilat "₺2.999"
   const { approx: money, isForeign, moneyTRY } = useCurrency();
   const { t, intl } = useI18n();
@@ -311,9 +312,20 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const typeStr = pd?.mode === "cargo" ? t("co.deliveryCargoLine") : pd?.mode === "sameday" ? t("co.deliverySameDayLine") : null;
 
   const toggleNote = (id: string) => setNotes((n) => (n.includes(id) ? n.filter((x) => x !== id) : [...n, id]));
-  const setAddon = (id: number, q: number) => setAddonQty((m) => ({ ...m, [id]: Math.max(0, q) }));
+  const setAddon = (id: number, q: number) => {
+    // Ziyaretçi ölçümü: ödeme sayfasında ek ürün ekleme/çıkarma (Revenue Optimizer kabul oranı).
+    const prev = addonQty[id] || 0;
+    const next = Math.max(0, q);
+    const a = addons.find((x) => x.id === id);
+    if (a && next !== prev) {
+      trackVisit(next > prev ? "add_to_cart" : "remove_from_cart", { i: a.productId, n: a.name, q: Math.abs(next - prev), m: a.priceMinor * Math.abs(next - prev) });
+    }
+    setAddonQty((m) => ({ ...m, [id]: next }));
+  };
 
   const stepKey = steps[stepIdx].key;
+  // Ziyaretçi ölçümü: ödeme sayfasının hangi adımına gelindi (terk analizi).
+  useEffect(() => { if (stepKey !== "urun") trackVisit("checkout_step", { s: stepKey }); }, [stepKey]);
   const canNext = useMemo(() => {
     if (stepKey === "alici") return recipientName.trim().length > 0;
     if (stepKey === "gonderen")
@@ -423,6 +435,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       if (paymentMethod === "havale") {
         // Havale: sipariş 'ödeme bekliyor' oluşur; dönen numara = havale referansı.
         const r = await createHavaleOrder(orderBody);
+        trackVisit("order_created", { o: r.order_number, m: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total });
         // GA4 purchase — YALNIZ backend gerçek order_number döndürdükten sonra.
         // Hata olsaydı createHavaleOrder throw ederdi ve buraya hiç gelinmezdi.
         // Tutar backend'in yetkili toplamı (kupon/fiyat sunucuda yeniden hesaplanır).
@@ -452,6 +465,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Kart: PayTR güvenli sayfasına yönlendir. Ödeme TAMAMLANMADAN sepet/taslak
         // TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
         const r = await initPaytr(orderBody);
+        trackVisit("order_created", { o: orderNumberFromOid(r.merchant_oid) ?? undefined, m: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total });
         // Gelişmiş dönüşüm: sonuç sayfasındaki purchase için YALNIZ hash'ler
         // sessionStorage'a (≤300 ms, asla fırlatmaz; ödeme akışı etkilenmez).
         await stashCardPurchaseUserData(r.merchant_oid, senderEmail, senderPhone);
@@ -712,7 +726,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
                   visibility={visibility} setVisibility={setVisibility} surprise={surprise} setSurprise={setSurprise}
                 />
               )}
-              {stepKey === "ekurun" && <StepAddons addons={addons} addonQty={addonQty} setAddon={setAddon} />}
+              {stepKey === "ekurun" && <StepAddons addons={addons} bundles={bundles} addonQty={addonQty} setAddon={setAddon} />}
               {stepKey === "odeme" && (
                 <StepOdeme
                   productName={shownName} productPrice={priceMinor} productQty={qty} total={total} subtotal={subtotal} deliveryFee={deliveryFeeMinor} deliveryLabel={deliveryLabel}
@@ -1148,7 +1162,7 @@ function StepGonderen(p: {
 }
 
 /* ---------------------------- Adım: Ek Ürünler -------------------------- */
-function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, number>; setAddon: (id: number, q: number) => void }) {
+function StepAddons(p: { addons: CheckoutAddon[]; bundles: CheckoutBundle[]; addonQty: Record<number, number>; setAddon: (id: number, q: number) => void }) {
   const { t } = useI18n();
   const { approx: money } = useCurrency();
   const count = p.addons.reduce((s, a) => s + (p.addonQty[a.id] || 0), 0);
@@ -1186,11 +1200,37 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
         )}
       </div>
 
+      {p.bundles.length > 0 && (
+        <div className="grid gap-3 px-4 pt-4 sm:grid-cols-2 sm:px-7 sm:pt-7">
+          {p.bundles.map((b) => {
+            const ids = b.productIds.map((pid) => p.addons.find((a) => a.productId === pid)?.id).filter((x): x is number => typeof x === "number");
+            const complete = ids.length === b.productIds.length;
+            const added = complete && ids.every((id) => (p.addonQty[id] || 0) > 0);
+            if (!complete) return null;
+            return (
+              <article key={b.id} className={`rounded-[20px] border p-4 ${added ? "border-[#A855F7] bg-[#29104C]" : "border-white/10 bg-[#1C0A38]"}`}>
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#C4B5FD]"><Package className="h-3.5 w-3.5" /> {b.name}</div>
+                {b.description && <p className="mt-1.5 text-[12px] leading-relaxed text-[#B9AECF]">{b.description}</p>}
+                <p className="mt-1.5 text-[11.5px] text-[#D8CFF0] line-clamp-2">{b.names.join(" + ")}</p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-[15px] font-extrabold text-[#D8B4FE]">+{money(b.totalMinor)}</span>
+                  <button onClick={() => ids.forEach((id) => p.setAddon(id, added ? 0 : Math.max(1, p.addonQty[id] || 0)))}
+                    className={`rounded-full px-4 py-2 text-[12px] font-bold transition-colors ${added ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#7C3AED] text-white hover:bg-[#8B5CF6]"}`}>
+                    {added ? t("co.bundleRemove") : t("co.bundleAdd")}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:gap-4 sm:p-7">
         {list.map((a, index) => {
           const q = p.addonQty[a.id] || 0;
           const on = q > 0;
-          const badge = index === 0 ? t("co.mostPreferred") : index === 1 ? t("co.popular") : index === 2 ? t("co.badgeNew") : null;
+          // Rozet YALNIZ panelde tanımlıysa (Revenue Optimizer). Sıraya göre uydurma rozet yok.
+          const badge = a.badge ?? null;
           return (
             <article key={a.id} className={`group overflow-hidden rounded-[20px] border transition-all ${on ? "border-[#A855F7] bg-[#29104C] shadow-[0_18px_35px_-22px_rgba(168,85,247,0.95)]" : "border-white/10 bg-[#1C0A38] hover:-translate-y-0.5 hover:border-[#7C3AED]/70"}`}>
               <div className="relative aspect-[4/3] overflow-hidden bg-white/95">
@@ -1200,6 +1240,7 @@ function StepAddons(p: { addons: CheckoutAddon[]; addonQty: Record<number, numbe
               <div className="p-3.5">
                 <p className="min-h-[38px] text-[12.5px] font-bold leading-snug text-white line-clamp-2">{a.name}</p>
                 <p className="mt-1 text-[11px] text-[#A99BBC]">{a.category || t("co.addonProduct")}</p>
+                {a.note && <p className="mt-1 text-[10.5px] font-semibold text-[#C4B5FD]">{a.note}</p>}
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="text-[16px] font-extrabold text-[#D8B4FE]">+{money(a.priceMinor)}</span>
                   {on ? (

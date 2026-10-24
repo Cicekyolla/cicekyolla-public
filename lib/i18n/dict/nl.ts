@@ -448,6 +448,17 @@ const nl: Dict = {
   "pdp.waText": "Hallo, ik wil graag \"{name}\" bestellen. {url}",
   "trust.waText": "Hallo, ik wil graag informatie over betalen en bestellen.",
   "cart.rowNeedsDelivery": "Geen bezorging gekozen — tik om te kiezen",
+  "co.bundleAdd": "Bundel toevoegen",
+  "co.bundleRemove": "Bundel verwijderen",
+  "co.offerAddedToday": "Vandaag door {n} mensen toegevoegd",
+  "co.offerAcceptRate": "Door {n}% van de klanten toegevoegd",
+  "co.offerCat.delivery": "Bezorging",
+  "co.offerCat.gifts": "Cadeau",
+  "co.offerCat.flowers": "Bloemen",
+  "co.offerCat.experience": "Beleving",
+  "co.offerCat.corporate": "Zakelijk",
+  "co.offerFloristPick": "Keuze van de florist",
+  "co.offerAlsoAdded": "Vaak samen gekocht",
 };
 
 export default nl;

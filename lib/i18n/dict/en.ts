@@ -448,6 +448,17 @@ const en: Dict = {
   "pdp.waText": "Hello, I would like to order \"{name}\". {url}",
   "trust.waText": "Hello, I would like to get information about payment and ordering.",
   "cart.rowNeedsDelivery": "Delivery not selected — tap to choose",
+  "co.bundleAdd": "Add bundle",
+  "co.bundleRemove": "Remove bundle",
+  "co.offerAddedToday": "Added by {n} people today",
+  "co.offerAcceptRate": "Added by {n}% of customers",
+  "co.offerCat.delivery": "Delivery",
+  "co.offerCat.gifts": "Gift",
+  "co.offerCat.flowers": "Flowers",
+  "co.offerCat.experience": "Experience",
+  "co.offerCat.corporate": "Corporate",
+  "co.offerFloristPick": "Florist's pick",
+  "co.offerAlsoAdded": "Often bought together",
 };
 
 export default en;

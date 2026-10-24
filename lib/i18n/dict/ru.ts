@@ -448,6 +448,17 @@ const ru: Dict = {
   "pdp.waText": "Здравствуйте, я хочу заказать «{name}». {url}",
   "trust.waText": "Здравствуйте, хочу получить информацию об оплате и заказе.",
   "cart.rowNeedsDelivery": "Доставка не выбрана — нажмите, чтобы выбрать",
+  "co.bundleAdd": "Добавить набор",
+  "co.bundleRemove": "Убрать набор",
+  "co.offerAddedToday": "Сегодня добавили {n} чел.",
+  "co.offerAcceptRate": "Добавили {n}% покупателей",
+  "co.offerCat.delivery": "Доставка",
+  "co.offerCat.gifts": "Подарок",
+  "co.offerCat.flowers": "Цветы",
+  "co.offerCat.experience": "Впечатления",
+  "co.offerCat.corporate": "Для компаний",
+  "co.offerFloristPick": "Выбор флориста",
+  "co.offerAlsoAdded": "Часто покупают вместе",
 };
 
 export default ru;

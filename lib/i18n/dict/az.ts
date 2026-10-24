@@ -448,6 +448,17 @@ const az: Dict = {
   "pdp.waText": "Salam, \"{name}\" məhsulunu sifariş etmək istəyirəm. {url}",
   "trust.waText": "Salam, ödəniş və sifariş haqqında məlumat almaq istəyirəm.",
   "cart.rowNeedsDelivery": "Çatdırılma seçilməyib — seçmək üçün toxunun",
+  "co.bundleAdd": "Paketi əlavə et",
+  "co.bundleRemove": "Paketi çıxar",
+  "co.offerAddedToday": "Bu gün {n} nəfər əlavə edib",
+  "co.offerAcceptRate": "Müştərilərin {n}%-i əlavə edib",
+  "co.offerCat.delivery": "Çatdırılma",
+  "co.offerCat.gifts": "Hədiyyə",
+  "co.offerCat.flowers": "Gül",
+  "co.offerCat.experience": "Təcrübə",
+  "co.offerCat.corporate": "Korporativ",
+  "co.offerFloristPick": "Floristin seçimi",
+  "co.offerAlsoAdded": "Tez-tez birlikdə alınır",
 };
 
 export default az;

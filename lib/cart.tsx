@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PendingDelivery } from "@/lib/pendingDelivery";
 import { pushEcommerceEvent } from "@/lib/analytics";
+import { trackVisit } from "@/lib/visitTracker";
 import { metaTrack } from "@/lib/metaPixel";
 import { istanbulNow, partitionExpired, expiryStamp } from "@/lib/deliveryExpiry";
 import { anchorServerClock, graceMinutes, nowMs } from "@/lib/serverClock";
@@ -176,11 +177,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
     },
     setQuantity(key, quantity) {
+      // Ziyaretçi ölçümü: azaltma/silme sepetten çıkarma olarak kaydedilir (tutar = çıkan adet × fiyat).
+      const before = items.find((entry) => entry.key === key);
+      if (before && quantity < before.quantity) {
+        trackVisit("remove_from_cart", { i: before.productId, n: before.name, q: before.quantity - Math.max(0, quantity), m: before.unitPriceMinor * (before.quantity - Math.max(0, quantity)) });
+      }
       setItems((current) => quantity > 0
         ? current.map((entry) => entry.key === key ? { ...entry, quantity } : entry)
         : current.filter((entry) => entry.key !== key));
     },
     removeItem(key) {
+      const gone = items.find((entry) => entry.key === key);
+      if (gone) trackVisit("remove_from_cart", { i: gone.productId, n: gone.name, q: gone.quantity, m: gone.unitPriceMinor * gone.quantity });
       setItems((current) => current.filter((entry) => entry.key !== key));
     },
     clearCart() {
