@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { useT } from "@/lib/i18n";
 import { CURRENCIES, useCurrency, type Currency } from "@/lib/currency";
 
-export function CurrencySelector() {
+export function CurrencySelector({ tone = "light" }: { tone?: "light" | "dark" }) {
   const t = useT();
   const { currency, available, setCurrency, ready, source } = useCurrency();
   const [open, setOpen] = useState(false);
@@ -140,14 +140,16 @@ export function CurrencySelector() {
           aria-expanded={open}
           aria-label={t("currency.aria")}
           dir="ltr"
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-[7px] pl-[9px] text-[11px] font-bold tracking-[0.04em] text-[#374151] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] ${
-            open ? "border-[#8B5CF6]/35 bg-[#8B5CF6]/[0.07]" : "border-[#8B5CF6]/20 bg-[#8B5CF6]/[0.02] hover:bg-[#8B5CF6]/[0.05]"
+          className={`flex items-center gap-1.5 rounded-full border px-3 py-[7px] pl-[9px] text-[11px] font-bold tracking-[0.04em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] ${
+            tone === "dark"
+              ? `text-white/90 ${open ? "border-[#C4B5FD]/55 bg-white/[0.16]" : "border-white/[0.22] bg-white/[0.07] hover:bg-white/[0.13]"}`
+              : `text-[#374151] ${open ? "border-[#8B5CF6]/35 bg-[#8B5CF6]/[0.07]" : "border-[#8B5CF6]/20 bg-[#8B5CF6]/[0.02] hover:bg-[#8B5CF6]/[0.05]"}`
           }`}
         >
-          <span aria-hidden className="text-[13px] leading-none text-[#6D28D9]">{current.symbol}</span>
+          <span aria-hidden className={`text-[13px] leading-none ${tone === "dark" ? "text-[#E9D5FF]" : "text-[#6D28D9]"}`}>{current.symbol}</span>
           <span className="uppercase">{current.label}</span>
           <svg width="8" height="6" viewBox="0 0 8 6" fill="none" aria-hidden className={`ml-px transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
-            <path d="M1 1l3 3.5L7 1" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1 1l3 3.5L7 1" stroke={tone === "dark" ? "#C4B5FD" : "#9CA3AF"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
         {panel}
@@ -160,7 +162,9 @@ export function CurrencySelector() {
             type="button"
             aria-label={t("currency.aria")}
             dir="ltr"
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[15px] font-bold text-[#6D28D9] transition-all duration-200 hover:bg-[#F5F3FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] lg:hidden"
+            className={`flex h-11 w-11 items-center justify-center rounded-full text-[15px] font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] lg:hidden ${
+              tone === "dark" ? "text-[#E9D5FF] hover:bg-white/[0.12]" : "text-[#6D28D9] hover:bg-[#F5F3FF]"
+            }`}
           >
             {current.symbol}
           </button>

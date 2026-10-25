@@ -3,6 +3,25 @@ import { mediaUrl } from "@/lib/media";
 /** Footer rozet logosu (yuvarlak altın ÇiçekYolla). Operatör varlığı: public/brand/ */
 const BADGE_LOGO = "/brand/cicekyolla-badge.webp";
 
+/**
+ * Marka wordmark'ı — CMS'te yüklenen logo dosyasını AYNEN gösterir.
+ *
+ * TARİHSEL SORUN (çözüldü): eski uygulama, kare çerçeveyi taşan bir <img>'i
+ * `left:-34px top:-22px h:108px` gibi SABİT sayılarla kaydırıp
+ * `overflow-hidden` ile kırpıyordu. Bu sayılar tek bir dosyanın (1805×871,
+ * sol boşluğu 274px) şeffaf boşluğuna göre elle kalibre edilmişti:
+ *   • o dosya            → logonun %99.6'sı görünüyordu (doğru)
+ *   • sıkı kırpılmış PNG → logonun yalnız %31.5'i görünüyordu (sağdan 656px
+ *     kesiliyor, "Yolla" ve çiçek kayboluyordu)
+ * Yani operatörün yüklediği görsel ile sitede çizilen görsel AYNI DEĞİLDİ.
+ *
+ * YENİ DAVRANIŞ: kırpma yok. Görsel çerçeveye `object-contain` ile sığar →
+ * en-boy oranı korunur, hiçbir kenar kesilmez, hangi dosya yüklenirse yüklensin
+ * yüklenen görsel birebir görünür. `object-left` yalnız hizalamadır; kırpmaz.
+ *
+ * Beklenen varlık: şeffaf PNG/WebP/SVG, kenarları sıkı kırpılmış, en-boy ≈ 3:1.
+ * (Sıkı kırpılmış dosyada logo çerçeve yüksekliğini tam doldurur.)
+ */
 export function BrandWordmark({
   logoUrl,
   alt = "ÇiçekYolla",
@@ -16,7 +35,7 @@ export function BrandWordmark({
   size?: "header" | "compact" | "footer" | "badge";
   inverse?: boolean;
 }) {
-  // badge: kırpma YOK — kare/yuvarlak rozet logosu (footer). Header/compact/footer modları DEĞİŞMEDİ.
+  // badge: kırpma YOK — kare/yuvarlak rozet logosu (footer'ın eski görünümü).
   if (size === "badge") {
     return (
       <div className="flex w-fit flex-col items-center" aria-label={alt}>
@@ -35,16 +54,14 @@ export function BrandWordmark({
   }
   const isFooter = size === "footer";
   const isCompact = size === "compact";
+  // Çerçeve genişlikleri, sıkı kırpılmış ~3:1 wordmark'ın yüksekliği tam
+  // doldurabilmesi için hesaplandı (h × 3.0 + pay). object-contain sayesinde
+  // daha geniş/dar dosyalar da kırpılmadan sığar.
   const frameClass = isFooter
-    ? "h-[76px] w-[230px] xl:h-[82px] xl:w-[250px]"
+    ? "h-[76px] w-[250px] xl:h-[82px] xl:w-[270px]"
     : isCompact
-      ? "h-[46px] w-[142px]"
-      : "h-[52px] w-[168px] xl:h-[56px] xl:w-[182px]";
-  const imageClass = isFooter
-    ? "left-[-45px] top-[-29px] h-[145px] xl:left-[-49px] xl:top-[-32px] xl:h-[158px]"
-    : isCompact
-      ? "left-[-27px] top-[-18px] h-[88px]"
-      : "left-[-31px] top-[-20px] h-[100px] xl:left-[-34px] xl:top-[-22px] xl:h-[108px]";
+      ? "h-[46px] w-[146px]"
+      : "h-[46px] w-[168px] xl:h-[50px] xl:w-[182px]";
   const taglineClass = isFooter
     ? "mt-2 text-[9px] xl:text-[10px]"
     : isCompact
@@ -53,16 +70,16 @@ export function BrandWordmark({
   // Açık zeminde tagline logodan GÜÇLÜ olmamalı: yardımcı bir satırın ait olduğu
   // markanın önüne geçmesi hiyerarşiyi bozuyordu (#51247A 11.15:1 > logo 9.25:1).
   // #6D28D9 -> 7.10:1: logodan net zayıf, WCAG AA'nın (4.5) rahat üstünde ve
-  // marka moru olduğu için kimliği pekiştiriyor. inverse (footer) DEĞİŞMEDİ.
+  // marka moru olduğu için kimliği pekiştiriyor. inverse (koyu zemin) #C084FC.
   const taglineColor = inverse ? "text-[#C084FC]" : "text-[#6D28D9]";
 
   return (
     <div className="flex w-fit flex-col" aria-label={alt}>
-      <div className={`${frameClass} relative overflow-hidden`}>
+      <div className={`${frameClass} relative`}>
         <img
           src={mediaUrl(logoUrl || "/brand-logo")}
           alt={alt}
-          className={`${imageClass} absolute block w-auto max-w-none object-contain`}
+          className="block h-full w-full object-contain object-left"
           decoding="async"
           draggable={false}
         />

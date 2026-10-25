@@ -130,14 +130,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const navOrUndef = nav.length > 0 ? nav : undefined;
   const footerOrUndef = footerNav.length > 0 ? footerNav : undefined;
 
-  // Header BEYAZ, footer KOYU zeminde. Tek logo dosyası ikisine birden uyamıyor:
-  // beyaza uygun koyu logo footer'da kayboluyor (3.03:1), footer'a uygun açık logo
-  // header'da soluk kalıyor (2.34:1).
-  // Header  -> CMS'teki logo (operatör beyaz zemine göre koyu sürümü yükledi).
-  // Footer  -> logoUrl verilmez; BrandWordmark'ın MEVCUT yedeği olan repodaki açık
-  //            marka varlığı (/brand-logo) devreye girer → koyu zeminde 8.48:1.
-  // Diğer tüm alanlar (alt metin, tagline, iletişim) aynen korunur.
-  const footerBrandLight = footerBrand ? { ...footerBrand, logoUrl: undefined } : undefined;
+  // TEK LOGO KAYNAĞI: header ve footer AYNI CMS logo dosyasını gösterir.
+  // Ne filtre, ne karartma, ne ayrı dosya — yüklediğin ne ise o görünür.
+  // Header ve footer artık AYNI tonda (#2A1B3D), yani logo tek renk duruşuyla
+  // iki yerde de okunur. Zemin değişse bile logo rengi değişmez.
 
   // EK (SAYFANIN DİLİ — SUNUCUDA): <html lang / dir> isteğin yolundan kurulur (13 dil sayfası kendi dilini,
   // Arapça dir="rtl" basar; Türkçe yollar aynen lang="tr"). Yol Next'in çizim deposundan PASİF okunur —
@@ -253,7 +249,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <ChromeGate><MemberNewsletterBand /></ChromeGate>
         {/* GLOBAL VERSION 80: TR footer locale rotalarında çizilmez — orada footer
             V80Shell'in locale-aware alt bilgisidir. TR yollarında AYNEN (ChromeGate geçirir). */}
-        <ChromeGate><Footer categories={footerOrUndef} brand={footerBrandLight} /></ChromeGate>
+        <ChromeGate><Footer categories={footerOrUndef} brand={footerBrand} /></ChromeGate>
         {/* Yüzen WhatsApp + Telegram: ChromeGate DIŞINDA — TR ve Global 13 dilde görünür (WhatsApp Global'de
             vitrinin mevcut bağlantısı + dil etiketi; Telegram aynı Admin ayarı). Ürün sayfalarında WhatsApp
             sticky çubukta/panelde kalır. */}

@@ -38,7 +38,7 @@ function detectFlagEmoji(): boolean {
   }
 }
 
-function Flag({ flag, code, size }: { flag: string; code: string; size: "sm" | "md" | "lg" }) {
+function Flag({ flag, code, size, tone = "light" }: { flag: string; code: string; size: "sm" | "md" | "lg"; tone?: "light" | "dark" }) {
   const [ok, setOk] = useState<boolean | null>(null);
   useEffect(() => { setOk(detectFlagEmoji()); }, []);
   const px = size === "sm" ? 16 : size === "md" ? 18 : 24;
@@ -47,7 +47,9 @@ function Flag({ flag, code, size }: { flag: string; code: string; size: "sm" | "
       <span
         aria-hidden
         dir="ltr"
-        className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#8B5CF6]/[0.10] font-extrabold uppercase text-[#6D28D9]"
+        className={`inline-flex shrink-0 items-center justify-center rounded-full font-extrabold uppercase ${
+          tone === "dark" ? "bg-white/[0.14] text-[#E9D5FF]" : "bg-[#8B5CF6]/[0.10] text-[#6D28D9]"
+        }`}
         style={{ width: px + 6, height: px + 6, fontSize: Math.round(px * 0.42), letterSpacing: "0.02em" }}
       >
         {code}
@@ -57,7 +59,7 @@ function Flag({ flag, code, size }: { flag: string; code: string; size: "sm" | "
   return <span aria-hidden className="shrink-0 leading-none" style={{ fontSize: px }}>{flag}</span>;
 }
 
-export function LanguageSelector() {
+export function LanguageSelector({ tone = "light" }: { tone?: "light" | "dark" }) {
   const { locale, setLocale, t } = useI18n();
   const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -173,14 +175,16 @@ export function LanguageSelector() {
           aria-expanded={open}
           aria-label={t("lang.aria")}
           dir="ltr"
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-[7px] pl-[9px] text-[11px] font-bold tracking-[0.04em] text-[#374151] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] ${
-            open ? "border-[#8B5CF6]/35 bg-[#8B5CF6]/[0.07]" : "border-[#8B5CF6]/20 bg-[#8B5CF6]/[0.02] hover:bg-[#8B5CF6]/[0.05]"
+          className={`flex items-center gap-1.5 rounded-full border px-3 py-[7px] pl-[9px] text-[11px] font-bold tracking-[0.04em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] ${
+            tone === "dark"
+              ? `text-white/90 ${open ? "border-[#C4B5FD]/55 bg-white/[0.16]" : "border-white/[0.22] bg-white/[0.07] hover:bg-white/[0.13]"}`
+              : `text-[#374151] ${open ? "border-[#8B5CF6]/35 bg-[#8B5CF6]/[0.07]" : "border-[#8B5CF6]/20 bg-[#8B5CF6]/[0.02] hover:bg-[#8B5CF6]/[0.05]"}`
           }`}
         >
-          <Flag flag={current.flag} code={current.code} size="sm" />
+          <Flag flag={current.flag} code={current.code} size="sm" tone={tone} />
           <span className="uppercase">{current.code}</span>
           <svg width="8" height="6" viewBox="0 0 8 6" fill="none" aria-hidden className={`ml-px transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
-            <path d="M1 1l3 3.5L7 1" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1 1l3 3.5L7 1" stroke={tone === "dark" ? "#C4B5FD" : "#9CA3AF"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
         {panel}
@@ -192,9 +196,11 @@ export function LanguageSelector() {
           <button
             type="button"
             aria-label={t("lang.aria")}
-            className="flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 hover:bg-[#F5F3FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] lg:hidden"
+            className={`flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD] lg:hidden ${
+              tone === "dark" ? "hover:bg-white/[0.12]" : "hover:bg-[#F5F3FF]"
+            }`}
           >
-            <Flag flag={current.flag} code={current.code} size="md" />
+            <Flag flag={current.flag} code={current.code} size="md" tone={tone} />
           </button>
         </SheetTrigger>
         <SheetContent side="bottom" className="max-h-[88dvh] gap-0 overflow-hidden rounded-t-[28px] border-0 bg-white p-0 shadow-2xl outline-none [&>button:last-child]:hidden">

@@ -281,26 +281,31 @@ export function Header({ menu, nav, search, brand }: {
       <header
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
+          /* MÜRDÜM ZEMİN — #2A1B3D, footer ile AYNI ton (tek takım).
+             Koyu zemin seçildi çünkü CMS'teki wordmark parlak lila (#DD8DE6):
+             bu zeminde 6.92:1 okunur, pudra zeminde 2.82:1 soluk kalıyordu.
+             Zemin koyu olunca tek logo dosyası hem header'da hem footer'da
+             doğru okunur; ikinci dosya/filtre/karartma gerekmez. */
           background: scrolled
-            ? "rgba(255, 255, 255, 0.94)"
-            : "linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 100%)",
+            ? "rgba(42, 27, 61, 0.94)"
+            : "linear-gradient(180deg, #2A1B3D 0%, #2A1B3D 100%)",
           backdropFilter: scrolled ? "blur(20px) saturate(160%)" : "none",
-          borderBottom: "1px solid rgba(17,24,39,0.07)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
           boxShadow: scrolled
-            ? "0 1px 0 rgba(139,92,246,0.10), 0 14px 40px rgba(76,29,149,0.08)"
-            : "0 1px 0 rgba(139,92,246,0.06)",
+            ? "0 1px 0 rgba(139,92,246,0.28), 0 14px 40px rgba(0,0,0,0.40)"
+            : "0 1px 0 rgba(139,92,246,0.18)",
         }}
       >
         <div className="max-w-[1440px] mx-auto px-5 lg:px-10 xl:px-14">
           <div className="flex items-center justify-between h-[82px] lg:h-[92px] gap-4 lg:gap-5 xl:gap-7">
 
-            {/* ── Logo — hero tipografisiyle aynı keskin vektör marka sistemi ── */}
+            {/* ── Logo — CMS'teki wordmark, kırpmasız (BrandWordmark object-contain) ── */}
             <Link
               href="/"
-              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-[#F5F3FF]"
+              className="group -ml-1 flex flex-shrink-0 items-center rounded-[18px] px-1.5 py-2 transition-colors duration-300 hover:bg-white/[0.07]"
               aria-label={t("header.home")}
             >
-              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} />
+              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} inverse />
             </Link>
 
             {/* ── Desktop mega nav (curated kategoriler — canlı CategoryTree) ──
@@ -330,8 +335,8 @@ export function Header({ menu, nav, search, brand }: {
                     onClick={() => setActiveMenu(null)}
                     className={`whitespace-nowrap font-semibold transition-colors duration-150 rounded-lg ${
                       activeMenu === key
-                        ? "text-[#8B5CF6] bg-[#F5F3FF]"
-                        : "text-[#1F2937] hover:text-[#8B5CF6] hover:bg-[#F5F3FF]"
+                        ? "text-[#E9D5FF] bg-white/[0.10]"
+                        : "text-white/80 hover:text-white hover:bg-white/[0.10]"
                     }`}
                     style={{
                       display: "inline-block",
@@ -349,11 +354,12 @@ export function Header({ menu, nav, search, brand }: {
 
             {/* ── Actions ── */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {/* Dil seçici — Figma 117 (desktop pill / mobile bottom sheet) */}
-              <LanguageSelector />
+              {/* Dil seçici — Figma 117 (desktop pill / mobile bottom sheet).
+                  tone="dark": mürdüm zeminde pill/ikon renkleri açık tona döner. */}
+              <LanguageSelector tone="dark" />
               {/* Para birimi seçici — dil seçicinin yanında, AYNI tasarım ailesi.
                   Kur yoksa kendini gizler; header bugünkü gibi kalır. */}
-              <CurrencySelector />
+              <CurrencySelector tone="dark" />
               <button
                 ref={searchToggleRef}
                 type="button"
@@ -361,7 +367,7 @@ export function Header({ menu, nav, search, brand }: {
                 aria-controls="cy-header-search"
                 aria-label={searchOpen ? t("header.searchClose") : t("header.searchOpen")}
                 onClick={() => { if (searchOpen) closeSearch(); else setSearchOpen(true); }}
-                className="w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all"
+                className="w-11 h-11 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/[0.10] transition-all"
               >
                 {searchOpen ? <X className="w-4.5 h-4.5" /> : <Search className="w-4.5 h-4.5" />}
               </button>
@@ -369,7 +375,7 @@ export function Header({ menu, nav, search, brand }: {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-[#4B5563] hover:text-[#8B5CF6] hover:bg-[#F5F3FF] transition-all">
+                  <button className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/[0.10] transition-all">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" d="M4 7h16M4 12h10M4 17h16" />
                     </svg>
@@ -377,9 +383,10 @@ export function Header({ menu, nav, search, brand }: {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-80 bg-white p-0">
                   <div className="flex flex-col h-full">
-                    <div className="p-7 border-b border-black/[0.05]">
+                    {/* Drawer başlığı header ile AYNI mürdüm: açılınca zemin sıçraması yok. */}
+                    <div className="bg-[#2A1B3D] p-7 border-b border-white/[0.08]">
                       <div className="flex items-center">
-<BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} size="compact" />
+<BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} size="compact" inverse />
                       </div>
                     </div>
                     <nav className="flex-1 overflow-y-auto p-5 space-y-1">
@@ -503,7 +510,7 @@ export function Header({ menu, nav, search, brand }: {
                 className="overflow-visible pb-4"
               >
                 <div id="cy-header-search" ref={searchPanelRef} role="search" className="relative max-w-xl mx-auto">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/45" />
                   <input
                     autoFocus
                     type="search"
@@ -519,14 +526,14 @@ export function Header({ menu, nav, search, brand }: {
                       }
                     }}
                     placeholder={t("header.searchPlaceholder")}
-                    className="w-full pl-11 pr-12 py-3 bg-[#F5F3FF] border border-[#DDD6FE] rounded-full text-sm text-[#374151] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#8B5CF6] focus:bg-white transition-all [&::-webkit-search-cancel-button]:appearance-none"
+                    className="w-full pl-11 pr-12 py-3 bg-white/[0.10] border border-white/[0.18] rounded-full text-sm text-white placeholder:text-white/45 focus:outline-none focus:border-[#C4B5FD] focus:bg-white/[0.16] transition-all [&::-webkit-search-cancel-button]:appearance-none"
                   />
                   {/* Görünür kapatma — dokunma alanı 36px, simge kompakt/premium. */}
                   <button
                     type="button"
                     onClick={() => { closeSearch(); searchToggleRef.current?.focus(); }}
                     aria-label={t("header.searchClose")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#8B5CF6] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full text-white/55 hover:bg-white/[0.14] hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C4B5FD]"
                   >
                     <X className="w-4 h-4" />
                   </button>

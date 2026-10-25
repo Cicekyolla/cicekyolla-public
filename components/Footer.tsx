@@ -102,7 +102,10 @@ export function Footer({
   return (
     <footer
       style={{
-        background: "linear-gradient(180deg, #0D0520 0%, #070011 100%)",
+        /* HEADER İLE AYNI TON (#2A1B3D → #1E1230). Önceden #0D0520 idi; header
+           mürdüme alınınca footer da aynı aileye çekildi (--footer-bg).
+           Header koyu olduğu için logo her iki yerde de açık varyanttır. */
+        background: "linear-gradient(180deg, #2A1B3D 0%, #1E1230 100%)",
         borderTop: "1px solid rgba(139,92,246,0.12)",
       }}
     >
@@ -112,9 +115,14 @@ export function Footer({
 
           {/* Brand column */}
           <div>
-            {/* Footer wordmark ağdan görsel çağırmaz; header ile aynı sabit marka bileşenidir. */}
+            {/* TUTARLILIK: footer artık header ile AYNI kaynağı kullanır
+                (CMS logo_url + kırpmasız BrandWordmark). Önceden burada
+                size="badge" vardı ve repodaki ALTIN rozeti çiziyordu →
+                aynı ekranda iki farklı marka rengi (header lila, footer altın).
+                Altın rozet varlığı (cicekyolla-badge.webp) repoda duruyor;
+                istenirse size="badge" ile geri alınır. */}
             <div className="mb-8">
-              <BrandWordmark alt={brand?.logoAlt} tagline={brand?.logoTagline} size="badge" inverse />
+              <BrandWordmark logoUrl={brand?.logoUrl} alt={brand?.logoAlt} tagline={brand?.logoTagline} size="footer" inverse />
             </div>
 
             <p className="text-sm text-[#6B7280] leading-relaxed max-w-xs mb-8">
