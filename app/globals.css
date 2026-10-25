@@ -301,3 +301,24 @@ html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="bg-[#C084FC]"
 html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="tracking-[0.3em]"] { color: var(--season-accent-text) !important; }
 html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] > * { background: var(--season-surface) !important; border-color: var(--hp-warm-line) !important; }
 html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] :is([class~="font-semibold"][class~="text-[#7C3AED]"], svg[class~="text-[#7C3AED]"]) { color: var(--season-accent-text) !important; }
+
+/* ── V73 KOLEKSİYON RAYI — sayfa başı tek damar ─────────────────────────────
+   Yalnız html[data-season]. Ray bandı krem (son alım şeridiyle birleşir), kart
+   beyaz kalır; çizgi, gölge, ok ve daire halkası sezon tonundan türetilir. */
+html[data-season] .hp-sec[data-hp-type="collection_rail"] > section { background: var(--season-surface) !important; padding-bottom: 1.25rem; }
+html[data-season] .hp-sec[data-hp-type="collection_rail"] [style*="blur(48px)"] {
+  border-color: var(--hp-warm-line) !important;
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--season-ink) 7%, transparent), 0 1px 3px color-mix(in srgb, var(--season-ink) 5%, transparent) !important;
+}
+html[data-season] .hp-sec[data-hp-type="collection_rail"] button[style*="blur(8px)"] {
+  border-color: var(--hp-warm-line) !important;
+  color: var(--season-accent-text) !important;
+}
+html[data-season] .hp-sec[data-hp-type="collection_rail"] .cat-circle {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--season-ink) 10%, transparent), 0 0 0 1.5px var(--hp-warm-line) !important;
+}
+html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="text-[#374151]"] { color: var(--season-ink) !important; }
+html[data-season] .hp-sec[data-hp-type="collection_rail"] a:hover :is([class~="text-[#374151]"]),
+html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="text-[#6B7280]"]:hover { color: var(--season-accent-text) !important; }
+html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] > * { border-top-color: transparent !important; }
+html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] [class~="divide-[rgba(17,24,39,0.07)]"] > * { border-color: var(--hp-warm-line) !important; }
