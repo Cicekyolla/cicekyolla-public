@@ -176,7 +176,7 @@ export function InstagramGallery({
       <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-11">
         <div className="mb-10 flex items-end justify-between gap-6 lg:mb-12">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8B5CF6]">
+            <p className="hp-eyebrow text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8B5CF6]">
               Instagram
             </p>
             <h2

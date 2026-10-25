@@ -18,7 +18,7 @@ export function Newsletter() {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
-            <p className="text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-2">E-Bülten</p>
+            <p className="hp-eyebrow text-[10px] tracking-[0.3em] text-[#8B5CF6] uppercase font-bold mb-2">E-Bülten</p>
             <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.6rem" }} className="font-semibold text-[#111827]">
               Özel Fırsatları Kaçırmayın
             </h3>

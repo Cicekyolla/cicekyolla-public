@@ -12,6 +12,7 @@ import { motion } from "motion/react";
 import { Sparkles, Gift, Flower2, Clock3, Package, Headset, Gem } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Price } from "@/components/Price";
+import { mediaUrl } from "@/lib/media";
 
 /**
  * CMS'ten (Homepage CMS → "Atölyeden Bugün") gelen tek slot. Slot ya seçilen
@@ -122,7 +123,7 @@ export function WorkshopToday({
               <div className="relative overflow-hidden" style={{ aspectRatio: "4/3" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={card.image}
+                  src={mediaUrl(card.image)}
                   alt={card.title}
                   loading="lazy"
                   decoding="async"

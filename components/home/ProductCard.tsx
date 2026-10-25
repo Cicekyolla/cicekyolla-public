@@ -42,6 +42,8 @@ export type Product = {
   scope?: string;
   hasSale?: boolean;
   categoryId?: number | null;
+  /** TEMA & SEZON: aktif temanın rozet yazısı (yalnız gerçek kategori eşleşmesinde dolu). */
+  seasonBadge?: string;
   derivatives?: { webp?: string; avif?: string; responsive?: Record<string, string> } | null;
   blurhash?: string | null;
 };
@@ -202,6 +204,13 @@ export function ProductCard({ product, idx, contextTag, deliveryPromise, polish 
           >
             {product.badge}
           </div>
+          ) : null}
+
+          {/* TEMA & SEZON rozeti — renkler globals.css .hp-season-badge (sezon token'ları) */}
+          {product.seasonBadge ? (
+            <div className={`hp-season-badge absolute left-4 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider ${product.badge ? "top-12" : "top-4"}`}>
+              {product.seasonBadge}
+            </div>
           ) : null}
 
           {/* Wishlist */}

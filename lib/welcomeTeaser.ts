@@ -83,6 +83,25 @@ export function welcomeTeaserVisible(i: WelcomeTeaserInput): boolean {
  * Ürün sayfasında mobilde alt kısımda sabit "Sipariş Ver" çubuğu vardır; teklif
  * alanı onun ÜSTÜNDE durur (satın alma düğmesini asla örtmez).
  */
+/**
+ * Tema & Sezon Adım 5 (25 Eki 2026): mobil ana sayfada teklif alanı hero'nun
+ * "Koleksiyonu Keşfet / WhatsApp Sipariş" butonlarının üzerine biniyordu.
+ * Kural: telefon genişliğinde (< 640 px) ANA SAYFADA teklif alanı müşteri
+ * ilk kez kaydırana kadar (≥ WELCOME_TEASER_SCROLL_PX) beklemede; kaydırınca
+ * görünür ve o sayfa görüntülemesi boyunca kalır. Masaüstü ve diğer sayfalar
+ * bugünkü gibi (hemen). Diğer tüm görünürlük kuralları aynen geçerli.
+ */
+export const WELCOME_TEASER_SCROLL_PX = 120;
+
+export function welcomeTeaserWaitsForScroll(pathname: string | null | undefined, isDesktop: boolean): boolean {
+  return !isDesktop && (pathname ?? "") === "/";
+}
+
+/** Bekleme kapısı açık mı? (bekleme gerekmiyorsa her zaman açık) */
+export function welcomeTeaserScrollGate(pathname: string | null | undefined, isDesktop: boolean, scrolledPx: number): boolean {
+  return !welcomeTeaserWaitsForScroll(pathname, isDesktop) || scrolledPx >= WELCOME_TEASER_SCROLL_PX;
+}
+
 export function teaserSitsAboveBuyBar(pathname: string | null | undefined): boolean {
   return (pathname ?? "").startsWith("/urun/");
 }

@@ -59,7 +59,7 @@ export function FlowerJourney() {
           className="flex items-center justify-center gap-4 mb-5"
         >
           <span className="h-px w-10" style={{ background: "linear-gradient(90deg, transparent, rgba(192,132,252,0.5))" }} />
-          <span className="text-[10px] tracking-[0.3em] uppercase font-bold text-[#C084FC]">Servis Deneyimi</span>
+          <span className="hp-eyebrow text-[10px] tracking-[0.3em] uppercase font-bold text-[#C084FC]">Servis Deneyimi</span>
           <span className="h-px w-10" style={{ background: "linear-gradient(90deg, rgba(192,132,252,0.5), transparent)" }} />
         </motion.div>
 

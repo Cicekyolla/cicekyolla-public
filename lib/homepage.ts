@@ -28,6 +28,8 @@ export interface HpProduct {
   // kalır ve davranış bugünkü gibidir; lib/homepageDerivatives.ts doldurur.
   cover_derivatives?: MediaDerivatives | null;
   cover_blurhash?: string | null;
+  /** TEMA & SEZON (API 121, additive): sezon rozeti eşleşmesi için kategori kimlikleri. Eski API: yok. */
+  category_ids?: number[];
 }
 export interface HpSection {
   id: number; type: HpSectionType; title: string | null; subtitle: string | null;
@@ -51,9 +53,13 @@ async function safeGet(url: string, init?: RequestInit): Promise<HomepageDTO | n
   }
 }
 
+/** Yayın sonrası anında güncelleme (Tema & Sezon Adım 5): /api/revalidate bu etiketi geçersizler.
+ *  Etiket yalnız önbellek anahtarı ekler; revalidate 60 aynen kalır (uç çağrılmazsa bugünkü davranış). */
+export const HOMEPAGE_CACHE_TAG = "homepage";
+
 /** Yayınlanan snapshot (published-only). Yoksa/hatada null. */
 export async function getPublishedHomepage(): Promise<HomepageDTO | null> {
-  return safeGet(`${API_ORIGIN}/api/public/homepage`, { next: { revalidate: 60 } });
+  return safeGet(`${API_ORIGIN}/api/public/homepage`, { next: { revalidate: 60, tags: [HOMEPAGE_CACHE_TAG] } });
 }
 
 /** Kısa ömürlü GRANT ile taslak önizleme (kalıcı token YOK). Yoksa/hatada null. */
@@ -74,7 +80,7 @@ export interface HomepageBannerDTO {
 export async function getActiveHomepageBanner(): Promise<HomepageBannerDTO | null> {
   try {
     const res = await fetch(`${API_ORIGIN}/api/public/homepage/banner`, {
-      headers: { Accept: 'application/json' }, next: { revalidate: 60 },
+      headers: { Accept: 'application/json' }, next: { revalidate: 60, tags: [HOMEPAGE_CACHE_TAG] },
     });
     if (!res.ok) return null;
     const j = (await res.json()) as { data?: HomepageBannerDTO | null };

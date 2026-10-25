@@ -6,7 +6,8 @@
 // gerçek ProductCard (ProductShowcase) ile, DTO'daki manuel sırayla render edilir.
 // ============================================================================
 import { Fragment } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { planSkins, resolveSeason, type SeasonThemeData, type SkinInput } from "@/lib/seasonTheme";
 import type { HomepageDTO, HpSection } from "@/lib/homepage";
 import type { DeliveryZoneCity } from "@/lib/api";
 
@@ -49,7 +50,12 @@ export interface RenderCtx {
   /** Kampanya banner'ı (090): aktifse hero görselinin üzerine biner (additive, opsiyonel).
       Yayın sürümünden bağımsız; null iken hero bugünkü gibi CMS görselini gösterir. */
   heroBanner?: HeroBanner | null;
+  /** TEMA & SEZON: aktif temanın ürün rozeti (renderer kendi doldurur; dışarıdan verilmez). */
+  seasonBadge?: SeasonThemeData["badge"] | null;
 }
+
+/** Renderer dışında (page.tsx) eklenen kuyruk bölümleri — zemin/boşluk planına aynı sırayla katılır. */
+export interface TailSection { type: string; node: ReactNode }
 
 /**
  * "Atölyeden Bugün" bölümünü en fazla 3 slota indirger:
@@ -112,7 +118,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "feature_split":       return <FeatureSplit />;
     case "same_day_delivery":   return <SameDayDelivery />;
     case "occasion_shopping":   return <OccasionShopping items={ctx.imagedCollections} config={s.config} title={s.title} subtitle={s.subtitle} />;
-    case "best_sellers":        return <ProductShowcase title={s.title?.trim() && s.title.trim() !== "Çok Satanlar" ? s.title : "En Çok Tercih Edilenler"} subtitle={s.subtitle ?? "Müşterilerimizin favori çiçekleri."} products={s.products} />;
+    case "best_sellers":        return <ProductShowcase title={s.title?.trim() && s.title.trim() !== "Çok Satanlar" ? s.title : "En Çok Tercih Edilenler"} subtitle={s.subtitle ?? "Müşterilerimizin favori çiçekleri."} products={s.products} seasonBadge={ctx.seasonBadge} />;
     case "editors_picks":       return <EditorsPicks title={s.title} subtitle={s.subtitle} config={s.config} />;
     case "workshop_today":      return <WorkshopToday title={s.title} subtitle={s.subtitle} slots={buildWorkshopSlots(s)} />;
     case "brand_story":         return <BrandStory />;
@@ -202,6 +208,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
           ctaLabel={ctaLabel}
           ctaHref={ctaHref}
           theme={theme}
+          seasonBadge={ctx.seasonBadge}
         />
       );
     }
@@ -209,7 +216,11 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
   }
 }
 
-export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCtx }) {
+export function HomepageRenderer({ dto, ctx: baseCtx, tail = [] }: { dto: HomepageDTO; ctx: RenderCtx; tail?: TailSection[] }) {
+  // TEMA & SEZON (25 Eki 2026): aktif tema yoksa season=null → planSkins zemine dokunmaz,
+  // sarmalayıcılar display:contents → DOM akışı ve ölçüler bugünküyle aynı.
+  const season = resolveSeason(dto.sections);
+  const ctx: RenderCtx = { ...baseCtx, seasonBadge: season?.theme?.badge ?? null };
   const enabledSections = dto.sections.filter((s) => s.enabled);
   // V65 vitrin ailesi tüm product_showcase bölümlerine sırayla eşlenir
   // (A Orkide → B Fırsat → C Saksı → D Premium). Admin'de ürün varsa
@@ -250,29 +261,51 @@ export function HomepageRenderer({ dto, ctx }: { dto: HomepageDTO; ctx: RenderCt
       ? "featured_collections"
       : null;
 
+  // Bölümler sırayla düz listeye alınır (çapalı ek bölümler ve page.tsx kuyruğu dahil) →
+  // zemin dönüşümü / "aynı zemin ardışık → sıkı üst boşluk" tek geçişte hesaplanır.
+  type Item = SkinInput & { key: string; node: ReactNode };
+  const items: Item[] = [];
+  const layoutOf = (s: HpSection) => (s.config as { layout?: SkinInput["layout"] })?.layout ?? null;
+  const showcaseType = (s: HpSection) => (fillAssign.get(s.id)?.theme === "noir" ? "showcase_noir" : s.type);
+  if (!hasCollectionRail) {
+    items.push({ key: "rail", type: "collection_rail", node: (
+      <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
+        <FloatingCategoryRail items={ctx.collections} variant="light" allHref="/kategori/koleksiyonlar" />
+      </section>
+    ) });
+  }
+  for (const s of enabledSections) {
+    items.push({ key: `s${s.id}`, type: s.type === "product_showcase" ? showcaseType(s) : s.type, layout: layoutOf(s), node: renderSection(s, ctx, fillAssign.get(s.id)) });
+    if (!hasWorkshopToday && s.type === "hero") items.push({ key: `wt${s.id}`, type: "workshop_today", node: <WorkshopToday /> });
+    if (moodAnchor && s.type === moodAnchor) items.push({ key: `mood${s.id}`, type: "mood_picker", node: <MoodPicker /> });
+    if (!hasUrgencyStrip && s.type === "featured_collections") items.push({ key: `urg${s.id}`, type: "urgency_strip", node: <Fragment><UrgencyStrip /><NightOrderStrip /></Fragment> });
+    if (!hasEditorsPicks && s.type === editorFallbackAnchor) items.push({ key: `ep${s.id}`, type: "editors_picks", node: <EditorsPicks config={{}} /> });
+    if (!hasFeatureSplit && s.type === fallbackAnchor) items.push({ key: `fs${s.id}`, type: "feature_split", node: <FeatureSplit /> });
+  }
+  if (!hasWorkshopToday && !hasHeroSection) items.push({ key: "wt", type: "workshop_today", node: <WorkshopToday /> });
+  if (moodAnchor === null) items.push({ key: "mood", type: "mood_picker", node: <MoodPicker /> });
+  if (!hasEditorsPicks && editorFallbackAnchor === null) items.push({ key: "ep", type: "editors_picks", node: <EditorsPicks config={{}} /> });
+  if (!hasFeatureSplit && fallbackAnchor === null) items.push({ key: "fs", type: "feature_split", node: <FeatureSplit /> });
+  tail.forEach((t, i) => items.push({ key: `tail${i}`, type: t.type, node: t.node }));
+
+  // season_theme görünmez ayar bölümüdür (renderSection null döner) → plana girmez.
+  const visible = items.filter((it) => it.type !== "season_theme");
+  const skins = planSkins(visible, !!season?.theme);
+
   return (
     <>
-      {/* Koleksiyon rayı header ile hero arasındaki temel vitrin öğesidir.
-          CMS sürümünde kayıt yoksa kaybolmaz; kayıt varsa ikinci kez gösterilmez. */}
-      {!hasCollectionRail ? (
-        <section aria-label="Koleksiyonlar" className="bg-white pt-5 pb-0">
-          <FloatingCategoryRail items={ctx.collections} variant="light" allHref="/kategori/koleksiyonlar" />
-        </section>
-      ) : null}
-      {enabledSections.map((s) => (
-        <Fragment key={s.id}>
-          {renderSection(s, ctx, fillAssign.get(s.id))}
-          {!hasWorkshopToday && s.type === "hero" ? <WorkshopToday /> : null}
-          {moodAnchor && s.type === moodAnchor ? <MoodPicker /> : null}
-          {!hasUrgencyStrip && s.type === "featured_collections" ? <Fragment><UrgencyStrip /><NightOrderStrip /></Fragment> : null}
-          {!hasEditorsPicks && s.type === editorFallbackAnchor ? <EditorsPicks config={{}} /> : null}
-          {!hasFeatureSplit && s.type === fallbackAnchor ? <FeatureSplit /> : null}
-        </Fragment>
+      {visible.map((it, i) => (
+        <div
+          key={it.key}
+          className="hp-sec"
+          data-hp-type={it.type}
+          data-hp-bg={skins[i].bg ?? undefined}
+          data-hp-spaced={skins[i].spaced ? "" : undefined}
+          data-hp-tight={skins[i].tight ? "" : undefined}
+        >
+          {it.node}
+        </div>
       ))}
-      {!hasWorkshopToday && !hasHeroSection ? <WorkshopToday /> : null}
-      {moodAnchor === null ? <MoodPicker /> : null}
-      {!hasEditorsPicks && editorFallbackAnchor === null ? <EditorsPicks config={{}} /> : null}
-      {!hasFeatureSplit && fallbackAnchor === null ? <FeatureSplit /> : null}
     </>
   );
 }

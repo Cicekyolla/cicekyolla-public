@@ -21,7 +21,7 @@ export function UrgencyStrip({ title, subtitle, config }:{
   const cta=typeof cfg.text==="string"&&cfg.text.trim()?cfg.text.trim():"Hemen Sipariş Ver";
   const href=typeof cfg.href==="string"&&cfg.href.trim()?cfg.href.trim():"/kategori/cicekler";
   return (
-    <div className="py-5 px-6" style={{background:"linear-gradient(90deg, #1E0A4A 0%, #4C1D95 40%, #6D28D9 70%, #1E0A4A 100%)"}}>
+    <div className="hp-grad-strip py-5 px-6" style={{background:"linear-gradient(90deg, #1E0A4A 0%, #4C1D95 40%, #6D28D9 70%, #1E0A4A 100%)"}}>
       <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-white">
           <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center" style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.15)"}}>
