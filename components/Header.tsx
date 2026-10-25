@@ -241,7 +241,7 @@ export function Header({ menu, nav, search, brand }: {
       {/* ── Live ticker ── */}
       <div
         style={{ background: "#7c3aed" }}
-        className="text-white"
+        className="cy-ticker text-white"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
           <Link

@@ -233,3 +233,71 @@ html[data-season] .hp-grad-card {
 }
 /* Saksı Çiçekleri CTA: yeşil→mor degrade yerine düz marka moru. */
 html[data-season] .hp-cta-botanic { background: var(--primary) !important; box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 30%, transparent) !important; }
+
+/* ── V72 SONBAHAR BÜTÜNLÜĞÜ — tek damar ──────────────────────────────────────
+   Yalnız html[data-season] (Admin'de tema aktifken). Ham hex üretilmez: değerler
+   --season-* / --primary / --chart-2 / --hp-eggplant'tan türetilir. Seçiciler sınıf
+   JETONU (~=) ile eşleşir → hover:/focus: varyantlarına dokunmaz. */
+html[data-season] {
+  --hp-warm-tint: var(--season-surface-alt);
+  --hp-warm-line: color-mix(in srgb, var(--season-accent-text) 16%, var(--season-surface-alt));
+  --hp-warm-deep: linear-gradient(135deg,
+    color-mix(in srgb, var(--primary) 22%, var(--hp-eggplant)) 0%,
+    color-mix(in srgb, var(--primary) 55%, var(--hp-eggplant)) 60%,
+    color-mix(in srgb, var(--primary) 70%, var(--hp-eggplant)) 100%);
+}
+
+/* 1) Açık bölümlerin iç yüzeyleri: lavanta çip/kart/karo → sıcak kum */
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) :is([class~="bg-[#F5F3FF]"], [class~="bg-[#f5f1ff]"], [class~="bg-[#f2eef6]"], [class~="bg-[#FFF1F2]"]),
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) > * :is([style*="#F5F3FF"], [style*="#EDE9FE"]) {
+  background: var(--hp-warm-tint) !important;
+}
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) :is([class~="border-[#EDE9FE]"], [class~="border-[#DDD6FE]"], [class~="border-[#FECDD3]"], [class~="border-[#ede9fe]"]),
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) > * :is([style*="#F5F3FF"], [style*="#EDE9FE"]) {
+  border-color: var(--hp-warm-line) !important;
+}
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) [class~="text-[#E11D48]"] { color: var(--secondary-foreground) !important; }
+
+/* 2) Ürün kartı garanti mührü: turkuaz → sezon bakırı */
+html[data-season] .hp-sec [stroke="#0BADA6"] { stroke: var(--season-accent-text); }
+html[data-season] .hp-sec [fill="#0BADA6"] { fill: var(--season-accent-text); }
+
+/* 3) Tek tip CTA: Fırsatlar ve Saksı vitrin butonları marka degradesine döner */
+html[data-season] .hp-sec a:is([style*="#D946EF"], .hp-cta-botanic) {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--chart-2) 100%) !important;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 32%, transparent) !important;
+}
+
+/* 4) Elektrik mor koyu kartlar → derin mor-patlıcan */
+html[data-season] .hp-sec [style*="#2D1260"] { background: var(--hp-warm-deep) !important; }
+html[data-season] .hp-sec [class~="via-[#4C1D95]/65"] {
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--primary) 16%, var(--hp-eggplant)) 0%,
+    color-mix(in srgb, color-mix(in srgb, var(--primary) 30%, var(--hp-eggplant)) 62%, transparent) 55%,
+    transparent 100%) !important;
+}
+
+/* 5) Ana sayfa sonu e-bülten bandı: lavanta → krem (yalnız ana sayfa) */
+html[data-season]:has(.hp-sec) section[class~="from-[#f5f0ff]"] {
+  background: var(--season-surface) !important;
+  border-top-color: var(--hp-warm-line) !important;
+}
+html[data-season]:has(.hp-sec) section[class~="from-[#f5f0ff]"] [class~="text-[#8b5cf6]"] { color: var(--season-accent-text) !important; }
+
+/* 6) Sayfa başı (yalnız ana sayfa): üst şerit, teslimat yeri, koleksiyon rayı, son alım şeridi.
+      Header'ın beyaz zemini ve logo değişmez. */
+html[data-season]:has(.hp-sec) .cy-ticker {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--primary) 18%, var(--hp-eggplant)) 0%,
+    color-mix(in srgb, var(--primary) 42%, var(--hp-eggplant)) 50%,
+    color-mix(in srgb, var(--primary) 18%, var(--hp-eggplant)) 100%) !important;
+}
+html[data-season]:has(.hp-sec) div[class~="bg-[#FBFAFF]"][class~="border-[#EDE9FE]"] {
+  background: var(--season-surface) !important;
+  border-color: var(--hp-warm-line) !important;
+}
+html[data-season]:has(.hp-sec) div[class~="bg-[#FBFAFF]"][class~="border-[#EDE9FE]"] svg { color: var(--season-accent-text); }
+html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="bg-[#C084FC]"] { background: var(--season-accent) !important; }
+html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="tracking-[0.3em]"] { color: var(--season-accent-text) !important; }
+html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] > * { background: var(--season-surface) !important; border-color: var(--hp-warm-line) !important; }
+html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] :is([class~="font-semibold"][class~="text-[#7C3AED]"], svg[class~="text-[#7C3AED]"]) { color: var(--season-accent-text) !important; }
