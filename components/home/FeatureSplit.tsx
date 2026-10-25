@@ -22,7 +22,7 @@ export function FeatureSplit() {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
         <div className="mb-9 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
+            <p className="hp-eyebrow text-[10px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
               81 İle Güvenli Gönderim
             </p>
             <h2

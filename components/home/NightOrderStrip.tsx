@@ -31,7 +31,7 @@ const YILDIZLAR: ReadonlyArray<{ left: string; top: string; size: number; opacit
 export function NightOrderStrip() {
   return (
     <div
-      className="relative overflow-hidden py-5 px-6"
+      className="hp-grad-strip relative overflow-hidden py-5 px-6"
       style={{ background: "linear-gradient(90deg, #1E0A4A 0%, #4C1D95 40%, #6D28D9 70%, #1E0A4A 100%)" }}
       aria-label="Gece çiçek siparişi"
       data-night-order-strip

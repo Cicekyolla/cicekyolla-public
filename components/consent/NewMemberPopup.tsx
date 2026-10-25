@@ -75,6 +75,9 @@ import {
   teaserSitsAboveBuyBar,
   welcomeTeaserCopy,
   welcomeTeaserVisible,
+  welcomeTeaserScrollGate,
+  welcomeTeaserWaitsForScroll,
+  WELCOME_TEASER_SCROLL_PX,
   type MemberFlagState,
 } from "@/lib/welcomeTeaser";
 
@@ -159,6 +162,10 @@ export function NewMemberPopup() {
      gizlenir; o pencere kapanınca geri gelir. Başlangıçta "gösterme". */
   const [overlayFree, setOverlayFree] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  /* Tema & Sezon Adım 5: mobil ana sayfada teklif alanı ilk kaydırmaya kadar bekler (hero butonlarının üstüne binmesin). */
+  const [scrolledPx, setScrolledPx] = useState(0);
+  /* Kapı için ayrı genişlik bilgisi: isDesktop yalnız panel açılırken ölçülür (başlangıçta false). */
+  const [isWide, setIsWide] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const heldOverlay = useRef(false);
 
@@ -210,6 +217,22 @@ export function NewMemberPopup() {
       window.removeEventListener("storage", refresh);
     };
   }, []);
+
+  /* Kaydırma kapısı: yalnız beklemesi gereken sayfada dinlenir; eşik aşılınca dinleyici kalkar. */
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 640px)").matches;
+    setIsWide(wide);
+    setScrolledPx(window.scrollY);
+    if (!welcomeTeaserWaitsForScroll(pathname, wide)) return;
+    // YALNIZ teklif alanının görünürlük kapısı — üyelik paneli burada AÇILMAZ.
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolledPx(y);
+      if (y >= WELCOME_TEASER_SCROLL_PX) window.removeEventListener("scroll", onScroll);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [pathname]);
 
   /* Panel açıkken: arka plan kaymaz, Esc kapatır, odak panelde döner. */
   useEffect(() => {
@@ -264,7 +287,8 @@ export function NewMemberPopup() {
       overlayFree,
       isLocalePath: !!pathname && isGlobalLocalePath(pathname),
       blockedPrefixes: MARKETING_BLOCKED_PATHS,
-    });
+    }) &&
+    welcomeTeaserScrollGate(pathname, isWide, scrolledPx);
   const aboveBuyBar = teaserSitsAboveBuyBar(pathname);
 
   /** Tek açılış yolu: müşterinin teklif alanına dokunması. */

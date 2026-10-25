@@ -94,7 +94,12 @@ test("ürün sayfasında mobil satın alma çubuğunun üstünde durur", () => {
 
 test("KAYNAK: panel yalnız müşteri dokununca açılır — süre/kaydırma ile kendiliğinden açılma YOK", () => {
   const src = readFileSync(join(ROOT, "components/consent/NewMemberPopup.tsx"), "utf8");
-  assert.doesNotMatch(src, /addEventListener\("scroll"/, "kaydırma tetikleyicisi kalmamalı");
+  // 25 Eki 2026 (Tema & Sezon Adım 5): mobil ana sayfadaki TEK kaydırma dinleyicisi yalnız küçük teklif
+  // alanının görünürlük kapısını açar; paneli ASLA açmaz (setVisible yalnız openPanel'de, aşağıda sayılır).
+  const scrollListeners = src.match(/addEventListener\("scroll"/g) ?? [];
+  assert.ok(scrollListeners.length <= 1, "en fazla bir kaydırma dinleyicisi (teklif alanı kapısı)");
+  const gate = src.slice(src.indexOf("Kaydırma kapısı"), src.indexOf("Panel açıkken: arka plan kaymaz"));
+  assert.ok(gate.length > 0 && !/setVisible/.test(gate), "kaydırma dinleyicisi paneli açmaz");
   assert.doesNotMatch(src, /setTimeout\(arm/, "süre tetikleyicisi kalmamalı");
   assert.doesNotMatch(src, /scroll_ratio|delay_ms/, "Admin gecikme/kaydırma ayarı paneli açmaz");
   // Tek açılış yolu teklif alanının düğmesi.
@@ -167,4 +172,20 @@ test("KAYNAK: panel kompakt — masaüstünde tam boy levha değil", () => {
   // Mobilde panel KISA açılır; gerisi panelin içinde kaydırılır.
   assert.match(src, /max-h-\[max\(420px,60dvh\)\]/, "mobilde panel kısa açılır");
   assert.match(src, /min-h-0 flex-1 overflow-y-auto overscroll-contain/, "gövde kendi içinde kayar");
+});
+
+// Tema & Sezon Adım 5 (25 Eki 2026): mobil ana sayfada teklif alanı ilk kaydırmaya kadar bekler.
+test("mobil ana sayfa: teklif alanı ilk kaydırmadan sonra görünür; masaüstü / diğer sayfalar bugünkü gibi", async () => {
+  const { welcomeTeaserScrollGate, welcomeTeaserWaitsForScroll, WELCOME_TEASER_SCROLL_PX } = await import("./welcomeTeaser.ts");
+  assert.equal(welcomeTeaserWaitsForScroll("/", false), true);
+  assert.equal(welcomeTeaserWaitsForScroll("/", true), false, "masaüstü beklemez");
+  assert.equal(welcomeTeaserWaitsForScroll("/kategori/buketler", false), false, "diğer sayfa beklemez");
+  assert.equal(welcomeTeaserScrollGate("/", false, 0), false);
+  assert.equal(welcomeTeaserScrollGate("/", false, WELCOME_TEASER_SCROLL_PX - 1), false);
+  assert.equal(welcomeTeaserScrollGate("/", false, WELCOME_TEASER_SCROLL_PX), true);
+  assert.equal(welcomeTeaserScrollGate("/", true, 0), true);
+  assert.equal(welcomeTeaserScrollGate("/urun/x", false, 0), true);
+  const src = readFileSync(join(ROOT, "components/consent/NewMemberPopup.tsx"), "utf8");
+  assert.match(src, /welcomeTeaserScrollGate\(pathname, isWide, scrolledPx\)/, "bileşen kapıyı kullanır");
+  assert.match(src, /\{ passive: true \}/, "kaydırma dinleyicisi pasif");
 });

@@ -22,6 +22,9 @@ import { mediaUrl } from "@/lib/media";
 import { heroPreloadLinks } from "@/lib/heroPreload";
 
 type HeroConfig = {
+  /** TEMA & SEZON (API 121): CTA altı bilgi çipleri + sağ alt cam kart. Boşsa bugünkü metinler. */
+  chips?: string[];
+  glass_card?: { enabled?: boolean; title?: string; text?: string };
   headline?: string;
   subtitle?: string;
   badge?: string;
@@ -61,6 +64,15 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
   const headline = config.headline?.trim() || "Sevdiklerine\nÇiçek Yolla\nAnlam Kazansın";
   const subtitle = config.subtitle?.trim() || "Özenle seçilmiş premium aranjmanlar, zarif paketleme, aynı gün teslimat.";
   const badge = config.badge?.trim() || "Aynı Gün Teslimat Aktif";
+  const CHIP_ICONS = [Clock3, Package, Headset, Gem] as const;
+  const adminChips = Array.isArray(config.chips) ? config.chips.map((c) => (typeof c === "string" ? c.trim() : "")).filter(Boolean).slice(0, 6) : [];
+  const chips = (adminChips.length ? adminChips : ["Bugün hazırlanır", "Özenli paketleme", "Canlı destek", "Premium seçki"])
+    .map((label, i) => ({ Icon: CHIP_ICONS[i % CHIP_ICONS.length], label }));
+  const glassCard = {
+    show: config.glass_card?.enabled !== false,
+    title: config.glass_card?.title?.trim() || "Aynı Gün Teslimat",
+    text: config.glass_card?.text?.trim() || "İstanbul içi hızlı teslimat",
+  };
   const cta1 = {
     label: config.cta1?.label?.trim() || "Koleksiyonu Keşfet",
     href: config.cta1?.href?.trim() || "/kategori/buketler",
@@ -164,9 +176,10 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
         `}</style>
       </motion.div>
 
-      {/* Layered overlays */}
+      {/* Layered overlays — TEMA & SEZON: hp-hero-ov* sınıfları yalnız html[data-season] varken
+          globals.css ile sezon degradesine döner; tema yokken bugünkü 3 katman aynen. */}
       <div
-        className="absolute inset-0"
+        className="hp-hero-ov absolute inset-0"
         style={{
           background:
             "linear-gradient(105deg, rgba(5,0,20,0.55) 0%, rgba(15,7,60,0.55) 45%, rgba(0,0,0,0.18) 100%)",
@@ -174,7 +187,7 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
         }}
       />
       <div
-        className="absolute inset-0"
+        className="hp-hero-ov-bottom absolute inset-0"
         style={{
           background:
             "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 40%)",
@@ -182,7 +195,7 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
         }}
       />
       <div
-        className="absolute inset-0 opacity-[0.12]"
+        className="hp-hero-ov-glow absolute inset-0 opacity-[0.12]"
         style={{
           background:
             "radial-gradient(ellipse at 20% 50%, #8B5CF6 0%, transparent 60%)",
@@ -301,12 +314,7 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
               transition={{ delay: 0.9, duration: 0.6 }}
               className="mt-7 sm:mt-10 flex flex-wrap gap-2.5"
             >
-              {([
-                { Icon: Clock3, label: "Bugün hazırlanır" },
-                { Icon: Package, label: "Özenli paketleme" },
-                { Icon: Headset, label: "Canlı destek" },
-                { Icon: Gem, label: "Premium seçki" },
-              ] as const).map((item) => (
+              {chips.map((item) => (
                 <span
                   key={item.label}
                   className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[11px] font-semibold text-white/75"
@@ -325,8 +333,9 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
         </div>
       </motion.div>
 
-      {/* Sağ cam kart — hero'nun kendi alt-sağ köşesi (ZIP). Artık banner olmadığı için taşma yok. */}
-      <motion.div
+      {/* Sağ cam kart — hero'nun kendi alt-sağ köşesi (ZIP). Artık banner olmadığı için taşma yok.
+          TEMA & SEZON: metin/aç-kapa Admin hero ayarlarından (glass_card); boşsa bugünkü metin. */}
+      {glassCard.show ? <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.1, duration: 0.8 }}
@@ -348,11 +357,11 @@ export function HomeHero({ config = {}, banner = null }: { config?: HeroConfig; 
             <Truck className="w-4.5 h-4.5 text-white" />
           </div>
           <div>
-            <p className="text-white text-sm font-semibold">Aynı Gün Teslimat</p>
-            <p className="text-white/50 text-xs">İstanbul içi hızlı teslimat</p>
+            <p className="text-white text-sm font-semibold">{glassCard.title}</p>
+            <p className="text-white/50 text-xs">{glassCard.text}</p>
           </div>
         </div>
-      </motion.div>
+      </motion.div> : null}
     </section>
   );
 }

@@ -313,13 +313,20 @@ export default async function HomePage() {
     return (
       <>
         <HomeJsonLd logoUrl={schemaLogoUrl} identity={identity} />
-        <HomepageRenderer dto={contentHomepage} ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills, heroBanner }} />
-        {showTestimonials && <Testimonials />}
-        {showInstagram && <InstagramGallery config={instagramSection?.config} />}
-        <CorporateReferences clients={corporateClients} />
-        {/* Çiçeğin Yolculuğu — vitrinlerden sonra, footer'dan hemen önce (Figma Servis Deneyimi) */}
-        <FlowerJourney />
-        <BlogRail posts={homeBlogPosts} />
+        {/* Kuyruk bölümleri renderer'a verilir: sıra/çıktı aynı, yalnız TEMA & SEZON zemin/boşluk
+            planına aynı geçişte katılırlar (tema yokken sarmalayıcı display:contents, etkisiz). */}
+        <HomepageRenderer
+          dto={contentHomepage}
+          ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills, heroBanner }}
+          tail={[
+            ...(showTestimonials ? [{ type: "testimonials", node: <Testimonials /> }] : []),
+            ...(showInstagram ? [{ type: "instagram_gallery", node: <InstagramGallery config={instagramSection?.config} /> }] : []),
+            { type: "corporate_references", node: <CorporateReferences clients={corporateClients} /> },
+            // Çiçeğin Yolculuğu — vitrinlerden sonra, footer'dan hemen önce (Figma Servis Deneyimi)
+            { type: "flower_journey", node: <FlowerJourney /> },
+            { type: "blog_rail", node: <BlogRail posts={homeBlogPosts} /> },
+          ]}
+        />
       </>
     );
   }

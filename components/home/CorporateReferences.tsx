@@ -97,7 +97,7 @@ export function CorporateReferences({ clients }: { clients?: CorporateClients })
     <section className="bg-white px-6 py-20 lg:px-14 lg:py-28">
       <div className="mx-auto max-w-[1370px]">
         <div className="mx-auto max-w-4xl text-center">
-          <p className="text-xs font-bold uppercase tracking-[.28em] text-[#8b5cf6]">Kurumsal Çözümler</p>
+          <p className="hp-eyebrow text-xs font-bold uppercase tracking-[.28em] text-[#8b5cf6]">Kurumsal Çözümler</p>
           <h2 className="mt-5 font-serif text-4xl font-semibold leading-tight text-[#111827] md:text-6xl">
             İşletmenize Özel Çiçek ve Dekorasyon Hizmetleri
           </h2>

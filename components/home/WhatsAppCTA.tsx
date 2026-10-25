@@ -15,7 +15,7 @@ export function WhatsAppCTA() {
     <section className="py-24 bg-white">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
         <div
-          className="relative overflow-hidden rounded-[32px] py-20 px-10 lg:px-20 text-center"
+          className="hp-grad-card relative overflow-hidden rounded-[32px] py-20 px-10 lg:px-20 text-center"
           style={{
             background: "linear-gradient(135deg, #1E0845 0%, #4C1D95 22%, #7C3AED 55%, #9333EA 78%, #B06EF7 100%)",
             boxShadow: "0 40px 120px rgba(139,92,246,0.3)",

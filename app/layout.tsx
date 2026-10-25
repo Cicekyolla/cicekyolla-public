@@ -30,6 +30,7 @@ import { CurrencyProvider } from "@/lib/currency";
 import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/categories";
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
+import { resolveSeason, seasonCssVars, type ResolvedSeason } from "@/lib/seasonTheme";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
 
 const GTM_ID = "GTM-54FJNMT2";
@@ -86,6 +87,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let headerColors: { bg: string; text: string; promoBar: string } | undefined;
   // Telegram: aynı yayın sürümü hero.config (Admin) → TR + 13 dil. Okunamazsa yedek @cicekyolla.
   let telegram = resolveTelegram(null);
+  // TEMA & SEZON (25 Eki 2026): yayındaki season_theme bölümü. Tema yok/pasif/tarih dışı → null,
+  // <html>'e HİÇBİR sezon özniteliği/değişkeni basılmaz → site birebir bugünkü.
+  let season: ResolvedSeason | null = null;
   try {
     const tree = await getCategoryTree();
     const built = buildHeaderMenu(tree);
@@ -99,6 +103,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }
   try {
     const homepage = await getPublishedHomepage();
+    season = resolveSeason(homepage?.sections);
     const heroConfig = homepage?.sections.find((section) => section.type === "hero")?.config;
     telegram = resolveTelegram(heroConfig);
     if (heroConfig) {
@@ -140,12 +145,20 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // okunamazsa "tr" (önceki davranış); aşağıdaki cy-lang-dir betiği istemcide aynı değeri kurmayı sürdürür.
   const htmlLang = htmlLangForPath(currentRequestPath());
 
-  return (
-    <html lang={htmlLang.lang} dir={htmlLang.dir} suppressHydrationWarning style={headerColors ? {
+  const seasonVars = season?.theme ? seasonCssVars(season.theme) : null;
+  const htmlStyle = headerColors || seasonVars ? {
+    ...(headerColors ? {
       "--header-bg-color": headerColors.bg,
       "--header-text-color": headerColors.text,
       "--promo-bar-color": headerColors.promoBar,
-    } as React.CSSProperties : undefined}>
+    } : {}),
+    ...(seasonVars ?? {}),
+  } as React.CSSProperties : undefined;
+
+  return (
+    <html lang={htmlLang.lang} dir={htmlLang.dir} suppressHydrationWarning style={htmlStyle}
+      data-season={season?.theme ? season.theme.id : undefined}
+      data-density={season && season.density !== "current" ? season.density : undefined}>
       <head>
         {/* EK (PERF, 9 Eyl 2026): ölçüm — Google Fonts CSS'i yalnız ana CSS
             (~24 KB br) indikten sonra @import ile keşfediliyordu; FCP bu seri

@@ -164,3 +164,72 @@ html[dir="rtl"] img, html[dir="rtl"] video, html[dir="rtl"] svg.cy-no-mirror { t
 .cy-intro ol { list-style: decimal; padding-inline-start: 1.5rem; }
 .cy-intro li { margin-top: .375rem; }
 .cy-intro a:not([class]) { color: #6d28d9; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEMA & SEZON (25 Eki 2026 — API 121, Admin › Homepage Admin › Tema & Sezon)
+   Her kural html[data-season] / html[data-density] veya .hp-sec[data-hp-*]
+   koşuluna bağlıdır. Layout bu öznitelikleri YALNIZ yayındaki tema aktifken
+   (veya boşluk "Bugünkü" dışında seçiliyken) basar → aksi halde bu blok hiçbir
+   öğeyi seçmez, site piksel olarak bugünkü gibi kalır. Mevcut --primary /
+   --secondary / font token'larına dokunulmaz. Değerler <html style="--season-*">'den.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root { --hp-eggplant: #0A0118; }
+
+/* Bölüm sarmalayıcısı kutu üretmez (display: contents) → akış/ölçü değişmez. */
+.hp-sec { display: contents; }
+
+/* ── Dikey ritim: tek token seti ───────────────────────────────────────────── */
+html[data-density="airy"]     { --hp-section-y: clamp(64px, 7vw, 104px); --hp-section-y-tight: clamp(40px, 5vw, 64px); }
+html[data-density="balanced"] { --hp-section-y: clamp(48px, 6vw, 88px);  --hp-section-y-tight: clamp(32px, 4vw, 56px); }
+html[data-density="compact"]  { --hp-section-y: clamp(36px, 4.5vw, 64px); --hp-section-y-tight: clamp(24px, 3vw, 40px); }
+@media (max-width: 640px) {
+  /* Mobilde iki bölüm arası toplam ≤ 96 px. */
+  html[data-density="airy"] { --hp-section-y: 48px; --hp-section-y-tight: 32px; }
+}
+html[data-density] .hp-sec[data-hp-spaced] > * {
+  padding-top: var(--hp-section-y) !important;
+  padding-bottom: var(--hp-section-y) !important;
+}
+/* "Üst boşluğu azalt" (Admin) veya aynı zemin ardışık → sıkı üst boşluk. */
+.hp-sec[data-hp-tight] > * { padding-top: var(--hp-section-y-tight, clamp(32px, 4vw, 56px)) !important; }
+
+/* ── Zemin aileleri: beyaz / sıcak krem / koyu patlıcan ────────────────────── */
+html[data-season] .hp-sec[data-hp-bg="white"] > * { background: white !important; }
+html[data-season] .hp-sec[data-hp-bg="surface"] > * { background: var(--season-surface) !important; }
+html[data-season] .hp-sec[data-hp-bg="surface_alt"] > * { background: var(--season-surface-alt) !important; }
+/* Açık bölümlerdeki soğuk (lila/pembe/mint) parıltı katmanları kapanır. */
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) .hp-glow { display: none; }
+
+/* ── Vurgular: açık zeminde koyu bakır (AA), koyu bölümde parlak bakır ─────── */
+html[data-season] .hp-sec:not([data-hp-bg="dark"]) .hp-eyebrow { color: var(--season-accent-text) !important; }
+html[data-season] .hp-sec[data-hp-bg="dark"] .hp-eyebrow { color: var(--season-accent) !important; }
+html[data-season] .hp-season-badge {
+  background: var(--season-accent-text);
+  color: white;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--season-accent-text) 35%, transparent);
+}
+
+/* ── Hero: buket doğal renginde, yazı tarafı sıcak koyu kahve-patlıcan ─────── */
+html[data-season] .hp-hero-ov { background: var(--season-overlay-desktop) !important; }
+html[data-season] .hp-hero-ov-glow { display: none; }
+html[data-season] .hp-hero-ov-bottom { opacity: 0.55; }
+@media (max-width: 767px) {
+  html[data-season] .hp-hero-ov { background: var(--season-overlay-mobile) !important; }
+}
+
+/* ── Elektrik mor degradeler → primary'den türetilmiş derin mor-patlıcan ───── */
+html[data-season] .hp-grad-strip {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--primary) 18%, var(--hp-eggplant)) 0%,
+    color-mix(in srgb, var(--primary) 42%, var(--hp-eggplant)) 50%,
+    color-mix(in srgb, var(--primary) 18%, var(--hp-eggplant)) 100%) !important;
+}
+html[data-season] .hp-grad-card {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--primary) 22%, var(--hp-eggplant)) 0%,
+    color-mix(in srgb, var(--primary) 55%, var(--hp-eggplant)) 60%,
+    color-mix(in srgb, var(--primary) 70%, var(--hp-eggplant)) 100%) !important;
+  box-shadow: 0 40px 120px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+}
+/* Saksı Çiçekleri CTA: yeşil→mor degrade yerine düz marka moru. */
+html[data-season] .hp-cta-botanic { background: var(--primary) !important; box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 30%, transparent) !important; }

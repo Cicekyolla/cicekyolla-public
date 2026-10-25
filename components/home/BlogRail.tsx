@@ -31,7 +31,7 @@ export function BlogRail({ posts }: { posts: BlogPost[] }) {
       className="bg-[#fbfafd] px-6 py-20 lg:px-14 lg:py-24"
     >
       <div className="mx-auto max-w-[1320px]">
-        <p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">
+        <p className="hp-eyebrow text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">
           ÇiçekYolla Rehber
         </p>
         <h2

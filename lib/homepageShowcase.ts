@@ -117,6 +117,8 @@ function toHpProduct(p: PublicProductListItem): HpProduct {
     // PERF (Adım 3): liste ucu türevleri zaten döndürüyor — kartlara geçir.
     cover_derivatives: p.cover_derivatives ?? null,
     cover_blurhash: p.cover_blurhash ?? null,
+    // TEMA & SEZON: liste ucunun birincil kategorisi → sezon rozeti eşleşmesi.
+    category_ids: p.primary_category_id ? [p.primary_category_id] : [],
   };
 }
 

@@ -11,6 +11,8 @@ import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 import { Price } from "@/components/Price";
+// r2.dev (TR'de bloklu) → same-origin /r2/: Admin'den yüklenen kart görseli doğrudan açılır.
+import { mediaUrl } from "@/lib/media";
 
 export interface EditorPick {
   id: number|string; name: string; subtitle: string; price?: number;
@@ -49,7 +51,7 @@ export function EditorsPicks({products,config,title,subtitle}:{
       <motion.div key={card.id} initial={{opacity:0,y:28}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:idx*.13,duration:.65}}>
        <Link href={card.href||`/urun/${card.slug}`} className="group block">
         <div className="relative overflow-hidden rounded-[24px] bg-[#1F0A40]" style={{aspectRatio:"3/4"}}>
-         <motion.img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-cover opacity-85" whileHover={{scale:1.05,opacity:1}} transition={{duration:.75,ease:[.16,1,.3,1]}}/>
+         <motion.img src={mediaUrl(card.image)} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-cover opacity-85" whileHover={{scale:1.05,opacity:1}} transition={{duration:.75,ease:[.16,1,.3,1]}}/>
          <div className="absolute inset-0" style={{background:"linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.18) 52%,transparent 100%)"}}/>
          <div className="absolute top-5 left-5 px-3 py-1.5 text-[10px] font-bold tracking-wider text-white/90 rounded-full" style={{background:"rgba(139,92,246,.25)",backdropFilter:"blur(12px)",border:"1px solid rgba(192,132,252,.35)"}}>{card.badge}</div>
          <div className="absolute bottom-0 left-0 right-0 p-7">

@@ -31,13 +31,17 @@ test("LOCKED yapılar ve LCP ayarları yerinde (kampanya banner'ı görsel dış
   assert.match(hero, /heroPreloadLinks\(\{ desktop: desktopImage, tablet: tabletImage, mobile: mobileImage \}\)/);
   // Banner başlık/CTA/rozet/cam kartı DEĞİŞTİRMEZ: yalnız görsel kaynağı seçilir.
   assert.match(hero, /Sevdiklerine<br \/>/);
-  assert.match(hero, /Aynı Gün Teslimat<\/p>/);
+  // TEMA & SEZON (25 Eki 2026): cam kart metni Admin hero.glass_card'tan gelebilir; boşken varsayılan
+  // metin AYNEN aynı kalır ve banner yine dokunmaz (banner yalnız görsel kaynağını seçer).
+  assert.match(hero, /title: config\.glass_card\?\.title\?\.trim\(\) \|\| "Aynı Gün Teslimat"/);
+  assert.match(hero, /\{glassCard\.title\}<\/p>/);
 });
 
 test("iki render yolu da banner'ı alır: CMS'li (renderer ctx) ve CMS'siz fallback", () => {
   assert.match(renderer, /<HomeHero config=\{s\.config\} banner=\{ctx\.heroBanner \?\? null\} \/>/);
   assert.match(sayfa, /<HomeHero banner=\{heroBanner\} \/>/);
-  assert.match(sayfa, /heroBanner \}\} \/>/, "renderer ctx'ine heroBanner geçilmeli");
+  // TEMA & SEZON: renderer artık kuyruk bölümlerini de (tail) alır → ctx satırı tek başına.
+  assert.match(sayfa, /ctx=\{\{[^}]*heroBanner \}\}/, "renderer ctx'ine heroBanner geçilmeli");
   assert.match(sayfa, /getActiveHomepageBanner\(\)/);
 });
 

@@ -28,6 +28,13 @@ const nextConfig = {
   // Varsayılan davranış hiç silmediği için 71.406 lokasyon adresi diski ~40 GB'a çıkarıyordu.
   cacheHandler: require.resolve("./cache-handler.js"),
 
+  // YALNIZ `next dev` (production build bu anahtarı kullanmaz). Varsayılan 60 sn'de kullanılmayan
+  // derlenmiş girişler bellekten atılıp yeniden derleniyordu; yavaş bir ana sayfa render'ı (yerelde
+  // ağ beklemesiyle 40-90 sn) sürerken modül grafiği yenilenince yarım kalan render eski React
+  // örneğine bağlı kalıyor → "Invalid hook call / Cannot read properties of null (reading
+  // 'useContext')" (25 Eki 2026, kanıt: tetikli yeniden derleme ile tekrar üretildi).
+  onDemandEntries: { maxInactiveAge: 15 * 60 * 1000, pagesBufferLength: 20 },
+
   async rewrites() {
     return [
       {

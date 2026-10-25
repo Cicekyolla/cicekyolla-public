@@ -9,6 +9,9 @@ import { ProductCard, type Product, type ProductDeliveryPromise } from "./Produc
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 import type { HpProduct } from "@/lib/homepage";
 import type { ShowcaseTheme } from "@/lib/homepageShowcase";
+import { seasonBadgeFor, type SeasonThemeData } from "@/lib/seasonTheme";
+
+type SeasonBadge = NonNullable<SeasonThemeData["badge"]>;
 
 // ── V65 cila: vitrin başına premium renk atmosferi (yalnız görsel katman) ──
 // Zeminler yumuşak geçişli; glow'lar düşük opaklıkta; kampanya PEMBE/LİLA
@@ -85,7 +88,7 @@ async function resolveDeliveryPromise(): Promise<ProductDeliveryPromise | undefi
   return undefined;
 }
 
-function toCard(p: HpProduct): Product {
+function toCard(p: HpProduct, seasonBadge?: SeasonBadge | null): Product {
   // TEK FİYAT KURALI (lib/productPrice.ts): indirim yalnız 0 < indirim < taban iken indirimdir.
   const { unitMinor, baseMinor, hasSale } = resolveUnitPrice(p);
   return {
@@ -99,15 +102,19 @@ function toCard(p: HpProduct): Product {
     // yoksa bugünkü gibi orijinal.
     derivatives: p.cover_derivatives ?? null,
     blurhash: p.cover_blurhash ?? null,
+    // TEMA & SEZON: ürün temadaki kategorilerden birindeyse sezon rozeti (eşleşme yoksa hiç gösterilmez).
+    seasonBadge: seasonBadgeFor(seasonBadge, p.category_ids),
   };
 }
 
-export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ctaHref, tone, theme }: {
+export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ctaHref, tone, theme, seasonBadge }: {
   title?: string | null; subtitle?: string | null; products?: HpProduct[]; limit?: number;
   /** V65 vitrin teması (additive, opsiyonel): CTA + zemin varyantı. Mevcut kullanım değişmez. */
   ctaLabel?: string; ctaHref?: string; tone?: "white" | "lilac"; theme?: ShowcaseTheme;
+  /** TEMA & SEZON (additive): aktif temanın rozet ayarı; yoksa rozet yok. */
+  seasonBadge?: SeasonBadge | null;
 }) {
-  const items = (limit ? (products ?? []).slice(0, limit) : (products ?? [])).map(toCard);
+  const items = (limit ? (products ?? []).slice(0, limit) : (products ?? [])).map((p) => toCard(p, seasonBadge));
   const [deliveryPromise, setDeliveryPromise] = useState<ProductDeliveryPromise>();
 
   useEffect(() => {
@@ -125,7 +132,7 @@ export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ct
       style={t ? t.section : undefined}
     >
       {t ? (
-        <div className="absolute inset-0" style={{ background: t.glow, pointerEvents: "none" }} />
+        <div className="hp-glow absolute inset-0" style={{ background: t.glow, pointerEvents: "none" }} />
       ) : null}
       {t?.dots ? (
         // Lüks dot texture — yalnız koyu (noir) temada, çok düşük opaklıkta
@@ -152,7 +159,7 @@ export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ct
           <div className="mt-10 text-center">
             <Link
               href={ctaHref}
-              className="inline-flex items-center gap-2.5 rounded-full px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              className={`${theme === "botanic" ? "hp-cta-botanic " : ""}inline-flex items-center gap-2.5 rounded-full px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5`}
               style={t ? t.cta : {
                 background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
                 boxShadow: "0 10px 30px rgba(139,92,246,0.35)",
