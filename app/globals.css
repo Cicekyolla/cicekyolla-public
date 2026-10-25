@@ -322,3 +322,65 @@ html[data-season] .hp-sec[data-hp-type="collection_rail"] a:hover :is([class~="t
 html[data-season] .hp-sec[data-hp-type="collection_rail"] [class~="text-[#6B7280]"]:hover { color: var(--season-accent-text) !important; }
 html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] > * { border-top-color: transparent !important; }
 html[data-season] .hp-sec[data-hp-type="hero_delivery_bar"] [class~="divide-[rgba(17,24,39,0.07)]"] > * { border-color: var(--hp-warm-line) !important; }
+
+/* ── V74 TEK DAMAR — boşluk, tek vitrin akışı, başlık yanı CTA, renk birliği ──
+   Yalnız html[data-season]. Tema kapalıyken hiçbir kural eşleşmez. */
+
+/* 1) Dikey ritim: bölümler arası ≈140–160 px (masaüstü), mobilde toplam ≤72 px. */
+html[data-season][data-density="airy"]     { --hp-section-y: clamp(44px, 5vw, 76px);  --hp-section-y-tight: clamp(32px, 3.6vw, 52px); }
+html[data-season][data-density="balanced"] { --hp-section-y: clamp(36px, 4.2vw, 60px); --hp-section-y-tight: clamp(28px, 3vw, 44px); }
+html[data-season][data-density="compact"]  { --hp-section-y: clamp(28px, 3.2vw, 44px); --hp-section-y-tight: clamp(22px, 2.4vw, 32px); }
+@media (max-width: 640px) {
+  html[data-season][data-density] { --hp-section-y: 36px; --hp-section-y-tight: 28px; }
+}
+
+/* 2) Tek akış: açık zeminler arası keskin kenar yerine yumuşak geçiş. */
+html[data-season] .hp-sec[data-hp-bg="white"] + .hp-sec[data-hp-bg="surface"] > * {
+  background: linear-gradient(to bottom, white 0, var(--season-surface) var(--hp-section-y)) !important;
+}
+html[data-season] .hp-sec[data-hp-bg="surface"] + .hp-sec[data-hp-bg="white"] > * {
+  background: linear-gradient(to bottom, var(--season-surface) 0, white var(--hp-section-y)) !important;
+}
+/* Ardışık ürün vitrinleri arasında bölüm kutusu yerine ince ayraç: kum çizgi + bakır nokta. */
+html[data-season] .hp-sec:is([data-hp-type="best_sellers"], [data-hp-type="product_showcase"]) + .hp-sec[data-hp-type="product_showcase"] > section::before,
+html[data-season] .hp-sec:is([data-hp-type="best_sellers"], [data-hp-type="product_showcase"]) + .hp-sec[data-hp-type="product_showcase"] > section::after {
+  content: ""; position: absolute; left: 50%; transform: translateX(-50%); z-index: 1; pointer-events: none;
+}
+html[data-season] .hp-sec:is([data-hp-type="best_sellers"], [data-hp-type="product_showcase"]) + .hp-sec[data-hp-type="product_showcase"] > section::before {
+  top: calc(var(--hp-section-y) / 2); width: min(260px, 46%); height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hp-warm-line) 25%, var(--hp-warm-line) 75%, transparent);
+}
+html[data-season] .hp-sec:is([data-hp-type="best_sellers"], [data-hp-type="product_showcase"]) + .hp-sec[data-hp-type="product_showcase"] > section::after {
+  top: calc(var(--hp-section-y) / 2 - 3px); width: 7px; height: 7px; border-radius: 9999px;
+  background: var(--season-accent);
+}
+
+/* 3) CTA başlığın yanında (≥768 px); mobilde altta kalır ama küçülür. */
+html[data-season] .hp-sec .hp-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+html[data-season] .hp-sec .hp-head-cta {
+  display: none; flex-shrink: 0; align-items: center; gap: 8px; padding-bottom: 8px;
+  font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: var(--primary);
+  transition: color .2s, gap .2s;
+}
+html[data-season] .hp-sec .hp-head-cta:hover { color: var(--season-accent-text); gap: 12px; }
+html[data-season] .hp-sec .hp-head-cta-light { color: color-mix(in srgb, white 85%, transparent); }
+html[data-season] .hp-sec .hp-head-cta-light:hover { color: var(--season-accent); }
+@media (min-width: 768px) {
+  html[data-season] .hp-sec .hp-head-cta { display: inline-flex; }
+  html[data-season] .hp-sec .hp-foot-cta { display: none; }
+}
+@media (max-width: 767px) {
+  html[data-season] .hp-sec .hp-foot-cta { margin-top: 24px; }
+  html[data-season] .hp-sec .hp-foot-cta > a { padding: 11px 22px !important; font-size: 13px; min-height: 44px; }
+}
+
+/* 4) Renk birliği: başlık mürekkebi, kart çizgileri, teslimat rozeti. */
+html[data-season] .hp-sec h2[class~="text-[#111827]"] { color: var(--season-ink) !important; }
+html[data-season] .hp-sec :is([class~="border-[#F1F0F5]"], [class~="border-[#EAE5EF]"], [class~="border-[#eee8f5]"]),
+html[data-season] .hp-sec article[class~="border-[#EDE9FE]"],
+html[data-season] .hp-sec a[class~="border-[#EDE9FE]"] { border-color: var(--hp-warm-line) !important; }
+html[data-season] .hp-sec [class~="bg-[#ECFDF5]"]:is([class~="text-[#047857]"], [class~="text-[#059669]"]) {
+  background: var(--season-surface) !important;
+  color: var(--season-accent-text) !important;
+  border-color: var(--hp-warm-line) !important;
+}

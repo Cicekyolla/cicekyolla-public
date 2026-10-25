@@ -146,9 +146,19 @@ export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ct
         />
       ) : null}
       <div className="relative z-10 max-w-[1440px] mx-auto px-6 lg:px-14">
-        <div className="mb-8">
-          {subtitle && <SectionLabel light={t?.light}>{subtitle}</SectionLabel>}
-          <SectionTitle light={t?.light}>{title || "Ürünler"}</SectionTitle>
+        {/* V74: başlık yanı CTA yalnız tema aktifken (html[data-season]) CSS ile görünür;
+            tema kapalıyken "hidden" kalır, alttaki buton aynen çalışır. */}
+        <div className="mb-8 hp-head">
+          <div className="min-w-0">
+            {subtitle && <SectionLabel light={t?.light}>{subtitle}</SectionLabel>}
+            <SectionTitle light={t?.light}>{title || "Ürünler"}</SectionTitle>
+          </div>
+          {ctaLabel && ctaHref ? (
+            <Link href={ctaHref} className={`hp-head-cta hidden ${t?.light ? "hp-head-cta-light" : ""}`}>
+              {ctaLabel}
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          ) : null}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {items.map((product, idx) => (
@@ -156,7 +166,7 @@ export function ProductShowcase({ title, subtitle, products, limit, ctaLabel, ct
           ))}
         </div>
         {ctaLabel && ctaHref ? (
-          <div className="mt-10 text-center">
+          <div className="mt-10 text-center hp-foot-cta">
             <Link
               href={ctaHref}
               className={`${theme === "botanic" ? "hp-cta-botanic " : ""}inline-flex items-center gap-2.5 rounded-full px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5`}
