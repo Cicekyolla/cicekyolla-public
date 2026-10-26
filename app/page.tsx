@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { floristLocalFields, resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
 import { safeJsonLd } from "@/lib/jsonLdSafe";
 import { FloatingCategoryRail } from "../components/home/FloatingCategoryRail";
-import { fetchDeliveryZones, fetchProducts, fetchRedirectMap, fetchSeoPage, toCardProduct, withMovedDistrictHrefs } from "@/lib/api";
+import { fetchCityDistricts, fetchDeliveryZones, fetchProducts, fetchRedirectMap, fetchSeoPage, finalPathOf, toCardProduct, withMovedDistrictHrefs } from "@/lib/api";
+import { districtLinks } from "@/lib/istanbulLinkAgi";
 import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
@@ -218,7 +219,11 @@ export default async function HomePage() {
 
   // Teslimat Bölgeleri: admin Delivery Motor'daki aktif bölgeler (additive).
   // API erişilemezse [] döner → DistrictDelivery kendi fallback'iyle çalışır.
-  const deliveryZones = withMovedDistrictHrefs(await fetchDeliveryZones(), await fetchRedirectMap());
+  const homeRedirects = await fetchRedirectMap();
+  const deliveryZones = withMovedDistrictHrefs(await fetchDeliveryZones(), homeRedirects);
+  // EK (İSTANBUL LİNK AĞI): açılır listedeki İstanbul gövdesi → SEO envanterindeki tüm ilçeler
+  // (/istanbul hub'ıyla aynı kaynak). Okunamazsa [] → bileşen Motor listesinde kalır.
+  const istanbulLinks = districtLinks("istanbul", await fetchCityDistricts("istanbul"), (p) => finalPathOf(homeRedirects, p));
 
   // Kurumsal referanslar ana sayfada Instagram'ın hemen altında gösterilir ve
   // admin > Mağaza Ön Yüzü > Kurumsal kaydından okunur.
@@ -317,7 +322,7 @@ export default async function HomePage() {
             planına aynı geçişte katılırlar (tema yokken sarmalayıcı display:contents, etkisiz). */}
         <HomepageRenderer
           dto={contentHomepage}
-          ctx={{ collections, imagedCollections, zones: deliveryZones, showcaseFills, heroBanner }}
+          ctx={{ collections, imagedCollections, zones: deliveryZones, istanbulLinks, showcaseFills, heroBanner }}
           tail={[
             ...(showTestimonials ? [{ type: "testimonials", node: <Testimonials /> }] : []),
             ...(showInstagram ? [{ type: "instagram_gallery", node: <InstagramGallery config={instagramSection?.config} /> }] : []),
@@ -362,7 +367,7 @@ export default async function HomePage() {
       <Testimonials />
       <InstagramGallery />
       <CorporateReferences clients={corporateClients} />
-      <DistrictDelivery zones={deliveryZones} />
+      <DistrictDelivery zones={deliveryZones} istanbulLinks={istanbulLinks} />
       <WhatsAppCTA />
       <Newsletter />
       {/* Çiçeğin Yolculuğu — footer'dan hemen önce (CMS'siz fallback'te de aynı konum) */}

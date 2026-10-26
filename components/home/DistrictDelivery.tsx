@@ -15,6 +15,7 @@ import { motion } from "motion/react";
 import { MapPin, ArrowRight, ChevronDown } from "lucide-react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
 import type { DeliveryZoneCity } from "@/lib/api";
+import type { DistrictLink } from "@/lib/istanbulLinkAgi";
 
 // API erişilemezse: [...slug] hardcoded DELIVERY_DATA ile birebir çalışan linkler.
 const FALLBACK_ZONES: DeliveryZoneCity[] = [
@@ -69,9 +70,16 @@ function buildRows(source: DeliveryZoneCity[]) {
   return rows;
 }
 
-export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
+export function DistrictDelivery({ zones, istanbulLinks }: { zones?: DeliveryZoneCity[]; istanbulLinks?: DistrictLink[] }) {
   const source = zones && zones.length > 0 ? zones : FALLBACK_ZONES;
   const rows = buildRows(source);
+  // EK (İSTANBUL LİNK AĞI, 26 Eki 2026): açılır listedeki İstanbul gövdesi Motor'daki
+  // ~5 ilçe yerine SEO envanterindeki 39 ilçenin tamamını linkler (server'da çözülür,
+  // SSR HTML'inde). Yalnız sayfa adresi — ilçe başına teslimat vaadi/rozet EKLENMEZ;
+  // üst satırlardaki "Aynı Gün Teslimat" rozetleri bugünkü gibi Motor kaydından gelir.
+  // Envanter okunamazsa bugünkü Motor listesi aynen kalır.
+  const districtsOf = (c: DeliveryZoneCity) =>
+    c.city_slug === "istanbul" && istanbulLinks && istanbulLinks.length > 0 ? istanbulLinks : c.districts;
   return (
     <section className="py-24" style={{ background: "linear-gradient(180deg, #FAFAFA 0%, #F5F3FF 60%, #FAFAFA 100%)" }}>
       <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
@@ -151,8 +159,8 @@ export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
                     <span className="flex items-center gap-2.5 text-sm font-semibold text-[#111827]">
                       <MapPin className="w-3.5 h-3.5 text-[#8B5CF6]" />
                       {c.city}
-                      {c.districts.length > 0 && (
-                        <span className="text-[11px] font-medium text-[#9CA3AF]">{c.districts.length} ilçe</span>
+                      {districtsOf(c).length > 0 && (
+                        <span className="text-[11px] font-medium text-[#9CA3AF]">{districtsOf(c).length} ilçe</span>
                       )}
                     </span>
                     <span className="flex items-center gap-3">
@@ -163,7 +171,7 @@ export function DistrictDelivery({ zones }: { zones?: DeliveryZoneCity[] }) {
                     </span>
                   </summary>
                   <div className="flex flex-wrap gap-2 px-5 pb-4 pt-1">
-                    {c.districts.map((d) => (
+                    {districtsOf(c).map((d) => (
                       <Link
                         key={d.slug}
                         href={d.href ?? `/${c.city_slug}/${d.slug}`}
