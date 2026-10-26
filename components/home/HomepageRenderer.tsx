@@ -11,6 +11,7 @@ import { planSkins, resolveSeason, type SeasonThemeData, type SkinInput } from "
 import { sitePalette, withSitePalette } from "@/lib/sitePalette";
 import type { HomepageDTO, HpSection } from "@/lib/homepage";
 import type { DeliveryZoneCity } from "@/lib/api";
+import type { DistrictLink } from "@/lib/istanbulLinkAgi";
 
 import { FloatingCategoryRail } from "./FloatingCategoryRail";
 import HeroDeliveryBar from "./HeroDeliveryBar";
@@ -45,6 +46,8 @@ export interface RenderCtx {
   imagedCollections: ComponentProps<typeof FeaturedCollections>["items"];
   /** Teslimat bölgeleri (admin Delivery Motor) — DistrictDelivery tüketir (additive, opsiyonel). */
   zones?: DeliveryZoneCity[];
+  /** EK (İSTANBUL LİNK AĞI): açılır listedeki 39 İstanbul ilçesi (SEO envanteri; additive, opsiyonel). */
+  istanbulLinks?: DistrictLink[];
   /** V65: product_showcase bölümlerinin sıralı tema ailesi ve boş vitrin dolguları.
       DTO'da ürün VARSA DTO kazanır — admin üstünlüğü korunur. */
   showcaseFills?: ShowcaseFill[];
@@ -126,7 +129,7 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
     case "testimonials":        return <Testimonials />;
     case "instagram_gallery":   return <InstagramGallery config={s.config} />;
     case "corporate_references":return <CorporateReferences />;
-    case "district_delivery":   return <DistrictDelivery zones={ctx.zones} />;
+    case "district_delivery":   return <DistrictDelivery zones={ctx.zones} istanbulLinks={ctx.istanbulLinks} />;
     case "whatsapp_cta":        return <WhatsAppCTA />;
     case "newsletter":          return <Newsletter />;
     case "product_showcase": {

@@ -4,6 +4,9 @@ import { BadgeCheck, Globe2, Map, Sparkles } from "lucide-react";
 import { SiteMapContent } from "./SiteMapContent";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { categories } from "@/app/api/site-map/data";
+import Link from "next/link";
+import { fetchCityDistricts, fetchRedirectMap, finalPathOf } from "@/lib/api";
+import { districtLinks } from "@/lib/istanbulLinkAgi";
 
 export const metadata: Metadata = {
   title: "Site Haritası",
@@ -14,6 +17,11 @@ export const metadata: Metadata = {
 
 export default async function SiteHaritasiPage() {
   const total = categories.length;
+  // EK (İSTANBUL LİNK AĞI, 26 Eki 2026): "site haritası" lokasyonları hiç listelemiyordu
+  // (ölçüm: 0 ilçe linki). İlçeler SEO envanterinden (/istanbul hub'ıyla aynı kaynak),
+  // SSR'da basılır; mahalleler her ilçe sayfasında zaten linkli. Okunamazsa bölüm çizilmez.
+  const redirects = await fetchRedirectMap();
+  const istanbulLinks = districtLinks("istanbul", await fetchCityDistricts("istanbul"), (p) => finalPathOf(redirects, p));
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -22,13 +30,14 @@ export default async function SiteHaritasiPage() {
     url: absoluteUrl("/site-haritasi"),
     mainEntity: {
       "@type": "ItemList",
-      numberOfItems: total,
-      itemListElement: categories.map((item, index) => ({
-        "@type": "ListItem",
-        position: index + 1,
-        name: item.title,
-        url: absoluteUrl(item.isPage ? `/${item.slug}` : `/kategori/${item.slug}`),
-      })),
+      numberOfItems: total + istanbulLinks.length,
+      itemListElement: [
+        ...categories.map((item) => ({
+          name: item.title,
+          url: absoluteUrl(item.isPage ? `/${item.slug}` : `/kategori/${item.slug}`),
+        })),
+        ...istanbulLinks.map((d) => ({ name: `${d.name} Çiçek Siparişi`, url: absoluteUrl(d.href) })),
+      ].map((item, index) => ({ "@type": "ListItem", position: index + 1, ...item })),
     },
   };
 
@@ -53,6 +62,19 @@ export default async function SiteHaritasiPage() {
         </div>
       </section>
       <section className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 lg:px-14"><SiteMapContent categories={categories} /></section>
+      {istanbulLinks.length > 0 && (
+        <section className="mx-auto max-w-[1440px] px-5 pb-16 sm:px-8 lg:px-14">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">Teslimat Bölgeleri</p>
+          <h2 className="mb-8 text-3xl font-black tracking-[-0.03em] text-[#12091f]">İstanbul — {istanbulLinks.length} İlçe</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {istanbulLinks.map((d) => (
+              <Link key={d.slug} href={d.href} className="rounded-[16px] border border-[#ece7f4] bg-white px-5 py-4 text-sm font-semibold text-[#1f2937] transition-colors hover:border-[#c4b5fd] hover:text-[#6d28d9]">
+                {d.name} Çiçek Siparişi
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }
