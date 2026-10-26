@@ -384,3 +384,168 @@ html[data-season] .hp-sec [class~="bg-[#ECFDF5]"]:is([class~="text-[#047857]"], 
   color: var(--season-accent-text) !important;
   border-color: var(--hp-warm-line) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SİTE PALETİ — "Sıcak Pudra & Mat Mor" (26 Eki 2026, lib/sitePalette.ts)
+   Yalnız html[data-palette="pudra"] (CY_SITE_PALETTE=pudra, TR sayfaları).
+   Kapalıyken bu blok hiçbir öğeyi seçmez → site birebir bugünkü gibi.
+   Header, footer ve üst şerit kendi özgün token'larına kilitlenir (dokunulmaz).
+   Anlamsal renkler (başarı yeşili, hata kırmızısı, WhatsApp) eşlenmez.
+   ═══════════════════════════════════════════════════════════════════════════ */
+html[data-palette="pudra"] {
+  --pp-page: #F8ECE7;
+  --pp-section: #F1DFD7;
+  --pp-card: #FCF6F3;
+  --pp-text: #2A1B3D;
+  --pp-muted: rgb(42 27 61 / 0.7);
+  --pp-primary: #6F5A92;
+  --pp-primary-hover: #5B4879;
+  --pp-soft: #EEE6EC;
+  --pp-line: rgb(42 27 61 / 0.12);
+  --pp-cta: linear-gradient(135deg, var(--pp-primary) 0%, var(--pp-primary-hover) 100%);
+  --pp-cta-shadow: 0 10px 28px rgb(42 27 61 / 0.18);
+  /* shadcn / ortak token'lar */
+  --background: var(--pp-page);
+  --foreground: var(--pp-text);
+  --card: var(--pp-card);
+  --card-foreground: var(--pp-text);
+  --popover: var(--pp-card);
+  --popover-foreground: var(--pp-text);
+  --primary: var(--pp-primary);
+  --secondary: var(--pp-soft);
+  --secondary-foreground: var(--pp-primary-hover);
+  --muted: var(--pp-soft);
+  --muted-foreground: var(--pp-muted);
+  --accent: var(--pp-soft);
+  --accent-foreground: var(--pp-primary-hover);
+  --border: var(--pp-line);
+  --ring: var(--pp-primary);
+  --input-background: var(--pp-card);
+  --switch-background: var(--pp-soft);
+  --chart-1: var(--pp-primary);
+  --chart-2: var(--pp-primary-hover);
+  --chart-5: var(--pp-primary-hover);
+}
+html[data-palette="pudra"] body { background: var(--pp-page); color: var(--pp-text); }
+
+/* Kilit: header / footer / üst şerit özgün token'larla çizilir (V72 şerit degradesi dahil). */
+html[data-palette="pudra"] :is(header, footer, .cy-ticker) {
+  --background: #FAFAFA; --foreground: #111827; --card: #FFFFFF; --card-foreground: #111827;
+  --popover: #FFFFFF; --popover-foreground: #111827;
+  --primary: #8B5CF6; --secondary: #F5F3FF; --secondary-foreground: #6D28D9;
+  --muted: #F3F4F6; --muted-foreground: #6B7280; --accent: #EDE9FE; --accent-foreground: #7C3AED;
+  --border: rgba(0, 0, 0, 0.07); --ring: #8B5CF6; --input-background: #F9F8FF; --switch-background: #DDD6FE;
+  --chart-1: #8B5CF6; --chart-2: #A855F7; --chart-5: #7C3AED;
+}
+
+/* ── Ana sayfa: beyaz bölüm = pudra sayfa zemini (Tema & Sezon "white" ailesi) ── */
+html[data-palette="pudra"] .hp-sec[data-hp-bg="white"] > * { background: var(--pp-page) !important; }
+html[data-palette="pudra"] .hp-sec[data-hp-bg="white"] + .hp-sec[data-hp-bg="surface"] > * {
+  background: linear-gradient(to bottom, var(--pp-page) 0, var(--season-surface) var(--hp-section-y)) !important;
+}
+html[data-palette="pudra"] .hp-sec[data-hp-bg="surface"] + .hp-sec[data-hp-bg="white"] > * {
+  background: linear-gradient(to bottom, var(--season-surface) 0, var(--pp-page) var(--hp-section-y)) !important;
+}
+html[data-palette="pudra"] .hp-sec[data-hp-type="collection_rail"] > section,
+html[data-palette="pudra"] .hp-sec[data-hp-type="hero_delivery_bar"] > * { background: var(--pp-page) !important; }
+
+/* ── Yüzeyler (header/footer dışı) ── */
+html[data-palette="pudra"] :is([class~="bg-white"], [class~="bg-white/95"], [class~="bg-card"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-card); }
+html[data-palette="pudra"] :is([class~="bg-[#FAFAFA]"], [class~="bg-[#FBFAFF]"], [class~="bg-[#F9F8FF]"], [class~="bg-[#FAFAFF]"], [class~="bg-gray-50"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-page) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#F5F3FF]"], [class~="bg-[#EDE9FE]"], [class~="bg-[#F3F0FF]"], [class~="bg-[#FAF5FF]"], [class~="bg-[#f5f1ff]"], [class~="bg-[#f2eef6]"], [class~="bg-[#F5F3FF]/60"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-soft) !important; }
+html[data-palette="pudra"] :is([class~="hover:bg-[#F5F3FF]"], [class~="hover:bg-[#EDE9FE]"], [class~="hover:bg-[#FAF5FF]"]):not(header *, footer *, .cy-ticker *):hover { background-color: var(--pp-section) !important; }
+html[data-palette="pudra"] :is([style*="#F5F3FF"], [style*="#EDE9FE"], [style*="#FBFAFF"]):not(header *, footer *, .cy-ticker *, .hp-sec *) { background-color: var(--pp-soft) !important; }
+
+/* ── Çizgiler ── */
+html[data-palette="pudra"] :is([class~="border-[#EDE9FE]"], [class~="border-[#DDD6FE]"], [class~="border-[#E9D5FF]"], [class~="border-[#F1F0F5]"], [class~="border-[#EAE5EF]"], [class~="border-[#eee8f5]"], [class~="border-[#ede9fe]"], [class~="divide-[#EDE9FE]"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-line) !important; }
+
+/* ── Metin: siyah/gri → koyu mürdüm; soluk metin %70 ── */
+html[data-palette="pudra"] :is([class~="text-[#111827]"], [class~="text-[#1F2937]"], [class~="text-[#0F172A]"], [class~="text-[#374151]"], [class~="text-gray-900"], [class~="text-[#140b20]"], [class~="text-[#160D22]"], [class~="text-[#14101C]"], [class~="text-[#130724]"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-text) !important; }
+html[data-palette="pudra"] :is([class~="text-[#4B5563]"], [class~="text-[#6B7280]"], [class~="text-[#9CA3AF]"], [class~="text-gray-500"], [class~="text-gray-600"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-muted) !important; }
+
+/* ── Parlak mor → mat mor (koyu zeminlerin içi hariç: okunurluk) ── */
+html[data-palette="pudra"] :is([class~="text-[#8B5CF6]"], [class~="text-[#7C3AED]"], [class~="text-[#6D28D9]"], [class~="text-[#A855F7]"], [class~="text-[#9333EA]"], [class~="text-[#8b5cf6]"], [class~="text-[#6d28d9]"], [style*="color: #8B5CF6"], [style*="color:#8B5CF6"], [style*="color: #7C3AED"], [style*="color:#7C3AED"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *, [class*="bg-[#0"] *, [class*="bg-[#1"] *, [style*="#0D0520"] *, [style*="#0A0118"] *) { color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="hover:text-[#7C3AED]"], [class~="hover:text-[#8B5CF6]"], [class~="hover:text-[#6D28D9]"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *):hover,
+html[data-palette="pudra"] .group:hover :is([class~="group-hover:text-[#7C3AED]"], [class~="group-hover:text-[#8B5CF6]"]):not(header *, footer *, .hp-sec[data-hp-bg="dark"] *) { color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#8B5CF6]"], [class~="bg-[#7C3AED]"], [class~="bg-[#6D28D9]"], [class~="bg-[#A855F7]"], [class~="bg-primary"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="hover:bg-[#6D28D9]"], [class~="hover:bg-[#7C3AED]"], [class~="hover:bg-[#8B5CF6]"]):not(header *, footer *, .cy-ticker *):hover { background-color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="border-[#8B5CF6]"], [class~="border-[#7C3AED]"], [class~="border-[#A855F7]"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="hover:border-[#7C3AED]"], [class~="hover:border-[#8B5CF6]"], [class~="hover:border-[#A855F7]"]):not(header *, footer *, .cy-ticker *):hover { border-color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="from-[#7C3AED]"], [class~="from-[#8B5CF6]"], [class~="from-[#6D28D9]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-from: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="to-[#A855F7]"], [class~="to-[#6D28D9]"], [class~="to-[#8B5CF6]"], [class~="via-[#A855F7]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-to: var(--pp-primary-hover) !important; }
+
+/* ── Satır içi mor degrade CTA'lar ve gölgeleri ── */
+html[data-palette="pudra"] :is([style*="#8B5CF6 0%, #A855F7"], [style*="#8B5CF6, #A855F7"], [style*="#7C3AED 0%, #A855F7"], [style*="#7C3AED 0%, #6D28D9"], [style*="#8B5CF6, #C084FC"]):not(header *, footer *, .cy-ticker *) {
+  background: var(--pp-cta) !important;
+}
+html[data-palette="pudra"] [style*="rgba(139,92,246"]:not(header *, footer *, .cy-ticker *) { box-shadow: var(--pp-cta-shadow) !important; }
+html[data-palette="pudra"] .hp-sec a:is([style*="#D946EF"], .hp-cta-botanic) { background: var(--pp-cta) !important; box-shadow: var(--pp-cta-shadow) !important; }
+
+/* ── V74 başlık yanı CTA: mat mor ── */
+html[data-palette="pudra"] .hp-sec .hp-head-cta { color: var(--pp-primary-hover); }
+
+/* ── Tarama ile bulunan kaçaklar: küçük harf hex sınıfları ── */
+html[data-palette="pudra"] :is([class~="text-[#0f172a]"], [class~="text-[#111827]/90"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-text) !important; }
+html[data-palette="pudra"] :is([class~="text-[#7c3aed]"], [class~="text-[#a855f7]"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *, [class*="bg-[#0"] *, [class*="bg-[#1"] *) { color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#8b5cf6]"], [class~="bg-[#7c3aed]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#faf8fc]"], [class~="bg-[#fbfaff]"], [class~="bg-[#f5f3ff]"], [class~="bg-[#faf7ff]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-soft) !important; }
+html[data-palette="pudra"] :is([class~="border-[#8b5cf6]"], [class~="border-[#7c3aed]"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="border-[#e6dff0]"], [class~="border-[#ddd6fe]"], [class~="border-[#e9d5ff]"], [class~="border-[#E6DFEA]"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-line) !important; }
+
+/* ── Satır içi stiller: cam yüzeyler, mor rozet/hover katmanları, ikon kutuları ── */
+html[data-palette="pudra"] :is([style*="background:rgba(255,255,255,0.8"], [style*="background:rgba(255,255,255,0.9"], [style*="background: rgba(255,255,255,0.8"], [style*="background: rgba(255,255,255,0.9"]):not(header *, footer *, .cy-ticker *) { background: rgb(252 246 243 / 0.92) !important; }
+html[data-palette="pudra"] :is([style*="background:rgba(139,92,246"], [style*="background: rgba(139,92,246"], [style*="background:#8B5CF6"], [style*="background: #8B5CF6"], [style*="background:#7C3AED"], [style*="background: #7C3AED"]):not(header *, footer *, .cy-ticker *) { background: rgb(111 90 146 / 0.92) !important; }
+html[data-palette="pudra"] [style*="linear-gradient(140deg, rgba(139,92,246"]:not(header *, footer *, .cy-ticker *) { background: linear-gradient(140deg, rgb(111 90 146 / 0.45), rgb(91 72 121 / 0.3)) !important; }
+html[data-palette="pudra"] :is([style*="#8B5CF622"], [style*="#A855F722"], [style*="#7C3AED22"]):not(header *, footer *, .cy-ticker *) { background: var(--pp-soft) !important; border-color: var(--pp-line) !important; }
+html[data-palette="pudra"] [style*="radial-gradient(circle, rgba(168,85,247"]:not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *) { background: radial-gradient(circle, rgb(111 90 146 / 0.14) 0%, transparent 70%) !important; }
+html[data-palette="pudra"] :is([style*="border:1px solid rgba(139,92,246"], [style*="border: 1px solid rgba(139,92,246"], [style*="border:1.5px solid rgba(139,92,246"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-line) !important; }
+html[data-palette="pudra"] :is([style*="color:#A855F7"], [style*="color: #A855F7"], [style*="color:#6D28D9"], [style*="color: #6D28D9"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *, [class*="bg-[#0"] *, [class*="bg-[#1"] *) { color: var(--pp-primary-hover) !important; }
+
+/* ── Tarama 2: küçük harf degrade uçları, koleksiyon rayı kartı ── */
+html[data-palette="pudra"] :is([class~="from-[#8b5cf6]"], [class~="from-[#7c3aed]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-from: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="to-[#a855f7]"], [class~="to-[#6d28d9]"], [class~="to-[#8b5cf6]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-to: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] [class*="shadow-[0_18px_45px_rgba(139,92,246"]:not(header *, footer *, .cy-ticker *) { box-shadow: var(--pp-cta-shadow) !important; }
+html[data-palette="pudra"] .hp-sec[data-hp-type="collection_rail"] [style*="blur(48px)"] { background: var(--pp-card) !important; }
+
+/* ── Tarama 3 (kategori): ray kartı her sayfada, daire yedeği, koyu mor kampanya bandı ── */
+html[data-palette="pudra"] [style*="background:#FFFFFF"][style*="blur(48px)"]:not(header *, footer *, .cy-ticker *) { background: var(--pp-card) !important; }
+html[data-palette="pudra"] [style*="#A855F7 0%, #7C3AED"]:not(header *, footer *, .cy-ticker *) { background: radial-gradient(120% 120% at 30% 20%, var(--pp-primary) 0%, var(--pp-primary-hover) 60%, var(--pp-text) 100%) !important; }
+html[data-palette="pudra"] [style*="#1E0845 0%, #4C1D95"]:not(header *, footer *, .cy-ticker *) { background: linear-gradient(135deg, #2A1B3D 0%, #3B2752 55%, var(--pp-primary-hover) 100%) !important; }
+
+/* ── Tarama 4 (ürün sayfası): pasif butonlar, açık lila degrade kart, satır içi beyaz kart ── */
+html[data-palette="pudra"] :is([class~="bg-[#DDD6FE]"], [class~="bg-[#ddd6fe]"], [class~="bg-[#C4B5FD]"]):not(header *, footer *, .cy-ticker *) { background-color: color-mix(in srgb, var(--pp-primary) 42%, var(--pp-card)) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#FBFAFE]"], [class~="bg-[#fbfafe]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-page) !important; }
+html[data-palette="pudra"] :is([class~="from-[#FBFAFF]"], [class~="from-[#F5F3FF]"], [class~="from-[#FAF5FF]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-from: var(--pp-page) !important; }
+html[data-palette="pudra"] :is([class~="to-[#F5F3FF]"], [class~="to-[#EDE9FE]"], [class~="via-[#F5F3FF]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-to: var(--pp-soft) !important; }
+html[data-palette="pudra"] :is([style*="background:#fff;"], [style*="background: #fff;"], [style*="background:#FFFFFF;"], [style*="background: #FFFFFF;"]):not(header *, footer *, .cy-ticker *) { background: var(--pp-card) !important; }
+
+/* ── Tarama 5 (sepet / checkout kabuğu): sayfa zemini, adım göstergesi ── */
+html[data-palette="pudra"] :is([class~="bg-[#fbfafc]"], [class~="bg-[#FBFAFC]"], [class~="bg-[#faf9fc]"], [class~="bg-[#F9FAFB]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-page) !important; }
+html[data-palette="pudra"] :is([style*="color:#9CA3AF"], [style*="color: #9CA3AF"], [style*="color:#6B7280"], [style*="color: #6B7280"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-muted) !important; }
+html[data-palette="pudra"] :is([style*="background:#F3F4F6"], [style*="background: #F3F4F6"]):not(header *, footer *, .cy-ticker *) { background: var(--pp-soft) !important; }
+
+/* ── Otomatik eşleme (scratchpad/pudra-gen.mjs): bileşenlerdeki marka ailesi hex sınıfları ──
+   414 sınıf tarandı; yalnız mor/lila/nötr tonlar eşlendi, anlamsal renkler (yeşil/kırmızı/turuncu/sarı/mavi) hariç. */
+html[data-palette="pudra"] :is([class~="bg-[#F8F5FF]"], [class~="bg-[#F9FAFB]"], [class~="bg-[#FAF8FD]"], [class~="bg-[#FAFAFA]"], [class~="bg-[#FAFAFB]"], [class~="bg-[#FAFAFC]"], [class~="bg-[#FAFAFF]"], [class~="bg-[#FBFAFD]"], [class~="bg-[#FBFAFE]"], [class~="bg-[#FBFAFF]"], [class~="bg-[#FCFBFD]"], [class~="bg-[#FCFBFE]"], [class~="bg-[#FCFCFD]"], [class~="bg-[#FCFCFE]"], [class~="bg-[#FFFBFB]"], [class~="bg-[#faf8fc]"], [class~="bg-[#faf9fd]"], [class~="bg-[#fbfafc]"], [class~="bg-[#fbfafd]"], [class~="bg-[#fcfaff]"], [class~="bg-[#fcfbfd]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-page) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#DDD6FE]"], [class~="bg-[#E5DFF3]"], [class~="bg-[#E5E7EB]"], [class~="bg-[#EDE9FE]"], [class~="bg-[#F1EAF9]"], [class~="bg-[#F1EDFF]"], [class~="bg-[#F1F0F5]"], [class~="bg-[#F2EEFF]"], [class~="bg-[#F3EEFF]"], [class~="bg-[#F3F0FF]"], [class~="bg-[#F3F4F6]"], [class~="bg-[#F5F3FF]"], [class~="bg-[#F6F0FF]"], [class~="bg-[#F6F2FC]"], [class~="bg-[#F6F3F8]"], [class~="bg-[#F7F6FB]"], [class~="bg-[#f2eef6]"], [class~="bg-[#f3edff]"], [class~="bg-[#f3efff]"], [class~="bg-[#f4efff]"], [class~="bg-[#f4f0ff]"], [class~="bg-[#f5efff]"], [class~="bg-[#f5f0ff]"], [class~="bg-[#f5f1ff]"], [class~="bg-[#f5f3ff]"], [class~="bg-[#f7f5fa]"], [class~="bg-[#f7f5fc]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-soft) !important; }
+html[data-palette="pudra"] :is([class~="hover:bg-[#EDE9FE]"], [class~="hover:bg-[#F0EEF9]"], [class~="hover:bg-[#F1F0F5]"], [class~="hover:bg-[#F5F3FF]"], [class~="hover:bg-[#F6F2FC]"], [class~="hover:bg-[#F8F5FF]"], [class~="hover:bg-[#F9FAFB]"], [class~="hover:bg-[#FAF5FF]"], [class~="hover:bg-[#FAFAFB]"], [class~="hover:bg-[#f5f0ff]"], [class~="hover:bg-[#f5f3ff]"], [class~="hover:bg-[#f7f5fc]"]):not(header *, footer *, .cy-ticker *):hover { background-color: var(--pp-section) !important; }
+html[data-palette="pudra"] :is([class~="border-[#C4B5FD]"], [class~="border-[#DDD2F5]"], [class~="border-[#DDD6FE]"], [class~="border-[#DED4F0]"], [class~="border-[#DED5E8]"], [class~="border-[#DED5EA]"], [class~="border-[#DED5EC]"], [class~="border-[#E4DCEB]"], [class~="border-[#E4DCF0]"], [class~="border-[#E4DDED]"], [class~="border-[#E5DDF0]"], [class~="border-[#E5DFF0]"], [class~="border-[#E5E7EB]"], [class~="border-[#E7E0F0]"], [class~="border-[#E8E1EF]"], [class~="border-[#E8E2ED]"], [class~="border-[#E8E2F5]"], [class~="border-[#E9E2F0]"], [class~="border-[#E9E2F5]"], [class~="border-[#E9E4F0]"], [class~="border-[#E9E7F0]"], [class~="border-[#EAE4F1]"], [class~="border-[#EAE5EF]"], [class~="border-[#EDE9FE]"], [class~="border-[#EEE8F3]"], [class~="border-[#EEE8F5]"], [class~="border-[#EEE9F3]"], [class~="border-[#F0EBF5]"], [class~="border-[#F0EBF7]"], [class~="border-[#F0ECF4]"], [class~="border-[#F0EDF3]"], [class~="border-[#F0EEF6]"], [class~="border-[#F1EEFA]"], [class~="border-[#F1F0F5]"], [class~="border-[#F2EDF7]"], [class~="border-[#F3F4F6]"], [class~="border-[#d8ccff]"], [class~="border-[#d9cced]"], [class~="border-[#d9ccff]"], [class~="border-[#ded6ff]"], [class~="border-[#e2dbf2]"], [class~="border-[#e3d9f5]"], [class~="border-[#e3daf0]"], [class~="border-[#e4dcff]"], [class~="border-[#e5dbfb]"], [class~="border-[#e6dff0]"], [class~="border-[#e7ddfb]"], [class~="border-[#e7def2]"], [class~="border-[#e7e1ef]"], [class~="border-[#e8e1f0]"], [class~="border-[#e9e1f1]"], [class~="border-[#e9e3f6]"], [class~="border-[#ebe7f2]"], [class~="border-[#ece7f4]"], [class~="border-[#ede9fe]"], [class~="border-[#eee8f4]"], [class~="border-[#eee8f5]"], [class~="border-[#eee9f6]"], [class~="border-[#eeeaf3]"], [class~="border-[#f0ecf7]"], [class~="divide-[#EDE9FE]"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-line) !important; }
+html[data-palette="pudra"] :is([class~="text-[#111827]"], [class~="text-[#12091f]"], [class~="text-[#121827]"], [class~="text-[#130724]"], [class~="text-[#140b20]"], [class~="text-[#14101C]"], [class~="text-[#141020]"], [class~="text-[#160B2E]"], [class~="text-[#160b25]"], [class~="text-[#160d22]"], [class~="text-[#171020]"], [class~="text-[#171221]"], [class~="text-[#1A1226]"], [class~="text-[#1C0838]"], [class~="text-[#1F2937]"], [class~="text-[#1f1b2d]"], [class~="text-[#1f2937]"], [class~="text-[#211B2D]"], [class~="text-[#24143F]"], [class~="text-[#24182F]"], [class~="text-[#2E2437]"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-text) !important; }
+html[data-palette="pudra"] :is([class~="text-[#342b40]"], [class~="text-[#3F3A52]"], [class~="text-[#3f3649]"], [class~="text-[#4A4256]"], [class~="text-[#4B5563]"], [class~="text-[#4b4457]"], [class~="text-[#4b5563]"], [class~="text-[#4f465a]"], [class~="text-[#5B6472]"], [class~="text-[#61586D]"], [class~="text-[#62596d]"], [class~="text-[#665E70]"], [class~="text-[#665d72]"], [class~="text-[#675d72]"], [class~="text-[#686074]"], [class~="text-[#6B7280]"], [class~="text-[#6f667b]"], [class~="text-[#6f7482]"], [class~="text-[#71667C]"], [class~="text-[#746b80]"], [class~="text-[#746c80]"], [class~="text-[#756a82]"], [class~="text-[#776d82]"], [class~="text-[#7A7084]"], [class~="text-[#7C7387]"], [class~="text-[#7b7286]"], [class~="text-[#7c7488]"], [class~="text-[#817889]"], [class~="text-[#8F8799]"], [class~="text-[#9A91A5]"], [class~="text-[#9CA3AF]"], [class~="text-[#9a91a5]"], [class~="text-[#9b91a8]"], [class~="text-[#9b92a7]"], [class~="text-[#9b94a8]"], [class~="text-[#A096AA]"], [class~="text-[#A099AA]"], [class~="text-[#A79FB2]"], [class~="text-[#B0A6BA]"], [class~="text-[#a097aa]"], [class~="text-[#a1a7b3]"], [class~="text-[#a59bad]"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-muted) !important; }
+html[data-palette="pudra"] :is([class~="text-[#4C1D95]"], [class~="text-[#5B21B6]"], [class~="text-[#6D28D9]"], [class~="text-[#6d28d9]"], [class~="text-[#7445A0]"], [class~="text-[#7C3AED]"], [class~="text-[#7c3aed]"], [class~="text-[#8B5CF6]"], [class~="text-[#8b5cf6]"], [class~="text-[#A78BDA]"], [class~="text-[#A855F7]"], [class~="text-[#A890D0]"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *, [class*="bg-[#0"] *, [class*="bg-[#1"] *, [style*="#0D0520"] *, [style*="#0A0118"] *) { color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="group-hover:text-[#6D28D9]"], [class~="group-hover:text-[#6d28d9]"], [class~="group-hover:text-[#7C3AED]"], [class~="group-hover:text-[#8B5CF6]"], [class~="hover:text-[#6D28D9]"], [class~="hover:text-[#6d28d9]"], [class~="hover:text-[#7C3AED]"], [class~="hover:text-[#7c3aed]"], [class~="hover:text-[#8B5CF6]"], [class~="hover:text-[#8b5cf6]"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *, [class*="bg-[#0"] *, [class*="bg-[#1"] *, [style*="#0D0520"] *, [style*="#0A0118"] *):hover { color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="bg-[#6D28D9]"], [class~="bg-[#7C3AED]"], [class~="bg-[#8B5CF6]"], [class~="bg-[#8b5cf6]"]):not(header *, footer *, .cy-ticker *) { background-color: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="hover:bg-[#6D28D9]"], [class~="hover:bg-[#7C3AED]"], [class~="hover:bg-[#8B5CF6]"], [class~="hover:bg-[#8b5cf6]"]):not(header *, footer *, .cy-ticker *):hover { background-color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([class~="border-[#7C3AED]"], [class~="border-[#8B5CF6]"], [class~="border-[#8b5cf6]"], [class~="border-[#A855F7]"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="from-[#5b21b6]"], [class~="from-[#6D28D9]"], [class~="from-[#7C3AED]"], [class~="from-[#7c3aed]"], [class~="from-[#8b5cf6]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-from: var(--pp-primary) !important; }
+html[data-palette="pudra"] :is([class~="to-[#6D28D9]"], [class~="to-[#6d28d9]"], [class~="to-[#8B5CF6]"], [class~="to-[#8b5cf6]"], [class~="to-[#9333ea]"], [class~="to-[#A855F7]"], [class~="to-[#a855f7]"], [class~="via-[#4c1d95]"]):not(header *, footer *, .cy-ticker *) { --tw-gradient-to: var(--pp-primary-hover) !important; }
+
+/* ── İstemcide çizilen bileşenler: React satır içi stili rgb() biçimine çevirir (ör. çerez çubuğu) ── */
+html[data-palette="pudra"] :is([style*="linear-gradient(135deg, rgb(139, 92, 246)"], [style*="linear-gradient(135deg, rgb(124, 58, 237)"], [style*="linear-gradient(90deg, rgb(139, 92, 246), rgb(168, 85, 247)"]):not(header *, footer *, .cy-ticker *) { background: var(--pp-cta) !important; }
+html[data-palette="pudra"] :is([style*="background: rgb(139, 92, 246)"], [style*="background-color: rgb(139, 92, 246)"], [style*="background: rgba(139, 92, 246"], [style*="background: rgb(124, 58, 237)"]):not(header *, footer *, .cy-ticker *) { background: rgb(111 90 146 / 0.92) !important; }
+html[data-palette="pudra"] [style*="rgba(139, 92, 246"]:not(header *, footer *, .cy-ticker *) { box-shadow: var(--pp-cta-shadow) !important; }
+html[data-palette="pudra"] :is([style*="border: 1px solid rgba(139, 92, 246"], [style*="border: 1.5px solid rgba(139, 92, 246"], [style*="border-color: rgba(139, 92, 246"]):not(header *, footer *, .cy-ticker *) { border-color: var(--pp-line) !important; }
+html[data-palette="pudra"] :is([style*="color: rgb(139, 92, 246)"], [style*="color: rgb(124, 58, 237)"], [style*="color: rgb(168, 85, 247)"], [style*="color: rgb(109, 40, 217)"]):not(header *, footer *, .cy-ticker *, .hp-sec[data-hp-bg="dark"] *, [class*="bg-[#0"] *, [class*="bg-[#1"] *) { color: var(--pp-primary-hover) !important; }
+html[data-palette="pudra"] :is([style*="color: rgb(156, 163, 175)"], [style*="color: rgb(107, 114, 128)"]):not(header *, footer *, .cy-ticker *) { color: var(--pp-muted) !important; }
+html[data-palette="pudra"] :is([style*="background: rgba(255, 255, 255, 0.8"], [style*="background: rgba(255, 255, 255, 0.9"], [style*="background: rgb(255, 255, 255)"]):not(header *, footer *, .cy-ticker *) { background: rgb(252 246 243 / 0.94) !important; }
+html[data-palette="pudra"] :is([style*="background: rgb(245, 243, 255)"], [style*="background: rgb(237, 233, 254)"], [style*="background: rgb(243, 244, 246)"]):not(header *, footer *, .cy-ticker *, .hp-sec *) { background: var(--pp-soft) !important; }
