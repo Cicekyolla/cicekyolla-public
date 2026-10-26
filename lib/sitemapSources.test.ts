@@ -25,6 +25,7 @@ import {
   NEXT_BUILD_PHASE,
   SITEMAP_MAX_URLS,
   SITEMAP_RETRY_AFTER_SECONDS,
+  SITEMAP_STALE_IF_ERROR_SECONDS,
 } from "./sitemapSources.ts";
 import { isLegacyPleskMedia, mediaUrl } from "./media.ts";
 
@@ -217,12 +218,13 @@ test("sitemapImageLoc: artık sunulmayan eski Plesk medya yolu basılmaz (isLega
   assert.equal(sitemapImageLoc("/storage/products/a.webp", deps), `${SITE}/storage/products/a.webp`, "bağımlılık verilmezse eski davranış");
 });
 
-test("sitemapResponse: kaynak okunabildi → 200, bugünkü başlıklar birebir", async () => {
+test("sitemapResponse: kaynak okunabildi → 200, bugünkü başlıklar + stale-if-error (1 gün)", async () => {
   const xml = '<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>';
   const res = sitemapResponse(xml);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("content-type"), "application/xml; charset=utf-8");
-  assert.equal(res.headers.get("cache-control"), "public, max-age=0, s-maxage=300, stale-while-revalidate=600");
+  assert.equal(SITEMAP_STALE_IF_ERROR_SECONDS, 86_400);
+  assert.equal(res.headers.get("cache-control"), "public, max-age=0, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400");
   assert.equal(res.headers.get("retry-after"), null);
   assert.equal(await res.text(), xml);
 });
