@@ -209,11 +209,21 @@ export function sitemapImageLoc(raw: string | null | undefined, deps: SitemapUrl
 export const SITEMAP_RETRY_AFTER_SECONDS = 300;
 
 /**
+ * EK (26 Eki 2026 — GSC "Genel HTTP hatası 503"): 200 yanıtına `stale-if-error`.
+ * GSC 24–26 Eki'de 16/24 alt sitemap'i 503 ile okudu: Googlebot geldiğinde API
+ * (sık deploy/yeniden başlatma penceresi) erişilemiyordu ve rota kurala uyup 503 döndü.
+ * Bu süre boyunca CDN (Cloudflare) elindeki SON İYİ 200 kopyayı sunabilir; origin
+ * yine dürüstçe 503 üretir (boş/eksik sitemap yayınlanmaz — KURAL 2 değişmedi).
+ * 1 gün: kısa kesintiyi örter; uzun kesintide 503 yeniden görünür olur.
+ */
+export const SITEMAP_STALE_IF_ERROR_SECONDS = 86_400;
+
+/**
  * Sitemap rotalarının TEK yanıt üreticisi.
  *   xml === null → kaynak başarısız: 503, Retry-After, no-store. İstek başına çalışan rotada
  *                  (/sitemaps/[type]) CDN/tarayıcı saklamaz. ISR ön-üretimi olan /sitemap.xml'de
  *                  bu başlık saklamayı yönetmez → index 503 dönmez (bkz. sitemapIndexFailureAction).
- *   xml string   → 200, bugünkü başlıklar birebir.
+ *   xml string   → 200, bugünkü başlıklar + stale-if-error (yukarı bkz.).
  */
 export function sitemapResponse(xml: string | null): Response {
   if (xml === null) {
@@ -229,7 +239,7 @@ export function sitemapResponse(xml: string | null): Response {
   return new Response(xml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
+      "Cache-Control": `public, max-age=0, s-maxage=300, stale-while-revalidate=600, stale-if-error=${SITEMAP_STALE_IF_ERROR_SECONDS}`,
     },
   });
 }
