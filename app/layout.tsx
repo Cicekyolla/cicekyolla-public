@@ -31,6 +31,7 @@ import { getCategoryTree, getCategoryNav, flattenCategories } from "@/lib/catego
 import { buildHeaderMenu } from "@/lib/headerNav";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { resolveSeason, seasonCssVars, type ResolvedSeason } from "@/lib/seasonTheme";
+import { sitePalette, withSitePalette } from "@/lib/sitePalette";
 import { indexRobots, SITE_URL } from "@/lib/site-config";
 
 const GTM_ID = "GTM-54FJNMT2";
@@ -141,6 +142,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // okunamazsa "tr" (önceki davranış); aşağıdaki cy-lang-dir betiği istemcide aynı değeri kurmayı sürdürür.
   const htmlLang = htmlLangForPath(currentRequestPath());
 
+  // SİTE PALETİ (26 Eki 2026): CY_SITE_PALETTE=pudra iken yalnız TR sayfalarında Pudra, yayındaki
+  // sezon temasının yerini alır (lib/sitePalette.ts). Kapalıyken season aynen kalır → site bugünkü gibi.
+  const palette = htmlLang.lang === "tr" ? sitePalette() : null;
+  season = withSitePalette(season, palette);
+
   const seasonVars = season?.theme ? seasonCssVars(season.theme) : null;
   const htmlStyle = headerColors || seasonVars ? {
     ...(headerColors ? {
@@ -154,7 +160,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={htmlLang.lang} dir={htmlLang.dir} suppressHydrationWarning style={htmlStyle}
       data-season={season?.theme ? season.theme.id : undefined}
-      data-density={season && season.density !== "current" ? season.density : undefined}>
+      data-density={season && season.density !== "current" ? season.density : undefined}
+      data-palette={palette ?? undefined}>
       <head>
         {/* EK (PERF, 9 Eyl 2026): ölçüm — Google Fonts CSS'i yalnız ana CSS
             (~24 KB br) indikten sonra @import ile keşfediliyordu; FCP bu seri

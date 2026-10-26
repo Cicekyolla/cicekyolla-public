@@ -8,6 +8,7 @@
 import { Fragment } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import { planSkins, resolveSeason, type SeasonThemeData, type SkinInput } from "@/lib/seasonTheme";
+import { sitePalette, withSitePalette } from "@/lib/sitePalette";
 import type { HomepageDTO, HpSection } from "@/lib/homepage";
 import type { DeliveryZoneCity } from "@/lib/api";
 
@@ -219,7 +220,8 @@ function renderSection(s: HpSection, ctx: RenderCtx, fill?: ShowcaseFill) {
 export function HomepageRenderer({ dto, ctx: baseCtx, tail = [] }: { dto: HomepageDTO; ctx: RenderCtx; tail?: TailSection[] }) {
   // TEMA & SEZON (25 Eki 2026): aktif tema yoksa season=null → planSkins zemine dokunmaz,
   // sarmalayıcılar display:contents → DOM akışı ve ölçüler bugünküyle aynı.
-  const season = resolveSeason(dto.sections);
+  // SİTE PALETİ: ana sayfa yalnız TR'de çizilir → palet açıksa Pudra yayındaki sezonun yerini alır.
+  const season = withSitePalette(resolveSeason(dto.sections), sitePalette());
   const ctx: RenderCtx = { ...baseCtx, seasonBadge: season?.theme?.badge ?? null };
   const enabledSections = dto.sections.filter((s) => s.enabled);
   // V65 vitrin ailesi tüm product_showcase bölümlerine sırayla eşlenir
