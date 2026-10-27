@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { ArrowRight, MapPin, Truck } from "lucide-react";
 import type { LocationNeighborhood } from "@/lib/api";
+import { ilgi } from "@/lib/turkish";
 
 type NeighborhoodCardsProps = {
   citySlug: string;
@@ -44,7 +45,7 @@ export function NeighborhoodCards({
   if (items.length === 0) return null;
   const title =
     variant === "neighborhood"
-      ? `${districtName}'in Diğer Mahalleleri`
+      ? `${ilgi(districtName)} Diğer Mahalleleri`
       : `${districtName} Mahallelerine Çiçek Teslimatı`;
 
   return (

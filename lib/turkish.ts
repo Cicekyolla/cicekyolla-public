@@ -36,3 +36,19 @@ export function yonelmeEki(ad: string): string {
 export function yonelme(ad: string): string {
   return ad + yonelmeEki(ad);
 }
+
+/** İlgi (tamlayan) hâli eki — ADDITIVE. "{İlçe}'in Diğer Mahalleleri" gibi sabit "'in" eklerini
+ *  düzeltmek için: Kadıköy → 'ün, Tuzla → 'nın, Beşiktaş → 'ın, Ataşehir → 'in, Beyoğlu → 'nun.
+ *  Son ünlü dört yönlü uyumu belirler; ünlüyle biten adlarda "n" kaynaştırması gelir. */
+export function ilgiEki(ad: string): string {
+  const temiz = ad.trim();
+  const kucuk = temiz.toLocaleLowerCase("tr-TR");
+  const sonUnlu = [...kucuk].reverse().find((h) => UNLULER.includes(h));
+  if (!sonUnlu) return "'in";
+  const ek = "aı".includes(sonUnlu) ? "ın" : "ei".includes(sonUnlu) ? "in" : "ou".includes(sonUnlu) ? "un" : "ün";
+  return UNLULER.includes(kucuk.slice(-1)) ? `'n${ek}` : `'${ek}`;
+}
+
+export function ilgi(ad: string): string {
+  return ad.trim() + ilgiEki(ad);
+}
