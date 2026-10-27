@@ -31,7 +31,8 @@ test("deliveryPresentation: kargo şehri daima cargo; İstanbul 'in' same_day; '
   assert.equal(deliveryPresentation(dec({}), false), "cargo", "Antalya/Muğla/İzmir şehir kuralı");
   assert.equal(deliveryPresentation(dec({ same_day: true, reach: "in" }), true), "same_day");
   assert.equal(deliveryPresentation(dec({ same_day: false, reach: "out" }), true), "cargo");
-  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "mixed" }), true), "neutral", "Başakşehir: kenar → vaat yok, katalog açık");
+  // 27 Eki 2026 iş kuralı: tüm İstanbul aynı gün → sınır (mixed) ilçe aynı gün sunumu; motor çözemezse (unknown) nötr kalır.
+  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "mixed" }), true), "same_day", "Başakşehir: sınır ilçe → aynı gün (ek yol ücreti)");
   assert.equal(deliveryPresentation(dec({ same_day: null, reach: "unknown" }), true), "neutral", "motor çözemedi → belirsizlik vaat DEĞİL");
   assert.equal(deliveryPresentation(dec({ same_day: true, reach: "unknown" }), true), "neutral", "reach alanı belirsiz diyorsa same_day=true olsa da vaat yok");
 });

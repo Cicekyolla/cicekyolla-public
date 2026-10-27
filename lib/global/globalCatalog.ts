@@ -104,7 +104,10 @@ export function deliveryPresentation(source: CatalogDecision | null | undefined,
   if (!source || source.mode !== "catalog") return "same_day";
   const loc = source.catalog.location;
   if (!loc || loc.found !== true) return "same_day";
-  if (loc.reach === "far") return "far";
+  // EK (27 Eki 2026 — iş kuralı): TÜM İstanbul aynı gün; uzak (far) + sınır (mixed) 11 ilçede ek yol ücreti alınır,
+  // kargo yok, fiyat yazılmaz. Liste API'de alt fiyat ve üzeri aynı gün ürünlere daraltılmış gelir (api#279) →
+  // sunum aynı gün ("far" şeridi / "adrese göre" dili basılmaz). Yalnız İstanbul (cityIsSameDay) için.
+  if (loc.reach === "far" || loc.reach === "mixed") return "same_day";
   if (loc.same_day === false) return "cargo";
   if (loc.same_day === null || loc.reach === "mixed" || loc.reach === "unknown") return "neutral";
   return "same_day";
