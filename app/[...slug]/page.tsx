@@ -17,6 +17,8 @@ import { CrossLinkBlock } from "@/components/location/CrossLinkBlock";
 import { LocationProducts } from "@/components/location/LocationProducts";
 import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
 import { yonelme } from "@/lib/turkish";
+import { cleanLocationName } from "@/lib/locationName";
+import { isNoindexNeighborhoodPath } from "@/lib/neighborhoodNoindex";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
@@ -87,6 +89,14 @@ function locationLabel(page: SeoPublicPage, fallback: string): string {
     .replace(/\s+Çiçek Gönder.*$/i, "")
     .trim();
   return fromHeading || fallback;
+}
+/** EK (Türkçe yer adı): H1'i olmayan mahalle/köy sayfasında ad slug'dan ("Bardakli Koyu") değil location core'dan
+ *  ("Bardaklı Köyü") gelir; ilçe adı da oradan. Yalnız 3 parçalı yolda ve operatör H1'i yokken okunur (önbellekli,
+ *  aynı uç kartlar için zaten çağrılıyor). Bulunamaz / API düşerse null → bugünkü slug davranışı birebir. */
+async function coreNeighborhoodNames(page: SeoPublicPage, parts: string[]): Promise<{ neighborhood: string; district: string } | null> {
+  if (parts.length !== 3 || page.h1) return null;
+  const core = await fetchDistrictNeighborhoods(parts[0], parts[1]).catch(() => null);
+  const hood = core?.neighborhoods.find((n) => n.slug === parts[2]);  return hood && core ? { neighborhood: cleanLocationName(hood.name), district: core.district.name } : null;
 }
 
 /** İstanbul lokasyonunda teslimat sözü motor kararına göre: "same_day" (bugünkü) | "cargo" (out) | "neutral" (far/mixed/unknown). */
@@ -392,9 +402,10 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   let parentRef: { path: string; name: string } | null = null;
   const parts = dyn?.parts ?? deliveryParts(path)!;
   const { city, district } = dyn ? { city: undefined, district: undefined } : getDeliveryInfo(parts);
-  const pageLabel = locationLabel(page, prettySlug(parts.at(-1) || parts[0]));
+  const coreNames = await coreNeighborhoodNames(page, parts);
+  const pageLabel = locationLabel(page, coreNames?.neighborhood || prettySlug(parts.at(-1) || parts[0]));
   const cityName = dyn?.cityName || city?.label || (parts.length === 1 ? pageLabel : prettySlug(parts[0]));
-  const districtName = dyn?.districtName || district?.label || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
+  const districtName = dyn?.districtName || district?.label || coreNames?.district || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
   if (parts.length === 3) {
@@ -716,7 +727,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // il / ilçe / mahalle sayfası locale kardeşleriyle karşılıklı hreflang basar (lib/global/hreflangFamily.ts —
   // Global sayfa AYNI koşul ve AYNI kaynakla tr'yi listeler). Okunamazsa / eşleşme yoksa yalnız canonical (bugünkü).
   const languages = pageNumber === 1 && canonicalPath === path ? await trLocationLanguages(page, path) : null;
-  return { title, description, alternates: languages ? { canonical: absoluteUrl(canonicalPath), languages } : { canonical: absoluteUrl(canonicalPath) }, robots: indexRobots(page.index_state), openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
+  // EK (il bazlı noindex şalteri, lib/neighborhoodNoindex.ts): pilot ilin mahalle/köy sayfası "noindex, follow" — adres ve canonical aynen.
+  const robots = page.page_type === "neighborhood" && isNoindexNeighborhoodPath(path) ? { index: false, follow: true } : indexRobots(page.index_state);
+  return { title, description, alternates: languages ? { canonical: absoluteUrl(canonicalPath), languages } : { canonical: absoluteUrl(canonicalPath) }, robots, openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
 }
 
 /** Türkçe İstanbul lokasyon sayfasının hreflang ailesi (tr + indexlenebilir locale sürümleri + x-default); yoksa null. Fırlatmaz. */
@@ -754,9 +767,10 @@ async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<P
   const parts = fixedParts || dyn?.parts;
   if (!parts) return null;
   const { city, district } = fixedParts ? getDeliveryInfo(fixedParts) : { city: undefined, district: undefined };
-  const pageLabel = locationLabel(page, prettySlug(parts.at(-1) || parts[0]));
+  const coreNames = await coreNeighborhoodNames(page, parts);
+  const pageLabel = locationLabel(page, coreNames?.neighborhood || prettySlug(parts.at(-1) || parts[0]));
   const cityName = dyn?.cityName || city?.label || (parts.length === 1 ? pageLabel : prettySlug(parts[0]));
-  const districtName = dyn?.districtName || district?.label || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
+  const districtName = dyn?.districtName || district?.label || coreNames?.district || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
   return {
