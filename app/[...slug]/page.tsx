@@ -260,7 +260,9 @@ async function showcaseConfigFor(page: SeoPublicPage, path: string): Promise<Res
 /** EK (27 Eki 2026): İstanbul uzak/sınır ilçe vitrininin liste alt fiyatı (kuruş) — motor kararı (konum listesi meta, önbellekli).
  *  İstanbul ilçe/mahalle sayfası değilse ya da okunamazsa null → vitrin bugünkü gibi. */
 async function showcaseFloorFor(page: SeoPublicPage, path: string): Promise<number | null> {
-  const loc = locationFromPath(page, path);
+  // İstanbul'un yeni adresleri (/sile-cicek-siparisi, /sile/{mahalle}-cicek-siparisi) ili yolda taşımaz →
+  // konum önce "location" bloğundan (vitrin yapılandırmasıyla aynı kaynak), yoksa yoldan.
+  const loc = getLocationBlock(page) ?? locationFromPath(page, path);
   if (!loc || loc.city !== "istanbul" || !loc.district) return null;
   const data = await fetchLocationProducts(loc.city, loc.district, { neighborhood: loc.neighborhood, page_size: 30 }).catch(() => null);
   return data?.meta?.listing_min_price_minor ?? null;

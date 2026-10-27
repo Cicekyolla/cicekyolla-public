@@ -103,3 +103,10 @@ test("kaynak nöbeti — PDP planlayıcı: eşik altı nedeni açık yazılır (
     assert.ok(nd && !/[（(]/.test(nd[1]), l + " notDeliverable: 'yalnız İstanbul içi aynı gün' parantezi kalktı (uzak bölgede eşik üstü ürün kuryeyle gidebilir)");
   }
 });
+
+test("EK (27 Eki 2026): vitrin alt fiyatı konumu önce location bloğundan alır (İstanbul yeni yolları ili yolda taşımaz)", () => {
+  const src = readFileSync(new URL("../app/[...slug]/page.tsx", import.meta.url), "utf8");
+  const fn = src.slice(src.indexOf("async function showcaseFloorFor"), src.indexOf("async function loadListingView"));
+  assert.ok(fn.includes("const loc = getLocationBlock(page) ?? locationFromPath(page, path);"), "blok önce, yol yedek");
+  assert.ok(fn.includes('loc.city !== "istanbul"'), "yalnız İstanbul");
+});
