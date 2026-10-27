@@ -24,8 +24,10 @@ const CONF = /checkout|ödeme|Checkout|paiement|afrekenen|caja|pagar|decis|결�
 const GARANTI_YASAK = /\b(guarantee|garantiert|garanti|garantie|garanzia|garantía|garantido|zəmanət|гарант|ضمان|保证|保証|보장)\b|\b\d{1,2}\s?(min|dk|dakika|minutes|minuten)\b|90\s?(dk|min)/iu;
 
 test("deliveryPresentation: reach 'far' → 'far' (same_day=null olsa da nötr değil, kargo değil); eski API/diğer durumlar değişmez", () => {
-  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "far", min_product_price_minor: 250000 }), true), "far");
-  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "mixed" }), true), "neutral", "uzak band kenarı → nötr (kapatma yok)");
+  // 27 Eki 2026 iş kuralı: TÜM İstanbul aynı gün (11 ilçede ek yol ücreti, liste API'de alt fiyatlı) → far/mixed sunumu aynı gün.
+  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "far", min_product_price_minor: 250000 }), true), "same_day");
+  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "mixed" }), true), "same_day", "sınır ilçe → aynı gün");
+  assert.equal(deliveryPresentation(dec({ same_day: null, reach: "far" }), false), "cargo", "kargo şehri daima cargo");
   assert.equal(deliveryPresentation(dec({ same_day: false, reach: "out" }), true), "cargo", "uzak band KAPALI → bugünkü kargo sunumu");
   assert.equal(deliveryPresentation(dec({ same_day: true, reach: "in" }), true), "same_day");
   assert.equal(deliveryPresentation(dec({ same_day: true }), true), "same_day", "eski API (reach yok) → aynen");
@@ -77,7 +79,8 @@ test("kaynak nöbeti — TR landing: motor kararı (meta.reach) sözleri yöneti
   // EK (27 Eki 2026 — iş kuralı): uzak + sınır ilçe liste alt fiyatı → sayfa aynı gün konuşur; kargo/adrese göre sözü yok.
   assert.ok(src.includes("const sameDayFloorMinor = !cargoMode ? (locationData?.meta?.listing_min_price_minor ?? null) : null;"), "alt fiyat API'den");
   assert.ok(src.includes(`const reachNeutral = (reach === "mixed" || reach === "unknown" || reach === "far") && sameDayFloorMinor == null;`), "alt fiyatta nötr söz yok");
-  assert.ok(src.includes("data-floor-note>Bu bölgede {sameDayFloor} ve üzeri ürünler, ek yol ücretiyle aynı gün teslim edilir."), "alt fiyat notu");
+  // 27 Eki 2026 kullanıcı kararı: alt fiyatlı ilçede fiyat cümlesi YAZILMAZ (liste zaten alt fiyat ve üzeri).
+  assert.ok(!src.includes("data-floor-note"), "alt fiyat cümlesi yok");
   assert.ok(src.includes("data-far-note") && src.includes("{farThreshold} ve üzeri ürünler, günün planı uygunsa"), "uzak notu koşullu; eşik API'den");
   assert.doesNotMatch(src.slice(src.indexOf("data-far-note")), /09:00|18:00/, "slot saati TR notuna gömülmez");
   // Meta açıklaması + hero + mahalle kartı etiketi de aynı karardan: 'adrese göre' modunda statik "aynı gün" YOK
