@@ -16,3 +16,32 @@ export function isNoindexNeighborhoodPath(urlPath: string, provinces: readonly s
   const parts = urlPath.split("?")[0].split("/").filter(Boolean);
   return parts.length === 3 && provinces.includes(parts[0]);
 }
+
+// ---------------------------------------------------------------------------
+// EK (27 Eki 2026 — kullanıcı kararı): İSTANBUL DIŞI KÖY + MAHALLE KAPALI.
+// Getirisi düşük (GSC) → izin listesi dışındaki illerin mahalle/köy sayfaları (/{il}/{ilçe}/{mahalle})
+// "noindex, follow" alır ve site haritasından çıkar. İL (/{il}) ve İLÇE (/{il}/{ilçe}) SAYFALARI AÇIK.
+// Sayfalar 200 kalır; URL/slug/canonical ve DB index_state DEĞİŞMEZ.
+// İstanbul'un yeni yolları (/{ilçe}-cicek-siparisi, /{ilçe}/{mahalle}-cicek-siparisi) ilk segmentte
+// il taşımaz ve parça sayıları farklıdır → kurala takılmaz.
+// KADEMELİ AÇMA: listeye il ("ankara") ya da il/ilçe ("ankara/cankaya") eklemek o kısmın mahallelerini açar.
+// HEPSİNİ GERİ ALMA: LOCATION_CLOSE_ENABLED = false.
+export const LOCATION_CLOSE_ENABLED = true;
+export const INDEXED_LOCATION_SCOPES: readonly string[] = ["istanbul"];
+
+/** Saf: sayfa (tip + yol) kapatma kuralına takılıyor mu? synthetic = seo kaydı olmayan dinamik lokasyon sayfası. */
+export function isClosedLocationPath(
+  urlPath: string,
+  pageType: string | null | undefined,
+  opts: { synthetic?: boolean; scopes?: readonly string[]; enabled?: boolean } = {},
+): boolean {
+  if (isNoindexNeighborhoodPath(urlPath) && pageType === "neighborhood") return true; // Kastamonu pilotu (önceki şalter)
+  if (!(opts.enabled ?? LOCATION_CLOSE_ENABLED)) return false;
+  const parts = urlPath.split("?")[0].split("/").filter(Boolean);
+  if (parts.length !== 3) return false; // yalnız mahalle/köy; il ve ilçe sayfaları kapsam dışı
+  if (!opts.synthetic && pageType !== "neighborhood") return false;
+  const scopes = opts.scopes ?? INDEXED_LOCATION_SCOPES;
+  const city = parts[0];
+  const cityDistrict = `${parts[0]}/${parts[1]}`;
+  return !scopes.includes(city) && !scopes.includes(cityDistrict);
+}

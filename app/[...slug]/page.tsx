@@ -18,7 +18,7 @@ import { LocationProducts } from "@/components/location/LocationProducts";
 import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
 import { yonelme } from "@/lib/turkish";
 import { cleanLocationName, neighborhoodTitle } from "@/lib/locationName";
-import { isNoindexNeighborhoodPath } from "@/lib/neighborhoodNoindex";
+import { isClosedLocationPath } from "@/lib/neighborhoodNoindex";
 import type { LocationDeliveryContext } from "@/lib/locationDeliveryTag";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
@@ -735,8 +735,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // il / ilçe / mahalle sayfası locale kardeşleriyle karşılıklı hreflang basar (lib/global/hreflangFamily.ts —
   // Global sayfa AYNI koşul ve AYNI kaynakla tr'yi listeler). Okunamazsa / eşleşme yoksa yalnız canonical (bugünkü).
   const languages = pageNumber === 1 && canonicalPath === path ? await trLocationLanguages(page, path) : null;
-  // EK (il bazlı noindex şalteri, lib/neighborhoodNoindex.ts): pilot ilin mahalle/köy sayfası "noindex, follow" — adres ve canonical aynen.
-  const robots = page.page_type === "neighborhood" && isNoindexNeighborhoodPath(path) ? { index: false, follow: true } : indexRobots(page.index_state);
+  // EK (lokasyon kapatma, lib/neighborhoodNoindex.ts): İstanbul dışı köy/mahalle "noindex, follow" (il/ilçe açık) —
+  // sayfa 200, adres ve canonical aynen; izin listesine eklenen il/ilçe açılır.
+  const robots = isClosedLocationPath(path, page.page_type, { synthetic: page.synthetic === true }) ? { index: false, follow: true } : indexRobots(page.index_state);
   return { title, description, alternates: languages ? { canonical: absoluteUrl(canonicalPath), languages } : { canonical: absoluteUrl(canonicalPath) }, robots, openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
 }
 
