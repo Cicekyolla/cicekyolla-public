@@ -307,14 +307,17 @@ test("pinned: mergePinnedFirst (önce pinned, sıra korunur, tekrar yok, limit);
 // ---------------------------------------------------------------------------
 test("KAYNAK: app/[...slug]/page.tsx — lokasyon (il city-only / ilçe / mahalle) + özel gün tek sorgu yardımcısıyla uca gider, null'da bugünkü fallback", () => {
   const page = oku("../app/[...slug]/page.tsx");
-  assert.ok(page.includes("const listing = await fetchListingPage(listingQueryFor(cfg, pageNumber));"), "sorgu tek yerde (pinned_ids / paginate / max none / locale)");
+  // EK (27 Eki 2026): uzak/sınır İstanbul ilçesinde alt fiyat aynı yardımcıdan iletilir.
+  assert.ok(page.includes("const listing = await fetchListingPage(listingQueryFor(cfg, pageNumber, floorMinor != null ? { minPriceMinor: floorMinor } : {}));"), "sorgu tek yerde (pinned_ids / paginate / max none / locale / alt fiyat)");
   assert.ok(page.includes("if (!listing) return null; // FAIL-OPEN: uç yok / 404 / 5xx / zaman aşımı → bugünkü yol (LocationProducts / fetchProducts / per-id)"));
   assert.ok(page.includes("totalPages: resolvedTotalPagesFrom(cfg, listing.pagination),"), "toplam sayfa listing pagination'dan (motor tavanları, tek sayfa modu)");
   assert.ok(page.includes("const rows = pageNumber === 1 && cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : listing.items;"), "eski uç pinned'ı tanımasa da önce");
   assert.ok(page.includes("const cards = await fetchListingCardsByIds(cfg.items);"), "manual: kartlar toplu uç");
   assert.ok(page.includes("if (cards === null) {"), "ids ucu yoksa per-id yola düşer");
   assert.ok(page.includes("loadShowcaseCards("), "per-id fallback korunur");
-  assert.ok(page.includes("totalPages: resolvedTotalPages(cfg, cards.length)"), "manual: çözülen kart sayısından");
+  // EK (27 Eki 2026): alt fiyatlı ilçede eşik altı kartlar düşer → toplam kalan kart sayısından (alt fiyat yoksa kept = cards).
+  assert.ok(page.includes("totalPages: resolvedTotalPages(cfg, kept.length)"), "manual: çözülen kart sayısından");
+  assert.ok(page.includes("const kept = floorMinor != null ? cards.filter((c) => Number(c.sale_price_minor ?? c.price_minor) >= floorMinor) : cards;"), "manual: alt fiyat süzgeci");
   // EK (kart teslimat etiketi): aynı props + sayfanın teslimat kararı (lib/locationDeliveryTag.ts).
   assert.ok(page.includes("<ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} deliveryContext={cardDeliveryContext} />"));
   // Nöbet sırası (lib/maltepeFamily.test.ts ile aynı): güvenli yol → taban sayfa → /sayfa/1 yönlendirmesi; sayfa > toplam → 404.
@@ -417,4 +420,13 @@ test("KAYNAK: global — locale kategori / lokasyon / storefront autoPool listel
   assert.ok(v80.includes("const autoIds = bundle.auto_product_ids;"), "bugünkü auto sırası fail-open");
   const paging = oku("./global/locationPaging.ts");
   assert.ok(paging.includes('import { capListing, resolvedPageSize, resolvedTotalPages } from "../listingEngine.ts";'), "lokasyon tavanları aynı motor");
+});
+
+test("EK (27 Eki 2026): min_price_minor yalnız verilince sorguya girer (önbellek anahtarı bugünkü)", () => {
+  const cfg = { source: { kind: "category", category_id: 5 }, paginationEnabled: true, pageSize: 30, maxItems: 500, maxPages: 10, inStock: true, sort: "default", pinnedIds: [] } as unknown as Parameters<typeof listingQueryFor>[0];
+  const none = listingQueryParams(listingQueryFor(cfg, 1));
+  assert.ok(!none.some(([k]) => k === "min_price_minor"));
+  const withFloor = listingQueryParams(listingQueryFor(cfg, 1, { minPriceMinor: 250000 }));
+  assert.deepEqual(withFloor.find(([k]) => k === "min_price_minor"), ["min_price_minor", "250000"]);
+  assert.deepEqual(withFloor.filter(([k]) => k !== "min_price_minor"), none, "diğer parametreler aynen");
 });

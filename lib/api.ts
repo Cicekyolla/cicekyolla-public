@@ -856,6 +856,8 @@ export interface LocationProductsPage {
     reach?: string; same_day?: boolean | null; band?: string | null;
     /** 'far' için bandın ürün fiyat eşiği (kuruş); public bunu yalnız metinde gösterir, karar vermez. */
     min_product_price_minor?: number | null;
+    /** EK (27 Eki 2026): İstanbul uzak/sınır ilçe liste alt fiyatı (kuruş) — sayfa aynı gün konuşur; eski API'de yok. */
+    listing_min_price_minor?: number | null;
   };
 }
 export interface LocationProductsQuery {
