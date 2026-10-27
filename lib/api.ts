@@ -7,6 +7,7 @@
 //   title_tag, meta_description, h1, intro_html, body_blocks[], faq[], schema_jsonld } }
 // ---------------------------------------------------------------------------
 
+import { seoPageTag } from "./revalidatePaths";
 import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
 import { categoryTreeAttempts, fetchTreeViaAttempts, fetchCategoryRowById } from "./categoryTreeFetch";
@@ -116,7 +117,8 @@ export async function fetchSeoPage(
     res = await fetchWithDeadline(url, opts?.noStore ? { headers: apiHeaders(), cache: "no-store" } : {
       headers: apiHeaders(),
       // ISR: sayfayı belirli aralıkla yeniden üret (public site tazeliği).
-      next: { revalidate: 300 },
+      // EK (27 Eki 2026): panel kaydında API /api/revalidate ile bu etiketi anında geçersizler.
+      next: { revalidate: 300, tags: [seoPageTag(path)] },
     }, 6_000);
   } catch {
     return null;
@@ -153,7 +155,7 @@ export interface SeoPageResult {
 export async function fetchSeoPageChecked(path: string): Promise<SeoPageResult> {
   const url = `${API_ORIGIN}/api/public/seo/page?path=${encodeURIComponent(path)}`;
   try {
-    const res = await fetchWithDeadline(url, { headers: apiHeaders(), next: { revalidate: 300 } }, 6_000);
+    const res = await fetchWithDeadline(url, { headers: apiHeaders(), next: { revalidate: 300, tags: [seoPageTag(path)] } }, 6_000);
     if (res.status === 404) return { ok: true, page: null };
     if (!res.ok) return { ok: false, page: null };
     const data = ((await res.json()) as { data?: SeoPublicPage } | null)?.data;

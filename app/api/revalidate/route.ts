@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { HOMEPAGE_CACHE_TAG } from "@/lib/homepage";
 import { checkRevalidateSecret, REVALIDATE_HEADER } from "@/lib/revalidateAuth";
+import { parseRevalidatePaths, seoPageTag } from "@/lib/revalidatePaths";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +23,20 @@ export async function POST(req: Request) {
   }
   if (auth === "unauthorized") {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401, headers: NO_STORE });
+  }
+  // EK (27 Eki 2026): { paths: [...] } gövdesi → yalnız o SEO sayfaları (sayfa + fetchSeoPage verisi) yenilenir.
+  // Gövdesiz / paths'siz çağrı bugünkü gibi ana sayfa (API homepageRevalidate gövdesiz çağırır).
+  const body = await req.json().catch(() => null);
+  const parsed = parseRevalidatePaths(body);
+  if (parsed) {
+    for (const p of parsed.paths) {
+      revalidateTag(seoPageTag(p));
+      revalidatePath(p);
+    }
+    return NextResponse.json(
+      { ok: true, revalidated: parsed.paths, rejected: parsed.rejected, at: new Date().toISOString() },
+      { headers: NO_STORE },
+    );
   }
   revalidateTag(HOMEPAGE_CACHE_TAG);
   revalidatePath("/");
