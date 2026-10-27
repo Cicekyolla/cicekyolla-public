@@ -59,7 +59,14 @@ export function absoluteUrl(path = "/"): string {
 
 export function indexRobots(indexState: string = "index"): Metadata["robots"] {
   const indexable = SITE_INDEXABLE && indexState === "index";
-  return indexable
-    ? { index: true, follow: true }
-    : { index: false, follow: false, nocache: true };
+  if (indexable) return { index: true, follow: true };
+  // EK (27 Eki 2026 — kapatma kuralı): kanonik canlı sitede kapatılan (noindex) sayfa "noindex, follow" —
+  // Google sayfayı dizinden çeker ama iç bağları izler (il/ilçe sayfalarına değer akar). Staging /
+  // kanonik olmayan host'ta (SITE_INDEXABLE=false) bugünkü gibi nofollow kalır.
+  return SITE_INDEXABLE ? computeClosedRobots() : { index: false, follow: false, nocache: true };
+}
+
+/** Kapatılan sayfanın robots değeri (TR ve 13 dil ortak): noindex, follow. */
+export function computeClosedRobots(): { index: false; follow: true } {
+  return { index: false, follow: true };
 }

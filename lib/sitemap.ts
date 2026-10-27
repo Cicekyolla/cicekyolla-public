@@ -9,7 +9,7 @@ import {
   type SeoInventoryItem,
 } from "@/lib/api";
 import { absoluteUrl, SITE_INDEXABLE } from "@/lib/site-config";
-import { isNoindexNeighborhoodPath } from "@/lib/neighborhoodNoindex";
+import { isClosedLocationPath } from "@/lib/neighborhoodNoindex";
 import { getIndexableBlogPosts } from "@/lib/blog";
 import { isFailedProductPage, type CategoryUrlRow, type ProductUrlRow } from "@/lib/sitemapSources";
 import { TR_CATEGORY_DEDICATED_ROUTES } from "@/lib/global/hreflangFamily";
@@ -130,7 +130,7 @@ function isIndexableNeighborhoodItem(item: SeoInventoryItem): boolean {
     item.index_state === "index" &&
     item.page_type === "neighborhood" &&
     passesProvinceLock(item.url_path) &&
-    !isNoindexNeighborhoodPath(item.url_path) &&
+    !isClosedLocationPath(item.url_path, "neighborhood") &&
     !item.url_path.includes("?") &&
     !item.url_path.includes("#")
   );
@@ -227,8 +227,8 @@ async function neighborhoodShardNodes(shard: number): Promise<NodeRead> {
     // yerine 503 döner.
     const page = await fetchNeighborhoodUrlPageChecked(NEIGHBORHOOD_PAGE_SIZE, off);
     if (!page) return { nodes, failed: true };
-    // EK (il bazlı noindex şalteri): şaltere takılan ilin mahalleleri haritaya yazılmaz (lib/neighborhoodNoindex.ts).
-    for (const row of page.items) if (!isNoindexNeighborhoodPath(row[0])) nodes.push(neighborhoodUrlNode(row));
+    // EK (lokasyon kapatma): kapatılan mahalleler haritaya yazılmaz (lib/neighborhoodNoindex.ts).
+    for (const row of page.items) if (!isClosedLocationPath(row[0], "neighborhood")) nodes.push(neighborhoodUrlNode(row));
     if (page.items.length < NEIGHBORHOOD_PAGE_SIZE) break;
   }
   return { nodes, failed: false };

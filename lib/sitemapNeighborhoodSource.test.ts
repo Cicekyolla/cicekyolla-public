@@ -77,9 +77,11 @@ const {
 // ---------------------------------------------------------------------------
 const TOPLAM = 71_406; // production read-back: published+index mahalle sayısı
 
-/** Deterministik, sıralı sahte URL evreni (production sıralaması: url_path ASC). */
+/** Deterministik, sıralı sahte URL evreni (production sıralaması: url_path ASC).
+ *  EK (lokasyon kapatma): shard MEKANİĞİ ölçülür → evren kapatma kuralına takılmayan (izinli) "istanbul" önekiyle;
+ *  kapatılan satırların süzülmesi ayrıca test edilir. */
 const EVREN: Array<[string, string]> = Array.from({ length: TOPLAM }, (_, i) => [
-  `/il${String(i).padStart(6, "0")}/ilce/mahalle-mah`,
+  `/istanbul/ilce${String(i).padStart(6, "0")}/mahalle-mah`,
   "2026-08-29T20:45:00.000Z",
 ]);
 
@@ -153,4 +155,19 @@ test("lastmod üretiliyor ve ISO biçiminde", async () => {
 
 test("SHARD_SIZE, PAGE_SIZE'ın tam katı — aksi hâlde shard sınırları kayar", () => {
   assert.equal(NEIGHBORHOOD_SHARD_SIZE % NEIGHBORHOOD_PAGE_SIZE, 0);
+});
+
+test("EK: kapatılan (İstanbul dışı) mahalle satırları shard'a yazılmaz, izinliler aynen", async () => {
+  (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
+    const url = new URL(String(input));
+    const offset = Number(url.searchParams.get("offset"));
+    const items: Array<[string, string]> = offset === 0
+      ? [["/ankara/cankaya/kizilay-mah", "2026-08-29T20:45:00.000Z"], ["/istanbul/ilce/mahalle-mah", "2026-08-29T20:45:00.000Z"], ["/maltepe/cinar-cicek-siparisi", "2026-08-29T20:45:00.000Z"]]
+      : [];
+    return { ok: true, json: async () => ({ data: { total: 3, limit: 10_000, offset, items } }) };
+  };
+  const xml = await renderNeighborhoodShard(1);
+  assert.equal(locSayisi(xml), 2);
+  assert.ok(!xml.includes("/ankara/cankaya/kizilay-mah"));
+  assert.ok(xml.includes("/maltepe/cinar-cicek-siparisi"));
 });

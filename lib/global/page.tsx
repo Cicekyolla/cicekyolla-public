@@ -21,7 +21,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
-import { absoluteUrl, SITE_URL } from "@/lib/site-config";
+import { absoluteUrl, computeClosedRobots, SITE_INDEXABLE, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
 import { resolveUnitPrice } from "@/lib/productPrice";
 import { stripTrailingBrand, titleForTemplate } from "@/lib/titleBrand";
@@ -333,7 +333,9 @@ const UI: Record<GlobalLocale, { categories: string; popular: string; faq: strin
   ko: { categories: "카테고리", popular: "이스탄불 인기 꽃", faq: "자주 묻는 질문", orderCta: "지금 주문 →", orderNote: "주문은 본 매장에서 완료됩니다 (해외 발급 Visa/Mastercard 사용 가능)." },
 };
 
-const NOINDEX = { index: false, follow: false } as const;
+// EK (27 Eki 2026 — kapatma kuralı): kapalı locale yüzeyi canlıda "noindex, follow" (iç bağlar il/ilçe sayfalarına
+// değer taşır); staging / kanonik olmayan host'ta bugünkü gibi nofollow.
+const NOINDEX = SITE_INDEXABLE ? computeClosedRobots() : ({ index: false, follow: false } as const);
 
 /** Locale ilçe Service düğümü için hizmet türü (o dilde; şema metni, görünmez). */
 const SERVICE_TYPE: Record<GlobalLocale, string> = {

@@ -9,6 +9,7 @@ import { Price } from "@/components/Price";
 import { ProductImage } from "@/components/product/ProductImage";
 import { avifMediaFromSizes } from "@/lib/avifPolicy";
 import type { CardProduct } from "@/lib/api";
+import { locationDeliveryTag, type LocationDeliveryContext } from "@/lib/locationDeliveryTag";
 import { prevNext, showcasePageHref, visiblePages } from "@/lib/showcasePagination";
 
 const SIZES = "(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw";
@@ -18,11 +19,13 @@ const NAV_BASE = "inline-flex h-11 min-w-[2.75rem] items-center justify-center r
 const NAV_IDLE = "border-[#e2dbf2] bg-white text-[#6d28d9] hover:border-[#c4b5fd] hover:bg-[#f5f0ff]";
 const NAV_ACTIVE = "border-[#8b5cf6] bg-[#8b5cf6] text-white";
 
-export function ShowcaseGrid({ items, basePath, page, totalPages }: {
+export function ShowcaseGrid({ items, basePath, page, totalPages, deliveryContext }: {
   items: CardProduct[];
   basePath: string;
   page: number;
   totalPages: number;
+  /** EK: sayfanın teslimat kararı (lib/locationDeliveryTag.ts); yoksa bugünkü sameDay etiketi. */
+  deliveryContext?: LocationDeliveryContext | null;
 }) {
   const { prev, next } = prevNext(page, totalPages);
   return (
@@ -49,7 +52,7 @@ export function ShowcaseGrid({ items, basePath, page, totalPages }: {
             </div>
             <div className="pt-5">
               <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">
-                {p.sameDay ? "Aynı Gün Teslimat" : "Premium Aranjman"}
+                {locationDeliveryTag(p, deliveryContext)}
               </p>
               <h3 className="mt-2 text-lg font-semibold text-[#171020] group-hover:text-[#6d28d9]"><ProductDisplayName id={p.id} fallback={p.name} /></h3>
               <p className="mt-2 flex items-baseline gap-2">

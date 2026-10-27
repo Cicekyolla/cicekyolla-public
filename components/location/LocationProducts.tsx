@@ -13,6 +13,7 @@ import { Price } from "@/components/Price";
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { toCardProduct, type CardProduct, type PublicProductListItem } from "@/lib/api";
+import { locationDeliveryTag, type LocationDeliveryContext } from "@/lib/locationDeliveryTag";
 import { ProductImage } from "@/components/product/ProductImage";
 import { avifMediaFromSizes } from "@/lib/avifPolicy";
 
@@ -45,6 +46,8 @@ type LocationProductsProps = {
   pageSize?: number;
   /** EK: istemcide en çok bu kadar ürün biriktirilir (varsayılan 48 — bugünkü). */
   maxItems?: number;
+  /** EK: sayfanın teslimat kararı — kart etiketi buna göre (lib/locationDeliveryTag.ts); yoksa bugünkü sameDay etiketi. */
+  deliveryContext?: LocationDeliveryContext | null;
 };
 
 type ApiEnvelope = {
@@ -89,6 +92,7 @@ export function LocationProducts({
   initialTotal,
   pageSize = PAGE_SIZE,
   maxItems = MAX_ITEMS,
+  deliveryContext,
 }: LocationProductsProps) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [items, setItems] = useState<CardProduct[]>(initialItems);
@@ -187,7 +191,7 @@ export function LocationProducts({
               </div>
               <div className="pt-5">
                 <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">
-                  {p.sameDay ? "Aynı Gün Teslimat" : "Premium Aranjman"}
+                  {locationDeliveryTag(p, deliveryContext)}
                 </p>
                 <h3 className="mt-2 text-lg font-semibold text-[#171020] group-hover:text-[#6d28d9]"><ProductDisplayName id={p.id} fallback={p.name} /></h3>
                 <p className="mt-2 flex items-baseline gap-2">

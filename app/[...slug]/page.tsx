@@ -17,8 +17,9 @@ import { CrossLinkBlock } from "@/components/location/CrossLinkBlock";
 import { LocationProducts } from "@/components/location/LocationProducts";
 import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
 import { yonelme } from "@/lib/turkish";
-import { cleanLocationName } from "@/lib/locationName";
-import { isNoindexNeighborhoodPath } from "@/lib/neighborhoodNoindex";
+import { cleanLocationName, neighborhoodTitle } from "@/lib/locationName";
+import { isClosedLocationPath } from "@/lib/neighborhoodNoindex";
+import type { LocationDeliveryContext } from "@/lib/locationDeliveryTag";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
@@ -92,11 +93,11 @@ function locationLabel(page: SeoPublicPage, fallback: string): string {
 }
 /** EK (Türkçe yer adı): H1'i olmayan mahalle/köy sayfasında ad slug'dan ("Bardakli Koyu") değil location core'dan
  *  ("Bardaklı Köyü") gelir; ilçe adı da oradan. Yalnız 3 parçalı yolda ve operatör H1'i yokken okunur (önbellekli,
- *  aynı uç kartlar için zaten çağrılıyor). Bulunamaz / API düşerse null → bugünkü slug davranışı birebir. */
-async function coreNeighborhoodNames(page: SeoPublicPage, parts: string[]): Promise<{ neighborhood: string; district: string } | null> {
+ *  aynı uç kartlar için zaten çağrılıyor); il/ilçe adı da buradan (slug yedeğinin önünde). Bulunamaz / API düşerse null → bugünkü slug davranışı birebir. */
+async function coreNeighborhoodNames(page: SeoPublicPage, parts: string[]): Promise<{ neighborhood: string; district: string; city: string } | null> {
   if (parts.length !== 3 || page.h1) return null;
   const core = await fetchDistrictNeighborhoods(parts[0], parts[1]).catch(() => null);
-  const hood = core?.neighborhoods.find((n) => n.slug === parts[2]);  return hood && core ? { neighborhood: cleanLocationName(hood.name), district: core.district.name } : null;
+  const hood = core?.neighborhoods.find((n) => n.slug === parts[2]);  return hood && core ? { neighborhood: cleanLocationName(hood.name), district: core.district.name, city: core.city.name } : null;
 }
 
 /** İstanbul lokasyonunda teslimat sözü motor kararına göre: "same_day" (bugünkü) | "cargo" (out) | "neutral" (far/mixed/unknown). */
@@ -404,8 +405,8 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   const { city, district } = dyn ? { city: undefined, district: undefined } : getDeliveryInfo(parts);
   const coreNames = await coreNeighborhoodNames(page, parts);
   const pageLabel = locationLabel(page, coreNames?.neighborhood || prettySlug(parts.at(-1) || parts[0]));
-  const cityName = dyn?.cityName || city?.label || (parts.length === 1 ? pageLabel : prettySlug(parts[0]));
-  const districtName = dyn?.districtName || district?.label || coreNames?.district || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
+  const cityName = coreNames?.city || dyn?.cityName || city?.label || (parts.length === 1 ? pageLabel : prettySlug(parts[0]));
+  const districtName = coreNames?.district || dyn?.districtName || district?.label || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
   if (parts.length === 3) {
@@ -526,6 +527,12 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   const farThreshold = reach === "far" && locationData?.meta?.min_product_price_minor != null
     ? formatMinorTRY(locationData.meta.min_product_price_minor)
     : null;
+  // EK: ürün kartı etiketi sayfanın teslimat kararıyla aynı dili konuşur (kargo sayfasında "Aynı Gün" yazılmaz).
+  const cardDeliveryContext: LocationDeliveryContext | null = cargoMode || reachOut
+    ? { mode: "cargo" }
+    : reach === "far"
+      ? { mode: "far", minPriceMinor: locationData?.meta?.min_product_price_minor ?? null }
+      : reachNeutral ? { mode: "neutral" } : null;
   const deliveryTime = cargoMode || reachOut ? "1–3 iş günü" : reachNeutral ? "Adrese göre belirlenir" : district?.time || "Aynı gün";
   const seoDescription = locationSeoDescription(parts, cityName, districtName, neighborhood, trDeliveryMode(reach));
   // Mahalle kartı alt etiketi: motor kararıyla aynı söz (out → kargo, adrese göre → nötr, aksi bugünkü).
@@ -639,7 +646,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
     <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{showcase ? (
-      <ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} />
+      <ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} deliveryContext={cardDeliveryContext} />
     ) : useLocationGrid && locationData ? (
       // Coverage Engine ürünleri: 12 SSR + "Daha Fazla Göster" (24/36/48) + gerçek filtreler.
       <LocationProducts
@@ -651,6 +658,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
         initialTotal={locationData.pagination.total}
         pageSize={LOCATION_PAGE_SIZE}
         maxItems={LOCATION_PAGE_SIZE * 2}
+        deliveryContext={cardDeliveryContext}
       />
     ) : products.length ? <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">{products.map((p) => <Link key={p.id} href={`/urun/${p.slug}`} className="group overflow-hidden rounded-[18px] bg-white"><div className="aspect-square overflow-hidden rounded-[18px] bg-[#f7f5fa]">{p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="grid h-full place-items-center text-[#8b5cf6]">ÇiçekYolla</div>}</div><div className="pt-5"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#8b5cf6]">{cargoMode ? "Türkiye Geneli Kargo" : "Premium Aranjman"}</p><h3 className="mt-3 text-lg font-semibold text-[#171020]">{p.name}</h3><p className="mt-3 text-xl font-bold"><Price minor={p.priceMinor} /></p></div></Link>)}</div> : <div className="mt-10 rounded-[24px] border border-[#ede9fe] bg-white p-8"><p className="text-[#746c80]">{cargoMode ? "Şu anda Türkiye geneli kargoya açık ürün bulunmuyor." : "Bu bölgeye gönderilebilen güncel ürünler çiçek koleksiyonunda listeleniyor."}</p><Link href={cargoMode ? "/kategori/turkiye-geneli-kargo" : "/kategori/cicekler"} className="mt-5 inline-flex rounded-full bg-[#8b5cf6] px-6 py-3 font-bold text-white">{cargoMode ? "Tüm Kargolu Ürünleri Gör" : "Çiçekleri İncele"}</Link></div>}</section>
 
@@ -727,8 +735,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // il / ilçe / mahalle sayfası locale kardeşleriyle karşılıklı hreflang basar (lib/global/hreflangFamily.ts —
   // Global sayfa AYNI koşul ve AYNI kaynakla tr'yi listeler). Okunamazsa / eşleşme yoksa yalnız canonical (bugünkü).
   const languages = pageNumber === 1 && canonicalPath === path ? await trLocationLanguages(page, path) : null;
-  // EK (il bazlı noindex şalteri, lib/neighborhoodNoindex.ts): pilot ilin mahalle/köy sayfası "noindex, follow" — adres ve canonical aynen.
-  const robots = page.page_type === "neighborhood" && isNoindexNeighborhoodPath(path) ? { index: false, follow: true } : indexRobots(page.index_state);
+  // EK (lokasyon kapatma, lib/neighborhoodNoindex.ts): İstanbul dışı köy/mahalle "noindex, follow" (il/ilçe açık) —
+  // sayfa 200, adres ve canonical aynen; izin listesine eklenen il/ilçe açılır.
+  const robots = isClosedLocationPath(path, page.page_type, { synthetic: page.synthetic === true }) ? { index: false, follow: true } : indexRobots(page.index_state);
   return { title, description, alternates: languages ? { canonical: absoluteUrl(canonicalPath), languages } : { canonical: absoluteUrl(canonicalPath) }, robots, openGraph: { title, description, url: absoluteUrl(canonicalPath), locale: page.lang === "tr" ? "tr_TR" : page.lang, type: "website" } };
 }
 
@@ -769,15 +778,17 @@ async function getLocationMetadata(page: SeoPublicPage, path: string): Promise<P
   const { city, district } = fixedParts ? getDeliveryInfo(fixedParts) : { city: undefined, district: undefined };
   const coreNames = await coreNeighborhoodNames(page, parts);
   const pageLabel = locationLabel(page, coreNames?.neighborhood || prettySlug(parts.at(-1) || parts[0]));
-  const cityName = dyn?.cityName || city?.label || (parts.length === 1 ? pageLabel : prettySlug(parts[0]));
-  const districtName = dyn?.districtName || district?.label || coreNames?.district || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
+  const cityName = coreNames?.city || dyn?.cityName || city?.label || (parts.length === 1 ? pageLabel : prettySlug(parts[0]));
+  const districtName = coreNames?.district || dyn?.districtName || district?.label || (parts[1] ? (parts.length === 2 ? pageLabel : prettySlug(parts[1])) : "");
   const neighborhood = parts[2] ? pageLabel : "";
   const place = neighborhood || districtName || cityName;
   return {
     // MARKA EKLENMEZ: app/layout.tsx metadata şablonu ("%s | ÇiçekYolla")
     // burada da uygulanır — brand'i tekrar eklemek "... | ÇiçekYolla | ÇiçekYolla"
     // duplicate title'ına yol açıyordu (kanıtlandı: canlı /istanbul/kadikoy).
-    title: `${place} Çiçekçi — ${place} Çiçek Siparişi`,
+    // EK: mahalle/köy (3 parçalı) şablon başlığı "Yer, İlçe (İl) Çiçekçi" — aynı adlı köyler ayrışır. H1 DEĞİŞMEZ;
+    // operatör başlığı (managedTitle) bunun önüne geçer. İl/ilçe çözülemezse bugünkü kalıp.
+    title: (neighborhood ? neighborhoodTitle(neighborhood, districtName, cityName) : null) || `${place} Çiçekçi — ${place} Çiçek Siparişi`,
     description: locationSeoDescription(parts, cityName, districtName, neighborhood, await trMetaDeliveryMode(parts)),
   };
 }
