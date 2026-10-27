@@ -12,6 +12,7 @@ import {
 } from "@/lib/legacy-recovery";
 import legacyCategorySlugs from "@/lib/legacy-category-slugs.json";
 import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
+import { isPlacePagePath } from "@/lib/placePages";
 import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch, resolveIstanbulLegacyNeighborhood } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
 import { isGlobalLocalePath } from "@/lib/global/config";
@@ -70,7 +71,10 @@ export async function middleware(req: NextRequest, event?: NextFetchEvent) {
      FAIL-SAFE: API erişilemezse false → bugünkü davranış birebir sürer. */
   /* MALTEPE AİLESİ: taşınan ilçe/mahalle adresleri (/maltepe-cicek-siparisi, /maltepe/{x}-cicek-siparisi) ve
      sayfalamaları (/sayfa/N) yönetilen 301'in HEDEFİDİR → isManagedRedirectTarget muafiyeti kapsar. */
-  const legacyMuaf = await isManagedRedirectTarget(req.nextUrl.pathname);
+  /* EK (YER SAYFALARI, 27 Eki 2026): /hastaneye-cicek-gonderimi, /otele-…, /fuara-…, /camiye-celenk-…, /avmye-… ve alt
+     sayfaları yeni canlı sayfalardır (lib/placePages.ts); "-cicek-" içeren tek parçalı eski URL kuralı (resolveMidCicek)
+     bunları ana sayfaya 301'liyordu. Yalnız bu 5 ailede legacy kurallar çalışmaz; yönetilen 301'ler aynen geçerli. */
+  const legacyMuaf = isPlacePagePath(req.nextUrl.pathname) || await isManagedRedirectTarget(req.nextUrl.pathname);
   /* EK (ÖZEL GÜN "-cicekleri") — next.config.js'ten TAŞINDI (bkz.
      legacy-recovery.ts::resolveCicekleriLegacy). Config katmanı middleware'den
      ÖNCE çalıştığı ve statik olduğu için operatör onaylı yönetilen 301'i

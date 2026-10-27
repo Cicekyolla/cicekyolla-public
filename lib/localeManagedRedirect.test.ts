@@ -445,7 +445,8 @@ test("kaynak nöbeti: locale dalı legacy kurallardan ÖNCE döner ve yalnız ta
   assert.ok(src.includes("export async function middleware(req: NextRequest, event?: NextFetchEvent) {"));
   assert.ok(dal.includes("target.search = req.nextUrl.search;"), "sorgu dizesi korunur");
   // TR dalı aynen: haritayı bekleyen okuma + son sıradaki yönetilen 301.
-  assert.ok(src.includes("const legacyMuaf = await isManagedRedirectTarget(req.nextUrl.pathname);"));
+  // EK (27 Eki 2026, yer sayfaları): döngü guard'ı aynen + yalnız 5 yer ailesi için dar muafiyet (lib/placePages.ts).
+  assert.ok(src.includes("const legacyMuaf = isPlacePagePath(req.nextUrl.pathname) || await isManagedRedirectTarget(req.nextUrl.pathname);"));
   assert.ok(src.includes("const managed = await resolveManagedRedirect(req.nextUrl.pathname);"));
   const lib = readFileSync(path.join(REPO_KOK, "lib", "managed-redirects.ts"), "utf8");
   const mapFn = lib.slice(lib.indexOf("async function getMapForLocale("), lib.indexOf("export async function resolveManagedLocaleRedirect("));
