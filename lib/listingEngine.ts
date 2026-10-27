@@ -402,10 +402,12 @@ export interface ListingQuery {
   paginate?: boolean;
   /** v2: dil — yalnız o dilde canlı çeviri olan ürünler; satıra locale_name / locale_slug eklenir. */
   locale?: string;
+  /** EK (27 Eki 2026): liste alt fiyatı (kuruş) — İstanbul uzak/sınır ilçe vitrini; uç satış fiyatı ≥ değer + aynı gün süzer. */
+  min_price_minor?: number;
 }
 
 /** Çözülmüş vitrin + sayfa → uç sorgusu (tek yerde; yüzeyler ikinci kez kurmaz). */
-export function listingQueryFor(cfg: ResolvedShowcase, page: number, extra: { locale?: string } = {}): ListingQuery {
+export function listingQueryFor(cfg: ResolvedShowcase, page: number, extra: { locale?: string; minPriceMinor?: number } = {}): ListingQuery {
   return {
     source: cfg.source,
     page: cfg.paginationEnabled ? page : 1,
@@ -417,6 +419,7 @@ export function listingQueryFor(cfg: ResolvedShowcase, page: number, extra: { lo
     sort: cfg.sort,
     pinned_ids: cfg.pinnedIds,
     ...(extra.locale ? { locale: extra.locale } : {}),
+    ...(extra.minPriceMinor && extra.minPriceMinor > 0 ? { min_price_minor: Math.trunc(extra.minPriceMinor) } : {}),
   };
 }
 
@@ -461,6 +464,7 @@ export function listingQueryParams(q: ListingQuery): [string, string][] {
   const sort = q.sort === "category_order" ? "default" : q.sort;
   if (sort && (LISTING_SORTS as readonly string[]).includes(sort)) out.push(["sort", sort]);
   if (q.locale) out.push(["locale", q.locale]);
+  if (q.min_price_minor && q.min_price_minor > 0) out.push(["min_price_minor", String(Math.trunc(q.min_price_minor))]);
   return out;
 }
 

@@ -257,7 +257,16 @@ async function showcaseConfigFor(page: SeoPublicPage, path: string): Promise<Res
  *     bugünkü fallback zincirine düşer. Sayfalama kapalıysa (pagination_enabled=false) tek sayfa.
  *   • Sorgu ve sayfa hesabı TEK yerde (lib/listingEngine.ts listingQueryFor / resolvedTotalPages*).
  */
-async function loadListingView(cfg: ResolvedShowcase, pageNumber: number): Promise<ShowcaseView | null> {
+/** EK (27 Eki 2026): İstanbul uzak/sınır ilçe vitrininin liste alt fiyatı (kuruş) — motor kararı (konum listesi meta, önbellekli).
+ *  İstanbul ilçe/mahalle sayfası değilse ya da okunamazsa null → vitrin bugünkü gibi. */
+async function showcaseFloorFor(page: SeoPublicPage, path: string): Promise<number | null> {
+  const loc = locationFromPath(page, path);
+  if (!loc || loc.city !== "istanbul" || !loc.district) return null;
+  const data = await fetchLocationProducts(loc.city, loc.district, { neighborhood: loc.neighborhood, page_size: 30 }).catch(() => null);
+  return data?.meta?.listing_min_price_minor ?? null;
+}
+
+async function loadListingView(cfg: ResolvedShowcase, pageNumber: number, floorMinor: number | null = null): Promise<ShowcaseView | null> {
   const pageSize = resolvedPageSize(cfg);
   const { offset, limit } = cfg.paginationEnabled ? pageSlice(pageNumber, pageSize) : { offset: 0, limit: pageSize };
   if (cfg.mode === "manual") {
@@ -267,9 +276,11 @@ async function loadListingView(cfg: ResolvedShowcase, pageNumber: number): Promi
       const items = await loadShowcaseCards(cfg.items.slice(offset, offset + limit));
       return { items, total: cfg.items.length, totalPages: resolvedTotalPages(cfg, cfg.items.length) };
     }
-    return { items: cards.slice(offset, offset + limit).map(toCardProduct), total: cards.length, totalPages: resolvedTotalPages(cfg, cards.length) };
+    // EK: alt fiyatlı ilçede elle seçilmiş vitrinden de eşik altı ürün düşer.
+    const kept = floorMinor != null ? cards.filter((c) => Number(c.sale_price_minor ?? c.price_minor) >= floorMinor) : cards;
+    return { items: kept.slice(offset, offset + limit).map(toCardProduct), total: kept.length, totalPages: resolvedTotalPages(cfg, kept.length) };
   }
-  const listing = await fetchListingPage(listingQueryFor(cfg, pageNumber));
+  const listing = await fetchListingPage(listingQueryFor(cfg, pageNumber, floorMinor != null ? { minPriceMinor: floorMinor } : {}));
   if (!listing) return null; // FAIL-OPEN: uç yok / 404 / 5xx / zaman aşımı → bugünkü yol (LocationProducts / fetchProducts / per-id)
   // Uç pinned_ids'i tanımıyorsa (eski uç) öne çıkarılanlar 1. sayfada burada öne alınır (tekrar yok); tanıyorsa aynı sonuç.
   const rows = pageNumber === 1 && cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : listing.items;
@@ -291,7 +302,7 @@ async function resolveRequest(requestedPath: string): Promise<Resolved> {
     const cfg = await showcaseConfigFor(base, parsed.basePath);
     if (!cfg) return { kind: "notfound" }; // ne vitrin ne otomatik seri → bugünkü gibi 404
     if (parsed.page === 1) return { kind: "redirect", to: parsed.basePath }; // yalnız vitrinli / serili, yayındaki taban sayfaya
-    const view = await loadListingView(cfg, parsed.page);
+    const view = await loadListingView(cfg, parsed.page, await showcaseFloorFor(base, parsed.basePath));
     if (!view || listingPageState(parsed.page, view.totalPages, true) !== "ok" || view.items.length === 0) return { kind: "notfound" };
     return { kind: "ok", path: parsed.basePath, pageNumber: parsed.page, page: base, showcase: view };
   }
@@ -300,7 +311,7 @@ async function resolveRequest(requestedPath: string): Promise<Resolved> {
   let showcase: ShowcaseView | null = null;
   const cfg = await showcaseConfigFor(page, requestedPath);
   if (cfg) {
-    const view = await loadListingView(cfg, 1);
+    const view = await loadListingView(cfg, 1, await showcaseFloorFor(page, requestedPath));
     // Hiç ürün çözülemezse / uç yoksa vitrin yok sayılır: bugünkü akış (fallback).
     if (view && view.items.length > 0) showcase = view;
   }
@@ -522,19 +533,23 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   //   'far'   → adrese göre: eşik ve üzeri ürünlerde özel araç (günün planı uygunsa), diğerleri kargo — vaat yok.
   //   'mixed' / 'unknown' → vaat yok ("adrese göre"); 'in' ya da motor sessiz (eski API) → bugünkü sözler.
   const reach = locationData?.meta?.reach ?? null;
-  const reachOut = reach === "out";
-  const reachNeutral = reach === "mixed" || reach === "unknown" || reach === "far";
-  const farThreshold = reach === "far" && locationData?.meta?.min_product_price_minor != null
+  // EK (27 Eki 2026 — iş kuralı): İstanbul uzak + sınır ilçeleri (11) liste alt fiyatı taşır → sayfa AYNI GÜN konuşur
+  // (ek yol ücretiyle), "kargo" / "adrese göre" sözü yok; liste API'de alt fiyat ve üzeri aynı gün ürünlere daraltılmış gelir.
+  const sameDayFloorMinor = !cargoMode ? (locationData?.meta?.listing_min_price_minor ?? null) : null;
+  const sameDayFloor = sameDayFloorMinor != null ? formatMinorTRY(sameDayFloorMinor) : null;
+  const reachOut = reach === "out" && sameDayFloorMinor == null;
+  const reachNeutral = (reach === "mixed" || reach === "unknown" || reach === "far") && sameDayFloorMinor == null;
+  const farThreshold = sameDayFloorMinor == null && reach === "far" && locationData?.meta?.min_product_price_minor != null
     ? formatMinorTRY(locationData.meta.min_product_price_minor)
     : null;
   // EK: ürün kartı etiketi sayfanın teslimat kararıyla aynı dili konuşur (kargo sayfasında "Aynı Gün" yazılmaz).
-  const cardDeliveryContext: LocationDeliveryContext | null = cargoMode || reachOut
+  const cardDeliveryContext: LocationDeliveryContext | null = sameDayFloorMinor != null ? null : cargoMode || reachOut
     ? { mode: "cargo" }
     : reach === "far"
       ? { mode: "far", minPriceMinor: locationData?.meta?.min_product_price_minor ?? null }
       : reachNeutral ? { mode: "neutral" } : null;
   const deliveryTime = cargoMode || reachOut ? "1–3 iş günü" : reachNeutral ? "Adrese göre belirlenir" : district?.time || "Aynı gün";
-  const seoDescription = locationSeoDescription(parts, cityName, districtName, neighborhood, trDeliveryMode(reach));
+  const seoDescription = locationSeoDescription(parts, cityName, districtName, neighborhood, trDeliveryMode(sameDayFloorMinor != null ? "in" : reach));
   // Mahalle kartı alt etiketi: motor kararıyla aynı söz (out → kargo, adrese göre → nötr, aksi bugünkü).
   const hoodDeliveryLabel = cargoMode || reachOut ? "Kargoyla 1–3 iş günü" : reachNeutral ? "Teslimat adrese göre" : undefined;
 
@@ -561,7 +576,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
 
   // Daralan erişimde (out/far) motorun süzdüğü liste boşsa genel ürün listesine DÜŞÜLMEZ (kuryeli ucuz ürünler
   // uzak ilçede yeniden açılmasın); diğer durumlarda bugünkü fallback aynen.
-  const productItems = showcase || useLocationGrid || (locationData != null && (reachOut || reach === "far"))
+  const productItems = showcase || useLocationGrid || (locationData != null && (reachOut || reach === "far" || sameDayFloorMinor != null))
     ? []
     : await (productsPromise ?? fetchProducts(productsQuery));
   const products = productItems
@@ -645,7 +660,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
 
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
-    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{showcase ? (
+    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{sameDayFloor ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-floor-note>Bu bölgede {sameDayFloor} ve üzeri ürünler, ek yol ücretiyle aynı gün teslim edilir.</p> : null}{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{showcase ? (
       <ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} deliveryContext={cardDeliveryContext} />
     ) : useLocationGrid && locationData ? (
       // Coverage Engine ürünleri: 12 SSR + "Daha Fazla Göster" (24/36/48) + gerçek filtreler.
@@ -797,6 +812,8 @@ async function trMetaDeliveryMode(parts: string[]): Promise<TrDeliveryMode> {
   if (parts[0] !== "istanbul" || parts.length < 2) return "same_day";
   try {
     const data = await fetchLocationProducts(parts[0], parts[1], { neighborhood: parts[2], page_size: 30 });
+    // EK (27 Eki 2026): alt fiyatlı uzak/sınır ilçe aynı gün konuşur.
+    if (data?.meta?.listing_min_price_minor != null) return "same_day";
     return trDeliveryMode(data?.meta?.reach ?? null);
   } catch {
     return "same_day";

@@ -72,7 +72,12 @@ test("kaynak nöbeti — TR landing: motor kararı (meta.reach) sözleri yöneti
   assert.ok(src.includes(`const reach = locationData?.meta?.reach ?? null;`), "reach meta'dan");
   assert.ok(src.includes(`const deliveryTime = cargoMode || reachOut ? "1–3 iş günü" : reachNeutral ? "Adrese göre belirlenir" : district?.time || "Aynı gün";`), "teslimat süresi kartı");
   assert.ok(src.includes(`{cargoMode || reachOut ? "1–3 iş günü kargo" : reachNeutral ? "Teslimat adrese göre" : "Aynı gün hızlı teslimat"} — {place}`), "hero rozeti");
-  assert.ok(src.includes(`useLocationGrid || (locationData != null && (reachOut || reach === "far"))`), "boş liste kapısı");
+  // EK (27 Eki 2026): alt fiyatlı (uzak/sınır İstanbul) ilçede de genel listeye düşülmez.
+  assert.ok(src.includes(`useLocationGrid || (locationData != null && (reachOut || reach === "far" || sameDayFloorMinor != null))`), "boş liste kapısı");
+  // EK (27 Eki 2026 — iş kuralı): uzak + sınır ilçe liste alt fiyatı → sayfa aynı gün konuşur; kargo/adrese göre sözü yok.
+  assert.ok(src.includes("const sameDayFloorMinor = !cargoMode ? (locationData?.meta?.listing_min_price_minor ?? null) : null;"), "alt fiyat API'den");
+  assert.ok(src.includes(`const reachNeutral = (reach === "mixed" || reach === "unknown" || reach === "far") && sameDayFloorMinor == null;`), "alt fiyatta nötr söz yok");
+  assert.ok(src.includes("data-floor-note>Bu bölgede {sameDayFloor} ve üzeri ürünler, ek yol ücretiyle aynı gün teslim edilir."), "alt fiyat notu");
   assert.ok(src.includes("data-far-note") && src.includes("{farThreshold} ve üzeri ürünler, günün planı uygunsa"), "uzak notu koşullu; eşik API'den");
   assert.doesNotMatch(src.slice(src.indexOf("data-far-note")), /09:00|18:00/, "slot saati TR notuna gömülmez");
   // Meta açıklaması + hero + mahalle kartı etiketi de aynı karardan: 'adrese göre' modunda statik "aynı gün" YOK
