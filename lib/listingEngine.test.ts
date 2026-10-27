@@ -315,7 +315,8 @@ test("KAYNAK: app/[...slug]/page.tsx — lokasyon (il city-only / ilçe / mahall
   assert.ok(page.includes("if (cards === null) {"), "ids ucu yoksa per-id yola düşer");
   assert.ok(page.includes("loadShowcaseCards("), "per-id fallback korunur");
   assert.ok(page.includes("totalPages: resolvedTotalPages(cfg, cards.length)"), "manual: çözülen kart sayısından");
-  assert.ok(page.includes("<ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} />"));
+  // EK (kart teslimat etiketi): aynı props + sayfanın teslimat kararı (lib/locationDeliveryTag.ts).
+  assert.ok(page.includes("<ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} deliveryContext={cardDeliveryContext} />"));
   // Nöbet sırası (lib/maltepeFamily.test.ts ile aynı): güvenli yol → taban sayfa → /sayfa/1 yönlendirmesi; sayfa > toplam → 404.
   const iSafe = page.indexOf("isSafeInternalPath(parsed.basePath)");
   const iFetch = page.indexOf("const base = await fetchSeoPage(parsed.basePath)");
