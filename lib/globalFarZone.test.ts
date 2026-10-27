@@ -77,7 +77,8 @@ test("kaynak nöbeti — TR landing: motor kararı (meta.reach) sözleri yöneti
   // EK (27 Eki 2026 — iş kuralı): uzak + sınır ilçe liste alt fiyatı → sayfa aynı gün konuşur; kargo/adrese göre sözü yok.
   assert.ok(src.includes("const sameDayFloorMinor = !cargoMode ? (locationData?.meta?.listing_min_price_minor ?? null) : null;"), "alt fiyat API'den");
   assert.ok(src.includes(`const reachNeutral = (reach === "mixed" || reach === "unknown" || reach === "far") && sameDayFloorMinor == null;`), "alt fiyatta nötr söz yok");
-  assert.ok(src.includes("data-floor-note>Bu bölgede {sameDayFloor} ve üzeri ürünler, ek yol ücretiyle aynı gün teslim edilir."), "alt fiyat notu");
+  // 27 Eki 2026 kullanıcı kararı: alt fiyatlı ilçede fiyat cümlesi YAZILMAZ (liste zaten alt fiyat ve üzeri).
+  assert.ok(!src.includes("data-floor-note"), "alt fiyat cümlesi yok");
   assert.ok(src.includes("data-far-note") && src.includes("{farThreshold} ve üzeri ürünler, günün planı uygunsa"), "uzak notu koşullu; eşik API'den");
   assert.doesNotMatch(src.slice(src.indexOf("data-far-note")), /09:00|18:00/, "slot saati TR notuna gömülmez");
   // Meta açıklaması + hero + mahalle kartı etiketi de aynı karardan: 'adrese göre' modunda statik "aynı gün" YOK

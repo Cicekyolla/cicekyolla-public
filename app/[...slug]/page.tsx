@@ -538,7 +538,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
   // EK (27 Eki 2026 — iş kuralı): İstanbul uzak + sınır ilçeleri (11) liste alt fiyatı taşır → sayfa AYNI GÜN konuşur
   // (ek yol ücretiyle), "kargo" / "adrese göre" sözü yok; liste API'de alt fiyat ve üzeri aynı gün ürünlere daraltılmış gelir.
   const sameDayFloorMinor = !cargoMode ? (locationData?.meta?.listing_min_price_minor ?? null) : null;
-  const sameDayFloor = sameDayFloorMinor != null ? formatMinorTRY(sameDayFloorMinor) : null;
+  // (27 Eki 2026, kullanıcı kararı: fiyat cümlesi yazılmaz — müşteri listede yalnız alt fiyat ve üzerini görür.)
   const reachOut = reach === "out" && sameDayFloorMinor == null;
   const reachNeutral = (reach === "mixed" || reach === "unknown" || reach === "far") && sameDayFloorMinor == null;
   const farThreshold = sameDayFloorMinor == null && reach === "far" && locationData?.meta?.min_product_price_minor != null
@@ -662,7 +662,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
 
     {neighborhood ? <section className="bg-white px-6 py-12 lg:px-14"><div className="mx-auto max-w-[1320px]"><div className="inline-flex items-center gap-3 rounded-full border border-[#e9e3f6] bg-[#fbfafd] px-6 py-4 font-semibold"><MapPin className="h-5 w-5 text-[#8b5cf6]" />{neighborhood}, {districtName}, {cityName}</div></div></section> : null}
 
-    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{sameDayFloor ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-floor-note>Bu bölgede {sameDayFloor} ve üzeri ürünler, ek yol ücretiyle aynı gün teslim edilir.</p> : null}{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{showcase ? (
+    <section className="mx-auto max-w-[1320px] px-6 py-20 lg:px-14"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">{place} için</p><h2 className="mt-3 font-serif text-5xl font-semibold text-[#140b20]">{cargoMode || reachOut ? "Türkiye Geneli Kargolu Ürünler" : "Popüler Aranjmanlar"}</h2>{farThreshold ? <p className="mt-4 max-w-3xl text-base leading-7 text-[#667085]" data-far-note>Bu bölgede {farThreshold} ve üzeri ürünler, günün planı uygunsa özel aracımızla geniş gündüz aralığında teslim edilebilir; diğer ürünler kargoyla 1–3 iş gününde ulaşır. Adresinize uygun seçenekler ödeme adımında gösterilir.</p> : null}{showcase ? (
       <ShowcaseGrid items={showcase.items} basePath={ownPath} page={pageNumber} totalPages={showcase.totalPages} deliveryContext={cardDeliveryContext} />
     ) : useLocationGrid && locationData ? (
       // Coverage Engine ürünleri: 12 SSR + "Daha Fazla Göster" (24/36/48) + gerçek filtreler.
