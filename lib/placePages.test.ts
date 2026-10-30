@@ -7,9 +7,10 @@ import { PLACE_KINDS, getPlaceHub, getPlaceInfo, isPlacePagePath, parsePlacePath
 
 const oku = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 
-test("5 yer ailesi, sabit hub adresleri", () => {
+test("6 yer ailesi, sabit hub adresleri", () => {
   assert.deepEqual(PLACE_KINDS.map((k) => k.hub), [
     "/hastaneye-cicek-gonderimi", "/otele-cicek-gonderimi", "/fuara-cicek-gonderimi", "/camiye-celenk-gonderimi", "/avmye-cicek-gonderimi",
+    "/dugun-salonuna-cicek-gonderimi",
   ]);
 });
 
@@ -47,7 +48,7 @@ test("KAYNAK: middleware eski URL kurallarını yer sayfalarında çalıştırma
   assert.ok(mw.includes("const legacyMuaf = isPlacePagePath(req.nextUrl.pathname) || await isManagedRedirectTarget(req.nextUrl.pathname);"));
 });
 
-test("KAYNAK: 5 rota aynı paylaşılan sayfayı kullanır", () => {
+test("KAYNAK: 6 rota aynı paylaşılan sayfayı kullanır", () => {
   for (const k of PLACE_KINDS) {
     const src = oku(`app${k.hub}/[[...slug]]/page.tsx`);
     assert.ok(src.includes(`placePageMetadata("${k.kind}"`) && src.includes(`<PlacePage kind="${k.kind}"`), k.hub);
