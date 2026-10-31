@@ -16,6 +16,8 @@ const tr = {
   // ---- header
   "header.band": "İSTANBUL'DA AYNI GÜN HIZLI TESLİMAT  ·  TÜRKİYE GENELİ 1–3 İŞ GÜNÜ KARGO",
   "header.bandLink": "Türkiye geneli kargo sayfasına git",
+  "header.bandIstanbul": "İSTANBUL'DA AYNI GÜN HIZLI TESLİMAT",
+  "header.bandIstanbulLink": "İstanbul teslimat sayfasına git",
   "header.login": "Giriş Yap / Üye Ol",
   "header.loginShort": "Üyelik",
   "header.account": "Hesabım",

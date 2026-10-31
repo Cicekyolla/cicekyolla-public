@@ -14,6 +14,8 @@ const ar: Dict = {
 
   "header.band": "توصيل سريع في نفس اليوم داخل إسطنبول  ·  شحن لكل تركيا خلال 1–3 أيام عمل",
   "header.bandLink": "الانتقال إلى صفحة الشحن لكل تركيا",
+  "header.bandIstanbul": "توصيل سريع في نفس اليوم داخل إسطنبول",
+  "header.bandIstanbulLink": "الانتقال إلى صفحة التوصيل في إسطنبول",
   "header.login": "تسجيل الدخول / إنشاء حساب",
   "header.loginShort": "حسابي",
   "header.account": "حسابي",

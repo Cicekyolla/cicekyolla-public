@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
 import { balanceMegaColumns, type MegaGroup } from "@/lib/headerNav";
 import { BrandWordmark } from "./BrandWordmark";
+import { isIstanbulPagePath } from "@/lib/istanbulBand";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSelector } from "./LanguageSelector";
@@ -227,6 +228,7 @@ export function Header({ menu, nav, search, brand }: {
 
   // Bağlantı hedefi ve etiketi tek saf eşlemeden gelir (lib/memberSessionHint).
   const accountEntry = headerAccountEntry(sessionState);
+  const istanbulBand = isIstanbulPagePath(pathname);
 
   const handleMouseEnter = (key: string) => {
     if (menuTimeout.current) clearTimeout(menuTimeout.current);
@@ -244,12 +246,13 @@ export function Header({ menu, nav, search, brand }: {
         className="cy-ticker text-white"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-10 xl:px-14 min-h-10 flex items-center justify-center lg:justify-between gap-4">
+          {/* İstanbul sayfalarında yalnız aynı gün yarısı (kargo sözü yok) — lib/istanbulBand.ts */}
           <Link
-            href="/kategori/turkiye-geneli-kargo"
+            href={istanbulBand ? "/kategori/istanbul-teslimat" : "/kategori/turkiye-geneli-kargo"}
             className="hidden lg:block min-w-0 max-w-[58vw] truncate text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-semibold whitespace-nowrap text-white/90 hover:text-white transition-colors"
-            aria-label={t("header.bandLink")}
+            aria-label={t(istanbulBand ? "header.bandIstanbulLink" : "header.bandLink")}
           >
-            {t("header.band")}
+            {t(istanbulBand ? "header.bandIstanbul" : "header.band")}
           </Link>
           <nav aria-label={t("header.customerOps")} className="flex items-center justify-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
             <Link href={accountEntry.href} className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">

@@ -13,6 +13,8 @@ const de: Dict = {
 
   "header.band": "TAGGLEICHE EXPRESSLIEFERUNG IN ISTANBUL  ·  TÜRKEIWEITER VERSAND IN 1–3 WERKTAGEN",
   "header.bandLink": "Zur Seite für türkeiweiten Versand",
+  "header.bandIstanbul": "TAGGLEICHE EXPRESSLIEFERUNG IN ISTANBUL",
+  "header.bandIstanbulLink": "Zur Seite für Lieferung in Istanbul",
   "header.login": "Anmelden / Registrieren",
   "header.loginShort": "Konto",
   "header.account": "Mein Konto",

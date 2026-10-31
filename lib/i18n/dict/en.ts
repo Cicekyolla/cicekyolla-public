@@ -13,6 +13,8 @@ const en: Dict = {
 
   "header.band": "SAME-DAY EXPRESS DELIVERY IN ISTANBUL  ·  NATIONWIDE CARGO IN 1–3 BUSINESS DAYS",
   "header.bandLink": "Go to nationwide cargo page",
+  "header.bandIstanbul": "SAME-DAY EXPRESS DELIVERY IN ISTANBUL",
+  "header.bandIstanbulLink": "Go to Istanbul delivery page",
   "header.login": "Sign In / Register",
   "header.loginShort": "Account",
   "header.account": "My Account",
