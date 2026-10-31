@@ -13,6 +13,8 @@ const nl: Dict = {
 
   "header.band": "EXPRESSLEVERING OP DEZELFDE DAG IN ISTANBUL  ·  VERZENDING DOOR HEEL TURKIJE IN 1–3 WERKDAGEN",
   "header.bandLink": "Naar de pagina voor landelijke verzending",
+  "header.bandIstanbul": "EXPRESSLEVERING OP DEZELFDE DAG IN ISTANBUL",
+  "header.bandIstanbulLink": "Naar de pagina voor levering in Istanbul",
   "header.login": "Inloggen / Registreren",
   "header.loginShort": "Account",
   "header.account": "Mijn account",

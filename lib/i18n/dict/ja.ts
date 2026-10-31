@@ -13,6 +13,8 @@ const ja: Dict = {
 
   "header.band": "イスタンブール市内 当日スピード配達  ·  トルコ全土 1〜3営業日で宅配",
   "header.bandLink": "全国宅配ページへ",
+  "header.bandIstanbul": "イスタンブール市内 当日スピード配達",
+  "header.bandIstanbulLink": "イスタンブール配達ページへ",
   "header.login": "ログイン / 会員登録",
   "header.loginShort": "アカウント",
   "header.account": "マイアカウント",

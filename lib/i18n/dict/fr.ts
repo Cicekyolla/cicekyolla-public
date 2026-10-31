@@ -13,6 +13,8 @@ const fr: Dict = {
 
   "header.band": "LIVRAISON EXPRESS LE JOUR MÊME À ISTANBUL  ·  EXPÉDITION DANS TOUTE LA TURQUIE EN 1–3 JOURS OUVRÉS",
   "header.bandLink": "Aller à la page d'expédition nationale",
+  "header.bandIstanbul": "LIVRAISON EXPRESS LE JOUR MÊME À ISTANBUL",
+  "header.bandIstanbulLink": "Aller à la page de livraison à Istanbul",
   "header.login": "Connexion / Inscription",
   "header.loginShort": "Compte",
   "header.account": "Mon compte",
