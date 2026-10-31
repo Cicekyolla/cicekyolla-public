@@ -315,8 +315,11 @@ export default async function HomePage() {
     const showTestimonials = testimonialsSection?.enabled !== false;
     const showInstagram = instagramSection?.enabled !== false;
 
+    // SCROLL FIX (31 Eki 2026): hp-sec sarmalayıcıları display:contents → kutu yok. Next App Router
+    // gezinmede segmentin ilk "görünür" öğesine scrollIntoView yapar; kutusuz öğeleri atlayıp
+    // E-Bülten bandına kayıyordu. Gerçek blok kap → hedef sayfanın tepesi. Bölüm sırası/DOM'u aynı.
     return (
-      <>
+      <main id="main-content" className="block">
         <HomeJsonLd logoUrl={schemaLogoUrl} identity={identity} />
         {/* Kuyruk bölümleri renderer'a verilir: sıra/çıktı aynı, yalnız TEMA & SEZON zemin/boşluk
             planına aynı geçişte katılırlar (tema yokken sarmalayıcı display:contents, etkisiz). */}
@@ -332,12 +335,12 @@ export default async function HomePage() {
             { type: "blog_rail", node: <BlogRail posts={homeBlogPosts} /> },
           ]}
         />
-      </>
+      </main>
     );
   }
 
   return (
-    <>
+    <main id="main-content" className="block">
       <HomeJsonLd logoUrl={schemaLogoUrl} identity={identity} />
 
       {/* §Koleksiyonlar — bağımsız section: Header'dan sonra, Hero'dan önce (TazeÇiçek düzeni).
@@ -373,6 +376,6 @@ export default async function HomePage() {
       {/* Çiçeğin Yolculuğu — footer'dan hemen önce (CMS'siz fallback'te de aynı konum) */}
       <FlowerJourney />
         <BlogRail posts={homeBlogPosts} />
-    </>
+    </main>
   );
 }

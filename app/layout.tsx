@@ -10,6 +10,7 @@ import { resolveSiteIdentity } from "@/lib/siteIdentity";
 import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { TelegramButton } from "@/components/TelegramButton";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { resolveTelegram } from "@/lib/telegramContact";
 import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
@@ -262,6 +263,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             sticky çubukta/panelde kalır. */}
         <WhatsAppButton />
         <TelegramButton {...telegram} />
+        {/* "Yukarı çık": Telegram'ın üstünde, ~600px kaydırınca belirir (TR + 13 dil). */}
+        <ScrollToTopButton />
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />
