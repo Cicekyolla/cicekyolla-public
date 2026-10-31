@@ -13,6 +13,8 @@ const zh: Dict = {
 
   "header.band": "伊斯坦布尔当日极速送达  ·  土耳其全境 1–3 个工作日快递",
   "header.bandLink": "前往全国快递页面",
+  "header.bandIstanbul": "伊斯坦布尔当日极速送达",
+  "header.bandIstanbulLink": "前往伊斯坦布尔配送页面",
   "header.login": "登录 / 注册",
   "header.loginShort": "账户",
   "header.account": "我的账户",

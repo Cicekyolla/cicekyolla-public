@@ -13,6 +13,8 @@ const es: Dict = {
 
   "header.band": "ENTREGA EXPRÉS EL MISMO DÍA EN ESTAMBUL  ·  ENVÍO A TODA TURQUÍA EN 1–3 DÍAS HÁBILES",
   "header.bandLink": "Ir a la página de envío nacional",
+  "header.bandIstanbul": "ENTREGA EXPRÉS EL MISMO DÍA EN ESTAMBUL",
+  "header.bandIstanbulLink": "Ir a la página de entrega en Estambul",
   "header.login": "Iniciar sesión / Registrarse",
   "header.loginShort": "Cuenta",
   "header.account": "Mi cuenta",

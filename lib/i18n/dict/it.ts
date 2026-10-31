@@ -13,6 +13,8 @@ const it: Dict = {
 
   "header.band": "CONSEGNA EXPRESS IN GIORNATA A ISTANBUL  ·  SPEDIZIONE IN TUTTA LA TURCHIA IN 1–3 GIORNI LAVORATIVI",
   "header.bandLink": "Vai alla pagina spedizione nazionale",
+  "header.bandIstanbul": "CONSEGNA EXPRESS IN GIORNATA A ISTANBUL",
+  "header.bandIstanbulLink": "Vai alla pagina consegna a Istanbul",
   "header.login": "Accedi / Registrati",
   "header.loginShort": "Account",
   "header.account": "Il mio account",

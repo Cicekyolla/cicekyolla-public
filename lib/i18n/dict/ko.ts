@@ -13,6 +13,8 @@ const ko: Dict = {
 
   "header.band": "이스탄불 당일 빠른 배송  ·  튀르키예 전역 1~3 영업일 택배",
   "header.bandLink": "전국 택배 페이지로 이동",
+  "header.bandIstanbul": "이스탄불 당일 빠른 배송",
+  "header.bandIstanbulLink": "이스탄불 배송 페이지로 이동",
   "header.login": "로그인 / 회원가입",
   "header.loginShort": "계정",
   "header.account": "내 계정",

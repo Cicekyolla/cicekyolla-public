@@ -13,6 +13,8 @@ const az: Dict = {
 
   "header.band": "İSTANBULDA EYNİ GÜN SÜRƏTLİ ÇATDIRILMA  ·  BÜTÜN TÜRKİYƏYƏ 1–3 İŞ GÜNÜNDƏ KARQO",
   "header.bandLink": "Bütün Türkiyəyə karqo səhifəsinə keç",
+  "header.bandIstanbul": "İSTANBULDA EYNİ GÜN SÜRƏTLİ ÇATDIRILMA",
+  "header.bandIstanbulLink": "İstanbulda çatdırılma səhifəsinə keç",
   "header.login": "Daxil ol / Qeydiyyat",
   "header.loginShort": "Hesab",
   "header.account": "Hesabım",
