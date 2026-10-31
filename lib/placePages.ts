@@ -7,7 +7,7 @@
 // Hub adresleri SABİT (panel yer slug'ını seçer). Admin aynı listeyi taşır: src/app/lib/placePagesCore.ts.
 // ============================================================================
 
-export type PlaceKind = "hastane" | "otel" | "fuar" | "cami" | "avm" | "dugun";
+export type PlaceKind = "hastane" | "otel" | "fuar" | "cami" | "avm" | "dugun" | "plaza" | "universite" | "mezarlik" | "havalimani";
 
 export interface PlaceKindDef {
   kind: PlaceKind;
@@ -24,6 +24,10 @@ export const PLACE_KINDS: readonly PlaceKindDef[] = [
   { kind: "cami", hub: "/camiye-celenk-gonderimi", label: "Camilere Çelenk Gönderimi" },
   { kind: "avm", hub: "/avmye-cicek-gonderimi", label: "AVM'lere Çiçek Gönderimi" },
   { kind: "dugun", hub: "/dugun-salonuna-cicek-gonderimi", label: "Düğün Salonlarına Çiçek Gönderimi" }, // 30 Eki 2026, ADDITIVE
+  { kind: "plaza", hub: "/plazaya-cicek-gonderimi", label: "Plazalara Çiçek Gönderimi" }, // 31 Eki 2026, ADDITIVE
+  { kind: "universite", hub: "/universiteye-cicek-gonderimi", label: "Üniversitelere Çiçek Gönderimi" },
+  { kind: "mezarlik", hub: "/mezarliga-cicek-gonderimi", label: "Mezarlıklara Çiçek Gönderimi" },
+  { kind: "havalimani", hub: "/havalimanina-cicek-gonderimi", label: "Havalimanlarına Çiçek Gönderimi" },
 ];
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
