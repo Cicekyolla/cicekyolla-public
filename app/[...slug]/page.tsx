@@ -22,6 +22,7 @@ import { isClosedLocationPath } from "@/lib/neighborhoodNoindex";
 import type { LocationDeliveryContext } from "@/lib/locationDeliveryTag";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
+import { coreNeighborhoodDecision, istanbulLocationDecision, type StaticLocationDecision } from "@/lib/staticLocationGuard";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
 import { istanbulDistrictJsonLd, resolveSiteIdentity } from "@/lib/siteIdentity";
@@ -293,6 +294,15 @@ async function loadListingView(cfg: ResolvedShowcase, pageNumber: number, floorM
   };
 }
 
+/** Sabit il kayıtsız yolu: İstanbul → yönetilen 301 haritası; diğer 3 il (3 parça) → lokasyon çekirdeği.
+ *  Kaynak okunamazsa "synthetic" (bugünkü davranış). İl kökü ve diğer illerin 2 parçalı yolu dokunulmaz. */
+async function staticLocationDecision(parts: string[]): Promise<StaticLocationDecision> {
+  if (parts[0] === "istanbul") return istanbulLocationDecision(parts, await fetchRedirectMap());
+  if (parts.length !== 3) return { kind: "synthetic" };
+  const core = await fetchDistrictNeighborhoods(parts[0], parts[1]).catch(() => null);
+  return coreNeighborhoodDecision(parts[2], core ? core.neighborhoods.map((n) => n.slug) : null);
+}
+
 /** Vitrin sayfalaması dahil çözümleme. Sayfalama/vitrin yoksa resolvePage ile BİREBİR aynı akış. */
 async function resolveRequest(requestedPath: string): Promise<Resolved> {
   const parsed = parseShowcasePath(requestedPath);
@@ -310,6 +320,14 @@ async function resolveRequest(requestedPath: string): Promise<Resolved> {
   }
   const page = await resolvePage(requestedPath);
   if (!page) return { kind: "notfound" };
+  // EK (2 Kas 2026): sabit 4 ilin KAYITSIZ yolu (syntheticDeliveryPage) artık doğrulanır — uydurma segment
+  // "X Mahallesi" metniyle 200 dönmez. Kural ve fail-safe: lib/staticLocationGuard.ts.
+  const fixedParts = page.synthetic === true ? deliveryParts(requestedPath) : null;
+  if (fixedParts) {
+    const decision = await staticLocationDecision(fixedParts);
+    if (decision.kind === "redirect") return { kind: "redirect", to: decision.to };
+    if (decision.kind === "notfound") return { kind: "notfound" };
+  }
   let showcase: ShowcaseView | null = null;
   const cfg = await showcaseConfigFor(page, requestedPath);
   if (cfg) {
