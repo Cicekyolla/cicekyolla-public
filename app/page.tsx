@@ -8,6 +8,7 @@ import { getCategoryTree } from "@/lib/categories";
 import { findCategoryIdBySlug, mapTreeToItems } from "@/lib/catalog";
 import { buildCollectionSlider } from "@/lib/collectionSlider";
 import { HomeHero } from "../components/home/HomeHero";
+import { CountdownStrip } from "../components/countdown/CountdownStrip";
 import HeroDeliveryBar from "../components/home/HeroDeliveryBar";
 import { TrustBar } from "../components/home/TrustBar";
 import { Manifesto } from "../components/home/Manifesto";
@@ -325,7 +326,7 @@ export default async function HomePage() {
             planına aynı geçişte katılırlar (tema yokken sarmalayıcı display:contents, etkisiz). */}
         <HomepageRenderer
           dto={contentHomepage}
-          ctx={{ collections, imagedCollections, zones: deliveryZones, istanbulLinks, showcaseFills, heroBanner }}
+          ctx={{ collections, imagedCollections, zones: deliveryZones, istanbulLinks, showcaseFills, afterHero: <CountdownStrip path="/" />, heroBanner }}
           tail={[
             ...(showTestimonials ? [{ type: "testimonials", node: <Testimonials /> }] : []),
             ...(showInstagram ? [{ type: "instagram_gallery", node: <InstagramGallery config={instagramSection?.config} /> }] : []),
@@ -353,6 +354,7 @@ export default async function HomePage() {
 
       <HeroDeliveryBar />
       <HomeHero banner={heroBanner} />
+      <CountdownStrip path="/" />
       {/* V65: Atölyeden Bugün — hero'nun hemen ardından (CMS'siz fallback'te de) */}
       <WorkshopToday />
       <TrustBar />

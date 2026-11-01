@@ -56,6 +56,8 @@ export interface RenderCtx {
   heroBanner?: HeroBanner | null;
   /** TEMA & SEZON: aktif temanın ürün rozeti (renderer kendi doldurur; dışarıdan verilmez). */
   seasonBadge?: SeasonThemeData["badge"] | null;
+  /** EK (GERİ SAYIM, 1 Kas 2026): hero'nun hemen altına aynı bölüm kutusunda çizilir (zemin/boşluk planı değişmez). */
+  afterHero?: ReactNode;
 }
 
 /** Renderer dışında (page.tsx) eklenen kuyruk bölümleri — zemin/boşluk planına aynı sırayla katılır. */
@@ -280,7 +282,8 @@ export function HomepageRenderer({ dto, ctx: baseCtx, tail = [] }: { dto: Homepa
     ) });
   }
   for (const s of enabledSections) {
-    items.push({ key: `s${s.id}`, type: s.type === "product_showcase" ? showcaseType(s) : s.type, layout: layoutOf(s), node: renderSection(s, ctx, fillAssign.get(s.id)) });
+    const node = renderSection(s, ctx, fillAssign.get(s.id));
+    items.push({ key: `s${s.id}`, type: s.type === "product_showcase" ? showcaseType(s) : s.type, layout: layoutOf(s), node: s.type === "hero" && ctx.afterHero ? <Fragment>{node}{ctx.afterHero}</Fragment> : node });
     if (!hasWorkshopToday && s.type === "hero") items.push({ key: `wt${s.id}`, type: "workshop_today", node: <WorkshopToday /> });
     if (moodAnchor && s.type === moodAnchor) items.push({ key: `mood${s.id}`, type: "mood_picker", node: <MoodPicker /> });
     if (!hasUrgencyStrip && s.type === "featured_collections") items.push({ key: `urg${s.id}`, type: "urgency_strip", node: <Fragment><UrgencyStrip /><NightOrderStrip /></Fragment> });
