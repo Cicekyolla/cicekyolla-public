@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { fetchListingSettings, fetchProducts, toCardProduct, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
+import { fetchListingSettings, fetchProducts, toCardProduct, isCategoryVisible, type SeoPublicPage, type BodyBlock, type PublicProductListItem } from "@/lib/api";
+import { findSiblingRail } from "@/lib/categorySiblings";
 // EK (GENEL LİSTELEME MOTORU): sayfa boyutu / tavanlar global ayardan (varsayılan 50 — bugünkü); kaynak listeleme ucu → bugünkü uç.
 import { fetchCategoryListing } from "@/lib/listingSurface";
 // EK (ADMİN TEK MERKEZ): kategori seo_page showcase bloğu (Kategori Merkezi: elle seçim / öne çıkarma / sayfalama override).
@@ -164,9 +165,18 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
     `${rootSlug} ${slug}`,
   );
   const contextTag = { label: page.h1, isOccasion };
-  const baseSubItems = currentNode?.children
+  const childItems = currentNode?.children
     ? mapTreeToItems(currentNode.children as Parameters<typeof mapTreeToItems>[0]).slice(0, 50)
     : [];
+  // EK (KÜME İÇ LİNK, 1 Kas 2026): alt kategorisi olmayan (yaprak) sayfada aynı ray kardeş
+  // koleksiyonlarla dolar ("{Üst} Kategorileri" + üst sayfaya "Tümünü Gör"). Kural: lib/categorySiblings.ts.
+  // Children'ı olan kategori bugünkü gibi kendi alt rayını gösterir; FilterBar yalnız gerçek children'ı alır.
+  const siblingRail = childItems.length === 0 && tree ? findSiblingRail(tree, slug, isCategoryVisible) : null;
+  const baseSubItems = childItems.length > 0
+    ? childItems
+    : siblingRail
+      ? mapTreeToItems(siblingRail.siblings as Parameters<typeof mapTreeToItems>[0]).slice(0, 50)
+      : [];
 
   // Ana sayfadaki çalışan kuralla AYNI: kategori görseli yoksa veya eski Plesk
   // kaynağıysa, alt kategorinin ilk aktif ve görselli ürün kapağını kullan.
@@ -371,19 +381,22 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
 
         {/* ── Alt Kategori Slider (Çiçeksepeti deseni): mevcut kategorinin children'ı ── */}
         {subItems.length > 0 ? (
-          <section aria-label="Alt kategoriler" className="max-w-[1440px] mx-auto pt-8 lg:pt-10">
+          <section aria-label={siblingRail ? "Benzer koleksiyonlar" : "Alt kategoriler"} className="max-w-[1440px] mx-auto pt-8 lg:pt-10">
             {/* h1 boşsa şablon "null Kategorileri" üretiyordu; kategori ağacı geçici
                 erişilemezse fallback devreye giremeyeceği için burada da korunuyor. */}
             <FloatingCategoryRail
               items={subItems}
               variant="light"
-              label={page.h1?.trim() ? `${page.h1.trim()} Kategorileri` : "Alt Kategoriler"}
+              label={siblingRail
+                ? `${siblingRail.parent.name} Kategorileri`
+                : page.h1?.trim() ? `${page.h1.trim()} Kategorileri` : "Alt Kategoriler"}
+              allHref={siblingRail ? `/kategori/${siblingRail.parent.slug}` : undefined}
             />
           </section>
         ) : null}
 
         {/* ── Filtre çubuğu (Çiçeksepeti deseni, GERÇEK backend filtreleri) ── */}
-        {categoryId ? <FilterBar categories={subItems.map((s) => ({ name: s.name, href: s.href }))} /> : null}
+        {categoryId ? <FilterBar categories={siblingRail ? [] : subItems.map((s) => ({ name: s.name, href: s.href }))} /> : null}
 
         {/* ── Kategori Ürünleri (canlı katalog → /urun/{slug}) ── */}
         {products.length > 0 ? (
