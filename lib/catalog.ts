@@ -1,5 +1,6 @@
 import { isCategoryVisible } from "@/lib/api";
 import { isLegacyPleskMedia, mediaUrl } from "@/lib/media";
+import { findAncestorTrail } from "@/lib/categorySiblings";
 /**
  * CICEKYOLLA OS — CATALOG (tek kanonik frontend kaynağı)
  * ------------------------------------------------------------------
@@ -87,6 +88,10 @@ export function getBreadcrumbTrailFromTree(
   nodes: CategoryNode[],
   slug: string
 ): { name: string; slug: string }[] {
+  // EK (1 Kas 2026): canlı hafif ağaç (/api/categories/public-tree) parent_slug TAŞIMAZ → ata zinciri
+  // önce iç içe children yapısından kurulur; yalnız kök düzey/bulunamazsa bugünkü parent_slug yürüyüşü.
+  const structural = findAncestorTrail(nodes, slug);
+  if (structural.length > 1) return structural;
   const bySlug = new Map<string, CategoryNode>();
   const walk = (list: CategoryNode[]): void => {
     for (const n of list) {
