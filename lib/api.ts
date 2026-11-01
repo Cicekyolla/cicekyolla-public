@@ -1026,3 +1026,20 @@ export async function fetchListingCardsByIds(ids: number[], opts?: ListingReadOp
   const byId = new Map(result.items.map((it) => [Number(it.id), it] as const));
   return clean.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
 }
+
+// ============================================================================
+// EK (GERİ SAYIM ŞERİDİ, 1 Kas 2026): GET /api/public/seo/countdowns (db/123).
+// revalidate 300; uç yoksa / okunamazsa boş liste → şerit hiç çizilmez.
+// ============================================================================
+import { normalizeCountdownItems, type CountdownItem } from "./countdown.ts";
+
+export async function fetchCountdowns(): Promise<CountdownItem[]> {
+  try {
+    const res = await fetchWithDeadline(`${API_ORIGIN}/api/public/seo/countdowns`, { headers: apiHeaders(), next: { revalidate: 300 } }, 3_000, fetch, false);
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data?: { items?: unknown } } | null;
+    return normalizeCountdownItems(json?.data?.items);
+  } catch {
+    return [];
+  }
+}

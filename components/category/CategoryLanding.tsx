@@ -18,6 +18,7 @@ import { FloatingCategoryRail } from "@/components/home/FloatingCategoryRail";
 import { FilterBar } from "@/components/category/FilterBar";
 import { CategoryProductGrid } from "@/components/category/CategoryProductGrid";
 import { CargoCategoryExperience } from "@/components/category/CargoCategoryExperience";
+import { CountdownStrip } from "@/components/countdown/CountdownStrip";
 import { absoluteUrl } from "@/lib/site-config";
 import { CategoryHeadingText } from "@/lib/i18n/content";
 import { isLegacyPleskMedia } from "@/lib/media";
@@ -363,6 +364,10 @@ export async function CategoryLanding({ page, path, searchParams }: { page: SeoP
 
           </div>
         </section>
+
+        {/* EK (GERİ SAYIM, 1 Kas 2026): H1 bloğunun hemen altı, ürünlerin üstü. Panelde bu yol
+            listelenmemişse hiçbir şey çizilmez (Admin → SEO Merkezi → Geri Sayım). */}
+        <CountdownStrip path={path} />
 
         {/* ── Alt Kategori Slider (Çiçeksepeti deseni): mevcut kategorinin children'ı ── */}
         {subItems.length > 0 ? (
