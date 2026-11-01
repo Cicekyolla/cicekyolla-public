@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findSiblingRail, type SiblingNode } from "./categorySiblings.ts";
+import { findAncestorTrail, findSiblingRail, type SiblingNode } from "./categorySiblings.ts";
 
 const visible = (n: SiblingNode) => n.status !== "passive" && n.status !== "archived";
 
@@ -47,4 +47,10 @@ test("üst kökteyse de (iç içe children) bulunur — parent_slug gerekmez", (
   const r = findSiblingRail(t, "x", visible);
   assert.equal(r?.parent.slug, "hub");
   assert.deepEqual(r?.siblings.map((s) => s.slug), ["y"]);
+});
+
+test("ata zinciri: parent_slug olmadan kökten yaprağa", () => {
+  assert.deepEqual(findAncestorTrail(tree, "ogretmenler-gunu-gul").map((t) => t.slug), ["ozel-gunler", "ogretmenler-gunu", "ogretmenler-gunu-gul"]);
+  assert.deepEqual(findAncestorTrail(tree, "tekil").map((t) => t.slug), ["tekil"]);
+  assert.deepEqual(findAncestorTrail(tree, "yok"), []);
 });

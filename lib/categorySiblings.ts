@@ -43,3 +43,17 @@ export function findSiblingRail<T extends SiblingNode>(
   const siblings = kids.filter((k) => k && typeof k.slug === "string" && k.slug !== slug && isVisible(k));
   return siblings.length > 0 ? { parent, siblings } : null;
 }
+
+/** EK (BREADCRUMB ATA ZİNCİRİ, 1 Kas 2026): kökten slug'a kadar ata zinciri, AĞAÇTAKİ YERİNDEN.
+ *  parent_slug taşımayan canlı hafif ağaçta da çalışır. Bulunamazsa []. */
+export function findAncestorTrail<T extends SiblingNode>(nodes: T[], slug: string): { name: string; slug: string }[] {
+  for (const n of nodes) {
+    if (!n || typeof n.slug !== "string" || typeof n.name !== "string") continue;
+    if (n.slug === slug) return [{ name: n.name, slug: n.slug }];
+    if (Array.isArray(n.children)) {
+      const sub = findAncestorTrail(n.children as T[], slug);
+      if (sub.length) return [{ name: n.name, slug: n.slug }, ...sub];
+    }
+  }
+  return [];
+}
