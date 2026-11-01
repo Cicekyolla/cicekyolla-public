@@ -54,7 +54,7 @@ const DELIVERY_DATA: Record<string, { label: string; districts: Record<string, {
   izmir: {
     label: "İzmir",
     districts: {
-      konak: { label: "Konak", time: "2–3 saat", cutoff: "12:00", neighborhoods: ["Alsancak", "Göztepe", "Güzelyalı", "Kültür", "Pasaport", "Hatay"], description: "Konak ve çevresine modern, zarif ve taze çiçek teslimatı yapın." },
+      konak: { label: "Konak", time: "2–3 saat", cutoff: "12:00", neighborhoods: ["Alsancak", "Göztepe", "Güzelyalı", "Kültür"], description: "Konak ve çevresine modern, zarif ve taze çiçek teslimatı yapın." },
       karsiyaka: { label: "Karşıyaka", time: "3–4 saat", cutoff: "12:00", neighborhoods: ["Bostanlı", "Mavişehir", "Alaybey", "Nergiz", "Atakent", "Bahriye Üçok"], description: "Karşıyaka'nın sevilen mahallelerine premium çiçek seçeneklerini güvenle gönderin." },
     },
   },
