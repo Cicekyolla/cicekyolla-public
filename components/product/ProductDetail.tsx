@@ -501,18 +501,28 @@ export function ProductDetail({
                 İkinci bir müşteri yolu (hızlı sipariş) YOKTUR.
                 Navigasyon router.push ile: window.location.href sepet yazımını yarışa sokup
                 localStorage effect'i çalışmadan sayfayı değiştiriyordu (ürün kaybı riski). */}
+            {/* 23 Eyl 2026 — ÖLÜ DÜĞME DÜZELTMESİ: buton `disabled` iken ziyaretçiye
+                "bu ürün satın alınamıyor" sinyali veriyordu ve teslimat planlayıcı
+                masaüstünde yukarıda, mobilde ekranlar yukarıda kaldığı için bağ
+                kurulamıyordu (trafiğin %85'i mobil). Artık tıklanabilir: teslimat
+                seçilmemişse planlayıcıya kaydırır — mobil alt çubuk (aşağıda) zaten
+                yıllardır bu davranışı kullanıyor, aynı davranış buraya taşındı.
+                FAIL-CLOSED KORUNUR: teslimat seçilmeden sepete YAZILMAZ. */}
             <button
               type="button"
-              disabled={!deliverySelection}
+              aria-describedby={deliverySelection ? undefined : "cy-teslimat-planlayici"}
               onClick={() => {
-                if (!deliverySelection) return;
+                if (!deliverySelection) {
+                  document.getElementById("cy-teslimat-planlayici")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  return;
+                }
                 addItem({ productId: product.id, productSlug: product.slug, name: product.name, variantId: sel?.id ?? null, variantTitle: sel?.title ?? null, unitPriceMinor: Number(shown), image: cover?.url ?? "", delivery: deliverySelection }, quantity);
                 router.push("/sepet");
               }}
-              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-[15px] font-bold transition-all ${deliverySelection ? "text-white hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]" : "cursor-not-allowed bg-[#DDD6FE] text-white"}`}
-              style={deliverySelection ? { background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" } : undefined}
+              className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-[15px] font-bold transition-all ${deliverySelection ? "text-white hover:scale-[1.01] shadow-[0_8px_24px_rgba(124,58,237,0.28)]" : "text-white hover:scale-[1.01]"}`}
+              style={{ background: deliverySelection ? "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)" : "linear-gradient(135deg, #A78BFA 0%, #C4B5FD 100%)" }}
             >
-              <ShoppingBag className="w-5 h-5" /> {t("pdp.order")}
+              <ShoppingBag className="w-5 h-5" /> {deliverySelection ? t("pdp.order") : t("pdp.planDelivery")}
             </button>
             <a
               href={`https://wa.me/${WHATSAPP}?text=${waText}`}
