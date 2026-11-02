@@ -23,6 +23,8 @@ import type { LocationDeliveryContext } from "@/lib/locationDeliveryTag";
 import { managedTitle, managedDescription, managedH1 } from "@/lib/managedSeoContent";
 import { resolveCategoryPage } from "@/lib/categoryPage";
 import { coreNeighborhoodDecision, istanbulLocationDecision, type StaticLocationDecision } from "@/lib/staticLocationGuard";
+import { getTagPage } from "@/lib/tagPage";
+import { TagLanding } from "@/components/location/TagLanding";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { locationBreadcrumbJsonLd } from "@/lib/locationBreadcrumb";
 import { istanbulDistrictJsonLd, resolveSiteIdentity } from "@/lib/siteIdentity";
@@ -754,7 +756,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const resolved = await resolveRequest(legacyPath);
   if (resolved.kind !== "ok") return { title: "Sayfa bulunamadı", robots: { index: false, follow: false } };
   const { page, path, pageNumber } = resolved;
-  const locationMetadata = await getLocationMetadata(page, path);
+  // Etiket sayfası (lib/tagPage.ts): konum şablon başlığı / hreflang yok — operatör başlığı.
+  const isTag = getTagPage(page, path) !== null;
+  const locationMetadata = isTag ? null : await getLocationMetadata(page, path);
   // Lokasyon SEO Merkezi entegrasyonu: OPERATÖR-ONAYLI içerik (content_source
   // kapısı, bkz. lib/managedSeoContent.ts) konum şablonunun ÖNÜNE geçer.
   // Kaynak NULL/otomatik ise (bugün yayındaki tüm sayfalar) davranış birebir eski.
@@ -852,6 +856,9 @@ export default async function Page({ params }: PageProps) {
   const faqLd = pageNumber === 1 ? faqJsonLd(page) : null;
   const rawSchema = pageNumber === 1 && page.schema_jsonld && Object.keys(page.schema_jsonld).length > 0 ? JSON.stringify(page.schema_jsonld) : null;
   const jsonLd = <>{rawSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(rawSchema) }} /> : null}{faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}</>;
+  // EK (2 Kas 2026): ilçe + etiket sayfası (/kadikoy/orkideler) — yalnız tag bloklu category_location (lib/tagPage.ts).
+  const tag = getTagPage(page, path);
+  if (tag) return <><TagLanding page={page} path={path} tag={tag} showcase={showcase} pageNumber={pageNumber} />{jsonLd}</>;
   const staticParts = deliveryParts(path);
   if (staticParts) {
     // TEK DAMAR (25 Eyl 2026): yalnız İstanbul İLÇE sayfaları aynı işletme (@id) + ilçe hizmet düğümünü taşır;
