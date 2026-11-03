@@ -15,6 +15,7 @@ import { resolveCommercialRedirect } from "@/lib/global/commercialRedirect";
 import { isPlacePagePath } from "@/lib/placePages";
 import { resolveManagedRedirect, isManagedRedirectTarget, resolveManagedLocaleRedirect, managedRedirectSearch, resolveIstanbulLegacyNeighborhood } from "@/lib/managed-redirects";
 import { resolveLegacyNeighborhoodRedirect } from "@/lib/legacy-neighborhood-redirect";
+import { occasionCategoryTarget } from "@/lib/occasionLegacy";
 import { isGlobalLocalePath } from "@/lib/global/config";
 import { resolveRootProductRedirect } from "@/lib/rootProductRedirect";
 const categorySlugs = new Set(legacyCategorySlugs);
@@ -139,6 +140,14 @@ const sayfaTarget = legacyMuaf ? null : resolveSayfaLegacy(req.nextUrl.pathname)
         new URL(await flattenManagedTarget(`/kategori/${categorySlug}`), req.nextUrl.origin),
         301,
       );
+    }
+  }
+  // EK (ÖZEL GÜN ESKİ ADRES): /kadinlar-gunu-cicek-siparisi gibi eski kategori adresleri
+  // konum bulunamayınca ana sayfaya düşüyordu; taban gerçek bir kategoriyse oraya gider.
+  if (legacyLocation.matched && !legacyLocation.destination) {
+    const occasionTarget = occasionCategoryTarget(legacyLocation.normalizedBase, legacyLocation.suffix, (s) => categorySlugs.has(s));
+    if (occasionTarget) {
+      return NextResponse.redirect(new URL(await flattenManagedTarget(occasionTarget), req.nextUrl.origin), 301);
     }
   }
   // EK (kurtarma): Konum eşleşti ama whitelist'te yayınlanmış hedef yok.
