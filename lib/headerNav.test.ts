@@ -68,12 +68,12 @@ test("dengeleme: az aile → boş sütun üretmez; boş girdi → []", () => {
   assert.deepEqual(balanceMegaColumns([], 4), []);
 });
 
-test("ek sütun: Gönderim Amacına Göre → Özel Günler (Sevgililer Günü + Yılbaşı), nav'da var olan etikete bağlı", () => {
+test("ek sütun: Gönderim Amacına Göre → Özel Günler (Sevgililer Günü, Yılbaşı, Kadınlar Günü), nav'da var olan etikete bağlı", () => {
   const labels = HEADER_NAV_CONFIG.map((c) => c.label);
   for (const key of Object.keys(MEGA_EXTRA_COLUMNS)) assert.ok(labels.includes(key), `${key} nav'da yok → sütun görünmez`);
   const cols = MEGA_EXTRA_COLUMNS["Gönderim Amacına Göre"];
   assert.equal(cols.length, 1);
   assert.equal(cols[0].title, "Özel Günler");
   assert.equal(cols[0].href, "/kategori/ozel-gunler");
-  assert.deepEqual(cols[0].links.map((l) => l.href), ["/kategori/sevgililer-gunu", "/kategori/yilbasi"]);
+  assert.deepEqual(cols[0].links.map((l) => l.href), ["/kategori/sevgililer-gunu", "/kategori/yilbasi", "/kategori/kadinlar-gunu"]);
 });
