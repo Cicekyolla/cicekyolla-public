@@ -56,7 +56,7 @@ export const MEGA_EXTRA_COLUMNS: Record<string, MegaColumn[]> = {
   ],
   // "Özel Günler" (/kategori/ozel-gunler) gerçek bir kök kategoridir ama nav'da
   // yer almıyor; 10. nav öğesi 1280px'te sığmaz (bkz. HEADER_NAV_CONFIG notu).
-  // Sezonun öne çıkan iki gününe header'dan giriş için tek sütun eklenir.
+  // Sezonun öne çıkan özel günlerine header'dan giriş için tek sütun eklenir.
   // Linkler var olan kategori sayfalarıdır; kategori verisi değişmez.
   'Gönderim Amacına Göre': [
     {
@@ -65,6 +65,7 @@ export const MEGA_EXTRA_COLUMNS: Record<string, MegaColumn[]> = {
       links: [
         { name: 'Sevgililer Günü', href: '/kategori/sevgililer-gunu' },
         { name: 'Yılbaşı', href: '/kategori/yilbasi' },
+        { name: 'Kadınlar Günü', href: '/kategori/kadinlar-gunu' },
       ],
     },
   ],

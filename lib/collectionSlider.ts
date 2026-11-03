@@ -13,7 +13,7 @@ import type { CategoryItem } from "./catalog";
 
 // Satis-oncelik isim listesi (sira = gosterim onceligi). Koleksiyonlar dahil (kaybolmaz).
 export const SALES_PRIORITY_NAMES: string[] = [
-  "Sevgiliye", "Doğum Günü", "Anneler Günü", "Öğretmenler Günü", "Yılbaşı", "Sevgililer Günü",
+  "Sevgiliye", "Doğum Günü", "Anneler Günü", "Öğretmenler Günü", "Yılbaşı", "Sevgililer Günü", "Kadınlar Günü",
   "Orkideler", "Güller", "Buketler", "Premium Çiçekler", "Kampanyalar",
   "Koleksiyonlar", "Saksı Bitkileri", "Yapay Dekorasyon", "Yapay Çiçekler",
   "Çikolata", "Hediye", "Kutuda Çiçekler", "Vazoda Çiçekler", "Teraryum",
