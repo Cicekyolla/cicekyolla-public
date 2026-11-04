@@ -28,7 +28,9 @@ import DeliveryPlanner, { type SelectedDelivery } from "@/components/product/Del
 import { OCCASIONS, DELIVERY_NOTES } from "@/lib/checkoutConfig";
 import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages";
 import type { CheckoutAddon, CheckoutBundle } from "./CheckoutFlow";
-import { fetchBankAccounts, createHavaleOrder, initPaytr, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
+import { fetchBankAccounts, createHavaleOrder, initPaytr, initIyzicoPrimary, fetchPrimaryProvider, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
+import { saveRetryInfo } from "@/lib/paymentRetry";
+import { tabStorage } from "@/lib/cardCheckoutSettle";
 import { buildCouponRequestBody, buildOrderRegionFields, readCouponPreview, readServerTotalMinor } from "@/lib/couponState";
 import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
 import { cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
@@ -464,7 +466,19 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
       } else {
         // Kart: PayTR güvenli sayfasına yönlendir. Ödeme TAMAMLANMADAN sepet/taslak
         // TEMİZLENMEZ — kart reddinde müşteri bilgileriyle geri dönebilsin.
+        // ADDITIVE (4 Kas 2026): ana sağlayıcı env ile iyzico'ya çevrildiyse (PAYMENT_PRIMARY)
+        // ilk deneme iyzico ödeme sayfasıdır. Sıra okunamazsa bugünkü gibi PayTR.
+        if ((await fetchPrimaryProvider()) === "iyzico") {
+          const z = await initIyzicoPrimary(orderBody);
+          saveRetryInfo(tabStorage(), { oid: z.merchant_oid, order_id: z.order_id, retry_key: z.retry_key });
+          await stashCardPurchaseUserData(z.merchant_oid, senderEmail, senderPhone);
+          try { onCardPaymentStarted?.({ merchantOid: z.merchant_oid, draftKey: DRAFT_KEY }); } catch { /* yok say */ }
+          if (z.payment_page_url) { window.location.href = z.payment_page_url; return; }
+          throw new CheckoutApiError(502, "unavailable");
+        }
         const r = await initPaytr(orderBody);
+        // Aynı sipariş için yedek altyapıyla "tekrar dene" yetkisi (yalnız bu sekme; asla fırlatmaz).
+        saveRetryInfo(tabStorage(), { oid: r.merchant_oid, order_id: r.order_id, retry_key: r.retry_key });
         trackVisit("order_created", { o: orderNumberFromOid(r.merchant_oid) ?? undefined, m: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total });
         // Gelişmiş dönüşüm: sonuç sayfasındaki purchase için YALNIZ hash'ler
         // sessionStorage'a (≤300 ms, asla fırlatmaz; ödeme akışı etkilenmez).
@@ -486,6 +500,18 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         return;
       }
     } catch (failure) {
+      // ADDITIVE (4 Kas 2026): kart ödeme ekranı HİÇ OLUŞMADI (ana sağlayıcı token
+      // veremedi / erişilemez) ve sunucu AYNI sipariş için yedek altyapıyı onayladıysa
+      // müşteri sonuç sayfasına gider; orada "Diğer ödeme altyapımızla tekrar deneyin" görür.
+      if (paymentMethod !== "havale" && failure instanceof CheckoutApiError) {
+        const d = failure.details as { merchant_oid?: unknown; order_id?: unknown; retry_key?: unknown; retry_available?: unknown } | null;
+        if (d && typeof d.merchant_oid === "string" && d.retry_available === true
+          && saveRetryInfo(tabStorage(), { oid: d.merchant_oid, order_id: d.order_id, retry_key: d.retry_key })) {
+          try { onCardPaymentStarted?.({ merchantOid: d.merchant_oid, draftKey: DRAFT_KEY }); } catch { /* yok say */ }
+          window.location.href = `/checkout/sonuc?oid=${encodeURIComponent(d.merchant_oid)}`;
+          return;
+        }
+      }
       // KÖK NEDEN: sunucu kuponu siparişte reddettiğinde (limit doldu, ilk
       // sipariş şartı, fiyat değişti, bölge…) müşteri yalnız "Sipariş
       // oluşturulamadı" görüyordu; nedeni bilmediği için aynı düğmeye basıp
