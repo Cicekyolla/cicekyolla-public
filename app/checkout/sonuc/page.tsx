@@ -3,27 +3,38 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, X, Loader2, MessageCircle } from "lucide-react";
-import { paytrStatus, SUPPORT_WHATSAPP, type PaytrStatus } from "@/lib/payment";
+import { Check, X, Loader2, MessageCircle, Clock, CreditCard } from "lucide-react";
+import { paytrStatus, initProviderRetry, CheckoutApiError, SUPPORT_WHATSAPP, type PaytrStatus } from "@/lib/payment";
 import { trackPaidPurchase } from "@/lib/purchaseAnalytics";
 import { useCart } from "@/lib/cart";
 import { clearPendingDelivery } from "@/lib/pendingDelivery";
 import { clearPendingCoupon } from "@/lib/pendingCoupon";
-import { dropCardCheckout, readCardCheckout, settleCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
+import { dropCardCheckout, readCardCheckout, settleCardCheckout, stashCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
+import { resolveResultView, retryButtonLabel, retryErrorView, readRetryInfo, saveRetryInfo, isEmailLike, type ResultView } from "@/lib/paymentRetry";
 
-/* /checkout/sonuc — PayTR kart ödemesi dönüş sayfası.
-   Ödeme onaylanınca (webhook) sipariş numarası GÖSTERİLİR; kural: no ödemeden sonra.
-   Reddedilirse müşteri burada çözer: Tekrar Dene + WhatsApp destek. */
+/* /checkout/sonuc — kart ödemesi dönüş sayfası (PayTR ana, iyzico yedek).
+   Durum YALNIZ sunucudan okunur (imzalı/doğrulanmış bildirim); adres çubuğundaki
+   ?fail=1 karar vermez. Ödeme onaylanınca sipariş numarası GÖSTERİLİR.
+   • Kesin başarısız + yedek açık → "Diğer ödeme altyapımızla tekrar deneyin" (müşteri tıklar).
+   • Sonuç belirsiz → "kontrol ediliyor"; yedek altyapı ASLA sunulmaz (çift çekim kalkanı). */
+
+const FAST_POLLS = 14;          // ~40 sn hızlı kontrol (3 sn aralık)
+const SLOW_POLL_MS = 15000;     // sonra 15 sn aralık
+const MAX_POLL_MS = 15 * 60000; // en fazla 15 dk
 
 function Sonuc() {
   const params = useSearchParams();
   const oid = params.get("oid") ?? "";
-  const failFlag = params.get("fail") === "1";
 
-  const [state, setState] = useState<"checking" | "paid" | "failed">("checking");
+  const [view, setView] = useState<ResultView>("checking");
+  const [status, setStatus] = useState<PaytrStatus | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   // Sunucunun onayladığı ödeme (HMAC doğrulanmış callback → payments.status='paid').
   const [confirmed, setConfirmed] = useState<PaytrStatus | null>(null);
+  const [retryBusy, setRetryBusy] = useState(false);
+  const [retryMsg, setRetryMsg] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [pollKey, setPollKey] = useState(0);
   const { items, hydrated, removeItem } = useCart();
   const settledRef = useRef(false);
 
@@ -60,71 +71,164 @@ function Sonuc() {
   }, []);
 
   useEffect(() => {
-    if (!oid) { setState("failed"); return; }
+    if (!oid) { setView("failed"); return; }
     let alive = true;
     let tries = 0;
+    const startedAt = Date.now();
+    const canRetryHere = readRetryInfo(tabStorage(), oid) !== null;
     const tick = async () => {
+      let s: PaytrStatus | null = null;
       try {
-        const s = await paytrStatus(oid);
+        s = await paytrStatus(oid);
         if (!alive) return;
         if (s.paid && s.order_number) {
           trackPaidPurchase(s);
           setOrderNumber(s.order_number);
           setConfirmed(s);
-          setState("paid");
+          setView("paid");
           return;
         }
       } catch { /* ağ hatası → tekrar dene */ }
+      if (!alive) return;
       tries += 1;
-      // Webhook birkaç saniye gecikebilir → ~40 sn poll, sonra fail göster.
-      if (tries >= 14) { if (alive) setState("failed"); return; }
-      window.setTimeout(tick, 3000);
+      const next = resolveResultView(s, tries >= FAST_POLLS, canRetryHere);
+      setStatus(s);
+      if (next === "retry" || next === "failed") { setView(next); return; } // sunucu kesin başarısız dedi
+      // Zaman aşımı BAŞARISIZLIK DEĞİLDİR: belirsizse "kontrol ediliyor" + seyrek kontrol sürer.
+      setView(next);
+      if (Date.now() - startedAt > MAX_POLL_MS) return;
+      window.setTimeout(tick, tries < FAST_POLLS ? 3000 : SLOW_POLL_MS);
     };
-    // fail param'ı gelse bile webhook başarıyı doğrulayabilir → yine de bir süre kontrol et,
-    // ama başarısız bayrağı varsa daha kısa dene.
-    if (failFlag) { window.setTimeout(() => { if (alive && state !== "paid") setState("failed"); }, 6000); }
     tick();
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [oid]);
+  }, [oid, pollKey]);
+
+  const provider = status?.retry_provider ?? null;
+  const needsEmail = Boolean(status?.retry_needs_email);
+
+  const startRetry = async () => {
+    if (!provider || retryBusy) return;
+    const storage = tabStorage();
+    const info = readRetryInfo(storage, oid);
+    if (!info) { setView("failed"); return; }
+    if (needsEmail && !isEmailLike(email)) { setRetryMsg("Devam etmek için geçerli bir e-posta adresi yazın."); return; }
+    setRetryBusy(true);
+    setRetryMsg(null);
+    try {
+      const r = await initProviderRetry(provider, {
+        order_id: info.order_id, retry_key: info.retry_key, payment_locale: "tr",
+        ...(needsEmail ? { email: email.trim() } : {}),
+      });
+      // Yeni deneme referansı için bu sekmenin notları taşınır (sepet yalnız onaydan sonra düşer).
+      saveRetryInfo(storage, { oid: r.merchant_oid, order_id: r.order_id, retry_key: r.retry_key });
+      const stash = readCardCheckout(storage, oid);
+      if (stash) stashCardCheckout(storage, { oid: r.merchant_oid, cartKeys: stash.cartKeys, draftKey: stash.draftKey });
+      const target = r.payment_page_url || r.iframe_url;
+      if (!target) throw new CheckoutApiError(502, "unavailable");
+      window.location.href = target;
+    } catch (failure) {
+      const apiError = failure instanceof CheckoutApiError ? failure.apiError : null;
+      const code = failure instanceof CheckoutApiError ? failure.status : 0;
+      const next = retryErrorView(apiError, code);
+      setRetryMsg(next.message);
+      setRetryBusy(false);
+      if (next.view === "checking" || next.view === "uncertain") { setView(next.view); setPollKey((k) => k + 1); return; }
+      setView(next.view);
+    }
+  };
 
   return (
     <main className="max-w-lg mx-auto px-5 py-20 text-center">
-      {state === "checking" && (
+      {view === "checking" && (
         <>
-          <Loader2 className="w-12 h-12 text-[#7C3AED] animate-spin mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Ödemeniz kontrol ediliyor…</h1>
-          <p className="text-[#6B7280] mt-2">Bankadan onay bekleniyor. Lütfen bu sayfadan ayrılmayın.</p>
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-6" />
+          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz kontrol ediliyor…</h1>
+          <p className="text-muted-foreground mt-2">Bankadan onay bekleniyor. Lütfen bu sayfadan ayrılmayın.</p>
         </>
       )}
 
-      {state === "paid" && (
+      {view === "uncertain" && (
         <>
-          <div className="w-16 h-16 rounded-full bg-[#F0FDF4] flex items-center justify-center mx-auto mb-5">
-            <Check className="w-8 h-8 text-[#22C55E]" />
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
+            <Clock className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Ödemeniz alındı!</h1>
-          <p className="text-[#6B7280] mt-2">Sipariş numaranız</p>
-          <p className="text-[22px] font-bold text-[#7C3AED] mt-1 tracking-wide">{orderNumber}</p>
-          <Link href={`/siparis-takip?order=${encodeURIComponent(orderNumber ?? "")}`} className="inline-block mt-6 rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
+          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz kontrol ediliyor</h1>
+          <p className="text-muted-foreground mt-2">
+            Bankanızdan yanıt henüz gelmedi. Birkaç dakika içinde size bilgi vereceğiz.
+            Lütfen bu sırada yeniden ödeme yapmayın.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
+            <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer"
+               className="inline-flex items-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
+              <MessageCircle className="w-4 h-4" /> Müşteri Hizmetleri
+            </a>
+          </div>
+        </>
+      )}
+
+      {view === "paid" && (
+        <>
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
+            <Check className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Siparişiniz alındı</h1>
+          <p className="text-muted-foreground mt-2">Ödemeniz onaylandı. Sipariş numaranız</p>
+          <p className="text-[22px] font-bold text-accent-foreground mt-1 tracking-wide">{orderNumber}</p>
+          <Link href={`/siparis-takip?order=${encodeURIComponent(orderNumber ?? "")}`} className="inline-block mt-6 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors">
             Siparişi Takip Et
           </Link>
         </>
       )}
 
-      {state === "failed" && (
+      {view === "retry" && provider && (
         <>
-          <div className="w-16 h-16 rounded-full bg-[#FEF2F2] flex items-center justify-center mx-auto mb-5">
-            <X className="w-8 h-8 text-[#EF4444]" />
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
+            <CreditCard className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-[#111827]" style={{ fontFamily: "var(--font-display)" }}>Ödeme tamamlanamadı</h1>
-          <p className="text-[#6B7280] mt-2">Kartınızdan çekim yapılmadı. Bilgileriniz korunuyor — tekrar deneyebilir ya da bize yazabilirsiniz.</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz alınamadı</h1>
+          <p className="text-muted-foreground mt-2">
+            Kartınızdan çekim yapılmadı. Diğer ödeme altyapımızla tekrar deneyebilirsiniz.
+          </p>
+          {needsEmail && (
+            <label className="block text-left mt-6">
+              <span className="text-sm font-semibold text-foreground">E-posta adresiniz</span>
+              <input
+                type="email" inputMode="email" autoComplete="email" value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1.5 w-full rounded-2xl border border-border bg-input-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="ornek@eposta.com"
+              />
+            </label>
+          )}
+          {retryMsg && <p className="text-destructive text-sm mt-4" role="alert">{retryMsg}</p>}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
-            <Link href="/sepet" className="rounded-2xl bg-[#7C3AED] text-white font-bold px-7 py-3.5 hover:bg-[#6D28D9] transition-colors">
-              Tekrar Dene
+            <button type="button" onClick={startRetry} disabled={retryBusy}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors disabled:opacity-60">
+              {retryBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+              {retryButtonLabel(provider)}
+            </button>
+            <Link href="/checkout" className="rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
+              Farklı ödeme yöntemi seç
+            </Link>
+          </div>
+        </>
+      )}
+
+      {view === "failed" && (
+        <>
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
+            <X className="w-8 h-8 text-destructive" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz alınamadı</h1>
+          <p className="text-muted-foreground mt-2">
+            Kartınızdan çekim yapılmadı. Havale/EFT ile ödeyebilir ya da bize yazabilirsiniz.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
+            <Link href="/checkout" className="rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors">
+              Farklı ödeme yöntemi seç
             </Link>
             <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-2 rounded-2xl border border-[#25D366] text-[#128C7E] font-bold px-7 py-3.5 hover:bg-[#F0FFF4] transition-colors">
+               className="inline-flex items-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
               <MessageCircle className="w-4 h-4" /> WhatsApp Destek
             </a>
           </div>
@@ -136,7 +240,7 @@ function Sonuc() {
 
 export default function CheckoutSonucPage() {
   return (
-    <Suspense fallback={<main className="max-w-lg mx-auto px-5 py-20 text-center"><Loader2 className="w-12 h-12 text-[#7C3AED] animate-spin mx-auto" /></main>}>
+    <Suspense fallback={<main className="max-w-lg mx-auto px-5 py-20 text-center"><Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" /></main>}>
       <Sonuc />
     </Suspense>
   );

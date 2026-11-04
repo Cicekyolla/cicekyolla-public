@@ -24,6 +24,14 @@ export interface PaytrStatus {
   total_amount_minor?: number;
   currency?: string;
   items?: PaidOrderItem[];
+  /* ADDITIVE (4 Kas 2026) — yedek sağlayıcı. Yalnız sunucu DOĞRULANMIŞ başarısızlık
+     gördüğünde dolu gelir; belirsiz (pending) durumda daima false/null. */
+  retry_available?: boolean;
+  retry_provider?: "paytr" | "iyzico" | null;
+  retry_needs_email?: boolean;
+  order_id?: number | null;
+  /** Ana ve yedek altyapı da başarısız → sipariş "ödeme başarısız". */
+  payment_failed?: boolean;
 }
 
 export const SUPPORT_WHATSAPP = "https://wa.me/905458813450";
@@ -98,6 +106,58 @@ export interface PaytrInitResult {
   iframe_token?: string;
   total_amount_minor?: number;
   member_linked?: boolean;
+  /** ADDITIVE: aynı sipariş için yedek altyapıyla tekrar deneme yetkisi (yalnız bu sekme). */
+  retry_key?: string | null;
+  order_id?: number;
+}
+
+/** Yedek / ana sağlayıcı başlatma yanıtı (aynı sipariş). Kart verisi YOK. */
+export interface ProviderInitResult {
+  merchant_oid: string;
+  order_id: number;
+  provider: "paytr" | "iyzico";
+  total_amount_minor?: number;
+  retry_key?: string | null;
+  /** iyzico: ödeme sayfası adresi (tam sayfa yönlendirme). */
+  payment_page_url?: string;
+  /** PayTR: güvenli ödeme adresi. */
+  iframe_url?: string;
+}
+
+/**
+ * AYNI sipariş için yeni deneme (yeni sipariş OLUŞTURULMAZ). Tutar istemciden
+ * gönderilmez; sunucu sipariş satırlarından hesaplar.
+ */
+export async function initProviderRetry(
+  provider: "paytr" | "iyzico",
+  body: { order_id: number; retry_key: string; email?: string; payment_locale?: string },
+): Promise<ProviderInitResult> {
+  const r = await fetch(`/api/payment/${provider}-init`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw await readApiError(r);
+  return (await r.json()).data;
+}
+
+/** PAYMENT_PRIMARY = iyzico iken checkout'un ilk denemesi (sipariş + iyzico oturumu). */
+export async function initIyzicoPrimary(body: unknown): Promise<ProviderInitResult> {
+  const r = await fetch("/api/payment/iyzico-init", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw await readApiError(r);
+  return (await r.json()).data;
+}
+
+/** Ödeme sırası (yalnız sağlayıcı adları). Hata → bugünkü davranış: PayTR. */
+export async function fetchPrimaryProvider(): Promise<"paytr" | "iyzico"> {
+  try {
+    const r = await fetch("/api/payment/providers", { cache: "no-store" });
+    if (!r.ok) return "paytr";
+    const d = (await r.json())?.data as { primary?: string } | undefined;
+    return d?.primary === "iyzico" ? "iyzico" : "paytr";
+  } catch {
+    return "paytr";
+  }
 }
 
 export async function initPaytr(body: unknown): Promise<PaytrInitResult> {
