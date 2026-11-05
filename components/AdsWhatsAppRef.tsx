@@ -32,6 +32,7 @@
 import { useEffect } from "react";
 import { isWhatsAppHref, readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
 import { pushEvent } from "@/lib/analytics";
+import { withGlobalWaPrefill } from "@/lib/global/waPrefill";
 
 export function AdsWhatsAppRef() {
   useEffect(() => {
@@ -56,15 +57,21 @@ export function AdsWhatsAppRef() {
       const attr = readAdsAttribution();
       const ref = urlGclid?.slice(0, 255) || attr.gclid || attr.gbraid || attr.wbraid;
 
-      // null dönerse referans zaten vardır ya da eklenemiyordur: her iki halde
-      // de bağlantıya KARIŞMAYIZ, yalnız olayı göndeririz.
-      const zenginlestirilmis = ref ? withWhatsAppRef(href, ref, window.location.origin) : null;
+      // C4 (5 Kas 2026): 13 global dil yolunda boş bağlantıya o dilde önmetin,
+      // her bağlantıya aynı satırda sayfa etiketi [p: …]. TR yolunda null → aynen.
+      const globalHref = withGlobalWaPrefill(href, window.location.pathname, window.location.origin);
+      const taban = globalHref ?? href;
+
+      // null dönerse referans zaten vardır ya da eklenemiyordur: o halde reklam
+      // etiketi eklenmez; global önmetin varsa yine o adrese gidilir.
+      const zenginlestirilmis = (ref ? withWhatsAppRef(taban, ref, window.location.origin) : null) ?? globalHref;
 
       if (!zenginlestirilmis) {
         // Bağlantıyı biz taşımıyoruz; tarayıcı kendi akışında gidecek.
         // Yeni sekmede sayfa ayakta kaldığı için etiket rahat çalışır; aynı
         // sekmede ise beklemek yerine olayı gönderip bırakırız — burada zaten
         // tıklama kimliği yok, yani Ads'in ilişkilendirebileceği bir şey yok.
+        // (TR yolunda reklamsız ziyaretçi — davranış C4 öncesiyle birebir.)
         pushEvent("whatsapp_click");
         return;
       }
