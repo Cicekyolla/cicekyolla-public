@@ -1072,7 +1072,7 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
       {/* Favoriler */}
       {favorites.length > 0 && (
         <div className="mt-5">
-          <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold mb-2">Favorileriniz</p>
+          <p className="text-[10px] tracking-[0.14em] text-[#8B5CF6] uppercase font-bold mb-2">{t("co.favorites")}</p>
           <div className="flex flex-wrap gap-2">
             {favorites.map((m) => (
               <button key={m} onClick={() => choose(m)} className="px-3 py-1.5 rounded-lg bg-[#F5F3FF] text-[#6D28D9] text-[12px] font-medium hover:bg-[#EDE9FE] transition-colors max-w-[240px]">
@@ -1621,7 +1621,7 @@ function LivingReceipt(p: {
           ödeme CTA'sı yerinden oynamadı. */}
       <div className="flex items-center gap-2.5 px-5 pt-4">
         <FlowerGuaranteeBadge color="#ffffff" className="h-9 w-9 shrink-0 opacity-70 lg:h-11 lg:w-11" />
-        <span className="text-[11.5px] font-semibold text-white/55">%100 ÇiçekYolla Garantisi</span>
+        <span className="text-[11.5px] font-semibold text-white/55">{t("pdp.guaranteeTitle")}</span>
       </div>
 
       {/* Güven şeridi — V85; bağırmayan, kısa ve gerçek */}

@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { ShieldCheck, Lock, ArrowLeft, MessageCircle } from "lucide-react";
 import { SUPPORT_WHATSAPP } from "@/lib/payment";
+import { useI18n } from "@/lib/i18n";
 
 const RESIZER_SRC = "https://www.paytr.com/js/iframeResizer.min.js";
 const FRAME_ID = "paytriframe";
@@ -50,6 +51,7 @@ export function PaytrFrame({
   productName: string;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [resizerReady, setResizerReady] = useState(false);
   const [resizerFailed, setResizerFailed] = useState(false);
   /** Çerçevenin `load` olayı geldi mi? Gelmezse sayfa hiç açılmamış demektir. */
@@ -119,26 +121,25 @@ export function PaytrFrame({
               <Lock className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <div className="text-[14px] font-bold text-[#1F2937]">Güvenli Ödeme</div>
+              <div className="text-[14px] font-bold text-[#1F2937]">{t("paytr.secure")}</div>
               <div className="truncate text-[11.5px] text-[#9CA3AF]">{productName}</div>
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-[11px] text-[#9CA3AF]">Ödenecek</div>
+            <div className="text-[11px] text-[#9CA3AF]">{t("paytr.amountDue")}</div>
             <div className="text-[16px] font-bold text-[#7C3AED]">{amountLabel}</div>
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#F1F0F5] bg-white px-3 py-2 text-[11.5px] text-[#6B7280]">
           <ShieldCheck className="h-4 w-4 shrink-0 text-[#22C55E]" />
-          Kart bilgileriniz PayTR&apos;nin 3D Secure korumalı formuna girilir; ÇiçekYolla sunucularında
-          tutulmaz ve görülmez.
+          {t("paytr.cardNote")}
         </div>
       </div>
 
       <iframe
         id={FRAME_ID}
         src={url}
-        title="PayTR güvenli ödeme formu"
+        title={t("paytr.frameTitle")}
         onLoad={() => setFrameLoaded(true)}
         onError={goToRedirectFlow}
         // Resizer devredeyse yükseklik içerikten gelir; devrede değilse çerçeve
@@ -155,7 +156,7 @@ export function PaytrFrame({
             onClick={onCancel}
             className="inline-flex items-center gap-2 rounded-2xl border border-[#E9E7F0] px-5 py-2.5 text-[13.5px] font-bold text-[#4B5563] transition-colors hover:border-[#C4B5FD] hover:text-[#7C3AED]"
           >
-            <ArrowLeft className="h-4 w-4" /> Ödeme yöntemine dön
+            <ArrowLeft className="h-4 w-4" /> {t("paytr.back")}
           </button>
           <a
             href={SUPPORT_WHATSAPP}
@@ -163,7 +164,7 @@ export function PaytrFrame({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-[13px] font-bold text-[#128C7E] hover:underline"
           >
-            <MessageCircle className="h-4 w-4" /> Yardım gerekirse WhatsApp
+            <MessageCircle className="h-4 w-4" /> {t("paytr.help")}
           </a>
         </div>
         {/* HER ZAMAN görünür kaçış yolu: çerçeve boş kalır ya da banka 3D
@@ -176,10 +177,10 @@ export function PaytrFrame({
             disabled={fellBack}
             className="text-[11.5px] font-semibold text-[#9CA3AF] underline decoration-dotted underline-offset-4 transition-colors hover:text-[#7C3AED] disabled:opacity-60"
           >
-            {fellBack ? "Güvenli ödeme sayfasına yönlendiriliyorsunuz…" : "Ödeme formu açılmadıysa güvenli sayfada devam edin"}
+            {fellBack ? t("paytr.redirecting") : t("paytr.openFull")}
           </button>
           {resizerFailed && !fellBack && (
-            <p className="mt-1.5 text-[11px] text-[#C4B5FD]">Ödeme formu kendi penceresinde kaydırılabilir.</p>
+            <p className="mt-1.5 text-[11px] text-[#C4B5FD]">{t("paytr.scrollNote")}</p>
           )}
         </div>
       </div>

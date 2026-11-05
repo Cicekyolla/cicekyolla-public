@@ -10,7 +10,9 @@ import { useCart } from "@/lib/cart";
 import { clearPendingDelivery } from "@/lib/pendingDelivery";
 import { clearPendingCoupon } from "@/lib/pendingCoupon";
 import { dropCardCheckout, readCardCheckout, settleCardCheckout, stashCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
-import { resolveResultView, retryButtonLabel, retryErrorView, readRetryInfo, saveRetryInfo, isEmailLike, type ResultView } from "@/lib/paymentRetry";
+import { resolveResultView, retryErrorView, retryErrorMessageKey, providerBrand, readRetryInfo, saveRetryInfo, isEmailLike, type ResultView } from "@/lib/paymentRetry";
+import { useI18n } from "@/lib/i18n";
+import type { DictKey } from "@/lib/i18n/dict/tr";
 
 /* /checkout/sonuc — kart ödemesi dönüş sayfası (PayTR ana, iyzico yedek).
    Durum YALNIZ sunucudan okunur (imzalı/doğrulanmış bildirim); adres çubuğundaki
@@ -32,7 +34,9 @@ function Sonuc() {
   // Sunucunun onayladığı ödeme (HMAC doğrulanmış callback → payments.status='paid').
   const [confirmed, setConfirmed] = useState<PaytrStatus | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
-  const [retryMsg, setRetryMsg] = useState<string | null>(null);
+  // C7: mesaj sözlük ANAHTARI olarak tutulur → müşterinin dilinde gösterilir (TR metni aynı).
+  const [retryMsg, setRetryMsg] = useState<DictKey | null>(null);
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [pollKey, setPollKey] = useState(0);
   const { items, hydrated, removeItem } = useCart();
@@ -111,7 +115,7 @@ function Sonuc() {
     const storage = tabStorage();
     const info = readRetryInfo(storage, oid);
     if (!info) { setView("failed"); return; }
-    if (needsEmail && !isEmailLike(email)) { setRetryMsg("Devam etmek için geçerli bir e-posta adresi yazın."); return; }
+    if (needsEmail && !isEmailLike(email)) { setRetryMsg("payres.emailInvalid"); return; }
     setRetryBusy(true);
     setRetryMsg(null);
     try {
@@ -130,7 +134,7 @@ function Sonuc() {
       const apiError = failure instanceof CheckoutApiError ? failure.apiError : null;
       const code = failure instanceof CheckoutApiError ? failure.status : 0;
       const next = retryErrorView(apiError, code);
-      setRetryMsg(next.message);
+      setRetryMsg(retryErrorMessageKey(apiError, code));
       setRetryBusy(false);
       if (next.view === "checking" || next.view === "uncertain") { setView(next.view); setPollKey((k) => k + 1); return; }
       setView(next.view);
@@ -142,8 +146,8 @@ function Sonuc() {
       {view === "checking" && (
         <>
           <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-6" />
-          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz kontrol ediliyor…</h1>
-          <p className="text-muted-foreground mt-2">Bankadan onay bekleniyor. Lütfen bu sayfadan ayrılmayın.</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t("payres.checkingTitle")}</h1>
+          <p className="text-muted-foreground mt-2">{t("payres.checkingText")}</p>
         </>
       )}
 
@@ -152,15 +156,12 @@ function Sonuc() {
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
             <Clock className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz kontrol ediliyor</h1>
-          <p className="text-muted-foreground mt-2">
-            Bankanızdan yanıt henüz gelmedi. Birkaç dakika içinde size bilgi vereceğiz.
-            Lütfen bu sırada yeniden ödeme yapmayın.
-          </p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t("payres.uncertainTitle")}</h1>
+          <p className="text-muted-foreground mt-2">{t("payres.uncertainText")}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
             <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
-              <MessageCircle className="w-4 h-4" /> Müşteri Hizmetleri
+              <MessageCircle className="w-4 h-4" /> {t("payres.support")}
             </a>
           </div>
         </>
@@ -171,11 +172,11 @@ function Sonuc() {
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
             <Check className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Siparişiniz alındı</h1>
-          <p className="text-muted-foreground mt-2">Ödemeniz onaylandı. Sipariş numaranız</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t("payres.paidTitle")}</h1>
+          <p className="text-muted-foreground mt-2">{t("payres.paidText")}</p>
           <p className="text-[22px] font-bold text-accent-foreground mt-1 tracking-wide">{orderNumber}</p>
           <Link href={`/siparis-takip?order=${encodeURIComponent(orderNumber ?? "")}`} className="inline-block mt-6 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors">
-            Siparişi Takip Et
+            {t("payres.track")}
           </Link>
         </>
       )}
@@ -185,30 +186,28 @@ function Sonuc() {
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
             <CreditCard className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz alınamadı</h1>
-          <p className="text-muted-foreground mt-2">
-            Kartınızdan çekim yapılmadı. Diğer ödeme altyapımızla tekrar deneyebilirsiniz.
-          </p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t("payres.failedTitle")}</h1>
+          <p className="text-muted-foreground mt-2">{t("payres.retryText")}</p>
           {needsEmail && (
             <label className="block text-left mt-6">
-              <span className="text-sm font-semibold text-foreground">E-posta adresiniz</span>
+              <span className="text-sm font-semibold text-foreground">{t("payres.emailLabel")}</span>
               <input
                 type="email" inputMode="email" autoComplete="email" value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1.5 w-full rounded-2xl border border-border bg-input-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="ornek@eposta.com"
+                placeholder={t("payres.emailPlaceholder")}
               />
             </label>
           )}
-          {retryMsg && <p className="text-destructive text-sm mt-4" role="alert">{retryMsg}</p>}
+          {retryMsg && <p className="text-destructive text-sm mt-4" role="alert">{t(retryMsg)}</p>}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
             <button type="button" onClick={startRetry} disabled={retryBusy}
               className="inline-flex items-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors disabled:opacity-60">
               {retryBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-              {retryButtonLabel(provider)}
+              {t("payres.payWith", { provider: providerBrand(provider) })}
             </button>
             <Link href="/checkout" className="rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
-              Farklı ödeme yöntemi seç
+              {t("payres.otherMethod")}
             </Link>
           </div>
         </>
@@ -219,17 +218,15 @@ function Sonuc() {
           <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-5">
             <X className="w-8 h-8 text-destructive" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Ödemeniz alınamadı</h1>
-          <p className="text-muted-foreground mt-2">
-            Kartınızdan çekim yapılmadı. Havale/EFT ile ödeyebilir ya da bize yazabilirsiniz.
-          </p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t("payres.failedTitle")}</h1>
+          <p className="text-muted-foreground mt-2">{t("payres.failedText")}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
             <Link href="/checkout" className="rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors">
-              Farklı ödeme yöntemi seç
+              {t("payres.otherMethod")}
             </Link>
             <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
-              <MessageCircle className="w-4 h-4" /> WhatsApp Destek
+              <MessageCircle className="w-4 h-4" /> {t("payres.whatsapp")}
             </a>
           </div>
         </>

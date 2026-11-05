@@ -29,8 +29,13 @@ test("KAYNAK: yeni eklenen layout'lar çocukları AYNEN döndürür (akışa dok
   for (const rel of ["app/checkout/layout.tsx", "app/hesabim/layout.tsx", "app/siparis-takip/layout.tsx"]) {
     const src = read(rel);
     assert.match(src, /return children;/, rel);
-    assert.doesNotMatch(src, /"use client"|fetch\(|cookies\(|headers\(/, `${rel}: yalnız metadata + geçiş olmalı`);
+    // C7 (6 Kas 2026): /checkout kabuğu /sepet gibi YALNIZ `cy_lang` çerezini okur (dil); TR'de çocuklar aynen.
+    const izinli = rel === "app/checkout/layout.tsx" ? /"use client"|fetch\(|headers\(/ : /"use client"|fetch\(|cookies\(|headers\(/;
+    assert.doesNotMatch(src, izinli, `${rel}: yalnız metadata + geçiş olmalı`);
   }
+  const co = read("app/checkout/layout.tsx");
+  assert.equal((co.match(/cookies\(\)/g) ?? []).length, 1, "checkout: tek çerez okuması");
+  assert.match(co, /cookies\(\)\.get\(LANG_COOKIE\)/, "checkout: yalnız dil çerezi");
 });
 
 test("KAYNAK: index'lenebilir statik sayfalar KENDİ yolunu canonical verir ve index dışı bırakılmaz", () => {
