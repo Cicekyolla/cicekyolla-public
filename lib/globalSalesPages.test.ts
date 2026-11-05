@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  isSalesSegment, isSalesPageRow, salesPagePath, salesRedirectTarget, salesProductIds, curateCatalog,
+  isSalesSegment, isSalesPageRow, salesPagePath, salesRedirectTarget, salesProductIds, curateCatalog, orderSalesLinks,
 } from "./global/salesPages.ts";
 import { INTENT_PAGE_KEYS, DESTINATION_ROOTS, SEGMENTS, GLOBAL_LOCALES } from "./global/config.ts";
 import { commercialSlug } from "./global/commercialUrl.ts";
@@ -65,4 +65,40 @@ test("KAYNAK: sayfa motoru — satış adresi çözümü, 301 (sorgu korunur), k
   const api = oku("./global/api.ts");
   assert.ok(api.includes("/api/public/global/page?locale=${locale}&slug=${encodeURIComponent(seg)}"));
   assert.ok(api.includes("/api/public/global/pages-inventory?locale=${locale}&kind=sales"));
+});
+
+// C1 (5 Kas 2026): canlı EN envanterinin gerçek ilk 16 anahtarı (alfabetik) — hub 15. sırada, 12'de kesiliyordu.
+const CANLI_EN = ["hospital-delivery", "hotel-10-karakoy-istanbul", "hotel-armada-hotel-istanbul", "hotel-bosphorus-palace-hotel",
+  "hotel-ciragan-palace-kempinski", "hotel-conrad-istanbul-bosphorus", "hotel-courtyard-by-marriott-istanbul-west",
+  "hotel-crowne-plaza-istanbul-asia", "hotel-crowne-plaza-istanbul-florya", "hotel-crowne-plaza-istanbul-old-city",
+  "hotel-crowne-plaza-istanbul-oryapark", "hotel-crowne-plaza-istanbul-tuzla-viaport-marina",
+  "hotel-crowne-plaza-istanbul-zeytinburnu", "hotel-cvk-park-bosphorus-hotel", "hotel-delivery", "hotel-divan-istanbul",
+].map((page_key) => ({ page_key, url_slug: null, h1: page_key }));
+const anahtar = (xs: { page_key: string }[]) => xs.map((x) => x.page_key);
+
+test("iç bağ listesi: yayındaki niyet hub'ları başta, kalan bugünkü sırada, en fazla 12", () => {
+  const eski = anahtar(CANLI_EN.filter((l) => l.page_key !== "istanbul").slice(0, 12));
+  assert.equal(eski.includes("hotel-delivery"), false, "kanıt: eski kesimde otel hub'ı yok");
+  const yeni = anahtar(orderSalesLinks(CANLI_EN, "istanbul", INTENT_PAGE_KEYS, 12));
+  assert.equal(yeni.length, 12);
+  assert.deepEqual(yeni.slice(0, 2), ["hotel-delivery", "hospital-delivery"]);
+  assert.deepEqual(yeni.slice(2), anahtar(CANLI_EN).filter((k) => k !== "hotel-delivery" && k !== "hospital-delivery").slice(0, 10));
+  assert.equal(new Set(yeni).size, yeni.length, "tekrar yok");
+});
+
+test("iç bağ listesi: bulunduğu sayfa çıkar, yayında olmayan hub eklenmez, RU adressiz dahil, kısa liste aynen", () => {
+  const otelde = anahtar(orderSalesLinks(CANLI_EN, "hotel-delivery", INTENT_PAGE_KEYS, 12));
+  assert.equal(otelde.includes("hotel-delivery"), false);
+  assert.equal(otelde[0], "hospital-delivery");
+  assert.equal(otelde.includes("delivery-without-address"), false, "EN'de yayında değil → bağ yok");
+  const ru = [{ page_key: "apology-flowers" }, { page_key: "delivery-without-address" }, { page_key: "hospital-delivery" }, { page_key: "hotel-a" }, { page_key: "hotel-delivery" }];
+  assert.deepEqual(anahtar(orderSalesLinks(ru, "istanbul", INTENT_PAGE_KEYS, 12)), ["hotel-delivery", "hospital-delivery", "delivery-without-address", "apology-flowers", "hotel-a"]);
+  const kisa = [{ page_key: "b" }, { page_key: "a" }, { page_key: "a" }];
+  assert.deepEqual(anahtar(orderSalesLinks(kisa, "x", INTENT_PAGE_KEYS, 12)), ["b", "a"]);
+  assert.deepEqual(orderSalesLinks([], "x", INTENT_PAGE_KEYS, 12), []);
+});
+
+test("motor iç bağ listesini orderSalesLinks ile kurar (12 sınırı korunur)", () => {
+  const page = oku("./global/page.tsx");
+  assert.ok(page.includes("orderSalesLinks(await fetchLiveSalesPages(locale), row.page_key, INTENT_PAGE_KEYS, 12)"));
 });

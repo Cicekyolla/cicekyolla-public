@@ -45,6 +45,21 @@ export function salesPagePath(locale: string, pageKey: string, urlSlug?: string 
   return `/${locale}/${urlSlug || pageKey}`;
 }
 
+/**
+ * Sayfa altı iç bağlantı listesi (5 Kas 2026, C1): bu sayfa hariç; o dilde yayındaki yerleşik niyet hub'ları
+ * (`hubKeys` sırasıyla: otel → hastane → adressiz) BAŞA, kalanlar API'nin verdiği sırayla; en fazla `max`.
+ * Neden: API anahtar sırası alfabetik → tekil "hotel-*" sayfaları 12 yuvayı doldurup "hotel-delivery" hub'ını
+ * listeden düşürüyordu. Yayında olmayan hub eklenmez (uydurma bağ yok); tekrar eden anahtar atılır.
+ */
+export function orderSalesLinks<T extends { page_key: string }>(
+  links: readonly T[], currentKey: string, hubKeys: readonly string[], max = 12,
+): T[] {
+  const pool = links.filter((l, i) => l.page_key !== currentKey && links.findIndex((x) => x.page_key === l.page_key) === i);
+  const hubs = hubKeys.map((k) => pool.find((l) => l.page_key === k)).filter((l): l is T => !!l);
+  const rest = pool.filter((l) => !hubKeys.includes(l.page_key));
+  return [...hubs, ...rest].slice(0, Math.max(0, max));
+}
+
 /** İstenen segment satırın kanonik adresi değilse (anahtar ile gelinip adres tanımlıysa) 301 hedefi; yoksa null. */
 export function salesRedirectTarget(locale: string, requested: string, row: { page_key: string; url_slug?: string | null }): string | null {
   const slug = row.url_slug || null;

@@ -78,6 +78,7 @@ import {
   isIntentPageKey,
   type ParsedLocalePath,
   INTENT_PAGE_CATEGORY,
+  INTENT_PAGE_KEYS,
   localeBlogPath,
 } from "./config";
 // GLOBAL BLOG MERKEZİ (11 Eki 2026, ADDITIVE): /<dil>/blog liste + detay + ana sayfa rehber bölümü.
@@ -105,7 +106,7 @@ import {
   type LocaleCatalog,
 } from "./api";
 import { findRenamedLocaleSlug } from "./renamedSlug";
-import { curateCatalog, isSalesPageRow, isSalesSegment, salesPagePath, salesProductIds, salesRedirectTarget } from "./salesPages";
+import { curateCatalog, isSalesPageRow, isSalesSegment, orderSalesLinks, salesPagePath, salesProductIds, salesRedirectTarget } from "./salesPages";
 import { catalogDecision, planLocationPage, hasCardFields, fallbackCategoryCards, deliveryPresentation, type CatalogDecision, type CatalogProduct, type LocationPlan } from "./globalCatalog";
 import { REACH, FAR, formatThresholdTl } from "./reachCopy";
 import {
@@ -998,7 +999,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   cutoffs?: CutoffRow[] | null;
 }) {
   // EK (SATIŞ SAYFALARI): iç bağlantı listesi — bu sayfa hariç, en fazla 12 (yalnız 1. sayfada basılır).
-  const salesLinks = (await fetchLiveSalesPages(locale)).filter((l) => l.page_key !== row.page_key).slice(0, 12);
+  // C1 (5 Kas 2026): yayındaki niyet hub'ları (otel/hastane/adressiz) başta — alfabetik kesimde düşüyorlardı.
+  const salesLinks = orderSalesLinks(await fetchLiveSalesPages(locale), row.page_key, INTENT_PAGE_KEYS, 12);
   // RELEASE 3: niyet sayfasında ?category yoksa varsayılan kategori (lokasyon sayfalarında sorgu aynen geçer).
   const searchParams = intent ? withIntentCategory(rawSearchParams, catalog, intentCategory ?? null) : rawSearchParams;
   // Lokasyon yüzeyi ise: üst hiyerarşi (crawlable kırıntı) + bir alt seviyenin
