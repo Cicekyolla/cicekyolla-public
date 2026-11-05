@@ -91,7 +91,7 @@ type Props = { productName: string; productId: number | null; variantId?: number
 export default function CheckoutWizard({ productName, productId, variantId, priceMinor, productSlug, coverUrl, addons = [], bundles = [], quantity = 1, initialAddonQty, delivery, onComplete, onDeliveryChange, initialEditDelivery = false, onCardPaymentStarted }: Props) {
   // approx → "≈ $73"  ·  moneyTRY → gerçek tahsilat "₺2.999"
   const { approx: money, isForeign, moneyTRY } = useCurrency();
-  const { t, intl } = useI18n();
+  const { t, intl, locale } = useI18n();
   // Faz 2: müşteriye GÖRÜNEN ürün adı (onaylı çeviri); sipariş payload/operasyon TR productName kullanır.
   const shownName = useProductName(productId, productName);
   const steps = useMemo(() => {
@@ -418,6 +418,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         ads_gclid: adsAttr.gclid,
         ads_gbraid: adsAttr.gbraid,
         ads_wbraid: adsAttr.wbraid,
+        // C5 (126): siparişi verenin alışveriş dili — ölçüm + operatör bilgisi. Opsiyonel;
+        // API bilinmeyen değeri null'a indirir, kolon yoksa yazmaz (sipariş akışı değişmez).
+        sender_locale: locale,
         meta_fbc: metaAttr.fbc,
         meta_fbp: metaAttr.fbp,
         occasion: occasion || null,
