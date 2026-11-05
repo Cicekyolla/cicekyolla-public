@@ -115,7 +115,7 @@ import {
   type LocationSection, type LocationSectionId,
 } from "./locationSections";
 import {
-  resolveLocationCatalog, isLocationContinuationPage,
+  resolveLocationCatalog, isLocationContinuationPage, fillLocationListing,
   parseListingPageParam, listingCategoryParam, locationListingSeo, locationPageTitle, isLocationListingNotFound, isCategoryListingNotFound,
   sliceLocationPage, locationPagination, locationPageHref,
   type LocationCatalogView, type LocationSearchParams,
@@ -1117,21 +1117,24 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
     const block = getShowcaseBlock(await fetchSeoPage(showcasePath, { noStore: true }).catch(() => null));
     const cfg = (block && resolveShowcaseConfig(block, listingSettings, { pageType: loc.kind, location })) ?? defaultShowcaseConfig(listingSettings, { kind: "location", ...location });
     const wantedPage = parseListingPageParam(rawSearchParams?.page) ?? 1;
-    const listing = await fetchListingPage(listingQueryFor(cfg, wantedPage, { locale }), { noStore: true });
+    // C8: vitrin TEK istekte tam liste (sayfasız; ≤ max_items) okunur → katalog dolgusu ve sayfalama burada.
+    const listing = await fetchListingPage(listingQueryFor({ ...cfg, paginationEnabled: false }, 1, { locale }), { noStore: true });
     if (listing && listingRowsLocalized(listing.items)) {
-      // manual (ids): uç sayfalamaz → tüm liste gelir, dilim burada; auto: uç dilimi (pinned önce; eski uç tanımasa da burada).
-      const all = cfg.mode === "manual" ? listing.items : wantedPage === 1 && cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : listing.items;
-      const totalPages = Math.max(1, cfg.mode === "manual" ? resolvedTotalPages(cfg, all.length) : resolvedTotalPagesFrom(cfg, listing.pagination));
-      const page = wantedPage <= totalPages ? wantedPage : 1;
-      const size = resolvedPageSize(cfg);
-      const rows = cfg.mode === "manual" ? (cfg.paginationEnabled ? all.slice((page - 1) * size, page * size) : all.slice(0, size)) : all;
-      const total = cfg.mode === "manual" ? all.length : listing.pagination.total;
-      for (const r of listing.items) if (!plan.byId.has(r.id)) plan.byId.set(r.id, localeRowToCatalogProduct(r));
+      // auto: öne çıkarılanlar önce (eski uç tanımasa da); manual: Admin sırası aynen.
+      const showcase = cfg.mode === "manual" ? listing.items : cfg.pinnedIds.length ? mergePinnedFirst(cfg.pinnedIds, listing.items) : listing.items;
+      // TR vitrini (o dilde yayında olanlar) ÖNCE, ardından bu lokasyonun teslim edilebilir kataloğu (tekrar yok).
+      // Uç kimliği metin döndürür ("1431"); katalog planı sayı anahtarlıdır → tek tip (sayı).
+      const filled = fillLocationListing(showcase.map((r) => Number(r.id)), plan.allOrder, {
+        perPage: cfg.perPage, maxItems: cfg.maxItems, maxPages: cfg.maxPages, paginationEnabled: cfg.paginationEnabled, page: wantedPage,
+      });
+      // Katalogda olan ürün katalog kaydıyla (kategori bağı vb.) gösterilir; yalnız vitrinde olan uç satırından.
+      for (const r of listing.items) { const id = Number(r.id); if (!plan.byId.has(id)) plan.byId.set(id, { ...localeRowToCatalogProduct(r), id }); }
+      const totalPages = Math.max(1, filled.totalPages);
       const basePath = canonicalLocationPath(locale, row);
       view = {
-        ...view, page, totalPages, total, ids: rows.map((r) => r.id),
-        chips: view.chips.map((c) => (c.key === null ? { ...c, count: total } : c)),
-        pagination: locationPagination(basePath, null, page, totalPages),
+        ...view, page: filled.page, totalPages, total: filled.total, ids: filled.ids,
+        chips: view.chips.map((c) => (c.key === null ? { ...c, count: filled.total } : c)),
+        pagination: locationPagination(basePath, null, filled.page, totalPages),
       };
     }
   }

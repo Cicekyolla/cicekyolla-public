@@ -406,7 +406,8 @@ test("KAYNAK: global — locale kategori / lokasyon / storefront autoPool listel
   assert.ok(src.includes("if (listing && listingRowsLocalized(listing.items)) {"), "locale_name yoksa surface yolu");
   assert.ok(src.includes("getShowcaseBlock(await fetchSeoPage(`/kategori/${surface.tr_slug}`, { noStore: true }).catch(() => null))"), "kategori bloğu (pinned/manual) no-store");
   assert.ok(src.includes("resolveLocationCatalog(plan, searchParams, canonicalLocationPath(locale, row), SHOP[locale].all, listingSize, listingCaps)"), "lokasyon tavanları");
-  assert.ok(src.includes("const listing = await fetchListingPage(listingQueryFor(cfg, wantedPage, { locale }), { noStore: true });"), "lokasyon: Tümü listesi uçtan");
+  // C8: lokasyon vitrini tam liste (sayfasız) okunur, katalog dolgusu + sayfalama fillLocationListing'de.
+  assert.ok(src.includes("const listing = await fetchListingPage(listingQueryFor({ ...cfg, paginationEnabled: false }, 1, { locale }), { noStore: true });"), "lokasyon: Tümü listesi uçtan");
   assert.ok(src.includes("if (isCategoryListingNotFound(searchParams, categoryTotalPages)) notFound();"));
   assert.ok(src.includes("<GlobalPagination locale={locale} pagination={locationPagination("));
   assert.ok(src.includes("if (isCategoryListingNotFound(listing, categoryTotalPages)) return { robots: NOINDEX };"));
@@ -419,7 +420,7 @@ test("KAYNAK: global — locale kategori / lokasyon / storefront autoPool listel
   assert.ok(v80.includes('fetchListingPage({ source: { kind: "catalog" }, locale, page: 1, per_page: limit, in_stock: settings.in_stock, sort: settings.sort, pinned_ids }, { noStore: true })'));
   assert.ok(v80.includes("const autoIds = bundle.auto_product_ids;"), "bugünkü auto sırası fail-open");
   const paging = oku("./global/locationPaging.ts");
-  assert.ok(paging.includes('import { capListing, resolvedPageSize, resolvedTotalPages } from "../listingEngine.ts";'), "lokasyon tavanları aynı motor");
+  assert.ok(paging.includes('import { capListing, listingTotalPages, resolvedPageSize, resolvedTotalPages, unpaginatedLimit } from "../listingEngine.ts";'), "lokasyon tavanları aynı motor");
 });
 
 test("EK (27 Eki 2026): min_price_minor yalnız verilince sorguya girer (önbellek anahtarı bugünkü)", () => {
