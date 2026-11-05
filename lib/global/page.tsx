@@ -65,6 +65,7 @@ import {
   CutoffStrip, type CutoffRow,
 } from "./sections";
 import { GlobalGoogleTrust } from "@/components/global/GlobalGoogleTrust";
+import { GlobalAssuranceSection } from "@/components/global/GlobalAssurance";
 import { GlobalCatalogBrowser, type CatalogBrowserItem } from "@/components/global/GlobalCatalogBrowser";
 import {
   type GlobalLocale,
@@ -1211,7 +1212,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
     // Devam sayfasında (?page ≥ 2) yalnız ürün alanı; diğer bölümler hiç kurulmaz (yorum isteği vb. yok).
     if (continuation && id !== "commerce") return null;
     const node = render(id);
-    return node ? <div key={id} data-location-section={id} className="contents">{node}</div> : null;
+    // C2: ürün alanı güvence bloğunun "Çiçeği seç" düğmesinin hedefi (#products).
+    return node ? <div key={id} data-location-section={id} className="contents">{id === "commerce" ? <span id="products" aria-hidden="true" className="block scroll-mt-24" /> : null}{node}</div> : null;
   };
 
   return (
@@ -1231,6 +1233,8 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {/* RELEASE 3: niyet sayfasında girişten hemen sonra gerçek kesme saati şeridi (yalnız motor verisi varsa). */}
         {intent && cutoffs && cutoffs.length > 0 ? <CutoffStrip locale={locale} rows={cutoffs} /> : null}
       </div>
+      {/* C2 (5 Kas 2026): yalnız İstanbul ticari ana sayfasında, 1. sayfada — satış odaklı güvence bloğu (13 dil). */}
+      {!continuation && row.page_key === DESTINATION_ROOT ? <GlobalAssuranceSection locale={locale} /> : null}
       {/* Bölümler Admin sırasında (varsayılan: güven → ürünler → kategoriler → duygu → yorumlar → hikâye → lokasyonlar → içerik → CTA). */}
       {order.map(block)}
       {/* EK (15 Eki 2026 — SATIŞ SAYFALARI): o dilde yayındaki satış sayfalarına gerçek <a href> (lokasyon + satış sayfalarından iç bağ). */}

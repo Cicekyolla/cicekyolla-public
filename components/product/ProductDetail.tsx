@@ -40,6 +40,8 @@ import { ProductTrustPanel } from "@/components/product/ProductTrustPanel";
 import { savePendingDelivery, clearPendingSelection, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCart } from "@/lib/cart";
 import { useI18n, Num } from "@/lib/i18n";
+import { isGlobalLocale } from "@/lib/global/config";
+import { GlobalAssuranceList } from "@/components/global/GlobalAssurance";
 import { useProductTranslation, CategoryHeadingText } from "@/lib/i18n/content";
 import { sanitizeProductHtml, DESC_PROSE } from "@/lib/richText";
 
@@ -306,7 +308,7 @@ export function ProductDetail({
           )}
 
           {/* Masaüstünde ürün görselinin altındaki doğal boşluğu dolduran additive güven alanı. */}
-          <ProductTrustPanel />
+          <ProductTrustPanel sameDay={!!product.same_day_available} />
         </div>
 
         {/* BİLGİ */}
@@ -582,6 +584,13 @@ export function ProductDetail({
               <p className="text-[12.5px] text-[#6B7280] mt-0.5 leading-relaxed">{t("pdp.visualDesc")}</p>
             </div>
           </div>
+
+          {/* C2 (5 Kas 2026): 13 global dilde güvence maddeleri MOBİLDE (masaüstünde aynı liste ProductTrustPanel'de). TR değişmez. */}
+          {isGlobalLocale(locale) ? (
+            <div data-global-assurance-mobile className="mt-5 rounded-2xl border border-[#EAE4F1] bg-[#FCFBF8] p-4 lg:hidden">
+              <GlobalAssuranceList locale={locale} sameDay={!!product.same_day_available} compact />
+            </div>
+          ) : null}
 
           {/* Teslimat notu — şeffaf */}
           <p className="mt-3 text-[11.5px] text-[#9CA3AF] leading-relaxed">

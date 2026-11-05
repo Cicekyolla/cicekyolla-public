@@ -1,10 +1,46 @@
 "use client";
 
 import { LockKeyhole, MessageCircle, ShieldCheck } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { isGlobalLocale } from "@/lib/global/config";
+import { ASSURANCE, assuranceWaHref } from "@/lib/global/assuranceCopy";
+import { GlobalAssuranceList } from "@/components/global/GlobalAssurance";
 
-export function ProductTrustPanel() {
-  const t = useT();
+/** C2 (5 Kas 2026): 13 global dilde panel satış odaklı güvence maddelerini gösterir; TR paneli birebir aynı kalır. */
+export function ProductTrustPanel({ sameDay = true }: { sameDay?: boolean } = {}) {
+  const { t, locale } = useI18n();
+  if (isGlobalLocale(locale)) {
+    const c = ASSURANCE[locale];
+    return (
+      <aside
+        data-global-assurance-panel
+        aria-labelledby="product-trust-title"
+        className="hidden lg:block mt-8 overflow-hidden rounded-[28px] border border-[#EAE4F1] bg-[linear-gradient(145deg,#FCFBF8_0%,#F8F5FC_55%,#F2ECFA_100%)] shadow-[0_24px_60px_-42px_rgba(72,39,104,0.45)]"
+      >
+        <div className="px-7 pb-5 pt-7">
+          <h2
+            id="product-trust-title"
+            className="max-w-md text-[22px] font-semibold leading-[1.25] text-[#24182F]"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+          >
+            {c.title}
+          </h2>
+        </div>
+        <div className="mx-4 rounded-[20px] border border-white/80 bg-white/70 px-5 py-5 backdrop-blur-sm">
+          <GlobalAssuranceList locale={locale} sameDay={sameDay} compact />
+        </div>
+        <a
+          href={assuranceWaHref(locale)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center justify-between border-t border-[#E4DCEB] bg-white/45 px-7 py-4 text-[12.5px] font-semibold text-[#5C3A73] transition hover:bg-white/70 hover:text-[#7C3AED]"
+        >
+          {c.ctaWa}
+          <span aria-hidden="true" className="text-base">→</span>
+        </a>
+      </aside>
+    );
+  }
   const assurances = [
     { icon: LockKeyhole, title: t("trust.a1"), text: t("trust.a1d") },
     { icon: ShieldCheck, title: t("trust.a2"), text: t("trust.a2d") },
