@@ -65,14 +65,22 @@ test("sonuç sayfası: karar sunucudan; ?fail=1 kararı belirlemez; tutar istemc
   assert.ok(!/amount|total_amount_minor:/.test(page.slice(page.indexOf("const startRetry"), page.indexOf("return (\n"))), "yeniden denemede tutar gönderilmez");
   assert.ok(!/#[0-9A-Fa-f]{6}\b/.test(page), "sabit renk yok (tasarım token'ları)");
   assert.ok(!/style=\{\{/.test(page), "satır içi stil yok");
-  assert.match(page, /Ödemeniz kontrol ediliyor/);
-  assert.match(page, /Birkaç dakika içinde size bilgi vereceğiz/);
-  assert.match(page, /Diğer ödeme altyapımızla tekrar deneyebilirsiniz/);
-  assert.match(page, /Farklı ödeme yöntemi seç/);
-  assert.match(page, /Siparişiniz alındı/);
+  // C7: metinler sözlükten (müşterinin dili); TR değerleri birebir aynı kalır.
+  const trDict = src("lib/i18n/dict/tr.ts");
+  for (const [key, text] of [
+    ["payres.uncertainTitle", "Ödemeniz kontrol ediliyor"],
+    ["payres.uncertainText", "Birkaç dakika içinde size bilgi vereceğiz"],
+    ["payres.retryText", "Diğer ödeme altyapımızla tekrar deneyebilirsiniz"],
+    ["payres.otherMethod", "Farklı ödeme yöntemi seç"],
+    ["payres.paidTitle", "Siparişiniz alındı"],
+  ]) {
+    assert.ok(page.includes(`t("${key}")`), key);
+    const line = trDict.split("\n").find((l) => l.includes(`"${key}": "`)) ?? "";
+    assert.ok(line.includes(text), key);
+  }
   // belirsiz görünümde yedek düğme YOK
   const uncertain = page.slice(page.indexOf('{view === "uncertain"'), page.indexOf('{view === "paid"'));
-  assert.ok(!/startRetry|retryButtonLabel/.test(uncertain));
+  assert.ok(!/startRetry|retryButtonLabel|payres\.payWith/.test(uncertain));
 });
 
 test("checkout: ödeme ekranı oluşmadıysa yalnız sunucu yedeği onaylarsa sonuç sayfasına; havale akışı değişmedi", () => {

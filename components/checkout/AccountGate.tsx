@@ -90,7 +90,7 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
       style={{ background: "linear-gradient(175deg, #0F0224 0%, #1A0638 55%, #110328 100%)" }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>✦ Siparişiniz</h3>
+        <h3 className="text-[9px] tracking-[0.32em] uppercase font-bold" style={{ color: "#C4B5FD" }}>{t("co.yourOrder")}</h3>
         {/* Checkout'tan ÇIKMAZ: teslimat düzenleme panelini açar. Önce
             /urun/[slug]'a Link'ti ve müşteri siparişe baştan başlıyordu. */}
         {onEditDelivery && (
@@ -144,7 +144,7 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
           birebir aynı: ödeme güvenliği rozeti değil, sakin marka güven imzası. */}
       <div className="mt-5 flex items-center gap-2.5">
         <FlowerGuaranteeBadge color="#ffffff" className="h-9 w-9 shrink-0 opacity-70 lg:h-11 lg:w-11" />
-        <span className="text-[11.5px] font-semibold text-white/55">%100 ÇiçekYolla Garantisi</span>
+        <span className="text-[11.5px] font-semibold text-white/55">{t("pdp.guaranteeTitle")}</span>
       </div>
     </motion.aside>
   );

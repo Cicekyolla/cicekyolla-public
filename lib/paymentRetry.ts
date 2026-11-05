@@ -66,6 +66,18 @@ export function retryErrorView(apiError: string | null, status: number): { view:
   return { view: "retry", message: "Ödeme şu anda başlatılamadı. Lütfen biraz sonra tekrar deneyin ya da bize yazın." };
 }
 
+/** C7 — retryErrorView mesajının sözlük anahtarı (ekran müşterinin dilinde gösterir;
+ *  `message` alanı TR metniyle aynen kalır). Mesaj yoksa null. */
+export function retryErrorMessageKey(apiError: string | null, status: number): "payres.emailRequired" | "payres.startFailed" | null {
+  if (retryErrorView(apiError, status).message == null) return null;
+  return apiError === "email_required" ? "payres.emailRequired" : "payres.startFailed";
+}
+
+/** C7 — yedek buton metninde gösterilen sağlayıcı adı (marka; çevrilmez). */
+export function providerBrand(provider: PaymentProviderId): string {
+  return provider === "iyzico" ? "iyzico" : "PayTR";
+}
+
 // ── Bu sekmenin yeniden deneme anahtarı ───────────────────────────────────────
 export const PAY_RETRY_PREFIX = "cicekyolla:pay-retry:";
 const PAY_RETRY_TTL_MS = 24 * 60 * 60 * 1000;
