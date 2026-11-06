@@ -126,7 +126,7 @@ export function Footer({
             </div>
 
             <p className="text-sm text-[#6B7280] leading-relaxed max-w-xs mb-8">
-              Türkiye'nin en prestijli çiçek teslimat platformu. Her özel anınızda duygularınızı en güzel şekilde ifade etmek için buradayız.
+              Maltepe atölyemizden İstanbul'a aynı gün, Türkiye'ye kargo ile çiçek. Her özel anınızda duygularınızı en güzel şekilde ifade etmek için buradayız.
             </p>
 
             {/* Social icons */}
