@@ -18,7 +18,7 @@
 // ============================================================================
 import type { GlobalLocale } from "./config";
 // EK (ADMİN TEK MERKEZ): sayfa sayısı / dilim tavanları (max_items, max_pages, pagination_enabled) TEK motordan — saf modül.
-import { capListing, resolvedPageSize, resolvedTotalPages } from "../listingEngine.ts";
+import { capListing, listingTotalPages, resolvedPageSize, resolvedTotalPages, unpaginatedLimit } from "../listingEngine.ts";
 
 /** Yedek sabit: lokasyon sayfasında sayfa başına ürün (global ayar okunamadıysa). */
 export const LOCATION_PAGE_SIZE = 24;
@@ -367,4 +367,45 @@ export function isCategoryListingNotFound(
   if (page === null) return true;
   const t = Number.isFinite(totalPages) && totalPages >= 1 ? Math.floor(totalPages) : 1;
   return page > t;
+}
+
+// ---------------------------------------------------------------------------
+// C8 (6 Kas 2026) — GLOBAL LOKASYON "TÜMÜ" = TR VİTRİNİ ÖNCE + KATALOG DOLGUSU.
+// Kanıt: Global lokasyon sayfası "Tümü"yü TR seo_page vitrininden okuyordu; uç `locale` ile yalnız o dilde
+// yayındaki ürünleri döndürdüğü için mahalle vitrini (manual 48) 13 dilde 9–18 ürüne, Adalar ilçesi (kat 90)
+// 3 ürüne düşüyordu — teslim edilebilir katalog (o dilde ~500) hiç görünmüyordu.
+// Kural: TR vitrininin o dildeki ürünleri ÖNCE (Admin seçimi + sırası korunur), ardından katalog planının
+// (allOrder: bu lokasyona teslim edilebilir, o dilde) kalanı; tekrar yok; global tavan + sayfalama.
+// ---------------------------------------------------------------------------
+export interface FilledLocationListing {
+  /** Bu sayfanın ürün kimlikleri. */
+  ids: number[];
+  /** Birleşik listenin (tavan uygulanmış) toplamı — "Tümü" çipi sayısı. */
+  total: number;
+  totalPages: number;
+  /** Geçerli sayfa (istenen > toplam ise 1; 404 kararı çağıranda: isLocationListingNotFound). */
+  page: number;
+}
+
+export function fillLocationListing(
+  showcaseIds: readonly (number | string)[],
+  catalogOrder: readonly (number | string)[],
+  opts: { perPage: number; maxItems: number | null; maxPages: number | null; paginationEnabled: boolean; page: number },
+): FilledLocationListing {
+  const seen = new Set<number>();
+  const merged: number[] = [];
+  // Listeleme ucu kimliği metin döndürür ("1431") → sayıya çevrilir; geçersizler atlanır.
+  for (const raw of [...showcaseIds, ...catalogOrder]) {
+    const id = Number(raw);
+    if (Number.isInteger(id) && id > 0 && !seen.has(id)) { seen.add(id); merged.push(id); }
+  }
+  const capped = opts.maxItems === null ? merged : merged.slice(0, Math.max(0, opts.maxItems));
+  const total = capped.length;
+  if (!opts.paginationEnabled) {
+    return { ids: capped.slice(0, unpaginatedLimit(opts.maxItems)), total, totalPages: total > 0 ? 1 : 0, page: 1 };
+  }
+  const totalPages = listingTotalPages(total, opts.perPage, opts.maxItems, opts.maxPages);
+  const page = Number.isInteger(opts.page) && opts.page >= 1 && opts.page <= totalPages ? opts.page : 1;
+  const size = Math.max(1, Math.floor(opts.perPage));
+  return { ids: capped.slice((page - 1) * size, page * size), total, totalPages, page };
 }
