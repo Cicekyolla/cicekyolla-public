@@ -11,7 +11,7 @@ const FALLBACK:FaqItem[]=[
  {category:"Sipariş & Teslimat",question:"Siparişimi takip edebilir miyim?",answer:"Sipariş durumunuz hazırlanma ve teslimat aşamalarında tarafınıza iletilir."},
  {category:"Ürünler & Kalite",question:"Çiçekler ne kadar taze kalır?",answer:"Ürün türüne ve bakım koşullarına göre değişir. Serin ortam, temiz su ve düzenli bakım tazeliği uzatır."},
  {category:"Ürünler & Kalite",question:"Fotoğraftaki ürünün aynısı mı gelir?",answer:"Dilerseniz hazırlanan ürününüzün fotoğrafını teslimattan önce WhatsApp'tan paylaşırız; beğenmezseniz yeniden hazırlarız. Tasarımın ana görünümü korunur; mevsimsel tedarikte eşdeğer renk ve değerde küçük değişiklikler olabilir."},
- {category:"Ödeme & İade",question:"Hangi ödeme yöntemlerini kullanabilirim?",answer:"Aktif ödeme yöntemleri ödeme adımında güvenli biçimde gösterilir."},
+ {category:"Ödeme & İade",question:"Hangi ödeme yöntemlerini kullanabilirim?",answer:"Kredi kartı veya banka kartıyla PayTR güvenli ödeme altyapısı üzerinden, 3D Secure onayıyla ödeyebilirsiniz; kart bilgileriniz sitemizde saklanmaz. Dilerseniz havale/EFT ile de ödeme yapabilirsiniz. Kartla ödemeler tek çekimdir."},
  {category:"Ödeme & İade",question:"İptal veya değişiklik yapabilir miyim?",answer:"Ürün hazırlanmaya başlamadan önce bize ulaşmanız halinde uygunluk durumuna göre yardımcı olabiliriz."},
  {category:"Kurumsal & Özel",question:"Kurumsal sipariş nasıl verebilirim?",answer:"Kurumsal talepleriniz için info@cicekyolla.com.tr adresinden veya 0507 441 34 74 numarasından bize ulaşabilirsiniz."},
  {category:"Kurumsal & Özel",question:"Kişiye özel tasarım yaptırabilir miyim?",answer:"Ürün ve stok uygunluğuna göre florist ekibimiz özel tasarım taleplerinizi değerlendirebilir."},
