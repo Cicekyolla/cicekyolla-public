@@ -63,6 +63,7 @@ test("sonuç sayfası + PayTR kutusu + hesap adımı: görünür TR sabit metin 
   const w = oku("../components/checkout/CheckoutWizard.tsx");
   assert.doesNotMatch(w, />%100 ÇiçekYolla Garantisi</);
   assert.doesNotMatch(w, />Favorileriniz</);
-  // Ödeme akışı aynen: yedek sağlayıcı isteği ve payment_locale değişmedi.
-  assert.match(sonuc, /payment_locale: "tr"/);
+  // §31 (6 Kas 2026): yeniden deneme ödeme formu sayfa dilinde (API tr/en'e indirger).
+  assert.match(sonuc, /payment_locale: locale,/);
+  assert.doesNotMatch(sonuc, /payment_locale: "tr"/);
 });

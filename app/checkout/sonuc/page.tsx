@@ -36,7 +36,7 @@ function Sonuc() {
   const [retryBusy, setRetryBusy] = useState(false);
   // C7: mesaj sözlük ANAHTARI olarak tutulur → müşterinin dilinde gösterilir (TR metni aynı).
   const [retryMsg, setRetryMsg] = useState<DictKey | null>(null);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [email, setEmail] = useState("");
   const [pollKey, setPollKey] = useState(0);
   const { items, hydrated, removeItem } = useCart();
@@ -120,7 +120,8 @@ function Sonuc() {
     setRetryMsg(null);
     try {
       const r = await initProviderRetry(provider, {
-        order_id: info.order_id, retry_key: info.retry_key, payment_locale: "tr",
+        // §31: ödeme formu sayfa dilinde (API: TR → tr, 13 dil → en).
+        order_id: info.order_id, retry_key: info.retry_key, payment_locale: locale,
         ...(needsEmail ? { email: email.trim() } : {}),
       });
       // Yeni deneme referansı için bu sekmenin notları taşınır (sepet yalnız onaydan sonra düşer).
