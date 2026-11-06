@@ -21,3 +21,29 @@
 
 ## Sitemap
 - https://www.cicekyolla.com.tr/sitemap.xml
+
+## International customers (English)
+Çiçekyolla is an Istanbul florist founded in 1986. The website is available in 13 languages for customers ordering from abroad or visiting Istanbul.
+- Delivery: same-day flower delivery across Istanbul, including hotels and hospitals
+- Payment: international Visa and Mastercard cards via PayTR or iyzico with 3-D Secure; charged in Turkish lira (TRY), your bank converts the amount
+- Support: WhatsApp
+
+### Flower delivery in Istanbul — by language
+- [English](https://www.cicekyolla.com.tr/en/flower-delivery-istanbul)
+- [Deutsch](https://www.cicekyolla.com.tr/de/blumen-verschicken-istanbul)
+- [Français](https://www.cicekyolla.com.tr/fr/livraison-fleurs-istanbul)
+- [Nederlands](https://www.cicekyolla.com.tr/nl/bloemen-bezorgen-istanbul)
+- [Italiano](https://www.cicekyolla.com.tr/it/consegna-fiori-istanbul)
+- [Español](https://www.cicekyolla.com.tr/es/envio-de-flores-estambul)
+- [Português](https://www.cicekyolla.com.tr/pt/entrega-de-flores-istambul)
+- [Azərbaycanca](https://www.cicekyolla.com.tr/az/istanbul)
+- [Русский](https://www.cicekyolla.com.tr/ru/dostavka-tsvetov-stambul)
+- [العربية](https://www.cicekyolla.com.tr/ar/istanbul)
+- [中文](https://www.cicekyolla.com.tr/zh/istanbul)
+- [日本語](https://www.cicekyolla.com.tr/ja/istanbul)
+- [한국어](https://www.cicekyolla.com.tr/ko/istanbul)
+
+### Hotel and hospital delivery in Istanbul
+- [Flower delivery to hotels](https://www.cicekyolla.com.tr/en/hotel-delivery)
+- [Flower delivery to hospitals](https://www.cicekyolla.com.tr/en/hospital-delivery)
+- The same pages exist in all 13 languages: https://www.cicekyolla.com.tr/{language}/hotel-delivery and https://www.cicekyolla.com.tr/{language}/hospital-delivery (language codes: en, de, fr, nl, it, es, pt, az, ru, ar, zh, ja, ko)

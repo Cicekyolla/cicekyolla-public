@@ -1149,6 +1149,10 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
   if (isLocationListingNotFound(rawSearchParams, view, order.includes("commerce"))) notFound();
   // Sayfa ≥ 2: hafif devam sayfası — hero (kırıntı + H1, giriş YOK) + YALNIZ ürün alanı; SEO içeriği 1. sayfada.
   const continuation = isLocationContinuationPage(view, order);
+  // C9 (6 Kas 2026): İstanbul hub'ı sayfada GÖRÜNEN SSS'yi (global_pages.faq, "content" bölümü) taşıyor ama şeması
+  // yoktu (yalnız niyet sayfalarında basılıyordu). Yalnız hub + 1. sayfa + bölüm görünürken; metin birebir görünen.
+  // İlçe/mahalle kapsam dışı (1.000+ sayfada tekrar eden SSS şeması riski).
+  const hubFaqLd = !intent && row.page_key === DESTINATION_ROOT && !continuation && order.includes("content") ? faqJsonLd(row.faq) : null;
   const t = mergedTexts(locale, null);
 
   const render = (id: LocationSectionId): React.ReactNode => {
@@ -1230,6 +1234,7 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {kirintiLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(kirintiLd) }} /> : null}
         {localLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localLd) }} /> : null}
         {faqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(faqLd) }} /> : null}
+        {hubFaqLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(hubFaqLd) }} /> : null}
         {/* Hero: SEO metni (H1 + giriş) DB'den gelir — korunur. Devam sayfasında (?page ≥ 2) giriş basılmaz. */}
         <h1 style={S.h1}>{row.h1}</h1>
         {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: rewriteLocaleLocationHrefs(row.intro_html) }} /> : null}
