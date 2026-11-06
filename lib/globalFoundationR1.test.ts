@@ -110,8 +110,9 @@ test("V80 footer: kimlik kaynağından adres + saat; 13 dilde footer.hours şabl
   }
 });
 
-test("Mühür SVG kendi dilini bildirir (marka metni Türkçe kalır)", () => {
+test("Mühür SVG kendi dilini bildirir (TR mühür aynen; C3: global dilde mühür o dilde)", () => {
   const src = read("../components/FlowerGuaranteeBadge.tsx");
-  assert.match(src, /lang="tr"/);
-  assert.match(src, /aria-label="%100 ÇiçekYolla Garantisi"/);
+  // C3 (6 Kas 2026): TR yolunda lang + aria-label 30 Ağu değeriyle aynı; global dilde SVG kendi dilini bildirir.
+  assert.match(src, /lang=\{isTr \? "tr" : lang\}/);
+  assert.match(src, /aria-label=\{isTr \? "%100 ÇiçekYolla Garantisi" : i18n\.t\("pdp\.guaranteeTitle"\)\}/);
 });

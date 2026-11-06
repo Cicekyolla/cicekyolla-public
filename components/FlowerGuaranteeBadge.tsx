@@ -14,6 +14,8 @@
 //      yeni istek/dependency yok. Font yüklenmezse tarayıcı sans-serif'e düşer.
 
 import { useId } from "react";
+import { useI18n } from "@/lib/i18n";
+import { sealTextFor } from "@/lib/guaranteeSeal";
 
 /**
  * ÇiçekYolla — %100 ÇİÇEKYOLLA GARANTİSİ
@@ -40,6 +42,8 @@ type Props = {
   /** Override heart path data for variant testing. Omit to use default. */
   heartPath?: string;
   className?: string;
+  /** C3: mühür dili; verilmezse sayfa dili (useI18n). TR ve bilinmeyen dil → bugünkü TR mühür. */
+  locale?: string;
 };
 
 export function FlowerGuaranteeBadge({
@@ -47,8 +51,15 @@ export function FlowerGuaranteeBadge({
   color = "#0BADA6",
   heartPath,
   className,
+  locale,
 }: Props) {
   const uid = useId().replace(/:/g, "");
+  // C3 (6 Kas 2026): yay metinleri sayfa dilinde (lib/guaranteeSeal.ts). Geometri, renk, boyut DEĞİŞMEZ;
+  // TR çıktısı 30 Ağu kaynağıyla birebir (aria-label + lang + metinler).
+  const i18n = useI18n();
+  const lang = (locale ?? i18n.locale) || "tr";
+  const seal = sealTextFor(lang);
+  const isTr = seal === sealTextFor("tr");
   const topId = `cy-top-${uid}`;
   const botId = `cy-bot-${uid}`;
 
@@ -59,10 +70,9 @@ export function FlowerGuaranteeBadge({
       height={size}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="%100 ÇiçekYolla Garantisi"
-      /* Marka mührü metni bilinçli olarak Türkçedir (Garanti Mührü kuralı); locale sayfalarında
-         dil sinyali karışmasın diye SVG kendi dilini bildirir. Görsel çıktı değişmez. */
-      lang="tr"
+      aria-label={isTr ? "%100 ÇiçekYolla Garantisi" : i18n.t("pdp.guaranteeTitle")}
+      /* SVG kendi dilini bildirir: TR mühürde "tr"; global dilde mühür o dilde (C3). */
+      lang={isTr ? "tr" : lang}
       className={className}
     >
       <defs>
@@ -86,7 +96,7 @@ export function FlowerGuaranteeBadge({
       */}
       <text fill={color}>
         <textPath href={`#${topId}`} startOffset="50%" textAnchor="middle">
-          <tspan fontFamily="'DM Sans', sans-serif" fontSize="11" fontWeight="600" letterSpacing="1.5">%100 </tspan><tspan fontFamily="'DM Sans', sans-serif" fontSize="15" fontWeight="800" letterSpacing="1.2">ÇİÇEKYOLLA</tspan>
+          <tspan fontFamily="'DM Sans', sans-serif" fontSize="11" fontWeight="600" letterSpacing="1.5">{seal.top}</tspan><tspan fontFamily="'DM Sans', sans-serif" fontSize="15" fontWeight="800" letterSpacing="1.2">ÇİÇEKYOLLA</tspan>
         </textPath>
       </text>
 
@@ -142,12 +152,13 @@ export function FlowerGuaranteeBadge({
       <text
         fontFamily="'DM Sans', sans-serif"
         fontWeight="700"
-        fontSize="14"
+        fontSize={isTr ? "14" : String(seal.bottomSize)}
         fill={color}
-        letterSpacing="3.0"
+        letterSpacing={isTr ? "3.0" : String(seal.bottomSpacing)}
+        {...(seal.dir ? { direction: seal.dir } : {})}
       >
         <textPath href={`#${botId}`} startOffset="50%" textAnchor="middle">
-          GARANTİSİ
+          {seal.bottom}
         </textPath>
       </text>
     </svg>
