@@ -6,11 +6,11 @@ import { FaqExperience, type FaqItem } from "@/components/faq/FaqExperience";
 export const metadata:Metadata={title:"Sık Sorulan Sorular",alternates:{canonical:"/sik-sorulan-sorular"},description:"Sipariş, teslimat, ürün, ödeme ve kurumsal hizmetlerle ilgili sık sorulan sorular."};
 
 const FALLBACK:FaqItem[]=[
- {category:"Sipariş & Teslimat",question:"Aynı gün teslimat için son sipariş saati nedir?",answer:"Uygun son sipariş saati teslimat bölgesi ve güncel yoğunluğa göre sipariş adımında gösterilir."},
- {category:"Sipariş & Teslimat",question:"Teslimat ücretli midir?",answer:"Teslimat ücreti seçilen bölge ve teslimat seçeneğine göre sipariş özetinde açıkça gösterilir."},
+ {category:"Sipariş & Teslimat",question:"Aynı gün teslimat için son sipariş saati nedir?",answer:"Atölyemize yakın bölgelerde saat 20:00'ye, Kadıköy–Beşiktaş bandında 18:00'e, daha uzak ilçelerde 17:00'ye kadar verilen siparişler aynı gün teslim edilir. Adresinize özel güncel son saat, sipariş adımında gösterilir."},
+ {category:"Sipariş & Teslimat",question:"Teslimat ücretli midir?",answer:"İstanbul'da 45 km'ye kadar aynı gün teslimat ücretsizdir. Daha uzak bölgelerde özel araç ücreti, adresinizi girdiğinizde ödemeden önce gösterilir. Türkiye geneline kargo ücretsizdir."},
  {category:"Sipariş & Teslimat",question:"Siparişimi takip edebilir miyim?",answer:"Sipariş durumunuz hazırlanma ve teslimat aşamalarında tarafınıza iletilir."},
  {category:"Ürünler & Kalite",question:"Çiçekler ne kadar taze kalır?",answer:"Ürün türüne ve bakım koşullarına göre değişir. Serin ortam, temiz su ve düzenli bakım tazeliği uzatır."},
- {category:"Ürünler & Kalite",question:"Fotoğraftaki ürünün aynısı mı gelir?",answer:"Tasarımın ana görünümü korunur. Mevsimsel tedarikte eşdeğer renk ve değerde küçük değişiklikler yapılabilir."},
+ {category:"Ürünler & Kalite",question:"Fotoğraftaki ürünün aynısı mı gelir?",answer:"Dilerseniz hazırlanan ürününüzün fotoğrafını teslimattan önce WhatsApp'tan paylaşırız; beğenmezseniz yeniden hazırlarız. Tasarımın ana görünümü korunur; mevsimsel tedarikte eşdeğer renk ve değerde küçük değişiklikler olabilir."},
  {category:"Ödeme & İade",question:"Hangi ödeme yöntemlerini kullanabilirim?",answer:"Aktif ödeme yöntemleri ödeme adımında güvenli biçimde gösterilir."},
  {category:"Ödeme & İade",question:"İptal veya değişiklik yapabilir miyim?",answer:"Ürün hazırlanmaya başlamadan önce bize ulaşmanız halinde uygunluk durumuna göre yardımcı olabiliriz."},
  {category:"Kurumsal & Özel",question:"Kurumsal sipariş nasıl verebilirim?",answer:"Kurumsal talepleriniz için info@cicekyolla.com.tr adresinden veya 0507 441 34 74 numarasından bize ulaşabilirsiniz."},
