@@ -9,11 +9,15 @@
  */
 
 import { motion } from "motion/react";
-import { Leaf, Shield } from "lucide-react";
+import { Camera, Leaf, Shield, Truck } from "lucide-react";
 
 // Doğrulanmamış USP iddiaları (müşteri sayısı/destek/kargo eşiği) kaldırıldı.
 // Yalnız ürün/ödeme düzeyinde savunulabilir, sayısal olmayan USP'ler kalır.
+// EK (6 Kas 2026): iki DOĞRULANMIŞ söz — canlı /api/delivery-check: İstanbul 1,9–37,8 km ücret ₺0
+// (45 km+ uzak bölge ücretli → "büyük bölümüne"); fotoğraf onayı + "beğenmezse yeniden hazırlanır" sahip kararı.
 const items = [
+  { icon: Truck, text: "İstanbul'un büyük bölümüne ücretsiz aynı gün teslimat" },
+  { icon: Camera, text: "Teslimattan önce fotoğraf onayı" },
   { icon: Leaf, text: "Taptaze Garantisi" },
   { icon: Shield, text: "Güvenli Ödeme" },
 ];
