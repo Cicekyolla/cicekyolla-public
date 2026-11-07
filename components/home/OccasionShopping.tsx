@@ -15,6 +15,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { SectionLabel, SectionTitle } from "./SectionHeading";
+import { applySeasonalOccasions } from "@/lib/seasonalOccasion";
 
 type OccItem = { id: string; name: string; href: string; image: string; enabled?: boolean };
 type OccasionShoppingConfig = { cards?: OccItem[] };
@@ -37,7 +38,9 @@ export function OccasionShopping({ items, config, title, subtitle }: { items?: O
     ? (config as OccasionShoppingConfig).cards!.filter(usableOccasion).slice(0, 12)
     : [];
   const legacyItems = (items ?? []).filter(usableOccasion).slice(0, 6);
-  const occasions = cmsCards.length > 0 ? cmsCards : DEFAULT_OCCASIONS.length > 0 ? DEFAULT_OCCASIONS : legacyItems;
+  // 7 Kas 2026: varsayılan listeye sezon kartı (ör. Öğretmenler Günü, 1–24 Kas) tarihe bağlı uygulanır.
+  const defaults = applySeasonalOccasions(DEFAULT_OCCASIONS, new Date());
+  const occasions = cmsCards.length > 0 ? cmsCards : defaults.length > 0 ? defaults : legacyItems;
   if (occasions.length === 0) return null;
   return (
     <section className="py-24 bg-white">
