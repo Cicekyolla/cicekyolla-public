@@ -7,7 +7,7 @@
 // (staticGenerationAsyncStorage) yalnız `urlPathname` OKUNUR: okuma pasiftir,
 // rotanın statik / ISR / dinamik kararını DEĞİŞTİRMEZ.
 //
-// DİKKAT — Next İÇ modülüdür (sürüm: next@14.2.5, package.json'da sabit):
+// DİKKAT — Next İÇ modülüdür (sürüm: next@14.2.35, package.json'da sabit):
 //   • Modül yolu kalkarsa derleme HATA verir (sessizce bozulmaz).
 //   • Depo / alan yoksa ya da okuma hata verirse null döner → çağıran "tr" basar
 //     (düzeltmeden önceki davranış). Baştaki dil betiği (app/layout.tsx cy-lang-dir)
