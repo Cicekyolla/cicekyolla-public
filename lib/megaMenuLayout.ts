@@ -63,6 +63,7 @@ export const MEGA_EXTRA_COLUMNS: Record<string, MegaColumn[]> = {
       title: 'Özel Günler',
       href: '/kategori/ozel-gunler',
       links: [
+        { name: 'Öğretmenler Günü', href: '/kategori/ogretmenler-gunu' },
         { name: 'Sevgililer Günü', href: '/kategori/sevgililer-gunu' },
         { name: 'Yılbaşı', href: '/kategori/yilbasi' },
         { name: 'Kadınlar Günü', href: '/kategori/kadinlar-gunu' },
