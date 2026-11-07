@@ -60,5 +60,5 @@ test("bağlantı: kök layout dili sunucuda kurar; baştaki dil betiği yerinde;
   const dts = join(root, "node_modules/next/dist/client/components/static-generation-async-storage.external.d.ts");
   if (existsSync(dts)) assert.match(readFileSync(dts, "utf8"), /readonly urlPathname: string;/);
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { dependencies?: Record<string, string> };
-  assert.equal(pkg.dependencies?.next, "14.2.5", "Next sürümü değişti: iç depo okumasını (lib/requestPath.ts) ve dil taramasını yeniden doğrula");
+  assert.equal(pkg.dependencies?.next, "14.2.35", "Next sürümü değişti: iç depo okumasını (lib/requestPath.ts) ve dil taramasını yeniden doğrula");
 });
