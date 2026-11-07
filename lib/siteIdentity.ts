@@ -55,7 +55,7 @@ export const IDENTITY_FALLBACK = {
   google_maps_url: "https://maps.google.com/?cid=1591470732109749248",
   google_place_id: "ChIJt-IisKbGyhQRABzV6TIKFhY",
   social_instagram: "https://instagram.com/cicekyolla",
-  social_facebook: "https://facebook.com/cicekyolla",
+  social_facebook: "https://facebook.com/cicekyolla.com.tr",
 } as const;
 
 /** Admin hero.config'te tanınan kimlik anahtarları (API homepageValidation hero şemasıyla aynı adlar). */

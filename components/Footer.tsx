@@ -133,7 +133,7 @@ export function Footer({
             <div className="flex gap-3">
               {[
                 { name: "Instagram", href: "https://www.instagram.com/cicekyolla/", Icon: Instagram },
-                { name: "Facebook", href: "https://www.facebook.com/cicekyolla", Icon: Facebook },
+                { name: "Facebook", href: "https://www.facebook.com/cicekyolla.com.tr", Icon: Facebook },
               ].map(({ name, href, Icon }) => (
                 <a
                   key={name}
