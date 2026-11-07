@@ -16,7 +16,7 @@ import { fetchGlobalPage, fetchLocaleCatalog, fetchGlobalPagesInventory, fetchLi
 import { fetchListingPage, fetchListingSettings, fetchProductBySlug, listingRowsLocalized, type ListingRow, type PublicProductDetail } from "@/lib/api";
 import { getPublishedHomepage } from "@/lib/homepage";
 import { buildV80Footer, type V80FooterModel, type V80Contact } from "./footer";
-import { resolveSiteIdentity } from "@/lib/siteIdentity";
+import { resolveSiteIdentity, socialLinks } from "@/lib/siteIdentity";
 import { mediaUrlOrNull, mediaDerivatives } from "@/lib/media";
 import { parseStorefrontConfig, activeProductRefs, mapStructureImages, type V80Config } from "./schema";
 import { resolveV80, WHATSAPP_URL, type V80SourceCategory, type V80SourceProduct, type V80View } from "./view";
@@ -222,10 +222,11 @@ export async function v80Contact(): Promise<V80Contact> {
       email: strOr(c?.contact_email, DEFAULT_EMAIL),
       addressLine: id.addressLine,
       hours: { opens: id.hours.opens, closes: id.hours.closes },
+      social: socialLinks(id),
     };
   } catch {
     const id = resolveSiteIdentity(null);
-    return { phone: DEFAULT_PHONE, email: DEFAULT_EMAIL, addressLine: id.addressLine, hours: { opens: id.hours.opens, closes: id.hours.closes } };
+    return { phone: DEFAULT_PHONE, email: DEFAULT_EMAIL, addressLine: id.addressLine, hours: { opens: id.hours.opens, closes: id.hours.closes }, social: socialLinks(id) };
   }
 }
 

@@ -10,7 +10,7 @@ import { Phone, Mail, MapPin, Instagram, Facebook } from "lucide-react";
 import { BrandWordmark } from "./BrandWordmark";
 import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
 import { yonelme } from "@/lib/turkish";
-import { resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
+import { resolveSiteIdentity, socialLinks, type SiteIdentity } from "@/lib/siteIdentity";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -129,12 +129,10 @@ export function Footer({
               Maltepe atölyemizden İstanbul'a aynı gün, Türkiye'ye kargo ile çiçek. Her özel anınızda duygularınızı en güzel şekilde ifade etmek için buradayız.
             </p>
 
-            {/* Social icons */}
+            {/* Social icons — 7 Kas 2026: Admin hero.config (Ayarlar › İşletme Kimliği) → resolveSiteIdentity;
+                Admin boşsa GBP yedeği, Admin değeri geçersizse ikon gizlenir (kırık bağlantı basılmaz). */}
             <div className="flex gap-3">
-              {[
-                { name: "Instagram", href: "https://www.instagram.com/cicekyolla/", Icon: Instagram },
-                { name: "Facebook", href: "https://www.facebook.com/cicekyolla.com.tr", Icon: Facebook },
-              ].map(({ name, href, Icon }) => (
+              {socialLinks(identity).map(({ key, label: name, href }) => ({ name, href, Icon: key === "instagram" ? Instagram : Facebook })).map(({ name, href, Icon }) => (
                 <a
                   key={name}
                   href={href}

@@ -15,7 +15,8 @@ import { localeLocationPath } from "../commercialUrl.ts";
 import { V80_DESTINATIONS, type V80Destination } from "./schema.ts";
 import { interp } from "./text.ts";
 
-/** Mevcut gerçek sosyal hesaplar (components/Footer.tsx ile aynı). */
+/** Yedek sosyal hesaplar: contact.social verilmeyen (eski) çağıranlar için. 7 Kas 2026'dan beri
+    v80Contact() sosyal bağlantıları TR footer ile AYNI kaynaktan (resolveSiteIdentity → socialLinks) verir. */
 export const V80_SOCIAL = [
   { key: "instagram", label: "Instagram", href: "https://www.instagram.com/cicekyolla/" },
   { key: "facebook", label: "Facebook", href: "https://www.facebook.com/cicekyolla.com.tr" },
@@ -43,6 +44,9 @@ export interface V80Contact {
   addressLine?: string;
   /** Release 1: çalışma saati (opens/closes, SS:DD) — footer.hours şablonuna girer. */
   hours?: { opens: string; closes: string };
+  /** 7 Kas 2026 (additive): TR footer ile aynı sosyal liste (Admin → resolveSiteIdentity → socialLinks).
+      Boş/geçersiz bağlantı listede yoktur → o ikon basılmaz. Verilmezse V80_SOCIAL yedeği. */
+  social?: { key: string; label: string; href: string }[];
 }
 export interface V80FooterLink { key: string; label: string; href: string; external?: boolean }
 export interface V80FooterColumn { key: "shop" | "help" | "deliver" | "follow"; title: string; links: V80FooterLink[] }
@@ -91,7 +95,9 @@ export function buildV80Footer(input: V80FooterInput): V80FooterModel {
     // EK (14 Eki 2026): şehir bağlantısı kanonik çözücüden (İstanbul ticari adres açık dilde yeni adres, 301'e bağlantı yok).
     .map((c) => ({ key: c, label: CITY_NAMES[locale][c], href: localeLocationPath(locale, c) }));
 
-  const follow: V80FooterLink[] = V80_SOCIAL.map((s) => ({ key: s.key, label: s.label, href: s.href, external: true }));
+  const follow: V80FooterLink[] = (input.contact.social ?? V80_SOCIAL)
+    .filter((s) => /^https:\/\//.test(s.href))
+    .map((s) => ({ key: s.key, label: s.label, href: s.href, external: true }));
 
   const columns: V80FooterColumn[] = [
     { key: "shop", title: t("footer.shop"), links: shop },

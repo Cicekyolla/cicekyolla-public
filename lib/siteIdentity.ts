@@ -76,6 +76,53 @@ export function toE164Tr(display: string): string {
   return "+" + d;
 }
 
+// ── SOSYAL / HARİTA BAĞLANTI KURALI (7 Kas 2026, additive) ──────────────────────────────
+// API homepageIdentityRules.ts ile aynı kural. Kök neden: "https" kuralını geçen yanlış Facebook adresi
+// (facebook.com/cicekyolla — açılmayan sayfa) ve boş kök harita (https://maps.google.com/) yayına çıkmıştı.
+//   Sosyal: Admin boş → GBP yedeği; Admin geçerli → Admin; Admin GEÇERSİZ → boş (ikon gizlenir, sameAs'a girmez;
+//           kırık bağlantı basılmaz).
+//   Harita: Admin boş/GEÇERSİZ (boş kök dahil) → GBP yedeği (cid'li); hasMap asla boş kök olmaz.
+function parseHttps(v: string): URL | null {
+  if (!/^https:\/\//i.test(v)) return null;
+  try { return new URL(v); } catch { return null; }
+}
+const FB_HOSTS = ["facebook.com", "www.facebook.com", "m.facebook.com", "fb.com", "www.fb.com"];
+const IG_HOSTS = ["instagram.com", "www.instagram.com"];
+export function isFacebookProfileUrl(v: string): boolean {
+  const u = parseHttps(v);
+  if (!u || !FB_HOSTS.includes(u.hostname.toLowerCase())) return false;
+  if (u.pathname === "/profile.php") return /^\d{5,}$/.test(u.searchParams.get("id") ?? "");
+  return /^\/[A-Za-z0-9.\-_]{3,80}\/?$/.test(u.pathname);
+}
+export function isInstagramProfileUrl(v: string): boolean {
+  const u = parseHttps(v);
+  if (!u || !IG_HOSTS.includes(u.hostname.toLowerCase())) return false;
+  return /^\/[A-Za-z0-9._]{1,30}\/?$/.test(u.pathname) && !/^\/(p|reel|tv|explore|accounts)\/?$/i.test(u.pathname);
+}
+export function isGoogleMapsPlaceUrl(v: string): boolean {
+  const u = parseHttps(v);
+  if (!u) return false;
+  const host = u.hostname.toLowerCase();
+  const hasPath = u.pathname.replace(/\/+$/, "").length > 0;
+  const hasQuery = [...u.searchParams.keys()].length > 0;
+  if (host === "maps.google.com" || host === "maps.google.com.tr") return hasPath || hasQuery;
+  if (/^(www\.)?google\.com(\.tr)?$/.test(host)) return /^\/maps(\/|$)/.test(u.pathname) && (u.pathname.replace(/\/+$/, "") !== "/maps" || hasQuery);
+  if (host === "maps.app.goo.gl") return hasPath;
+  if (host === "goo.gl") return /^\/maps\/.+/.test(u.pathname);
+  if (host === "g.page") return hasPath;
+  return false;
+}
+type LinkKey = "social_instagram" | "social_facebook" | "google_maps_url";
+const LINK_RULE: Record<LinkKey, (v: string) => boolean> = {
+  social_instagram: isInstagramProfileUrl, social_facebook: isFacebookProfileUrl, google_maps_url: isGoogleMapsPlaceUrl,
+};
+function pickLink(cfg: Record<string, unknown> | null | undefined, key: LinkKey, used: string[]): string {
+  const v = cfg?.[key];
+  if (typeof v !== "string" || !v.trim()) return IDENTITY_FALLBACK[key];
+  if (LINK_RULE[key](v.trim())) { used.push(key); return v.trim(); }
+  return key === "google_maps_url" ? IDENTITY_FALLBACK.google_maps_url : "";
+}
+
 function pick(cfg: Record<string, unknown> | null | undefined, key: keyof typeof IDENTITY_FALLBACK, used: string[]): string {
   const v = cfg?.[key];
   if (typeof v === "string" && v.trim()) { used.push(key); return v.trim(); }
@@ -100,9 +147,9 @@ export function resolveSiteIdentity(cfg?: Record<string, unknown> | null): SiteI
     addressCountry: "TR" as const,
   };
   const hours = { opens: pick(cfg, "hours_opens", used), closes: pick(cfg, "hours_closes", used), note: pick(cfg, "hours_note", used) };
-  const googleMapsUrl = pick(cfg, "google_maps_url", used);
+  const googleMapsUrl = pickLink(cfg, "google_maps_url", used);
   const googlePlaceId = pick(cfg, "google_place_id", used);
-  const social = { instagram: pick(cfg, "social_instagram", used), facebook: pick(cfg, "social_facebook", used) };
+  const social = { instagram: pickLink(cfg, "social_instagram", used), facebook: pickLink(cfg, "social_facebook", used) };
   const alternateNames = name === "ÇiçekYolla" ? ["Çiçek Yolla", "Cicekyolla"] : [];
   return {
     name,
@@ -122,6 +169,15 @@ export function resolveSiteIdentity(cfg?: Record<string, unknown> | null): SiteI
     sameAs: [social.instagram, social.facebook, googleMapsUrl].filter(Boolean),
     cmsFields: used,
   };
+}
+
+export interface SocialLink { key: "instagram" | "facebook"; label: string; href: string }
+/** TR footer + 13 dil footer'ının ortak sosyal ikon listesi: boş (geçersiz) bağlantı listeye girmez → ikon gizlenir. */
+export function socialLinks(id: SiteIdentity): SocialLink[] {
+  return ([
+    { key: "instagram", label: "Instagram", href: id.social.instagram },
+    { key: "facebook", label: "Facebook", href: id.social.facebook },
+  ] as SocialLink[]).filter((l) => !!l.href);
 }
 
 /** "Haritada Aç": Admin'deki harita bağlantısı; yoksa adres + Place ID ile Google Haritalar araması. */
