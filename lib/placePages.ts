@@ -79,6 +79,15 @@ export function getPlaceHub(blocks: readonly unknown[] | null | undefined): Plac
   return { ...b, places };
 }
 
+/** EK (11 Kas 2026, ADDITIVE): yer sayfasının ürün kaynağı kategorisine "tümünü gör" bağı.
+    Yalnız geçerli slug + müşteriye görünür kategori (isCategoryVisible sonucu çağırandan gelir);
+    aksi halde null → bağ basılmaz (sahte/kırık bağ yok). Adres kalıbı sitenin geri kalanıyla aynı: /kategori/{slug}. */
+export function placeCategoryHref(row: { slug?: unknown } | null | undefined, visible: boolean): string | null {
+  if (!row || !visible) return null;
+  const s = typeof row.slug === "string" ? row.slug.trim() : "";
+  return SLUG_RE.test(s) ? `/kategori/${s}` : null;
+}
+
 /** Metin blokları (paragraph / heading) — özel bloklar hariç. */
 export function textBlocks(blocks: readonly unknown[] | null | undefined): { type: "paragraph" | "heading"; text: string }[] {
   return (blocks ?? [])
