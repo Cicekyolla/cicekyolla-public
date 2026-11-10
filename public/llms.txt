@@ -1,11 +1,12 @@
 # Çiçekyolla
 
-> Çiçekyolla, 1986 yılında kurulan, çiçekçilik sektöründe kırk yıla yaklaşan tecrübeye sahip köklü bir Türk çiçek tasarım ve gönderim markasıdır. İstanbul'da aynı gün saatlik teslimat, Türkiye genelinde güvenli kargo ile gönderim sunar.
+> Çiçekyolla, 1986 yılında kurulan, çiçekçilik sektöründe kırk yıla yaklaşan tecrübeye sahip köklü bir Türk çiçek tasarım ve gönderim markasıdır. İstanbul'da seçilen saat aralığında aynı gün teslimat, Türkiye genelinde güvenli kargo ile gönderim sunar.
 
 ## Marka
 - Kuruluş yılı: 1986
 - Hizmetler: özel tasarım buket ve aranjman, saksı bitkileri (toptan ve perakende), canlı ve yapay çiçek dekorasyonu, peyzaj tasarımı, düğün/davet/kurumsal organizasyon çiçekçiliği, online çiçek gönderimi
-- Teslimat: İstanbul'da aynı gün (saatlik); İstanbul dışı tüm il ve ilçelere 1-3 iş günü güvenli kargo
+- Teslimat: İstanbul'da aynı gün (seçilen saat aralığında); İstanbul dışı tüm il ve ilçelere 1-3 iş günü güvenli kargo
+- Ödeme: kredi ve banka kartı (PayTR, 3D Secure) veya havale/EFT; tahsilat Türk lirası
 - İletişim: info@cicekyolla.com.tr
 
 ## Öne çıkan sayfalar
@@ -25,7 +26,7 @@
 ## International customers (English)
 Çiçekyolla is an Istanbul florist founded in 1986. The website is available in 13 languages for customers ordering from abroad or visiting Istanbul.
 - Delivery: same-day flower delivery across Istanbul, including hotels and hospitals
-- Payment: international Visa and Mastercard cards via PayTR or iyzico with 3-D Secure; charged in Turkish lira (TRY), your bank converts the amount
+- Payment: international Visa and Mastercard cards via PayTR with 3-D Secure; charged in Turkish lira (TRY), your bank converts the amount. Bank transfer (EFT) to a Turkish bank account is also available
 - Support: WhatsApp
 
 ### Flower delivery in Istanbul — by language
