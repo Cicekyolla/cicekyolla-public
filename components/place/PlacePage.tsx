@@ -6,11 +6,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, MessageCircle, Truck } from "lucide-react";
-import { fetchListingPage, fetchSeoPage, toCardProduct, type SeoPublicPage } from "@/lib/api";
+import { fetchCategoryById, fetchListingPage, fetchSeoPage, isCategoryVisible, toCardProduct, type SeoPublicPage } from "@/lib/api";
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
-import { getPlaceHub, getPlaceInfo, placeKindDef, placePath, textBlocks, validCategoryId, type PlaceKind } from "@/lib/placePages";
+import { getPlaceHub, getPlaceInfo, placeCategoryHref, placeKindDef, placePath, textBlocks, validCategoryId, type PlaceKind } from "@/lib/placePages";
 
 const PRODUCT_COUNT = 24;
 
@@ -52,10 +52,23 @@ export async function PlacePage({ kind, params }: { kind: PlaceKind; params: { s
   const info = slug ? getPlaceInfo(page.body_blocks) : null;
   const hub = slug ? null : getPlaceHub(page.body_blocks);
   const categoryId = validCategoryId(info?.category_id ?? hub?.category_id);
-  const listing = categoryId
-    ? await fetchListingPage({ source: { kind: "category", category_id: categoryId }, page: 1, per_page: PRODUCT_COUNT, paginate: false }).catch(() => null)
-    : null;
-  const products = listing?.items.map(toCardProduct) ?? [];
+  // 11 Kas 2026: liste artık sayfalı okunur (sayfa 1, PRODUCT_COUNT ürün). Eskiden sayfalama kapalı istenirdi;
+  // liste sözleşmesinde bu durumda "per_page yok sayılır, tek sayfa = min(toplam, max_items)" (api catalogListing.test.ts)
+  // → sayfa 24 yerine 500 ürün basıyordu (2,6 MB HTML).
+  const source = categoryId ? ({ kind: "category", category_id: categoryId } as const) : null;
+  const firstPage = source ? await fetchListingPage({ source, page: 1, per_page: PRODUCT_COUNT }).catch(() => null) : null;
+  // Kalan ürünlere erişim: aynı kaynağın kategori sayfası (gerçek <a href> sayfalama, index,follow, sitemap'te).
+  const moreInCategory = (firstPage?.pagination.total ?? 0) > PRODUCT_COUNT;
+  const categoryRow = categoryId && moreInCategory ? await fetchCategoryById(categoryId).catch(() => null) : null;
+  const categoryHref = placeCategoryHref(categoryRow, !!categoryRow && isCategoryVisible(categoryRow));
+  // ERİŞİM GÜVENCESİ: daha fazla ürün var ama kategori bağı kurulamadıysa (okuma hatası, görünmeyen kategori)
+  // bugünkü davranış aynen sürer (tam liste) → 24'ün dışındaki ürünler bu sayfadan kopmaz.
+  const keepFullList = moreInCategory && !categoryHref;
+  const listing = keepFullList && source
+    ? (await fetchListingPage({ source, page: 1, per_page: PRODUCT_COUNT, paginate: false }).catch(() => null)) ?? firstPage
+    : firstPage;
+  const items = listing?.items ?? [];
+  const products = (keepFullList ? items : items.slice(0, PRODUCT_COUNT)).map(toCardProduct);
   const h1 = page.h1 || info?.name || def.label;
   const texts = textBlocks(page.body_blocks);
   const faq = (page.faq ?? []).filter((f) => f.q && f.a);
@@ -135,6 +148,13 @@ export async function PlacePage({ kind, params }: { kind: PlaceKind; params: { s
           <div className="mx-auto max-w-[1320px]">
             <h2 className="mb-8 font-serif text-3xl font-semibold text-[#140b20]">Önerilen Çiçekler</h2>
             <ShowcaseGrid items={products} basePath={path} page={1} totalPages={1} />
+            {categoryHref ? (
+              <div className="mt-10 text-center">
+                <Link href={categoryHref} className="inline-flex rounded-full border border-[#c4b5fd] px-7 py-3.5 text-sm font-bold text-[#6d28d9] hover:border-[#6d28d9]">
+                  Tüm Ürünleri Gör
+                </Link>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
