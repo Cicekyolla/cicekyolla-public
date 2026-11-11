@@ -124,7 +124,7 @@ import { mediaUrl, mediaDerivatives } from "@/lib/media";
 import { firstServedProductImageUrl, servedProductImageUrl } from "@/lib/productImageUrl";
 import { CATEGORY_DEFAULT_SORT } from "@/lib/categorySort";
 // GLOBAL VERSION 80 — yeni kasa: ana sayfa V80Page, tüm locale sayfaları V80Shell (başlık) içinde.
-import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog } from "./v80/data";
+import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80FooterFromCatalog, v80FooterIntentPages } from "./v80/data";
 import { mergedTexts } from "./v80/copy";
 import { V80Shell } from "@/components/global/v80/V80Shell";
 import { V80Page } from "@/components/global/v80/V80Page";
@@ -1276,8 +1276,8 @@ export async function LocalePage({ locale, path, searchParams }: {
     // VERSION 80 — Global ana sayfa. SEO satırı (h1/intro/faq) view.content'e taşınır;
     // approved 'home' yoksa da vitrin varsayılan kopyayla çizilir (metadata NOINDEX kalır).
     // GLOBAL BLOG MERKEZİ: rehber bölümü o dilin YAYINDAKİ yazılarından (yoksa bölüm basılmaz).
-    const [view, contact, identity, blogPosts] = await Promise.all([
-      loadV80(locale), v80Contact(), siteIdentity(), fetchLocaleBlogPosts(locale).catch(() => []),
+    const [view, contact, identity, blogPosts, intentPages] = await Promise.all([
+      loadV80(locale), v80Contact(), siteIdentity(), fetchLocaleBlogPosts(locale).catch(() => []), v80FooterIntentPages(locale),
     ]);
     const header = {
       locale,
@@ -1287,7 +1287,7 @@ export async function LocalePage({ locale, path, searchParams }: {
       localeSlugByTr: Object.fromEntries(view.shop.products.map((p) => [p.trSlug, p.slug])),
     };
     return (
-      <V80Shell locale={locale} header={header} footer={v80FooterFromView(view, contact)}>
+      <V80Shell locale={locale} header={header} footer={v80FooterFromView(view, contact, intentPages)}>
         {/* Release 1: locale ana sayfada da işletme şeması (TR ana sayfa ile aynı kaynak/düğüm). */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localeHomeJsonLd(identity, locale)) }} />
         <V80Page view={view} guide={<GlobalBlogRail locale={locale} posts={homepageBlogPosts(blogPosts)} />} />
@@ -1592,6 +1592,8 @@ export async function LocalePage({ locale, path, searchParams }: {
           sizeProducts={sizeProducts}
           /* WhatsApp hazır mesajı locale PDP adresini taşısın (TR'ye düşmesin). */
           canonicalPath={`/${locale}/${seg.product}/${parsed.slug}`}
+          /* EK (11 Kas 2026): görünür kırıntının ilk basamağı dilin ana sayfası (BreadcrumbList ile aynı ad/adres). */
+          breadcrumbHome={{ href: `/${locale}`, label: LABELS[locale].ana }}
           presentation={{
             name: surface.name,
             short_description: surface.short_description,

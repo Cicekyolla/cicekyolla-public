@@ -34,6 +34,9 @@ export interface V80FooterInput {
   isHome: boolean;
   hasFaq?: boolean;
   year?: number;
+  /** EK (11 Kas 2026): o dilde YAYINDA olan İstanbul hizmet sayfaları (otel/hastane) — teslimat sütununa eklenir.
+      Çağıran yalnız envanterde doğrulanmış anahtarları verir; boş/yok → bugünkü sütun aynen. */
+  intentPages?: { key: string; slug: string }[];
 }
 /** İletişim damarı (yayımlı ana sayfa hero.config → resolveSiteIdentity). Adres/saat opsiyonel (eski çağıranlar kırılmaz). */
 export interface V80Contact {
@@ -44,6 +47,24 @@ export interface V80Contact {
   /** Release 1: çalışma saati (opens/closes, SS:DD) — footer.hours şablonuna girer. */
   hours?: { opens: string; closes: string };
 }
+/** EK (11 Kas 2026): otel/hastane hizmet sayfası bağ etiketi (doğal arama dili; sayfanın kendisi o dilde yazılı). */
+export const V80_INTENT_LABELS: Record<GlobalLocale, Record<"hotel-delivery" | "hospital-delivery", string>> = {
+  en: { "hotel-delivery": "Flowers to hotels", "hospital-delivery": "Flowers to hospitals" },
+  de: { "hotel-delivery": "Blumen ins Hotel", "hospital-delivery": "Blumen ins Krankenhaus" },
+  fr: { "hotel-delivery": "Fleurs à l'hôtel", "hospital-delivery": "Fleurs à l'hôpital" },
+  nl: { "hotel-delivery": "Bloemen naar een hotel", "hospital-delivery": "Bloemen naar het ziekenhuis" },
+  it: { "hotel-delivery": "Fiori in hotel", "hospital-delivery": "Fiori in ospedale" },
+  es: { "hotel-delivery": "Flores al hotel", "hospital-delivery": "Flores al hospital" },
+  pt: { "hotel-delivery": "Flores para hotel", "hospital-delivery": "Flores para hospital" },
+  az: { "hotel-delivery": "Otelə çiçək", "hospital-delivery": "Xəstəxanaya çiçək" },
+  ru: { "hotel-delivery": "Цветы в отель", "hospital-delivery": "Цветы в больницу" },
+  ar: { "hotel-delivery": "زهور إلى الفندق", "hospital-delivery": "زهور إلى المستشفى" },
+  zh: { "hotel-delivery": "鲜花送酒店", "hospital-delivery": "鲜花送医院" },
+  ja: { "hotel-delivery": "ホテルへのお花配達", "hospital-delivery": "病院へのお花配達" },
+  ko: { "hotel-delivery": "호텔 꽃배달", "hospital-delivery": "병원 꽃배달" },
+};
+const INTENT_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export interface V80FooterLink { key: string; label: string; href: string; external?: boolean }
 export interface V80FooterColumn { key: "shop" | "help" | "deliver" | "follow"; title: string; links: V80FooterLink[] }
 export interface V80FooterModel {
@@ -90,6 +111,11 @@ export function buildV80Footer(input: V80FooterInput): V80FooterModel {
     .filter((c) => live.has(c))
     // EK (14 Eki 2026): şehir bağlantısı kanonik çözücüden (İstanbul ticari adres açık dilde yeni adres, 301'e bağlantı yok).
     .map((c) => ({ key: c, label: CITY_NAMES[locale][c], href: localeLocationPath(locale, c) }));
+  // EK (11 Kas 2026): yayındaki otel/hastane hub'ları (etiketi olmayan ya da slug'ı geçersiz satır basılmaz).
+  for (const ip of input.intentPages ?? []) {
+    const label = (V80_INTENT_LABELS[locale] as Record<string, string>)[ip.key];
+    if (label && INTENT_SLUG_RE.test(ip.slug)) deliver.push({ key: ip.key, label, href: `/${locale}/${ip.slug}` });
+  }
 
   const follow: V80FooterLink[] = V80_SOCIAL.map((s) => ({ key: s.key, label: s.label, href: s.href, external: true }));
 

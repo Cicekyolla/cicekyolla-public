@@ -23,6 +23,7 @@ import { resolveV80, WHATSAPP_URL, type V80SourceCategory, type V80SourceProduct
 import { mergedTexts } from "./copy";
 import { applyRealCategorySlugs, fallbackCategoryCards } from "../globalCatalog";
 import { SEGMENTS } from "../config";
+import { prioritizedNavCategories } from "./navPriority";
 import type { V80HeaderProps } from "@/components/global/v80/V80Header";
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://cicekyolla-api.skyversal.xyz";
@@ -229,18 +230,39 @@ export async function v80Contact(): Promise<V80Contact> {
   }
 }
 
+/** EK (11 Kas 2026 — 13 DİL İÇ BAĞLANTI): alt bilgide gösterilecek İstanbul hizmet hub'ları (otel/hastane).
+    Yalnız o dilin yayın envanterinde (approved) bulunan anahtar basılır; adres url_slug || page_key (sayfanın
+    kendi canonical'ı). Envanter 5 dk süreç belleğinde tutulur (sayfa başına ek istek yok); uç hatasında son
+    bilinen değer, o da yoksa bağ basılmaz (fail-closed, ölü bağ yok). */
+const FOOTER_INTENT_KEYS = ["hotel-delivery", "hospital-delivery"] as const;
+const intentMemo = new Map<GlobalLocale, { at: number; v: { key: string; slug: string }[] }>();
+export async function v80FooterIntentPages(locale: GlobalLocale): Promise<{ key: string; slug: string }[]> {
+  const m = intentMemo.get(locale);
+  if (m && Date.now() - m.at < 5 * 60_000) return m.v;
+  const inv = await fetchGlobalPagesInventory(locale).catch(() => null);
+  if (!inv) return m?.v ?? [];
+  const v = FOOTER_INTENT_KEYS.flatMap((k) => {
+    const row = inv.find((r) => r.page_key === k);
+    return row ? [{ key: k, slug: (row.url_slug || row.page_key).trim() }] : [];
+  });
+  intentMemo.set(locale, { at: Date.now(), v });
+  return v;
+}
+
 /** Ana sayfa: görünüm modelinden (o dilde canlı kategoriler, yayımlı şehirler, metin geçersiz kılmaları). */
-export function v80FooterFromView(view: V80View, contact: V80Contact): V80FooterModel {
+export function v80FooterFromView(view: V80View, contact: V80Contact, intentPages: { key: string; slug: string }[] = []): V80FooterModel {
   return buildV80Footer({
     locale: view.locale,
     texts: view.texts,
-    categories: view.categories.map((c) => ({ name: c.name, href: c.href })),
+    // EK (11 Kas 2026): mağaza sütunu menüyle AYNI öncelik (yönetici sırası varsa o).
+    categories: view.navCategories,
     allHref: view.shop.allHref,
     liveDestinations: view.liveDestinations,
     contact,
     whatsapp: WHATSAPP_URL,
     isHome: true,
     hasFaq: view.content.faq.length > 0,
+    intentPages,
   });
 }
 
@@ -250,33 +272,41 @@ export async function v80FooterFromCatalog(
   locale: GlobalLocale, catalog: LocaleCatalog, contact: V80Contact, knownLive: readonly string[] = []
 ): Promise<V80FooterModel> {
   const seg = SEGMENTS[locale];
-  const live = await fetchLiveDestinations(locale);
+  const [live, intentPages] = await Promise.all([fetchLiveDestinations(locale), v80FooterIntentPages(locale)]);
   const liveDestinations = new Set<string>(knownLive);
   for (const d of live ?? []) if (d.live) liveDestinations.add(d.slug);
   const cats = catalog.categories
     .filter((c) => (c.live_products ?? 0) > 0)
     .sort((a, b) => (b.live_products ?? 0) - (a.live_products ?? 0) || a.name.localeCompare(b.name))
     .map((c) => ({ name: c.name, href: `/${locale}/${seg.category}/${c.slug}` }));
+  // EK (11 Kas 2026): mağaza sütunu öncelik listesiyle; "tümü" bağı bugünkü gibi en kalabalık kategori.
+  const shopCats = navFromCatalog(locale, catalog).map((n) => ({ name: n.label, href: n.href }));
   return buildV80Footer({
     locale,
     texts: mergedTexts(locale, null),
-    categories: cats,
+    categories: shopCats,
     allHref: cats[0]?.href ?? null,
     liveDestinations: [...liveDestinations],
     contact,
     whatsapp: WHATSAPP_URL,
     isHome: false,
+    intentPages,
   });
+}
+
+/** EK (11 Kas 2026): katalogdan menü — eskiden ALFABETİK ilk 6 (Artificial Decoration, Birthday Cakes…); artık
+    navPriority.ts önceliği (kategori kimliği 13 dilde ortak). Yalnız o dilde canlı kategoriler. */
+export function navFromCatalog(locale: GlobalLocale, catalog: LocaleCatalog): { key: string; label: string; href: string }[] {
+  const seg = SEGMENTS[locale];
+  return prioritizedNavCategories(catalog.categories.map((c) => ({ slug: c.slug, name: c.name, live: c.live_products ?? 0, id: c.id ?? null })))
+    .map((c) => ({ key: c.slug, label: c.name, href: `/${locale}/${seg.category}/${c.slug}` }));
 }
 
 /** Ana sayfa dışındaki locale sayfaları için Version 80 başlığı (o dilde canlı kategoriler + varsayılan metinler). */
 export function v80HeaderFromCatalog(locale: GlobalLocale, catalog: LocaleCatalog): V80HeaderProps {
   const seg = SEGMENTS[locale];
   const texts = mergedTexts(locale, null);
-  const nav = catalog.categories
-    .filter((c) => (c.live_products ?? 0) > 0)
-    .slice(0, 6)
-    .map((c) => ({ key: c.slug, label: c.name, href: `/${locale}/${seg.category}/${c.slug}` }));
+  const nav = navFromCatalog(locale, catalog);
   return {
     locale,
     nav,

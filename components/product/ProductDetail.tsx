@@ -115,6 +115,7 @@ export function ProductDetail({
   presentation,
   canonicalPath,
   breadcrumbCategory,
+  breadcrumbHome,
 }: {
   data: PublicProductDetail;
   sizeProducts?: AutoSizeProduct[];
@@ -129,6 +130,8 @@ export function ProductDetail({
       basamağı o kategoriye GERÇEK bağlantıdır (sunucudaki BreadcrumbList ile aynı
       ad/adres); verilmezse bugünkü düz etiket (ürün tipi) aynen kalır. */
   breadcrumbCategory?: { name: string; slug: string } | null;
+  /** EK (11 Kas 2026): locale PDP kırıntısının ilk basamağı (/en vb.). Verilmezse TR davranışı: "/" + sözlük etiketi. */
+  breadcrumbHome?: { href: string; label: string } | null;
 }) {
   // Fiyat yazımı seçili para biriminde. Taban DAİMA TRY kuruş; gerçek tahsilat TRY.
   const { money, moneyTRY, isForeign } = useCurrency();
@@ -214,7 +217,7 @@ export function ProductDetail({
       {/* Breadcrumb */}
       <div className="max-w-[1280px] mx-auto px-5 md:px-8 pt-6">
         <nav className="flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
-          <Link href="/" className="hover:text-[#7C3AED] transition-colors">{t("common.homePage")}</Link>
+          <Link href={breadcrumbHome?.href ?? "/"} className="hover:text-[#7C3AED] transition-colors">{breadcrumbHome?.label ?? t("common.homePage")}</Link>
           <ChevronRight className="w-3 h-3" />
           {breadcrumbCategory ? (
             <Link href={`/kategori/${breadcrumbCategory.slug}`} prefetch={false} className="text-[#6B7280] hover:text-[#7C3AED] transition-colors">
