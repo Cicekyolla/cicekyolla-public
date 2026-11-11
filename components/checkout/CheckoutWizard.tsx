@@ -48,6 +48,7 @@ import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { useProductName } from "@/lib/i18n/content";
 import { useCurrency } from "@/lib/currency";
 import { CheckoutProgress } from "./CheckoutProgress";
+import { localizeBandLabel } from "@/lib/deliveryBandLabel";
 
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 // Tek para formatı — PDP/sepet ile AYNI fonksiyon (useCurrency).
@@ -239,7 +240,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   // TESLİMAT ÜCRETİ — TEK KAYNAK MOTOR: seçimle yazılan ücret (PDP/checkout paneli /check). Toplam = ara toplam − indirim + ücret;
   // sunucu sipariş anında aynı ücreti motordan yeniden hesaplar (expected_total_minor eşleşmezse 409 total_changed → yeniden onay).
   const deliveryFeeMinor = Math.max(0, Math.round(Number(pd?.deliveryFeeMinor ?? 0)) || 0);
-  const deliveryLabel = deliveryMethodLabel(pd, { sameDay: t("co.deliverySameDayLine"), cargo: t("co.deliveryCargoLine"), none: t("co.steps.delivery") });
+  const deliveryLabel = localizeBandLabel(deliveryMethodLabel(pd, { sameDay: t("co.deliverySameDayLine"), cargo: t("co.deliveryCargoLine"), none: t("co.steps.delivery") }), locale, t);
   const total = cartTotalMinor(subtotal, discountMinor, deliveryFeeMinor);
 
   /** Kupon önizlemesinin kalemleri — ana ürün + seçili ek ürünler (varyantlı). */
@@ -780,13 +781,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
           <div className={`items-center gap-3 mt-7 ${editingDelivery ? "hidden" : "flex"}`}>
             {stepIdx > 2 && (
               <button onClick={() => go(-1)} className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] text-[#4B5563] font-semibold px-5 py-3.5 hover:bg-[#FAFAFB] transition-colors">
-                <ArrowLeft className="w-4 h-4" /> Geri
+                <ArrowLeft className="w-4 h-4" /> {t("common.back")}
               </button>
             )}
             {stepKey !== "odeme" ? (
               <button onClick={() => go(1)} disabled={!canNext}
                 className={`group flex-1 flex items-center justify-center gap-2 rounded-2xl text-white text-[15px] font-bold py-4 transition-all shadow-[0_12px_30px_-10px_rgba(124,58,237,0.6)] ${canNext ? "bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.99]" : "bg-[#C4B5FD] cursor-not-allowed"}`}>
-                {stepKey === "ekurun" ? "Bunlarla Devam Et" : "Devam Et"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                {stepKey === "ekurun" ? t("co.continueWithAddons") : t("common.continue")} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </button>
             ) : (
               <button onClick={submit} disabled={loading}
@@ -862,7 +863,7 @@ function StepTeslimatDuzenle(p: {
         {/* Yeni seçim özeti — yalnız geçerli seçim varken */}
         {p.draft && (
           <div className="mt-4 rounded-2xl border border-[#A7F3D0] bg-[#F0FDF4] p-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#059669]">Yeni teslimat</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#059669]">{t("co.newDelivery")}</div>
             <p className="mt-1.5 text-[13.5px] text-[#065F46] font-semibold leading-relaxed">{line(p.draft)}</p>
           </div>
         )}
@@ -1060,7 +1061,7 @@ function StepKart(p: { occasion: string | null; recipientName: string; cardMessa
         <div className="flex items-center gap-3">
           <button onClick={toggleFav} disabled={!p.cardMessage.trim()}
             className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors disabled:opacity-40 ${isFav ? "text-[#7C3AED]" : "text-[#9CA3AF] hover:text-[#7C3AED]"}`}>
-            <Star className={`w-4 h-4 ${isFav ? "fill-[#7C3AED]" : ""}`} /> {isFav ? "Favorilerde" : "Favorilere ekle"}
+            <Star className={`w-4 h-4 ${isFav ? "fill-[#7C3AED]" : ""}`} /> {isFav ? t("co.favSaved") : t("co.favAdd")}
           </button>
           {p.cardMessage && (
             <button onClick={() => p.setCardMessage("")} className="text-[12.5px] font-medium text-[#9CA3AF] hover:text-[#6B7280]">{t("co.noCard")}</button>
@@ -1127,7 +1128,7 @@ function StepGonderen(p: {
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className={labelCls}>{t("co.fullName")}</label><input className={inputCls} value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder={t("co.fullNamePh")} /></div>
           <div>
-            <label className={labelCls}>Telefon *</label>
+            <label className={labelCls}>{t("co.phone")}</label>
             <input
               className={phoneErr ? errInput : inputCls}
               value={p.phone}
@@ -1139,14 +1140,14 @@ function StepGonderen(p: {
             {phoneErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">{t("co.phoneErr")}</p>}
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>E-posta *</label>
+            <label className={labelCls}>{t("co.email")}</label>
             <input
               className={emailErr ? errInput : inputCls}
               value={p.email}
               inputMode="email"
               onChange={(e) => p.setEmail(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-              placeholder="ornek@eposta.com"
+              placeholder={t("co.emailPh")}
             />
             {emailErr && <p className="mt-1.5 text-[12px] font-medium text-[#DC2626]">{t("co.emailErr")}</p>}
           </div>
@@ -1274,12 +1275,12 @@ function StepAddons(p: { addons: CheckoutAddon[]; bundles: CheckoutBundle[]; add
                   <span className="text-[16px] font-extrabold text-[#D8B4FE]">+{money(a.priceMinor)}</span>
                   {on ? (
                     <div className="flex items-center rounded-full border border-[#A855F7]/55 bg-[#7C3AED] p-0.5">
-                      <button onClick={() => p.setAddon(a.id, q - 1)} aria-label="Azalt" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Minus className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => p.setAddon(a.id, q - 1)} aria-label={t("common.decrease")} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Minus className="h-3.5 w-3.5" /></button>
                       <span className="min-w-6 text-center text-[12px] font-bold">{q}</span>
                       <button onClick={() => p.setAddon(a.id, q + 1)} aria-label={t("common.increase")} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"><Plus className="h-3.5 w-3.5" /></button>
                     </div>
                   ) : (
-                    <button onClick={() => p.setAddon(a.id, 1)} aria-label={`${a.name} ekle`} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] text-white transition-colors hover:border-[#A855F7] hover:bg-[#7C3AED]">
+                    <button onClick={() => p.setAddon(a.id, 1)} aria-label={t("co.addAddon", { name: a.name })} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] text-white transition-colors hover:border-[#A855F7] hover:bg-[#7C3AED]">
                       <Plus className="h-4 w-4" />
                     </button>
                   )}
@@ -1438,9 +1439,9 @@ function StepOdeme(p: {
 
       <div className="mt-4 pt-4 border-t border-[#F1F0F5] space-y-3">
         <RevRow icon={User} label={t("co.recipient")} value={`${p.recipientName || "—"}${p.occasion ? " · " + (OCCASIONS.find((o) => o.id === p.occasion)?.emoji ?? "") + " " + t(("occ." + p.occasion) as DictKey) : ""}`} />
-        <RevRow icon={MapPin} label="Teslimat" value={`${p.region ? p.region + " — " : ""}${p.address || "—"}`} />
-        <RevRow icon={Calendar} label="Tarih & Saat" value={`${p.dateStr ?? "—"}${p.slotStr ? " · " + p.slotStr : ""}`} />
-        {p.typeStr && <RevRow icon={Truck} label="Teslimat Tipi" value={p.typeStr} />}
+        <RevRow icon={MapPin} label={t("co.steps.delivery")} value={`${p.region ? p.region + " — " : ""}${p.address || "—"}`} />
+        <RevRow icon={Calendar} label={t("co.dateTime")} value={`${p.dateStr ?? "—"}${p.slotStr ? " · " + p.slotStr : ""}`} />
+        {p.typeStr && <RevRow icon={Truck} label={t("co.gate.deliveryType")} value={p.typeStr} />}
         {p.cardMessage && <RevRow icon={MessageSquareText} label={t("co.cardMessage")} value={`“${p.cardMessage}”`} />}
       </div>
 
@@ -1564,7 +1565,7 @@ function LivingReceipt(p: {
         </ReceiptGroup>
       )}
 
-      <ReceiptGroup label="Teslimat" onEdit={p.onEditDelivery}>
+      <ReceiptGroup label={t("co.steps.delivery")} onEdit={p.onEditDelivery}>
         {p.placeName && <RLine icon={MapPin} value={p.placeName} />}
         {p.regionLabel.trim() && <RLine icon={MapPin} value={p.regionLabel} />}
         {p.dateStr && <RLine icon={Calendar} value={p.dateStr} />}
@@ -1603,7 +1604,7 @@ function LivingReceipt(p: {
             <span>{t("common.deliveryFee")} · {p.deliveryLabel}</span>{p.deliveryFee > 0 ? <span>{money(p.deliveryFee)}</span> : <span className="text-[#86EFAC]">{t("common.free")}</span>}
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-white/40">Toplam</span>
+            <span className="text-[12px] text-white/40">{t("common.total")}</span>
             <span className="text-white font-semibold" style={{ fontFamily: "var(--font-display)", fontSize: "26px", letterSpacing: "-0.02em" }}>{money(p.total)}</span>
           </div>
           {isForeign && (

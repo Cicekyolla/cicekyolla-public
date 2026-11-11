@@ -14,6 +14,7 @@ import { useCurrency } from "@/lib/currency";
 import { buildCouponRequestBody, cartFingerprint, readCouponPreview, unanimousRegionIds } from "@/lib/couponState";
 import { clearPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
 import { cartDeliveryFeeMinor, cartTotalMinor, deliveryMethodLabel, cartDeliveriesMatch } from "@/lib/deliveryFee";
+import { localizeBandLabel } from "@/lib/deliveryBandLabel";
 
 // NOT: yerel `money` KALDIRILDI. Sepet artık seçili para birimini kullanır
 // (useCurrency().approx) — kalem, ara toplam, indirim ve GENEL TOPLAM aynı para
@@ -34,7 +35,7 @@ function deliveryLine(d: { date?: string; slotLabel?: string; mode?: "sameday" |
 export default function CartPage() {
   const { items, subtotalMinor, setQuantity, removeItem } = useCart();
   const { approx: money, isForeign, moneyTRY } = useCurrency();
-  const { t, intl } = useI18n();
+  const { t, intl, locale } = useI18n();
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export default function CartPage() {
   const discountMinor = applied?.discountMinor ?? 0;
   // TESLİMAT ÜCRETİ — motorun seçimle yazdığı ücret (PDP /check); sunucu sipariş anında yeniden hesaplar.
   const deliveryFeeMinor = cartDeliveryFeeMinor(items.map((item) => item.delivery));
-  const deliveryLabel = deliveryMethodLabel(items[0]?.delivery, { sameDay: t("cart.deliverySameDay"), cargo: t("common.cargo"), none: t("common.cargo") });
+  const deliveryLabel = localizeBandLabel(deliveryMethodLabel(items[0]?.delivery, { sameDay: t("cart.deliverySameDay"), cargo: t("common.cargo"), none: t("common.cargo") }), locale, t);
   const totalMinor = cartTotalMinor(subtotalMinor, discountMinor, deliveryFeeMinor);
 
   // Sepet (ürün/varyant/adet/FİYAT) değişince uygulanan kupon geçersiz sayılır:
