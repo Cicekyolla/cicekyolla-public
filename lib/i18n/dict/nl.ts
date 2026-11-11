@@ -137,7 +137,7 @@ const nl: Dict = {
   "pdp.planDelivery": "Bezorging plannen",
   "pdp.whatsappOrder": "Bestellen via WhatsApp",
   "pdp.planFirst": "Laten we eerst de bezorging plannen — kies waar en wanneer deze bloemen moeten aankomen.",
-  "pdp.trust.photo": "Foto ter goedkeuring vóór levering",
+  "pdp.trust.photo": "Foto vóór levering, op verzoek",
   "pdp.trust.fresh": "Vers gemaakt",
   "pdp.trust.secure": "Beveiligde verbinding",
   "pdp.trust.sameDay": "Bezorging op dezelfde dag",

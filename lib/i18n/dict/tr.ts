@@ -146,7 +146,7 @@ const tr = {
   "pdp.planDelivery": "Teslimatı Planla",
   "pdp.whatsappOrder": "WhatsApp ile Sipariş",
   "pdp.planFirst": "Önce teslimatı planlayalım — bu çiçeğin nereye ve ne zaman ulaşacağını birlikte belirleyelim.",
-  "pdp.trust.photo": "Teslimattan önce fotoğraf onayı",
+  "pdp.trust.photo": "İsterseniz teslimattan önce fotoğraf",
   "pdp.trust.fresh": "Taze hazırlanır",
   "pdp.trust.secure": "Güvenli bağlantı",
   "pdp.trust.sameDay": "Aynı gün teslimat",

@@ -137,7 +137,7 @@ const ko: Dict = {
   "pdp.planDelivery": "배송 설정",
   "pdp.whatsappOrder": "WhatsApp으로 주문",
   "pdp.planFirst": "먼저 배송을 설정해요 — 이 꽃을 어디로, 언제 보낼지 정해 주세요.",
-  "pdp.trust.photo": "배송 전 사진 확인",
+  "pdp.trust.photo": "요청 시 배송 전 사진 제공",
   "pdp.trust.fresh": "신선하게 제작",
   "pdp.trust.secure": "보안 연결",
   "pdp.trust.sameDay": "당일 배송",

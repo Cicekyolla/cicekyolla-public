@@ -17,7 +17,8 @@ import { Camera, Leaf, Shield, Truck } from "lucide-react";
 // (45 km+ uzak bölge ücretli → "büyük bölümüne"); fotoğraf onayı + "beğenmezse yeniden hazırlanır" sahip kararı.
 const items = [
   { icon: Truck, text: "İstanbul'un büyük bölümüne ücretsiz aynı gün teslimat" },
-  { icon: Camera, text: "Teslimattan önce fotoğraf onayı" },
+  // 12 Kas 2026 (sahip kararı): fotoğraf İSTEK ÜZERİNE gönderilir — her siparişte otomatik değil.
+  { icon: Camera, text: "İsterseniz teslimattan önce fotoğraf" },
   { icon: Leaf, text: "Taptaze Garantisi" },
   { icon: Shield, text: "Güvenli Ödeme" },
 ];

@@ -137,7 +137,7 @@ const ja: Dict = {
   "pdp.planDelivery": "配達を設定",
   "pdp.whatsappOrder": "WhatsApp で注文",
   "pdp.planFirst": "まず配達を設定しましょう — お花をどこへ、いつ届けるかをお選びください。",
-  "pdp.trust.photo": "お届け前の写真確認",
+  "pdp.trust.photo": "ご希望でお届け前に写真をお送りします",
   "pdp.trust.fresh": "新鮮な仕上げ",
   "pdp.trust.secure": "安全な接続",
   "pdp.trust.sameDay": "当日配達",
