@@ -42,6 +42,7 @@ import { isCategoryPageConfirmedIndexable } from "@/lib/categoryPage";
 import { fetchCategoryLocaleVersions } from "@/lib/hreflangSources";
 import { localeBreadcrumbJsonLd } from "./localeBreadcrumb";
 import { LABELS } from "./locationLabels";
+import { relatedCategories } from "./relatedCategories";
 import { fetchListingPage, fetchListingSettings, fetchProductBySlug, fetchProducts, fetchProductsPaged, fetchRedirectMap, fetchSeoPage, formatMinorTRY, listingRowsLocalized, type ListingRow, type ListingSettings, type PublicProductDetail } from "@/lib/api";
 // EK (ADMİN TEK MERKEZ): dil kategori / lokasyon serileri listeleme ucundan (locale, pinned_ids) — tek sayfa hesabı; uç locale'i
 // tanımıyorsa (locale_name yok) bugünkü surface / catalog yolu (fail-open). Okumalar no-store (globalNoStore sözleşmesi).
@@ -1414,9 +1415,8 @@ export async function LocalePage({ locale, path, searchParams }: {
         .map(({ m, d }) => ({ card: detailToCard(locale, d, m.name), href: `/${locale}/${seg.product}/${m.slug}` }));
     }
     // İlgili kategoriler: AYNI dilde canlı ürünü olan diğer kategoriler (iç bağlantı; sayı API'de aynı üye sorgusundan).
-    const ilgili = (catalog.categories ?? [])
-      .filter((c) => c.slug !== surface.slug && (c.live_products ?? 0) > 0)
-      .slice(0, 8);
+    // EK (11 Kas 2026): alfabetik ilk 8 yerine o dildeki ortak ürün kümesine göre (relatedCategories.ts); veri yoksa eski sıra.
+    const ilgili = relatedCategories(surface.slug, catalog.categories ?? [], 8);
     const ui = UI[locale];
     const shop = SHOP[locale];
     return (
