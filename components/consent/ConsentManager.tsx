@@ -24,6 +24,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Check } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import {
   fetchConsentConfig,
   subscribeToPush,
@@ -273,6 +274,7 @@ function PreferencesPanel({
 }) {
   /* Kayıtlı tercih varsa onu göster (panel sonradan da açılabiliyor);
      yoksa V100 varsayılanları: Analiz açık, Pazarlama kapalı. */
+  const { t } = useI18n(); // EK (11 Kas 2026): 13 dil (TR metinleri sözlükte birebir aynı)
   const saved = getCookiePrefs();
   const [analytics, setAnalytics] = useState(saved ? saved.analytics : true);
   const [marketing, setMarketing] = useState(saved ? saved.marketing : false);
@@ -306,18 +308,18 @@ function PreferencesPanel({
         >
           <div>
             <p className="text-[9px] tracking-[0.32em] uppercase font-bold mb-1" style={{ color: "#8B5CF6" }}>
-              Çerez Tercihleri
+              {t("consent.prefsKicker")}
             </p>
             <h3
               className="text-white font-semibold"
               style={{ fontFamily: "var(--font-display)", fontSize: "17px", letterSpacing: "-0.01em" }}
             >
-              Gizlilik Ayarları
+              {t("consent.prefsTitle")}
             </h3>
           </div>
           <button
             onClick={onDismiss}
-            aria-label="Kapat"
+            aria-label={t("consent.close")}
             className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
             style={{ background: "rgba(255,255,255,0.06)" }}
           >
@@ -330,9 +332,9 @@ function PreferencesPanel({
           {/* Mandatory */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-white/80 text-sm font-semibold mb-0.5">Zorunlu Çerezler</p>
+              <p className="text-white/80 text-sm font-semibold mb-0.5">{t("consent.required")}</p>
               <p className="text-white/35 text-xs leading-relaxed">
-                Sitenin çalışması için gereklidir. Devre dışı bırakılamaz.
+                {t("consent.requiredDesc")}
               </p>
             </div>
             <div className="flex-shrink-0 mt-0.5">
@@ -345,11 +347,9 @@ function PreferencesPanel({
           {/* Analytics */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-white/80 text-sm font-semibold mb-0.5">Analiz Çerezleri</p>
+              <p className="text-white/80 text-sm font-semibold mb-0.5">{t("consent.analytics")}</p>
               <p className="text-white/35 text-xs leading-relaxed">
-                Siteyi nasıl kullandığınızı anlamamız için Google Analytics'i ve kendi ölçüm
-                sistemimizi kullanır; tekrar ziyaretinizi tanımak için cihazınızda rastgele bir
-                numara saklar (en çok 13 ay). Ad, telefon, adres ve IP adresi bu ölçüme girmez.
+                {t("consent.analyticsDesc")}
               </p>
             </div>
             <div className="flex-shrink-0 mt-0.5">
@@ -362,9 +362,9 @@ function PreferencesPanel({
           {/* Marketing */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-white/80 text-sm font-semibold mb-0.5">Pazarlama Çerezleri</p>
+              <p className="text-white/80 text-sm font-semibold mb-0.5">{t("consent.marketing")}</p>
               <p className="text-white/35 text-xs leading-relaxed">
-                Size özel teklifler ve içerikler sunmak için kullanılır.
+                {t("consent.marketingDesc")}
               </p>
             </div>
             <div className="flex-shrink-0 mt-0.5">
@@ -384,7 +384,7 @@ function PreferencesPanel({
               color: "rgba(255,255,255,0.7)",
             }}
           >
-            Seçimi Kaydet
+            {t("consent.save")}
           </button>
           <button
             onClick={onAcceptAll}
@@ -394,7 +394,7 @@ function PreferencesPanel({
               boxShadow: "0 6px 20px rgba(139,92,246,0.4)",
             }}
           >
-            Tümünü Kabul Et
+            {t("consent.acceptAll")}
           </button>
         </div>
       </motion.div>
@@ -413,16 +413,47 @@ function CookieConsent({
   /* Config henüz inmediyse V100 varsayılanlarıyla çalışır — yasal katman beklemez. */
   cfg: ConsentConfig["cookie"] | null;
 }) {
+  // EK (11 Kas 2026 — 13 DİL): Admin yapılandırması (cfg) yalnız Türkçe yazılıyor → yalnız TR'de kullanılır.
+  // Diğer 13 dilde metinler sözlükten (consent.*). TR çıktısı aynen: cfg yoksa varsayılanlar sözlükteki TR değerleri.
+  const { t, locale } = useI18n();
+  const trCfg = locale === "tr" ? cfg : null;
   const T = {
-    title: cfg?.title ?? "Deneyiminizi size özel hale getirelim.",
-    description:
-      cfg?.description ??
-      "ÇiçekYolla deneyimini geliştirmek, tercihlerinizi hatırlamak ve size daha uygun içerikler sunmak için çerezlerden yararlanıyoruz.",
-    accept: cfg?.accept_text ?? "Tümünü Kabul Et",
-    manage: cfg?.manage_text ?? "Tercihleri Yönet",
+    title: trCfg?.title ?? t("consent.title"),
+    description: trCfg?.description ?? t("consent.desc"),
+    accept: trCfg?.accept_text ?? t("consent.acceptAll"),
+    manage: trCfg?.manage_text ?? t("consent.manage"),
   };
   const [visible, setVisible] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
+
+  /* EK (11 Kas 2026 — MOBİL): bant açıkken yüksekliği --cy-consent-h'ye yazılır. Sayfa altına aynı boşluk eklenir
+     (sepet/ödeme düğmeleri bandın altında kalmaz, kaydırılarak erişilir) ve sabit alt çubuklar (PDP "sepete ekle")
+     bandın üstüne çıkar. Bant kapanınca değişken ve boşluk kaldırılır. */
+  useEffect(() => {
+    if (!visible || showPrefs || typeof window === "undefined") return;
+    const root = document.documentElement;
+    const apply = () => {
+      const el = Array.from(document.querySelectorAll<HTMLElement>("[data-cookie-banner]")).find((n) => n.offsetParent !== null || n.getClientRects().length > 0);
+      const h = el ? Math.ceil(el.getBoundingClientRect().height) : 0;
+      root.style.setProperty("--cy-consent-h", `${h}px`);
+      document.body.style.paddingBottom = h ? `${h}px` : "";
+    };
+    // Hemen + kısa gecikmeyle ölç: arka plan sekmesinde rAF/ResizeObserver çalışmayabilir (bant yine de görünür olur).
+    apply();
+    const raf = requestAnimationFrame(apply);
+    const late = window.setTimeout(apply, 700);
+    window.addEventListener("resize", apply);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(apply) : null;
+    document.querySelectorAll<HTMLElement>("[data-cookie-banner]").forEach((n) => ro?.observe(n));
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(late);
+      window.removeEventListener("resize", apply);
+      ro?.disconnect();
+      root.style.removeProperty("--cy-consent-h");
+      document.body.style.paddingBottom = "";
+    };
+  }, [visible, showPrefs]);
 
   useEffect(() => {
     const s = safeGet(COOKIE_KEY);
@@ -510,7 +541,7 @@ function CookieConsent({
                       href="/kvkk"
                       className="underline underline-offset-2 hover:text-white/70 transition-colors"
                     >
-                      Çerez Politikası
+                      {t("consent.policy")}
                     </a>
                   </p>
                 </div>
@@ -559,18 +590,17 @@ function CookieConsent({
               <div className="flex justify-center pt-3 pb-1">
                 <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.12)" }} />
               </div>
-              <div className="px-6 pt-3 pb-8">
+              <div className="px-6 pt-2 pb-5">
                 <p
-                  className="text-white font-semibold text-[17px] leading-snug mb-2"
+                  className="text-white font-semibold text-[15px] leading-snug mb-1.5"
                   style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
                 >
                   {T.title}
                 </p>
-                <p className="text-white/40 text-xs leading-relaxed mb-5">
-                  Tercihlerinizi hatırlamak ve size uygun içerikler sunmak için çerezlerden
-                  yararlanıyoruz.{" "}
+                <p className="text-white/40 text-xs leading-relaxed mb-4">
+                  {t("consent.descShort")}{" "}
                   <a href="/kvkk" className="underline underline-offset-2">
-                    Detaylar
+                    {t("consent.details")}
                   </a>
                 </p>
                 <div className="flex gap-3">
@@ -593,7 +623,7 @@ function CookieConsent({
                       boxShadow: "0 4px 16px rgba(139,92,246,0.45)",
                     }}
                   >
-                    Kabul Et
+                    {t("consent.accept")}
                   </button>
                 </div>
               </div>
@@ -947,6 +977,8 @@ function NotificationConsent({ enabled, cfg }: { enabled: boolean; cfg: ConsentC
    önce cookie, kararından 13.5s sonra bildirim.
 ══════════════════════════════════════ */
 export function ConsentManager() {
+  // EK (11 Kas 2026): bildirim izni penceresinin metni Admin'de yalnız Türkçe → 13 dilde gösterilmez (TR aynen).
+  const { locale } = useI18n();
   const [cookieResolved, setCookieResolved] = useState(false);
   const [cfg, setCfg] = useState<ConsentConfig | null>(null);
 
@@ -980,7 +1012,7 @@ export function ConsentManager() {
       )}
       {/* Haberdar Ol: yalnız admin açtıysa VE gerçek VAPID anahtarı varsa
           (API push.active'i buna göre döndürür) — çalışmayan CTA gösterilmez. */}
-      {cfg?.push.active && <NotificationConsent enabled={cookieResolved} cfg={cfg.push} />}
+      {cfg?.push.active && locale === "tr" && <NotificationConsent enabled={cookieResolved} cfg={cfg.push} />}
     </>
   );
 }

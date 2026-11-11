@@ -673,7 +673,8 @@ export function ProductDetail({
       <div className="h-24 lg:hidden" aria-hidden="true" />
       <div
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-[#EDE9FE] px-4 py-3 flex items-center gap-3"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        /* EK (11 Kas 2026): çerez bandı açıkken çubuk bandın ÜSTÜNE çıkar (--cy-consent-h, ConsentManager); bant yokken 0. */
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", bottom: "var(--cy-consent-h, 0px)" }}
       >
         <div className="shrink-0">
           <div className="text-[11px] text-[#9CA3AF] leading-none">{t("common.price")}</div>

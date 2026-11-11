@@ -14,6 +14,7 @@ import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { resolveTelegram } from "@/lib/telegramContact";
 import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
+import { LocaleCommerceFooterGate } from "@/components/LocaleCommerceFooter";
 import { VisitPageTracker } from "@/components/analytics/VisitPageTracker";
 import { NewMemberPopup } from "@/components/consent/NewMemberPopup";
 import { DeliveryAddressPopup } from "@/components/delivery/DeliveryAddressPopup";
@@ -257,7 +258,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <ChromeGate><MemberNewsletterBand /></ChromeGate>
         {/* GLOBAL VERSION 80: TR footer locale rotalarında çizilmez — orada footer
             V80Shell'in locale-aware alt bilgisidir. TR yollarında AYNEN (ChromeGate geçirir). */}
-        <ChromeGate><Footer categories={footerOrUndef} brand={footerBrand} /></ChromeGate>
+        {/* EK (11 Kas 2026): sepet/ödeme/takipte TR dışı dilde sade yerel alt bilgi; diğer her yerde <Footer> AYNEN. */}
+        <ChromeGate><LocaleCommerceFooterGate identity={footerBrand?.identity}><Footer categories={footerOrUndef} brand={footerBrand} /></LocaleCommerceFooterGate></ChromeGate>
         {/* Yüzen WhatsApp + Telegram: ChromeGate DIŞINDA — TR ve Global 13 dilde görünür (WhatsApp Global'de
             vitrinin mevcut bağlantısı + dil etiketi; Telegram aynı Admin ayarı). Ürün sayfalarında WhatsApp
             sticky çubukta/panelde kalır. */}
