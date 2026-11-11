@@ -137,7 +137,7 @@ const az: Dict = {
   "pdp.planDelivery": "Çatdırılmanı planla",
   "pdp.whatsappOrder": "WhatsApp ilə sifariş",
   "pdp.planFirst": "Əvvəlcə çatdırılmanı planlayaq — bu çiçəyin hara və nə vaxt çatacağını birlikdə müəyyən edək.",
-  "pdp.trust.photo": "Çatdırılmadan əvvəl foto təsdiqi",
+  "pdp.trust.photo": "İstəsəniz, çatdırılmadan əvvəl foto",
   "pdp.trust.fresh": "Təzə hazırlanır",
   "pdp.trust.secure": "Təhlükəsiz bağlantı",
   "pdp.trust.sameDay": "Eyni gün çatdırılma",

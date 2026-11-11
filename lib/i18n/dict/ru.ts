@@ -137,7 +137,7 @@ const ru: Dict = {
   "pdp.planDelivery": "Запланировать доставку",
   "pdp.whatsappOrder": "Заказать через WhatsApp",
   "pdp.planFirst": "Сначала спланируем доставку — укажите, куда и когда доставить эти цветы.",
-  "pdp.trust.photo": "Фото на согласование до доставки",
+  "pdp.trust.photo": "Фото до доставки — по запросу",
   "pdp.trust.fresh": "Свежая сборка",
   "pdp.trust.secure": "Защищённое соединение",
   "pdp.trust.sameDay": "Доставка в день заказа",

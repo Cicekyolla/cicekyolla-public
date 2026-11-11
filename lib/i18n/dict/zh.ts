@@ -137,7 +137,7 @@ const zh: Dict = {
   "pdp.planDelivery": "安排配送",
   "pdp.whatsappOrder": "通过 WhatsApp 订购",
   "pdp.planFirst": "先安排配送——选择这束花送往何处、何时送达。",
-  "pdp.trust.photo": "送达前照片确认",
+  "pdp.trust.photo": "可应要求在送达前提供照片",
   "pdp.trust.fresh": "新鲜制作",
   "pdp.trust.secure": "安全连接",
   "pdp.trust.sameDay": "当日配送",

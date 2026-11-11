@@ -137,7 +137,7 @@ const pt: Dict = {
   "pdp.planDelivery": "Planear entrega",
   "pdp.whatsappOrder": "Encomendar via WhatsApp",
   "pdp.planFirst": "Vamos planear a entrega primeiro — escolha onde e quando estas flores devem chegar.",
-  "pdp.trust.photo": "Aprovação por foto antes da entrega",
+  "pdp.trust.photo": "Foto antes da entrega, a pedido",
   "pdp.trust.fresh": "Preparado fresco",
   "pdp.trust.secure": "Ligação segura",
   "pdp.trust.sameDay": "Entrega no mesmo dia",

@@ -138,7 +138,7 @@ const ar: Dict = {
   "pdp.planDelivery": "خطط للتوصيل",
   "pdp.whatsappOrder": "اطلب عبر واتساب",
   "pdp.planFirst": "لنخطط للتوصيل أولًا — حدد أين ومتى تصل هذه الزهور.",
-  "pdp.trust.photo": "الموافقة على الصورة قبل التوصيل",
+  "pdp.trust.photo": "صورة قبل التوصيل عند الطلب",
   "pdp.trust.fresh": "يُحضَّر طازجًا",
   "pdp.trust.secure": "اتصال آمن",
   "pdp.trust.sameDay": "توصيل في نفس اليوم",
