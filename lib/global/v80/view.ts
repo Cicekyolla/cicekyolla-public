@@ -13,6 +13,7 @@ import { CITY_NAMES } from "../locationLabels.ts";
 import { localeLocationPath } from "../commercialUrl.ts";
 import type { GlobalPage } from "../api";
 import { mergedTexts, interp } from "./copy.ts";
+import { prioritizedNavCategories } from "./navPriority.ts";
 import {
   defaultConfig, targetHref, activeProductRefs, bannerTextKey, type V80Config, type V80Structure, type V80Target, type V80SectionId,
   type V80Destination, type V80CategoryRef, V80_DESTINATIONS, V80_SECTION_IDS,
@@ -122,6 +123,8 @@ export interface V80View {
   sections: V80SectionId[];
   whatsapp: string;
   nav: { key: string; label: string; href: string }[];
+  /** EK (11 Kas 2026): menü/alt bilgi kategori önceliği (yönetici sırası yoksa navPriority.ts). */
+  navCategories: { name: string; href: string }[];
   ticker: string[];
   trustMini: { key: string; icon: string; text: string }[];
   discovery: V80DiscoveryView[];
@@ -243,9 +246,16 @@ export function resolveV80(input: V80Input): V80View {
   const firstCatHref = categories[0]?.href ?? null;
 
   // Navigasyon: admin listesi boşsa canlı kategoriler (ilk 6).
+  // EK (11 Kas 2026 — 13 DİL İÇ BAĞLANTI): kategori sırası kaydedilmemişse "ilk 6" artık canlı ürün sayısının
+  // kapsayıcı kökleri (Koleksiyonlar, Gönderim Amacına Göre…) değil, müşteri öncelik listesi (navPriority.ts).
+  // Admin menü listesi veya Vitrin › Kategori sırası kaydedilmişse davranış AYNEN (operatör kararı).
+  const srcBySlug = new Map(input.categories.map((c) => [c.slug, c as V80SourceCategory & { id?: number | null }]));
+  const navCategories = hasCategoryOrder(s)
+    ? categories.slice(0, 6)
+    : prioritizedNavCategories(categories.map((c) => ({ ...c, trSlug: srcBySlug.get(c.slug)?.tr_slug ?? null, id: srcBySlug.get(c.slug)?.id ?? null })));
   const nav = s.nav.length
     ? s.nav.filter((n) => n.enabled).map((n) => ({ key: n.key, label: texts[`x.nav.${n.key}`] ?? "", href: href(n.target) })).filter((n): n is { key: string; label: string; href: string } => !!n.href && !!n.label)
-    : categories.slice(0, 6).map((c) => ({ key: c.slug, label: c.name, href: c.href }));
+    : navCategories.map((c) => ({ key: c.slug, label: c.name, href: c.href }));
 
   const filterFromTarget = (target: V80Target): V80Filter | null => {
     if (target.kind === "category") {
@@ -382,6 +392,7 @@ export function resolveV80(input: V80Input): V80View {
     sections,
     whatsapp: WHATSAPP_URL,
     nav,
+    navCategories: navCategories.map((c) => ({ name: c.name, href: c.href })),
     ticker: s.ticker.filter((x) => x.enabled).map((x) => texts[`ticker.${x.key}`] ?? texts[`x.ticker.${x.key}`] ?? "").filter(Boolean),
     trustMini: s.trustMini.filter((x) => x.enabled).map((x) => ({ key: x.key, icon: x.icon, text: texts[`trustMini.${x.key}`] ?? texts[`x.trustMini.${x.key}`] ?? "" })).filter((x) => x.text),
     discovery,
