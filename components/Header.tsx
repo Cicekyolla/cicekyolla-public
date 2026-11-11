@@ -271,7 +271,7 @@ export function Header({ menu, nav, search, brand }: {
               )}
             </Link>
             <span aria-hidden className="h-4 w-px bg-white/30" />
-            <Link href="/siparis-takibi" className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
+            <Link href="/siparis-takip" className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-white/90 hover:text-white transition-colors">
               <PackageCheck className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{t("header.orderStatus")}</span>
               <span className="sm:hidden">{t("header.track")}</span>
