@@ -11,6 +11,7 @@ import { BrandWordmark } from "./BrandWordmark";
 import { openCookiePreferences, canOpenCookiePreferences } from "./consent/ConsentManager";
 import { yonelme } from "@/lib/turkish";
 import { resolveSiteIdentity, type SiteIdentity } from "@/lib/siteIdentity";
+import { FOOTER_PLACE_KINDS, placeKindDef } from "@/lib/placePages";
 
 export interface FooterBrand {
   logoUrl?: string;
@@ -57,6 +58,13 @@ function teslimatLinkleri(pathname: string | null) {
   // 13 Eki 2026: süzgeç ve yol `globalPath`'ten (TR href'leri taşındı); çıktı bugünküyle birebir aynı.
   // EK (14 Eki 2026): Global yol kanonik çözücüden (ticari adres açık dilde yeni adres, 301'e bağlantı yok).
   return FOOTER_DELIVERY_LINKS.flatMap((l) => (l.globalPath ? [{ label: l.label, href: localeLocationPath(locale, l.globalPath.slice(1)) }] : []));
+}
+
+/** EK (11 Kas 2026): alt bilgideki hizmet hub'ları (lib/placePages.ts FOOTER_PLACE_KINDS); locale yolunda boş. */
+function placeHubLinks(pathname: string | null): { label: string; href: string }[] {
+  const m = /^\/([a-z]{2})(?:\/|$)/.exec(pathname ?? "");
+  if (m && (GLOBAL_LOCALES as readonly string[]).includes(m[1])) return [];
+  return FOOTER_PLACE_KINDS.map((k) => placeKindDef(k)).map((d) => ({ label: d.label, href: d.hub }));
 }
 
 const FALLBACK_COLLECTION_LINKS = [
@@ -198,6 +206,23 @@ export function Footer({
                 </li>
               ))}
             </ul>
+            {/* EK (11 Kas 2026): İstanbul hizmet hub'ları siteden 0 bağ alıyordu → her TR sayfasında 4 kalıcı bağ
+                (diğer 6 hub her hub sayfasının alt şeridinde + site haritasında). Locale yolunda basılmaz (TR sayfalar). */}
+            {placeHubLinks(pathname).length > 0 ? (
+              <>
+                <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-4" data-footer-place-hubs>Gönderim Noktaları</h4>
+                <ul className="space-y-3 mb-8">
+                  {placeHubLinks(pathname).map((item) => (
+                    <li key={item.href}>
+                      <Link href={item.href} className="text-sm text-[#6B7280] hover:text-white transition-colors duration-200 flex items-center gap-2 group">
+                        <span className="w-1 h-1 rounded-full bg-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
             <h4 className="text-[10px] tracking-[0.28em] text-[#8B5CF6] uppercase font-bold mb-4">Teslimat</h4>
             <ul className="space-y-3">
               {teslimatLinkleri(pathname).map((item) => (

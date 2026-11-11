@@ -101,3 +101,30 @@ export function validCategoryId(v: unknown): number | null {
   const n = typeof v === "string" ? Number(v) : v;
   return typeof n === "number" && Number.isInteger(n) && n > 0 ? n : null;
 }
+
+// ── EK (11 Kas 2026 — İSTANBUL HİZMET HUB'LARI İÇ BAĞLANTI) ───────────────────────────────────────
+// Kanıt (canlı, 11 Kas): 10 hub ana sayfa, /kategori/cicekler, /istanbul, ilçe sayfaları, /site-haritasi,
+// SSS ve /blog'dan 0 bağ alıyordu; hub'lar birbirine, yer sayfaları kendi ilçesine bağ vermiyordu.
+
+/** Alt bilgide kalıcı bağ alan hub'lar (her TR sayfasında; toplu şerit değil, en sık niyet 4 hub). */
+export const FOOTER_PLACE_KINDS: readonly PlaceKind[] = ["hastane", "otel", "cami", "dugun"];
+
+/** Bu hub dışındaki hub'lar (hub sayfasının alt şeridi; sıra PLACE_KINDS). */
+export function siblingPlaceHubs(kind: PlaceKind): readonly PlaceKindDef[] {
+  return PLACE_KINDS.filter((k) => k.kind !== kind);
+}
+
+const TR_FOLD: Record<string, string> = { ç: "c", ğ: "g", ı: "i", i̇: "i", ö: "o", ş: "s", ü: "u", â: "a", î: "i", û: "u" };
+
+/** Yer kaydındaki ilçe adı → o ilçenin TR sayfası (/{ilçe}-cicek-siparisi). Yalnız 39 İstanbul ilçesinden biriyse;
+    "Kadıköy / İstanbul", "Ataşehir, İstanbul" gibi ekler atılır. Eşleşmezse null (uydurma bağ yok). */
+export function placeDistrictHref(district: unknown, districts: ReadonlySet<string>): string | null {
+  if (typeof district !== "string") return null;
+  const head = district.split(/[,/·(]/)[0] ?? "";
+  const slug = head
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[çğıöşüâîû]|i̇/g, (ch) => TR_FOLD[ch] ?? ch)
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+  return slug && districts.has(slug) ? `/${slug}-cicek-siparisi` : null;
+}
