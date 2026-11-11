@@ -19,6 +19,7 @@ import { useProductName } from "@/lib/i18n/content";
 import { ProductImage } from "@/components/product/ProductImage";
 import { readPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
+import { localizeBandLabel } from "@/lib/deliveryBandLabel";
 import { CheckoutProgress } from "./CheckoutProgress";
 
 // Para yazımı bileşen içinde useCurrency().approx ile alınır (checkout = yaklaşık).
@@ -64,14 +65,14 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
       .finally(() => setAccountLoading(false));
   }, [delivery]);
 
-  const { t, intl } = useI18n();
+  const { t, intl, locale } = useI18n();
   const shownName = useProductName(productId, productName);
   const TRUST = TRUST_ICONS.map((icon, i) => ({ icon, label: t(TRUST_KEYS[i] as "co.gate.ssl") }));
   const dateStr = formatDate(pd?.date, intl);
   // TESLİMAT ÜCRETİ (25 Eyl 2026): hesap adımı özeti de motorun ücretini ve yöntem adını gösterir; toplam ücreti içerir
   // (sepet/checkout/sunucu ile aynı formül). Kargo ücretsizse mevcut "Ücretsiz Kargo" etiketi kalır.
   const gateDeliveryFee = Math.max(0, Math.round(Number(pd?.deliveryFeeMinor ?? 0)) || 0);
-  const typeStr = pd?.mode === "cargo" ? t("co.gate.freeCargo") : pd?.mode === "sameday" ? deliveryMethodLabel(pd, { sameDay: t("co.trust.sameDay"), cargo: t("co.gate.freeCargo"), none: t("co.trust.sameDay") }) : null;
+  const typeStr = pd?.mode === "cargo" ? t("co.gate.freeCargo") : pd?.mode === "sameday" ? localizeBandLabel(deliveryMethodLabel(pd, { sameDay: t("co.trust.sameDay"), cargo: t("co.gate.freeCargo"), none: t("co.trust.sameDay") }), locale, t) : null;
   const gateTotal = cartTotalMinor(totalMinor ?? priceMinor * quantity, 0, gateDeliveryFee);
   // TEK HUNİ: giriş sonrası dönüş her zaman checkout'un kendisidir.
   // Eski fallback /hizli-siparis'e dönüyordu; o route artık ürün sayfasına
@@ -95,7 +96,7 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
             /urun/[slug]'a Link'ti ve müşteri siparişe baştan başlıyordu. */}
         {onEditDelivery && (
           <button type="button" onClick={onEditDelivery} className="flex items-center gap-1 text-[12px] font-semibold text-white/70 hover:text-white transition-colors">
-            <Pencil className="w-3 h-3" /> Düzenle
+            <Pencil className="w-3 h-3" /> {t("common.edit")}
           </button>
         )}
       </div>
@@ -160,7 +161,7 @@ export default function AccountGate({ productName, productId, priceMinor, coverU
           {t("co.gate.title")}
         </h1>
         <p className="text-[15px] text-[#6B7280] mt-3 max-w-lg mx-auto leading-relaxed">
-          Ürününüz hazır. Şimdi siparişinizi birkaç adımda güvenle tamamlayacağız.
+          {t("co.gate.lead")}
         </p>
       </div>
 

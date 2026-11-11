@@ -14,7 +14,9 @@ test("13 global dilin hepsinde eksiksiz metin; marka/sağlayıcı adları çevri
     const c = ASSURANCE[l];
     for (const k of ["title", "intro", "wa", "ctaShop", "ctaWa", "waText"] as const) assert.ok(c[k].trim().length > 1, `${l}.${k}`);
     for (const k of PAIRS) { assert.ok(c[k][0].trim() && c[k][1].trim(), `${l}.${k}`); }
-    for (const brand of ["PayTR", "iyzico", "3-D Secure"]) assert.ok(c.pay[1].includes(brand), `${l} pay ${brand}`);
+    for (const brand of ["PayTR", "3-D Secure"]) assert.ok(c.pay[1].includes(brand), `${l} pay ${brand}`);
+    // Paket E: iyzico canlıda kapalı (yedek kapalı) → müşteri metninde anılmaz.
+    assert.ok(!/iyzico/i.test(c.pay[1]), `${l} pay iyzico anılmamalı`);
   }
 });
 

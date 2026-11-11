@@ -17,6 +17,7 @@ import AddressAutocomplete, { type AddressResult } from "@/components/delivery/A
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
 import { readPendingDelivery, hasPendingAddress, PENDING_ADDRESS_EVENT } from "@/lib/pendingDelivery";
 import { useI18n, Num } from "@/lib/i18n";
+import { localizeBandLabel } from "@/lib/deliveryBandLabel";
 
 // --- Endpoint yanıt tipleri (backend sözleşmesi) ---------------------------
 interface Slot {
@@ -152,7 +153,7 @@ function hhmmToMin(v: string | null | undefined): number | null {
 }
 
 export default function DeliveryPlanner({ product, onSelect }: Props) {
-  const { t, intl } = useI18n();
+  const { t, intl, locale } = useI18n();
   // DİL DEĞİŞİMİ = SUNUM: t kimliği değişince check/slot YENİDEN ÇALIŞMAZ (slot korunur). Hata metinleri ref ile.
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
@@ -524,7 +525,7 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                         {/* band + süre + ücret + son alım */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] mb-2">
                           <span className="inline-flex items-center gap-1 font-bold text-[#059669]"><Zap className="w-3.5 h-3.5" /> {t("planner.sameDaySmall")}</span>
-                          {sd!.band && <span className="text-[#6B7280]">{sd!.band.replace("İstanbul - ", "")}</span>}
+                          {sd!.band && <span className="text-[#6B7280]">{localizeBandLabel(sd!.band.replace("İstanbul - ", ""), locale, t)}</span>}
                           {sd!.est_min_minutes != null && sd!.est_max_minutes != null && (
                             <span className="text-[#6B7280]">· <Num>{sd!.est_min_minutes}-{sd!.est_max_minutes}</Num> {t("planner.min")}</span>
                           )}

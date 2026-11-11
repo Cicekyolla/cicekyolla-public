@@ -44,7 +44,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   en: {
     title: "Order from abroad with complete peace of mind",
     intro: "We arrange your flowers in our own Istanbul atelier and deliver them with our own couriers. You choose — we keep you updated on WhatsApp, in your language.",
-    pay: ["Pay with any card", "Pay securely from anywhere in the world via PayTR or iyzico with 3-D Secure. You're charged in Turkish lira and your bank converts it. Bank transfer and Western Union are welcome too."],
+    pay: ["Pay with any card", "Pay securely from anywhere in the world via PayTR with 3-D Secure. You're charged in Turkish lira and your bank converts it. Bank transfer and Western Union are welcome too."],
     photo: ["See it before it goes", "We send you a photo of your arrangement on WhatsApp or in the app before delivery."],
     slots: ["Same day, at the time you choose", "Pick the window that suits you: 9–12, 12–5, 5–10 or 8–11 pm."],
     slotsFallback: ["Same day, at the time you choose", "Pick the delivery window that suits you at checkout."],
@@ -60,7 +60,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   de: {
     title: "Aus dem Ausland bestellen – ganz ohne Sorgen",
     intro: "Wir binden Ihre Blumen in unserem eigenen Atelier in Istanbul und liefern sie mit unseren eigenen Kurieren aus. Sie wählen aus – wir halten Sie per WhatsApp in Ihrer Sprache auf dem Laufenden.",
-    pay: ["Mit jeder Karte bezahlen", "Bezahlen Sie von überall auf der Welt sicher über PayTR oder iyzico mit 3-D Secure. Abgebucht wird in Türkischer Lira, Ihre Bank rechnet um. Auch Überweisung und Western Union sind möglich."],
+    pay: ["Mit jeder Karte bezahlen", "Bezahlen Sie von überall auf der Welt sicher über PayTR mit 3-D Secure. Abgebucht wird in Türkischer Lira, Ihre Bank rechnet um. Auch Überweisung und Western Union sind möglich."],
     photo: ["Foto vor dem Versand", "Vor der Zustellung schicken wir Ihnen ein Foto des fertigen Straußes per WhatsApp oder in der App."],
     slots: ["Taggleich, zur Wunschzeit", "Wählen Sie Ihr Zeitfenster: 9–12, 12–17, 17–22 oder 20–23 Uhr."],
     slotsFallback: ["Taggleich, zur Wunschzeit", "Wählen Sie Ihr passendes Zeitfenster im Checkout."],
@@ -76,7 +76,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   fr: {
     title: "Commandez depuis l'étranger en toute sérénité",
     intro: "Nous composons vos fleurs dans notre propre atelier à Istanbul et les livrons avec nos propres coursiers. Vous choisissez, nous vous tenons informé sur WhatsApp, dans votre langue.",
-    pay: ["Payez avec n'importe quelle carte", "Payez en toute sécurité depuis le monde entier via PayTR ou iyzico, avec 3-D Secure. Le montant est débité en livres turques, votre banque fait la conversion. Virement bancaire et Western Union acceptés."],
+    pay: ["Payez avec n'importe quelle carte", "Payez en toute sécurité depuis le monde entier via PayTR, avec 3-D Secure. Le montant est débité en livres turques, votre banque fait la conversion. Virement bancaire et Western Union acceptés."],
     photo: ["Une photo avant l'envoi", "Avant la livraison, nous vous envoyons une photo de votre bouquet sur WhatsApp ou dans l'application."],
     slots: ["Le jour même, à l'heure choisie", "Choisissez votre créneau : 9h–12h, 12h–17h, 17h–22h ou 20h–23h."],
     slotsFallback: ["Le jour même, à l'heure choisie", "Choisissez le créneau qui vous convient lors du paiement."],
@@ -92,7 +92,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   nl: {
     title: "Zorgeloos bestellen vanuit het buitenland",
     intro: "We maken je bloemen in ons eigen atelier in Istanbul en bezorgen ze met onze eigen koeriers. Jij kiest, wij houden je via WhatsApp op de hoogte, in jouw taal.",
-    pay: ["Betalen met elke kaart", "Betaal vanaf elke plek ter wereld veilig via PayTR of iyzico met 3-D Secure. Het bedrag wordt in Turkse lira afgeschreven; je bank rekent het om. Overboeking en Western Union kan ook."],
+    pay: ["Betalen met elke kaart", "Betaal vanaf elke plek ter wereld veilig via PayTR met 3-D Secure. Het bedrag wordt in Turkse lira afgeschreven; je bank rekent het om. Overboeking en Western Union kan ook."],
     photo: ["Eerst een foto", "Voor de bezorging sturen we je een foto van het boeket via WhatsApp of in de app."],
     slots: ["Vandaag nog, op jouw tijd", "Kies je tijdvak: 9–12, 12–17, 17–22 of 20–23 uur."],
     slotsFallback: ["Vandaag nog, op jouw tijd", "Kies bij het afrekenen het tijdvak dat jou uitkomt."],
@@ -108,7 +108,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   it: {
     title: "Ordina dall'estero in tutta tranquillità",
     intro: "Prepariamo i tuoi fiori nel nostro atelier di Istanbul e li consegniamo con i nostri corrieri. Tu scegli, noi ti aggiorniamo su WhatsApp nella tua lingua.",
-    pay: ["Paga con qualsiasi carta", "Paga in sicurezza da qualsiasi parte del mondo con PayTR o iyzico e 3-D Secure. L'importo è addebitato in lire turche, la conversione la fa la tua banca. Accettiamo anche bonifico e Western Union."],
+    pay: ["Paga con qualsiasi carta", "Paga in sicurezza da qualsiasi parte del mondo con PayTR e 3-D Secure. L'importo è addebitato in lire turche, la conversione la fa la tua banca. Accettiamo anche bonifico e Western Union."],
     photo: ["Una foto prima della consegna", "Prima della consegna ti inviamo una foto della composizione su WhatsApp o nell'app."],
     slots: ["In giornata, all'ora che scegli", "Scegli la fascia oraria: 9–12, 12–17, 17–22 o 20–23."],
     slotsFallback: ["In giornata, all'ora che scegli", "Scegli al pagamento la fascia oraria che preferisci."],
@@ -124,7 +124,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   es: {
     title: "Haz tu pedido desde el extranjero con total tranquilidad",
     intro: "Preparamos tus flores en nuestro propio taller de Estambul y las entregamos con nuestros propios mensajeros. Tú eliges; nosotros te avisamos por WhatsApp, en tu idioma.",
-    pay: ["Paga con cualquier tarjeta", "Paga con seguridad desde cualquier parte del mundo con PayTR o iyzico y 3-D Secure. Se cobra en liras turcas y tu banco hace la conversión. También aceptamos transferencia y Western Union."],
+    pay: ["Paga con cualquier tarjeta", "Paga con seguridad desde cualquier parte del mundo con PayTR y 3-D Secure. Se cobra en liras turcas y tu banco hace la conversión. También aceptamos transferencia y Western Union."],
     photo: ["Una foto antes del envío", "Antes de la entrega te enviamos una foto del ramo por WhatsApp o en la app."],
     slots: ["El mismo día, a la hora que elijas", "Elige tu franja: 9–12, 12–17, 17–22 o 20–23 h."],
     slotsFallback: ["El mismo día, a la hora que elijas", "Elige al pagar la franja horaria que mejor te venga."],
@@ -140,7 +140,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   pt: {
     title: "Encomende do exterior com total tranquilidade",
     intro: "Preparamos as suas flores no nosso próprio ateliê em Istambul e entregamos com os nossos próprios estafetas. Você escolhe; nós damos notícias pelo WhatsApp, no seu idioma.",
-    pay: ["Pague com qualquer cartão", "Pague com segurança de qualquer lugar do mundo via PayTR ou iyzico, com 3-D Secure. O valor é cobrado em liras turcas e o seu banco faz a conversão. Também aceitamos transferência bancária e Western Union."],
+    pay: ["Pague com qualquer cartão", "Pague com segurança de qualquer lugar do mundo via PayTR, com 3-D Secure. O valor é cobrado em liras turcas e o seu banco faz a conversão. Também aceitamos transferência bancária e Western Union."],
     photo: ["Uma foto antes do envio", "Antes da entrega, enviamos uma foto do arranjo pelo WhatsApp ou pela app."],
     slots: ["No mesmo dia, na hora que escolher", "Escolha o horário: 9–12, 12–17, 17–22 ou 20–23 h."],
     slotsFallback: ["No mesmo dia, na hora que escolher", "Escolha no pagamento o horário que mais lhe convém."],
@@ -156,7 +156,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   az: {
     title: "Xaricdən rahatlıqla sifariş verin",
     intro: "İstanbuldakı əzizlərinizə gülləri öz emalatxanamızda hazırlayır, öz kuryerlərimizlə çatdırırıq. Siz seçin, qalanını öz dilinizdə WhatsApp-da birlikdə izləyək.",
-    pay: ["İstənilən kartla ödəniş", "Dünyanın hər yerindən kartınızla PayTR və ya iyzico vasitəsilə 3-D Secure ilə təhlükəsiz ödəyin. Məbləğ türk lirəsi ilə çıxılır, məzənnəni bankınız çevirir. Bank köçürməsi və Western Union da qəbul edilir."],
+    pay: ["İstənilən kartla ödəniş", "Dünyanın hər yerindən kartınızla PayTR vasitəsilə 3-D Secure ilə təhlükəsiz ödəyin. Məbləğ türk lirəsi ilə çıxılır, məzənnəni bankınız çevirir. Bank köçürməsi və Western Union da qəbul edilir."],
     photo: ["Göndərmədən öncə foto", "Hazırlanan gülün fotosunu çatdırılmadan əvvəl WhatsApp-da və ya tətbiqdə sizə göndəririk."],
     slots: ["Eyni gün, seçdiyiniz saatda", "Uyğun saat aralığını seçin: 09–12, 12–17, 17–22 və ya 20–23."],
     slotsFallback: ["Eyni gün, seçdiyiniz saatda", "Uyğun saat aralığını ödəniş zamanı seçin."],
@@ -172,7 +172,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   ru: {
     title: "Заказывайте из-за границы без лишних волнений",
     intro: "Мы собираем букеты в собственной мастерской в Стамбуле и доставляем их своими курьерами. Вы выбираете, а мы держим вас в курсе в WhatsApp на вашем языке.",
-    pay: ["Оплата любой картой", "Платите безопасно из любой точки мира через PayTR или iyzico с 3-D Secure. Сумма списывается в турецких лирах, конвертацию делает ваш банк. Также принимаем банковский перевод и Western Union."],
+    pay: ["Оплата любой картой", "Платите безопасно из любой точки мира через PayTR с 3-D Secure. Сумма списывается в турецких лирах, конвертацию делает ваш банк. Также принимаем банковский перевод и Western Union."],
     photo: ["Фото перед отправкой", "Перед доставкой пришлём фото готового букета в WhatsApp или в приложении."],
     slots: ["В тот же день, в удобное время", "Выберите интервал: 9–12, 12–17, 17–22 или 20–23."],
     slotsFallback: ["В тот же день, в удобное время", "Удобный интервал доставки выбирается при оформлении заказа."],
@@ -189,7 +189,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   ar: {
     title: "اطلب من الخارج براحة بال تامة",
     intro: "نُنسّق زهورك في مشغلنا الخاص في إسطنبول ونوصلها بواسطة مندوبينا. أنت تختار، ونحن نُطلعك على كل خطوة عبر واتساب وبلغتك.",
-    pay: ["ادفع بأي بطاقة", "ادفع بأمان من أي مكان في العالم عبر PayTR أو iyzico مع التحقق ⁦3-D Secure⁩. يُخصم المبلغ بالليرة التركية ويتولى بنكك التحويل. نقبل أيضاً التحويل البنكي وويسترن يونيون."],
+    pay: ["ادفع بأي بطاقة", "ادفع بأمان من أي مكان في العالم عبر PayTR مع التحقق ⁦3-D Secure⁩. يُخصم المبلغ بالليرة التركية ويتولى بنكك التحويل. نقبل أيضاً التحويل البنكي وويسترن يونيون."],
     photo: ["صورة قبل الإرسال", "نرسل لك صورة الباقة الجاهزة عبر واتساب أو التطبيق قبل التسليم."],
     slots: ["في نفس اليوم وفي الوقت الذي تختاره", "اختر الفترة المناسبة: 9–12، 12–17، 17–22 أو 20–23."],
     slotsFallback: ["في نفس اليوم وفي الوقت الذي تختاره", "اختر فترة التوصيل المناسبة لك عند الدفع."],
@@ -205,7 +205,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   zh: {
     title: "身在海外，也能放心下单",
     intro: "我们在伊斯坦布尔自有花艺工作室制作花束，由自有快递员配送。您只需挑选，我们会用您的语言通过 WhatsApp 随时告知进度。",
-    pay: ["支持任何银行卡", "无论身在何处，均可通过 PayTR 或 iyzico 以 3-D Secure 安全支付。以土耳其里拉扣款，由您的银行自动换汇。也支持银行转账和西联汇款。"],
+    pay: ["支持任何银行卡", "无论身在何处，均可通过 PayTR 以 3-D Secure 安全支付。以土耳其里拉扣款，由您的银行自动换汇。也支持银行转账和西联汇款。"],
     photo: ["发货前先看照片", "送达前，我们会通过 WhatsApp 或 App 把成品照片发给您。"],
     slots: ["当日送达，时段任选", "可选时段：9–12、12–17、17–22 或 20–23 点。"],
     slotsFallback: ["当日送达，时段任选", "结账时选择适合您的配送时段。"],
@@ -221,7 +221,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   ja: {
     title: "海外からでも、安心してご注文いただけます",
     intro: "イスタンブールの自社アトリエで花束を仕立て、自社の配達員がお届けします。お選びいただくだけで、進み具合は WhatsApp でお客様の言語でお知らせします。",
-    pay: ["どのカードでもお支払いOK", "世界中どこからでも、PayTR または iyzico で 3-D Secure による安全なお支払いが可能です。トルコリラで請求され、為替換算はお客様の銀行が行います。銀行振込や Western Union もご利用いただけます。"],
+    pay: ["どのカードでもお支払いOK", "世界中どこからでも、PayTR で 3-D Secure による安全なお支払いが可能です。トルコリラで請求され、為替換算はお客様の銀行が行います。銀行振込や Western Union もご利用いただけます。"],
     photo: ["お届け前に写真を確認", "お届けの前に、仕上がった花束の写真を WhatsApp またはアプリでお送りします。"],
     slots: ["当日お届け、時間帯も選べます", "9〜12時、12〜17時、17〜22時、20〜23時からお選びください。"],
     slotsFallback: ["当日お届け、時間帯も選べます", "ご都合のよい配達時間帯はご注文手続きでお選びいただけます。"],
@@ -237,7 +237,7 @@ export const ASSURANCE: Record<GlobalLocale, AssuranceCopy> = {
   ko: {
     title: "해외에서도 안심하고 주문하세요",
     intro: "이스탄불의 자체 아틀리에에서 꽃을 만들고, 자체 배송 기사가 직접 전해 드립니다. 고르기만 하시면 진행 상황은 고객님의 언어로 WhatsApp으로 알려 드립니다.",
-    pay: ["어떤 카드로든 결제", "전 세계 어디서나 PayTR 또는 iyzico를 통해 3-D Secure로 안전하게 결제하세요. 터키 리라로 청구되며 환전은 카드사에서 처리합니다. 계좌이체와 웨스턴유니온도 가능합니다."],
+    pay: ["어떤 카드로든 결제", "전 세계 어디서나 PayTR을 통해 3-D Secure로 안전하게 결제하세요. 터키 리라로 청구되며 환전은 카드사에서 처리합니다. 계좌이체와 웨스턴유니온도 가능합니다."],
     photo: ["보내기 전에 사진 확인", "배송 전에 완성된 꽃 사진을 WhatsApp이나 앱으로 보내 드립니다."],
     slots: ["당일 배송, 원하는 시간에", "9–12시, 12–17시, 17–22시, 20–23시 중에서 고르세요."],
     slotsFallback: ["당일 배송, 원하는 시간에", "결제 단계에서 원하는 배송 시간대를 고르세요."],
