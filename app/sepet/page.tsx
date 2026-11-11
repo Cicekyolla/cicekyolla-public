@@ -15,6 +15,19 @@ import { buildCouponRequestBody, cartFingerprint, readCouponPreview, unanimousRe
 import { clearPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
 import { cartDeliveryFeeMinor, cartTotalMinor, deliveryMethodLabel, cartDeliveriesMatch } from "@/lib/deliveryFee";
 import { localizeBandLabel } from "@/lib/deliveryBandLabel";
+import { cartFeeRowState } from "@/lib/cartFeeDisplay";
+import { useLocaleProductHref } from "@/lib/i18n/useLocaleProductHref";
+import { isGlobalLocale } from "@/lib/global/config";
+
+/** EK (11 Kas 2026): teslimatı seçilmemiş satırın bağı müşterinin dilindeki ürün sayfasına (TR'de /urun/ aynen). */
+function DeliveryPickLink({ trSlug, children }: { trSlug: string; children: React.ReactNode }) {
+  const href = useLocaleProductHref(trSlug);
+  return (
+    <Link href={href} data-cart-pick-delivery className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-3 py-1 text-[12px] font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]">
+      {children}
+    </Link>
+  );
+}
 
 // NOT: yerel `money` KALDIRILDI. Sepet artık seçili para birimini kullanır
 // (useCurrency().approx) — kalem, ara toplam, indirim ve GENEL TOPLAM aynı para
@@ -47,6 +60,10 @@ export default function CartPage() {
   const deliveryFeeMinor = cartDeliveryFeeMinor(items.map((item) => item.delivery));
   const deliveryLabel = localizeBandLabel(deliveryMethodLabel(items[0]?.delivery, { sameDay: t("cart.deliverySameDay"), cargo: t("common.cargo"), none: t("common.cargo") }), locale, t);
   const totalMinor = cartTotalMinor(subtotalMinor, discountMinor, deliveryFeeMinor);
+  // EK (11 Kas 2026): teslimatı seçilmemiş satır varken ücret "Ücretsiz" değil "teslimat seçiminde hesaplanır" (hesap aynı).
+  const feeState = cartFeeRowState(items.map((item) => item.delivery), deliveryFeeMinor);
+  // EK (11 Kas 2026): dil kipinde "alışverişe devam" müşterinin dilindeki ana sayfaya (TR'de / aynen).
+  const shopHomeHref = isGlobalLocale(locale) ? `/${locale}` : "/";
 
   // Sepet (ürün/varyant/adet/FİYAT) değişince uygulanan kupon geçersiz sayılır:
   // aksi halde müşteri bayat bir indirim görür ve sipariş adımında sunucu
@@ -146,7 +163,7 @@ export default function CartPage() {
               <ShoppingBag className="mx-auto h-12 w-12 text-[#c4b5fd]" />
               <h2 className="mt-5 text-2xl font-bold">{t("cart.empty")}</h2>
               <p className="mt-2 text-[#6f7482]">{t("cart.emptyDesc")}</p>
-              <Link href="/" className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#8b5cf6] px-7 py-3.5 font-bold text-white"><ArrowLeft className="h-4 w-4" /> {t("cart.startShopping")}</Link>
+              <Link href={shopHomeHref} className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#8b5cf6] px-7 py-3.5 font-bold text-white"><ArrowLeft className="h-4 w-4" /> {t("cart.startShopping")}</Link>
             </div>
           ) : (
             <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_470px]">
@@ -175,12 +192,9 @@ export default function CartPage() {
                                  Checkout kapısı bunları reddediyor ve müşteri /sepet ↔ /checkout
                                  arasında sıkışıyordu. Huniyi kırmamak için satırın kendisi
                                  teslimat seçimine götürür. */
-                              <Link
-                                href={`/urun/${item.productSlug}`}
-                                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-3 py-1 text-[12px] font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]"
-                              >
+                              <DeliveryPickLink trSlug={item.productSlug}>
                                 <AlertTriangle className="h-3.5 w-3.5" /> {t("cart.rowNeedsDelivery")}
-                              </Link>
+                              </DeliveryPickLink>
                             )}
                           </div>
                           <button type="button" aria-label={t("cart.removeItem")} onClick={() => removeItem(item.key)} className="rounded-full p-2 text-[#c4cad4] transition hover:bg-[#f7f5fc] hover:text-[#8b5cf6]"><X className="h-5 w-5" /></button>
@@ -197,7 +211,7 @@ export default function CartPage() {
                     </div>
                   </article>
                 ))}
-                <Link href="/" className="inline-flex items-center gap-2 font-medium text-[#8b5cf6]"><ArrowLeft className="h-4 w-4" /> {t("cart.continueShopping")}</Link>
+                <Link href={shopHomeHref} className="inline-flex items-center gap-2 font-medium text-[#8b5cf6]"><ArrowLeft className="h-4 w-4" /> {t("cart.continueShopping")}</Link>
               </div>
               {/* V85 koyu premium panel — checkout'taki ürün hafızası paneliyle
                   AYNI aile, böylece sepet→checkout geçişi tek deneyim gibi okunur.
@@ -235,7 +249,7 @@ export default function CartPage() {
                   <div className="mt-7 space-y-3 text-[14px]">
                     <div className="flex justify-between"><span className="text-white/45">{t("common.subtotal")}</span><Num className="font-semibold text-white/85">{money(subtotalMinor)}</Num></div>
                     {discountMinor > 0 ? <div className="flex justify-between text-[#86EFAC]"><span>{t("common.discount")}</span><Num className="font-semibold">-{money(discountMinor)}</Num></div> : null}
-                    <div className="flex justify-between" data-delivery-fee-row><span className="text-white/45">{deliveryLabel}</span>{deliveryFeeMinor > 0 ? <Num className="font-semibold text-white/85">{money(deliveryFeeMinor)}</Num> : <span className="font-semibold text-[#86EFAC]">{t("common.free")}</span>}</div>
+                    <div className="flex justify-between" data-delivery-fee-row><span className="text-white/45">{feeState === "pending" ? t("common.deliveryFee") : deliveryLabel}</span>{feeState === "pending" ? <span className="text-right text-[13px] font-medium text-white/70" data-delivery-fee-pending>{t("cart.feePending")}</span> : feeState === "amount" ? <Num className="font-semibold text-white/85">{money(deliveryFeeMinor)}</Num> : <span className="font-semibold text-[#86EFAC]">{t("common.free")}</span>}</div>
                   </div>
                   <div className="my-6 h-px" style={{ background: "rgba(196,181,253,0.13)" }} />
                   <div className="flex items-baseline justify-between">

@@ -8,6 +8,7 @@ import { useCheckoutOffers } from "@/lib/checkoutOffers";
 import { useCart, type CartItem } from "@/lib/cart";
 import { savePendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useI18n } from "@/lib/i18n";
+import { isGlobalLocale } from "@/lib/global/config";
 import { ExpiredDeliveryNotice } from "@/components/checkout/ExpiredDeliveryNotice";
 import { stashCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
 
@@ -23,7 +24,9 @@ function deliveryFingerprint(delivery?: PendingDelivery) {
 
 export default function CartCheckoutPage() {
   const { items, hydrated, subtotalMinor, clearCart, updateAllDelivery, pruneExpiredDelivery } = useCart();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // EK (11 Kas 2026): dil kipinde boş sepet dönüşü müşterinin dilindeki ana sayfaya (TR'de / aynen).
+  const shopHomeHref = isGlobalLocale(locale) ? `/${locale}` : "/";
   const first = items[0];
   const firstDelivery = first?.delivery;
   const fingerprint = deliveryFingerprint(firstDelivery);
@@ -106,7 +109,7 @@ export default function CartCheckoutPage() {
   // view yoksa sepet gerçekten boştur. Sipariş tamamlandıysa view dolu kalır ve
   // başarı ekranı (sipariş numarası) ekranda durmaya devam eder.
   // Tek satır süresi geçtiği için sepet boşaldıysa müşteri NEDENİNİ görmeli.
-  if (!view) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center"><div className="mx-auto mb-6 max-w-xl text-left"><ExpiredDeliveryNotice /></div><ShoppingBag className="mx-auto h-12 w-12 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">{t("co.emptyTitle")}</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> {t("co.emptyBack")}</Link></main>;
+  if (!view) return <main className="min-h-[60vh] bg-background px-6 py-16 text-center"><div className="mx-auto mb-6 max-w-xl text-left"><ExpiredDeliveryNotice /></div><ShoppingBag className="mx-auto h-12 w-12 text-primary" /><h1 className="mt-5 font-display text-3xl font-semibold">{t("co.emptyTitle")}</h1><Link href={shopHomeHref} className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><ArrowLeft className="h-4 w-4" /> {t("co.emptyBack")}</Link></main>;
 
   // Teslimat doğrulaması yalnız sipariş ÖNCESİ anlamlıdır; sipariş verildikten
   // sonra sepet boşaldığı için bu kontrol tetiklenip başarı ekranını gizlemesin.
