@@ -10,7 +10,11 @@ import { fetchCategoryById, fetchListingPage, fetchSeoPage, isCategoryVisible, t
 import { ShowcaseGrid } from "@/components/location/ShowcaseGrid";
 import { absoluteUrl, indexRobots } from "@/lib/site-config";
 import { escapeJsonLdText } from "@/lib/jsonLdSafe";
-import { getPlaceHub, getPlaceInfo, placeCategoryHref, placeKindDef, placePath, textBlocks, validCategoryId, type PlaceKind } from "@/lib/placePages";
+import { getPlaceHub, getPlaceInfo, placeCategoryHref, placeDistrictHref, placeKindDef, placePath, siblingPlaceHubs, textBlocks, validCategoryId, type PlaceKind } from "@/lib/placePages";
+import { KOMSU_ILCELER } from "@/lib/istanbulKomsuIlceler";
+
+// EK (11 Kas 2026): 39 İstanbul ilçesi (ilçe sayfası adresinin tek kaynağı; lib/istanbulBand.ts ile aynı küme).
+const ILCELER: ReadonlySet<string> = new Set(Object.keys(KOMSU_ILCELER));
 
 const PRODUCT_COUNT = 24;
 
@@ -70,6 +74,9 @@ export async function PlacePage({ kind, params }: { kind: PlaceKind; params: { s
   const items = listing?.items ?? [];
   const products = (keepFullList ? items : items.slice(0, PRODUCT_COUNT)).map(toCardProduct);
   const h1 = page.h1 || info?.name || def.label;
+  const districtHref = info ? placeDistrictHref(info.district, ILCELER) : null;
+  // Hub sayfasının alt şeridi: diğer 9 hub (yer alt sayfalarında basılmaz → 364 sayfada tekrar eden şerit yok).
+  const siblings = slug ? [] : siblingPlaceHubs(kind);
   const texts = textBlocks(page.body_blocks);
   const faq = (page.faq ?? []).filter((f) => f.q && f.a);
 
@@ -104,7 +111,12 @@ export async function PlacePage({ kind, params }: { kind: PlaceKind; params: { s
           {info && (info.district || info.address) ? (
             <p className="mt-4 flex items-start gap-2 text-sm text-[#667085]">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#8b5cf6]" />
-              <span>{[info.address, info.district].filter(Boolean).join(" · ")}</span>
+              {/* EK (11 Kas 2026): ilçe adı 39 ilçeden biriyse o ilçenin sayfasına gerçek bağ (yer → ilçe). */}
+              <span>
+                {info.address ? info.address : null}
+                {info.address && info.district ? " · " : null}
+                {info.district ? (districtHref ? <Link href={districtHref} className="underline decoration-[#c4b5fd] underline-offset-2 hover:text-[#6d28d9]">{info.district}</Link> : info.district) : null}
+              </span>
             </p>
           ) : null}
           {page.intro_html ? (
@@ -177,6 +189,21 @@ export async function PlacePage({ kind, params }: { kind: PlaceKind; params: { s
                   <h3 className="font-semibold text-[#140b20]">{f.q}</h3>
                   <p className="mt-3 text-sm leading-6 text-[#667085]">{f.a}</p>
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {siblings.length > 0 ? (
+        <section className="px-6 pb-16 lg:px-14" data-place-siblings>
+          <div className="mx-auto max-w-[1320px]">
+            <h2 className="mb-6 font-serif text-2xl font-semibold text-[#140b20]">İstanbul'da Diğer Gönderim Noktaları</h2>
+            <div className="flex flex-wrap gap-3">
+              {siblings.map((k) => (
+                <Link key={k.kind} href={k.hub} className="rounded-full border border-[#ebe7f2] bg-white px-4 py-2 text-sm font-semibold text-[#1f2937] transition-colors hover:border-[#c4b5fd] hover:text-[#6d28d9]">
+                  {k.label}
+                </Link>
               ))}
             </div>
           </div>

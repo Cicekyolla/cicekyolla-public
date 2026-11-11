@@ -7,6 +7,7 @@ import { categories } from "@/app/api/site-map/data";
 import Link from "next/link";
 import { fetchCityDistricts, fetchRedirectMap, finalPathOf } from "@/lib/api";
 import { districtLinks } from "@/lib/istanbulLinkAgi";
+import { PLACE_KINDS } from "@/lib/placePages";
 
 export const metadata: Metadata = {
   title: "Site Haritası",
@@ -30,13 +31,14 @@ export default async function SiteHaritasiPage() {
     url: absoluteUrl("/site-haritasi"),
     mainEntity: {
       "@type": "ItemList",
-      numberOfItems: total + istanbulLinks.length,
+      numberOfItems: total + istanbulLinks.length + PLACE_KINDS.length,
       itemListElement: [
         ...categories.map((item) => ({
           name: item.title,
           url: absoluteUrl(item.isPage ? `/${item.slug}` : `/kategori/${item.slug}`),
         })),
         ...istanbulLinks.map((d) => ({ name: `${d.name} Çiçek Siparişi`, url: absoluteUrl(d.href) })),
+        ...PLACE_KINDS.map((k) => ({ name: k.label, url: absoluteUrl(k.hub) })),
       ].map((item, index) => ({ "@type": "ListItem", position: index + 1, ...item })),
     },
   };
@@ -75,6 +77,18 @@ export default async function SiteHaritasiPage() {
           </div>
         </section>
       )}
+      {/* EK (11 Kas 2026): İstanbul hizmet hub'ları (10) — site haritası bunları hiç listelemiyordu. */}
+      <section className="mx-auto max-w-[1440px] px-5 pb-16 sm:px-8 lg:px-14" data-sitemap-place-hubs>
+        <p className="mb-2 text-xs font-bold uppercase tracking-[.24em] text-[#8b5cf6]">İstanbul</p>
+        <h2 className="mb-8 text-3xl font-black tracking-[-0.03em] text-[#12091f]">Gönderim Noktaları</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {PLACE_KINDS.map((k) => (
+            <Link key={k.kind} href={k.hub} className="rounded-[16px] border border-[#ece7f4] bg-white px-5 py-4 text-sm font-semibold text-[#1f2937] transition-colors hover:border-[#c4b5fd] hover:text-[#6d28d9]">
+              {k.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
