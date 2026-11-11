@@ -11,9 +11,17 @@
  *    (VISIT_ANON_ENABLED). Form içeriği, ad, telefon, adres GÖNDERİLMEZ;
  *    yönlendiren adresin yalnız alan adı, tıklama kimliklerinin yalnız VARLIĞI
  *    gönderilir (değeri değil).
+ *  • İLK TEMAS (Paket F, lib/firstTouch.ts): ilk sayfanın kaynağı YALNIZ onayda
+ *    sessionStorage'a (`cy_ft`) yazılır; onaysız yalnız bu sayfa belleğinde
+ *    kalır. Pakete EK alan olarak (fr/fus/fum/fuc/fg/ff/fp/ll) girer; mevcut
+ *    alanların (l, r, us, um, uc) anlamı DEĞİŞMEZ.
  *  • Gönderim arka planda (sendBeacon/keepalive); hata sessizce düşer, sayfa
  *    ve ödeme akışı hiçbir koşulda beklemez veya bozulmaz.
  */
+
+import {
+  firstTouchFields, rememberFirstTouch, resolveFirstTouch, sanitizeUtm, type FirstTouch, type StorageLike,
+} from "./firstTouch.ts";
 
 export type VisitEventType =
   | "page_view" | "view_item" | "add_to_cart" | "remove_from_cart" | "view_cart" | "begin_checkout"
@@ -44,6 +52,7 @@ let visitId: string | null = null;
 let queue: Array<Record<string, unknown>> = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 let context: Record<string, unknown> | null = null;
+let firstTouch: FirstTouch | null = null;
 let pings = 0;
 let started = false;
 let lastSig = "";
@@ -83,6 +92,14 @@ function visitorId(): string | null {
   }
 }
 
+function sessionStore(): StorageLike | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 function deviceKind(): "mobile" | "tablet" | "desktop" {
   const ua = navigator.userAgent;
   if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
@@ -103,15 +120,15 @@ function referrerHost(): string | null {
 /** Ziyaretin ilk sayfasındaki bağlam (kaynak sınıflandırması API'de yapılır). */
 function buildContext(): Record<string, unknown> {
   const p = new URLSearchParams(window.location.search);
-  const cut = (v: string | null, n: number) => (v ? v.slice(0, n) : undefined);
   return {
     l: (document.documentElement.lang || "tr").slice(0, 2),
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     d: deviceKind(),
     r: referrerHost() ?? undefined,
-    us: cut(p.get("utm_source"), 80),
-    um: cut(p.get("utm_medium"), 40),
-    uc: cut(p.get("utm_campaign"), 120),
+    // e-posta/telefon benzeri utm değeri düşer (lib/firstTouch.ts sanitizeUtm).
+    us: sanitizeUtm(p.get("utm_source"), 80),
+    um: sanitizeUtm(p.get("utm_medium"), 40),
+    uc: sanitizeUtm(p.get("utm_campaign"), 120),
     g: p.has("gclid") || p.has("gbraid") || p.has("wbraid") ? 1 : undefined,
     f: p.has("fbclid") ? 1 : undefined,
   };
@@ -119,10 +136,12 @@ function buildContext(): Record<string, unknown> {
 
 function payload(): string | null {
   if (!queue.length || !visitId) return null;
+  const consent = analyticsConsent();
+  rememberFirstTouch(sessionStore(), consent, firstTouch);
   const body: Record<string, unknown> = {
     v: visitId,
-    c: analyticsConsent() ? 2 : 1,
-    x: { ...(context ?? {}), l: (document.documentElement.lang || "tr").slice(0, 2) },
+    c: consent ? 2 : 1,
+    x: { ...(context ?? {}), l: (document.documentElement.lang || "tr").slice(0, 2), ...firstTouchFields(firstTouch) },
     e: queue.splice(0, MAX_QUEUE),
   };
   const u = visitorId();
@@ -151,6 +170,16 @@ function ensureStarted(): void {
   started = true;
   visitId = randomId();
   context = buildContext();
+  try {
+    firstTouch = resolveFirstTouch({
+      storage: sessionStore(),
+      consent: analyticsConsent(),
+      location: window.location,
+      referrer: document.referrer,
+    });
+  } catch {
+    firstTouch = null;
+  }
   const leave = () => flushVisit(true);
   window.addEventListener("pagehide", leave);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") leave(); });

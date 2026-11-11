@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { pushEcommerceEvent } from "@/lib/analytics";
+import { isProductPath } from "@/lib/firstTouch";
 
 type ProductJsonLd = {
   "@type"?: string | string[];
@@ -54,7 +56,8 @@ export function EcommerceViewItemTracker() {
   const lastTrackedPath = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!pathname.startsWith("/urun/")) return;
+    // TR /urun/<slug> + 13 dilin ürün yolu (/en/product/<slug>, /de/produkt/<slug> ...).
+    if (!isProductPath(pathname)) return;
     if (lastTrackedPath.current === pathname) return;
 
     const timer = window.setTimeout(() => {
@@ -70,23 +73,21 @@ export function EcommerceViewItemTracker() {
           ? product.brand
           : product.brand?.name || "ÇiçekYolla";
 
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({ ecommerce: null });
-      window.dataLayer.push({
-        event: "view_item",
-        ecommerce: {
-          currency: product.offers.priceCurrency || "TRY",
-          value: price,
-          items: [
-            {
-              item_id: product.productID || slug,
-              item_name: product.name,
-              item_brand: brand,
-              price,
-              quantity: 1,
-            },
-          ],
-        },
+      // Tek kapı (lib/analytics.ts): dataLayer'a BİREBİR aynı iki satır
+      // ({ecommerce:null} + {event:"view_item", ecommerce}) yazılır; ek olarak
+      // panelin kendi ziyaretçi ölçümüne view_item düşer (huni "Ürün inceleme").
+      pushEcommerceEvent("view_item", {
+        currency: product.offers.priceCurrency || "TRY",
+        value: price,
+        items: [
+          {
+            item_id: product.productID || slug,
+            item_name: product.name,
+            item_brand: brand,
+            price,
+            quantity: 1,
+          },
+        ],
       });
 
       lastTrackedPath.current = pathname;
