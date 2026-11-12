@@ -210,7 +210,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
 
   return (
     <>
-      <button type="button" aria-hidden="true" tabIndex={-1} onClick={onClose} className="fixed inset-0 z-[94] bg-foreground/30 lg:hidden" />
+      <button type="button" aria-hidden="true" tabIndex={-1} onClick={onClose} className="fixed inset-0 z-[9989] bg-foreground/30 lg:hidden" />
       <section
         role="dialog"
         aria-label={t("concierge.title")}
@@ -218,7 +218,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
         data-concierge-panel=""
         // Çerez bandı açıkken panel bandın üstüne çıkar; üstten taşmaması için yükseklik de o kadar kısalır.
         style={lift ? { marginBottom: lift, maxHeight: `calc(100dvh - ${lift + 24}px)` } : undefined}
-        className="fixed inset-x-0 bottom-0 z-[95] flex h-[88dvh] flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl lg:inset-x-auto lg:bottom-6 lg:left-6 lg:h-[640px] lg:max-h-[calc(100dvh-48px)] lg:w-[400px] lg:rounded-3xl"
+        className="fixed inset-x-0 bottom-0 z-[9990] flex h-[88dvh] flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl lg:inset-x-auto lg:bottom-6 lg:left-6 lg:h-[640px] lg:max-h-[calc(100dvh-48px)] lg:w-[400px] lg:rounded-3xl"
       >
         <header className="flex items-center justify-between gap-3 border-b border-border bg-secondary px-4 py-3">
           <div className="flex min-w-0 items-center gap-2.5">

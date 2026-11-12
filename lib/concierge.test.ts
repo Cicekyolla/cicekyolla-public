@@ -469,3 +469,20 @@ test("sözleşme: Public istek / yanıt alanları API'ninkiyle aynı (webConcier
   }
   assert.match(src("../components/concierge/ConciergeLauncher.tsx"), /on = res\.ok;/);
 });
+
+test("katman: panel ve arka planı site başlıklarının ÜSTÜNDE, çerez bandının ALTINDA çizilir (mobilde kapat düğmesi örtülmez)", () => {
+  // Kaynak: 12 Kas 2026 canlı testi — 13 dil sayfasında mobilde çerez bandı açıkken panel yukarı itiliyor,
+  // sabit üst başlık (V80Header, z-index 400) panelin kapat düğmesini ve arka planı örtüyordu (panel z-95 idi).
+  const panel = src("../components/concierge/ConciergePanel.tsx");
+  const z = (re: RegExp) => Number((re.exec(panel) ?? [])[1]);
+  const panelZ = z(/fixed inset-x-0 bottom-0 z-\[(\d+)\]/);
+  const backdropZ = z(/fixed inset-0 z-\[(\d+)\] bg-foreground/);
+  const globalHeader = Number((/position: "sticky", top: 0, zIndex: (\d+)/.exec(src("../components/global/v80/V80Header.tsx")) ?? [])[1]);
+  const trHeader = Number((/sticky top-0 z-(\d+)/.exec(src("../components/Header.tsx")) ?? [])[1]);
+  const consent = src("../components/consent/ConsentManager.tsx");
+  const bandZ = Math.min(...[...consent.matchAll(/data-cookie-banner=""\s*\n\s*className="[^"]*z-\[(\d+)\]/g)].map((m) => Number(m[1])));
+  assert.ok(globalHeader > 0 && trHeader > 0 && Number.isFinite(bandZ), "başlık ve bant katmanları okunabildi");
+  assert.ok(panelZ > globalHeader && panelZ > trHeader, `panel (${panelZ}) başlıkların üstünde`);
+  assert.ok(backdropZ > globalHeader && backdropZ < panelZ, `arka plan (${backdropZ}) başlığın üstünde, panelin altında`);
+  assert.ok(panelZ < bandZ, `panel (${panelZ}) çerez bandının (${bandZ}) altında; bant için ayrıca yukarı kayar`);
+});
