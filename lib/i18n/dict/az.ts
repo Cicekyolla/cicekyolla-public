@@ -546,6 +546,28 @@ const az: Dict = {
   "lfooter.privacy": "Məxfilik siyasəti (türkcə)",
   "lfooter.terms": "Məsafəli satış müqaviləsi (türkcə)",
   "lfooter.rights": "Bütün hüquqlar qorunur.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Gül məsləhətçisi",
+  "concierge.title": "ÇiçekYolla gül məsləhətçisi",
+  "concierge.greeting": "Salam. Gülləri kimə və hansı münasibətlə göndərmək istədiyinizi yazın; sizə uyğun seçimləri birlikdə tapaq.",
+  "concierge.quick1": "Sevgilimə gül göndərmək istəyirəm",
+  "concierge.quick2": "Ad günü üçün gül axtarıram",
+  "concierge.quick3": "Şəfa diləyi ilə gül göndərmək istəyirəm",
+  "concierge.placeholder": "Mesajınızı yazın",
+  "concierge.send": "Göndər",
+  "concierge.close": "Söhbəti bağla",
+  "concierge.typing": "Cavab yazılır",
+  "concierge.tierEconomy": "Sərfəli",
+  "concierge.tierRecommended": "Tövsiyə olunan",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Çatdırılmanı seç",
+  "concierge.whatsapp": "WhatsApp-da davam et",
+  "concierge.tryNote": "Digər valyutalardakı məbləğlər təxminidir; ödəniş Türk lirəsi ilə alınır.",
+  "concierge.errorNetwork": "Cavab alınmadı. Zəhmət olmasa yenidən cəhd edin.",
+  "concierge.errorRate": "Həddən çox mesaj göndərildi. Zəhmət olmasa bir az sonra yenidən cəhd edin.",
+  "concierge.errorBusy": "Əvvəlki mesajınız hələ cavablandırılır. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin.",
+  "concierge.retry": "Yenidən göndər",
+  "concierge.privacy": "Rəqəmsal köməkçi ilə yazışırsınız. Kart məlumatı yazmayın; mesajlarınız cavab hazırlamaq üçün emal olunur.",
 };
 
 export default az;

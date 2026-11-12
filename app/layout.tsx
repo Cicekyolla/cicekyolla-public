@@ -11,6 +11,7 @@ import { MemberNewsletterBand } from "@/components/MemberNewsletterBand";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { TelegramButton } from "@/components/TelegramButton";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
+import { ConciergeLauncher } from "@/components/concierge/ConciergeLauncher";
 import { resolveTelegram } from "@/lib/telegramContact";
 import { AdsWhatsAppRef } from "@/components/AdsWhatsAppRef";
 import { ConsentManager } from "@/components/consent/ConsentManager";
@@ -267,6 +268,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <TelegramButton {...telegram} />
         {/* "Yukarı çık": Telegram'ın üstünde, ~600px kaydırınca belirir (TR + 13 dil). */}
         <ScrollToTopButton />
+        {/* Web AI Satış Danışmanı: SOL altta; bayrak kapalıyken (varsayılan) hiçbir şey çizmez, SSR'da null. */}
+        <ConciergeLauncher />
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />

@@ -546,6 +546,28 @@ const nl: Dict = {
   "lfooter.privacy": "Privacybeleid (in het Turks)",
   "lfooter.terms": "Overeenkomst op afstand (in het Turks)",
   "lfooter.rights": "Alle rechten voorbehouden.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Bloemenadvies",
+  "concierge.title": "ÇiçekYolla bloemenadvies",
+  "concierge.greeting": "Hallo. Vertel ons voor wie de bloemen zijn en voor welke gelegenheid; samen vinden we de juiste keuze.",
+  "concierge.quick1": "Ik wil bloemen sturen naar mijn partner",
+  "concierge.quick2": "Ik zoek bloemen voor een verjaardag",
+  "concierge.quick3": "Ik wil beterschapsbloemen sturen",
+  "concierge.placeholder": "Typ uw bericht",
+  "concierge.send": "Versturen",
+  "concierge.close": "Chat sluiten",
+  "concierge.typing": "Antwoord wordt geschreven",
+  "concierge.tierEconomy": "Voordelig",
+  "concierge.tierRecommended": "Aanbevolen",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Bezorging kiezen",
+  "concierge.whatsapp": "Verder op WhatsApp",
+  "concierge.tryNote": "Bedragen in andere valuta zijn bij benadering; de betaling wordt in Turkse lira afgeschreven.",
+  "concierge.errorNetwork": "Er kwam geen antwoord. Probeer het opnieuw.",
+  "concierge.errorRate": "Er zijn te veel berichten verstuurd. Probeer het iets later opnieuw.",
+  "concierge.errorBusy": "Uw vorige bericht wordt nog beantwoord. Probeer het over enkele seconden opnieuw.",
+  "concierge.retry": "Opnieuw versturen",
+  "concierge.privacy": "U chat met een digitale assistent. Typ geen kaartgegevens; uw berichten worden verwerkt om antwoorden te maken.",
 };
 
 export default nl;

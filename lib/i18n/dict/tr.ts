@@ -559,6 +559,28 @@ const tr = {
   "lfooter.privacy": "KVKK ve gizlilik",
   "lfooter.terms": "Mesafeli satış sözleşmesi",
   "lfooter.rights": "Tüm hakları saklıdır.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Çiçek danışmanı",
+  "concierge.title": "ÇiçekYolla çiçek danışmanı",
+  "concierge.greeting": "Merhaba. Kime ve hangi vesileyle çiçek göndermek istediğinizi yazın; size uygun seçenekleri birlikte bulalım.",
+  "concierge.quick1": "Sevgilime çiçek göndermek istiyorum",
+  "concierge.quick2": "Doğum günü için çiçek arıyorum",
+  "concierge.quick3": "Geçmiş olsun çiçeği göndermek istiyorum",
+  "concierge.placeholder": "Mesajınızı yazın",
+  "concierge.send": "Gönder",
+  "concierge.close": "Sohbeti kapat",
+  "concierge.typing": "Yanıt yazılıyor",
+  "concierge.tierEconomy": "Ekonomik",
+  "concierge.tierRecommended": "Önerilen",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Teslimat seç",
+  "concierge.whatsapp": "WhatsApp'tan devam et",
+  "concierge.tryNote": "Gösterilen döviz tutarları yaklaşıktır; ödeme Türk lirası olarak alınır.",
+  "concierge.errorNetwork": "Yanıt alınamadı. Lütfen yeniden deneyin.",
+  "concierge.errorRate": "Çok fazla mesaj gönderildi. Lütfen biraz sonra yeniden deneyin.",
+  "concierge.errorBusy": "Önceki mesajınız hâlâ yanıtlanıyor. Lütfen birkaç saniye sonra yeniden deneyin.",
+  "concierge.retry": "Yeniden gönder",
+  "concierge.privacy": "Dijital asistanla yazışıyorsunuz. Kart bilgisi yazmayın; mesajlarınız yanıt üretmek için işlenir.",
 };
 
 export type Dict = typeof tr;

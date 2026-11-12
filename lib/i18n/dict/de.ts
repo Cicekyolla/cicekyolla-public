@@ -546,6 +546,28 @@ const de: Dict = {
   "lfooter.privacy": "Datenschutz (auf Türkisch)",
   "lfooter.terms": "Fernabsatzvertrag (auf Türkisch)",
   "lfooter.rights": "Alle Rechte vorbehalten.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Blumenberatung",
+  "concierge.title": "ÇiçekYolla Blumenberatung",
+  "concierge.greeting": "Hallo. Schreiben Sie uns, für wen und zu welchem Anlass die Blumen sind – wir finden gemeinsam die passende Auswahl.",
+  "concierge.quick1": "Ich möchte meinem Partner Blumen schicken",
+  "concierge.quick2": "Ich suche Blumen zum Geburtstag",
+  "concierge.quick3": "Ich möchte Blumen zur Genesung schicken",
+  "concierge.placeholder": "Nachricht schreiben",
+  "concierge.send": "Senden",
+  "concierge.close": "Chat schließen",
+  "concierge.typing": "Antwort wird geschrieben",
+  "concierge.tierEconomy": "Günstig",
+  "concierge.tierRecommended": "Empfohlen",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Lieferung wählen",
+  "concierge.whatsapp": "Auf WhatsApp fortfahren",
+  "concierge.tryNote": "Beträge in anderen Währungen sind Näherungswerte; bezahlt wird in türkischen Lira.",
+  "concierge.errorNetwork": "Es kam keine Antwort. Bitte versuchen Sie es erneut.",
+  "concierge.errorRate": "Es wurden zu viele Nachrichten gesendet. Bitte versuchen Sie es etwas später erneut.",
+  "concierge.errorBusy": "Ihre vorherige Nachricht wird noch beantwortet. Bitte versuchen Sie es in einigen Sekunden erneut.",
+  "concierge.retry": "Erneut senden",
+  "concierge.privacy": "Sie schreiben mit einem digitalen Assistenten. Geben Sie keine Kartendaten ein; Ihre Nachrichten werden zur Erstellung der Antworten verarbeitet.",
 };
 
 export default de;

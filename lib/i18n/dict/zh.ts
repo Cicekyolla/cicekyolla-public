@@ -546,6 +546,28 @@ const zh: Dict = {
   "lfooter.privacy": "隐私政策（土耳其语）",
   "lfooter.terms": "远程销售合同（土耳其语）",
   "lfooter.rights": "版权所有。",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "鲜花顾问",
+  "concierge.title": "ÇiçekYolla 鲜花顾问",
+  "concierge.greeting": "您好。请告诉我们鲜花送给谁、是什么场合，我们一起为您挑选合适的花束。",
+  "concierge.quick1": "我想给爱人送花",
+  "concierge.quick2": "我在找生日鲜花",
+  "concierge.quick3": "我想送花祝愿早日康复",
+  "concierge.placeholder": "请输入您的消息",
+  "concierge.send": "发送",
+  "concierge.close": "关闭聊天",
+  "concierge.typing": "正在回复",
+  "concierge.tierEconomy": "实惠",
+  "concierge.tierRecommended": "推荐",
+  "concierge.tierPremium": "精选",
+  "concierge.cardCta": "选择配送",
+  "concierge.whatsapp": "在 WhatsApp 上继续",
+  "concierge.tryNote": "其他货币金额仅供参考；付款以土耳其里拉收取。",
+  "concierge.errorNetwork": "未收到回复，请重试。",
+  "concierge.errorRate": "发送的消息过多，请稍后再试。",
+  "concierge.errorBusy": "您的上一条消息仍在回复中，请几秒后再试。",
+  "concierge.retry": "重新发送",
+  "concierge.privacy": "您正在与数字助手交流。请勿填写银行卡信息；您的消息将被处理以生成回复。",
 };
 
 export default zh;

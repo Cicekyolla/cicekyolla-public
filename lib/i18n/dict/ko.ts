@@ -546,6 +546,28 @@ const ko: Dict = {
   "lfooter.privacy": "개인정보 처리방침(터키어)",
   "lfooter.terms": "원격 판매 계약(터키어)",
   "lfooter.rights": "All rights reserved.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "꽃 상담",
+  "concierge.title": "ÇiçekYolla 꽃 상담",
+  "concierge.greeting": "안녕하세요. 누구에게, 어떤 일로 꽃을 보내고 싶으신지 알려 주세요. 알맞은 꽃을 함께 찾아드리겠습니다.",
+  "concierge.quick1": "사랑하는 사람에게 꽃을 보내고 싶어요",
+  "concierge.quick2": "생일 꽃을 찾고 있어요",
+  "concierge.quick3": "쾌유를 비는 꽃을 보내고 싶어요",
+  "concierge.placeholder": "메시지를 입력하세요",
+  "concierge.send": "보내기",
+  "concierge.close": "채팅 닫기",
+  "concierge.typing": "답변 작성 중",
+  "concierge.tierEconomy": "실속형",
+  "concierge.tierRecommended": "추천",
+  "concierge.tierPremium": "프리미엄",
+  "concierge.cardCta": "배송 선택",
+  "concierge.whatsapp": "WhatsApp에서 계속하기",
+  "concierge.tryNote": "다른 통화 금액은 대략적인 값이며, 결제는 터키 리라로 청구됩니다.",
+  "concierge.errorNetwork": "답변을 받지 못했습니다. 다시 시도해 주세요.",
+  "concierge.errorRate": "메시지가 너무 많이 전송되었습니다. 잠시 후 다시 시도해 주세요.",
+  "concierge.errorBusy": "이전 메시지에 아직 답변 중입니다. 몇 초 후 다시 시도해 주세요.",
+  "concierge.retry": "다시 보내기",
+  "concierge.privacy": "디지털 도우미와 대화 중입니다. 카드 정보는 입력하지 마세요. 메시지는 답변 작성을 위해 처리됩니다.",
 };
 
 export default ko;

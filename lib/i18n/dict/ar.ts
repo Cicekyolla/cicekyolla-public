@@ -547,6 +547,28 @@ const ar: Dict = {
   "lfooter.privacy": "سياسة الخصوصية (بالتركية)",
   "lfooter.terms": "عقد البيع عن بُعد (بالتركية)",
   "lfooter.rights": "جميع الحقوق محفوظة.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "مستشار الزهور",
+  "concierge.title": "مستشار الزهور في ÇiçekYolla",
+  "concierge.greeting": "مرحبًا. اكتب لنا لمن الزهور وما المناسبة، وسنجد معًا الخيارات المناسبة.",
+  "concierge.quick1": "أريد إرسال زهور إلى من أحب",
+  "concierge.quick2": "أبحث عن زهور لعيد ميلاد",
+  "concierge.quick3": "أريد إرسال زهور للتمني بالشفاء",
+  "concierge.placeholder": "اكتب رسالتك",
+  "concierge.send": "إرسال",
+  "concierge.close": "إغلاق المحادثة",
+  "concierge.typing": "جارٍ كتابة الرد",
+  "concierge.tierEconomy": "اقتصادي",
+  "concierge.tierRecommended": "موصى به",
+  "concierge.tierPremium": "فاخر",
+  "concierge.cardCta": "اختر التوصيل",
+  "concierge.whatsapp": "المتابعة عبر واتساب",
+  "concierge.tryNote": "المبالغ بالعملات الأخرى تقريبية؛ يتم تحصيل الدفع بالليرة التركية.",
+  "concierge.errorNetwork": "لم يصل رد. يرجى المحاولة مرة أخرى.",
+  "concierge.errorRate": "تم إرسال رسائل كثيرة. يرجى المحاولة بعد قليل.",
+  "concierge.errorBusy": "ما زلنا نرد على رسالتك السابقة. يرجى المحاولة بعد بضع ثوانٍ.",
+  "concierge.retry": "إعادة الإرسال",
+  "concierge.privacy": "أنت تتحدث مع مساعد رقمي. لا تكتب بيانات بطاقتك؛ تتم معالجة رسائلك لإعداد الردود.",
 };
 
 export default ar;
