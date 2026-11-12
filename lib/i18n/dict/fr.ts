@@ -546,6 +546,28 @@ const fr: Dict = {
   "lfooter.privacy": "Confidentialité (en turc)",
   "lfooter.terms": "Contrat de vente à distance (en turc)",
   "lfooter.rights": "Tous droits réservés.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Conseiller fleurs",
+  "concierge.title": "Conseiller fleurs ÇiçekYolla",
+  "concierge.greeting": "Bonjour. Dites-nous pour qui sont les fleurs et pour quelle occasion ; nous trouverons ensemble les bonnes options.",
+  "concierge.quick1": "Je veux envoyer des fleurs à la personne que j’aime",
+  "concierge.quick2": "Je cherche des fleurs d’anniversaire",
+  "concierge.quick3": "Je veux envoyer des fleurs de bon rétablissement",
+  "concierge.placeholder": "Écrivez votre message",
+  "concierge.send": "Envoyer",
+  "concierge.close": "Fermer la discussion",
+  "concierge.typing": "Réponse en cours",
+  "concierge.tierEconomy": "Économique",
+  "concierge.tierRecommended": "Recommandé",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Choisir la livraison",
+  "concierge.whatsapp": "Continuer sur WhatsApp",
+  "concierge.tryNote": "Les montants dans d’autres devises sont approximatifs ; le paiement est débité en livres turques.",
+  "concierge.errorNetwork": "Aucune réponse reçue. Veuillez réessayer.",
+  "concierge.errorRate": "Trop de messages ont été envoyés. Veuillez réessayer un peu plus tard.",
+  "concierge.errorBusy": "Votre message précédent est encore en cours de traitement. Veuillez réessayer dans quelques secondes.",
+  "concierge.retry": "Renvoyer",
+  "concierge.privacy": "Vous échangez avec un assistant numérique. N’indiquez pas vos données de carte ; vos messages sont traités pour générer les réponses.",
 };
 
 export default fr;

@@ -546,6 +546,28 @@ const it: Dict = {
   "lfooter.privacy": "Privacy (in turco)",
   "lfooter.terms": "Contratto di vendita a distanza (in turco)",
   "lfooter.rights": "Tutti i diritti riservati.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Consulente fiori",
+  "concierge.title": "Consulente fiori ÇiçekYolla",
+  "concierge.greeting": "Buongiorno. Ci dica per chi sono i fiori e per quale occasione: troveremo insieme le opzioni giuste.",
+  "concierge.quick1": "Voglio mandare fiori alla persona che amo",
+  "concierge.quick2": "Cerco fiori per un compleanno",
+  "concierge.quick3": "Voglio mandare fiori di pronta guarigione",
+  "concierge.placeholder": "Scriva il suo messaggio",
+  "concierge.send": "Invia",
+  "concierge.close": "Chiudi la chat",
+  "concierge.typing": "Risposta in scrittura",
+  "concierge.tierEconomy": "Economico",
+  "concierge.tierRecommended": "Consigliato",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Scegli la consegna",
+  "concierge.whatsapp": "Continua su WhatsApp",
+  "concierge.tryNote": "Gli importi in altre valute sono indicativi; il pagamento viene addebitato in lire turche.",
+  "concierge.errorNetwork": "Non è arrivata alcuna risposta. Riprovi.",
+  "concierge.errorRate": "Sono stati inviati troppi messaggi. Riprovi tra poco.",
+  "concierge.errorBusy": "Stiamo ancora rispondendo al suo messaggio precedente. Riprovi tra qualche secondo.",
+  "concierge.retry": "Invia di nuovo",
+  "concierge.privacy": "Sta scrivendo con un assistente digitale. Non inserisca i dati della carta; i suoi messaggi vengono elaborati per generare le risposte.",
 };
 
 export default it;

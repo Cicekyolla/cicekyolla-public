@@ -546,6 +546,28 @@ const ja: Dict = {
   "lfooter.privacy": "プライバシーポリシー（トルコ語）",
   "lfooter.terms": "通信販売契約（トルコ語）",
   "lfooter.rights": "All rights reserved.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "お花のご相談",
+  "concierge.title": "ÇiçekYolla お花のご相談",
+  "concierge.greeting": "こんにちは。どなたに、どのような機会でお花を贈りたいかをお知らせください。ぴったりのお花を一緒にお選びします。",
+  "concierge.quick1": "大切な人にお花を贈りたい",
+  "concierge.quick2": "誕生日のお花を探しています",
+  "concierge.quick3": "お見舞いのお花を贈りたい",
+  "concierge.placeholder": "メッセージを入力",
+  "concierge.send": "送信",
+  "concierge.close": "チャットを閉じる",
+  "concierge.typing": "返信を作成中",
+  "concierge.tierEconomy": "お手頃",
+  "concierge.tierRecommended": "おすすめ",
+  "concierge.tierPremium": "プレミアム",
+  "concierge.cardCta": "配送を選ぶ",
+  "concierge.whatsapp": "WhatsApp で続ける",
+  "concierge.tryNote": "他通貨の金額は目安です。お支払いはトルコリラで請求されます。",
+  "concierge.errorNetwork": "返信を受け取れませんでした。もう一度お試しください。",
+  "concierge.errorRate": "メッセージが多すぎます。しばらくしてからもう一度お試しください。",
+  "concierge.errorBusy": "前のメッセージに返信中です。数秒後にもう一度お試しください。",
+  "concierge.retry": "再送信",
+  "concierge.privacy": "デジタルアシスタントとのチャットです。カード情報は入力しないでください。メッセージは返信の作成のために処理されます。",
 };
 
 export default ja;

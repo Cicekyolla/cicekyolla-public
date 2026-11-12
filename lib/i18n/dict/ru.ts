@@ -546,6 +546,28 @@ const ru: Dict = {
   "lfooter.privacy": "Конфиденциальность (на турецком)",
   "lfooter.terms": "Договор дистанционной продажи (на турецком)",
   "lfooter.rights": "Все права защищены.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Консультант по цветам",
+  "concierge.title": "Консультант по цветам ÇiçekYolla",
+  "concierge.greeting": "Здравствуйте. Напишите, кому и по какому поводу вы хотите отправить цветы, и мы вместе подберём подходящие варианты.",
+  "concierge.quick1": "Хочу отправить цветы любимому человеку",
+  "concierge.quick2": "Ищу цветы на день рождения",
+  "concierge.quick3": "Хочу отправить цветы с пожеланием выздоровления",
+  "concierge.placeholder": "Напишите сообщение",
+  "concierge.send": "Отправить",
+  "concierge.close": "Закрыть чат",
+  "concierge.typing": "Ответ пишется",
+  "concierge.tierEconomy": "Эконом",
+  "concierge.tierRecommended": "Рекомендуем",
+  "concierge.tierPremium": "Премиум",
+  "concierge.cardCta": "Выбрать доставку",
+  "concierge.whatsapp": "Продолжить в WhatsApp",
+  "concierge.tryNote": "Суммы в других валютах приблизительные; оплата списывается в турецких лирах.",
+  "concierge.errorNetwork": "Ответ не получен. Пожалуйста, попробуйте ещё раз.",
+  "concierge.errorRate": "Отправлено слишком много сообщений. Пожалуйста, попробуйте чуть позже.",
+  "concierge.errorBusy": "Мы ещё отвечаем на ваше предыдущее сообщение. Пожалуйста, попробуйте через несколько секунд.",
+  "concierge.retry": "Отправить ещё раз",
+  "concierge.privacy": "Вы переписываетесь с цифровым помощником. Не указывайте данные карты; ваши сообщения обрабатываются для подготовки ответов.",
 };
 
 export default ru;

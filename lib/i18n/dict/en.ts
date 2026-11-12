@@ -546,6 +546,28 @@ const en: Dict = {
   "lfooter.privacy": "Privacy policy (in Turkish)",
   "lfooter.terms": "Distance sales agreement (in Turkish)",
   "lfooter.rights": "All rights reserved.",
+  // Web AI Satış Danışmanı (sohbet paneli)
+  "concierge.launcher": "Flower advisor",
+  "concierge.title": "ÇiçekYolla flower advisor",
+  "concierge.greeting": "Hello. Tell us who the flowers are for and the occasion, and we will find the right options together.",
+  "concierge.quick1": "I want to send flowers to my partner",
+  "concierge.quick2": "I am looking for birthday flowers",
+  "concierge.quick3": "I want to send get-well flowers",
+  "concierge.placeholder": "Type your message",
+  "concierge.send": "Send",
+  "concierge.close": "Close chat",
+  "concierge.typing": "Writing a reply",
+  "concierge.tierEconomy": "Economy",
+  "concierge.tierRecommended": "Recommended",
+  "concierge.tierPremium": "Premium",
+  "concierge.cardCta": "Choose delivery",
+  "concierge.whatsapp": "Continue on WhatsApp",
+  "concierge.tryNote": "Amounts in other currencies are approximate; payment is charged in Turkish lira.",
+  "concierge.errorNetwork": "We could not get a reply. Please try again.",
+  "concierge.errorRate": "Too many messages were sent. Please try again a little later.",
+  "concierge.errorBusy": "Your previous message is still being answered. Please try again in a few seconds.",
+  "concierge.retry": "Send again",
+  "concierge.privacy": "You are chatting with a digital assistant. Do not type card details; your messages are processed to generate replies.",
 };
 
 export default en;
