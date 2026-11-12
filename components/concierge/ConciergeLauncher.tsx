@@ -19,14 +19,14 @@
  * Panel kodu ilk tıklamada yüklenir (sayfa başına yalnız bu küçük başlatıcı gelir).
  */
 
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useReducer, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { acquireOverlay, releaseOverlay } from "@/components/consent/ConsentManager";
 import { useOverlayBusy } from "@/components/useOverlayBusy";
 import { useI18n } from "@/lib/i18n";
 import {
-  conciergeVisibleOnPath, launcherSlot, readStatusCache, STATUS_STORAGE_KEY, writeStatusCache, type LauncherSlot,
+  chatReducer, conciergeVisibleOnPath, INITIAL_CHAT, launcherSlot, readStatusCache, STATUS_STORAGE_KEY, writeStatusCache, type LauncherSlot,
 } from "@/lib/concierge";
 
 const ConciergePanel = lazy(() => import("./ConciergePanel"));
@@ -57,6 +57,10 @@ export function ConciergeLauncher() {
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
   const [locked, setLocked] = useState(false);
+  // Sohbet geçmişi BURADA (kök layout'ta, sayfa geçişlerinde yaşayan bileşende) tutulur: panel kapatılıp
+  // açıldığında ya da karttan ürün sayfasına gidilip dönüldüğünde yazışma ekranda kalır. Yalnız bellekte
+  // durur (depolamaya yazılmaz); sayfa tam yenilenirse ekran sıfırlanır, sunucudaki oturum sürer.
+  const [chat, dispatch] = useReducer(chatReducer, INITIAL_CHAT);
 
   // Açık mı? — sekme oturumunda 10 dk hatırlanır; kapalıysa hiçbir şey çizilmez.
   useEffect(() => {
@@ -97,7 +101,7 @@ export function ConciergeLauncher() {
   if (open) {
     return (
       <Suspense fallback={null}>
-        <ConciergePanel locale={locale} dir={dir} t={t} pathname={pathname} onClose={close} onOff={turnOff} />
+        <ConciergePanel locale={locale} dir={dir} t={t} pathname={pathname} state={chat} dispatch={dispatch} onClose={close} onOff={turnOff} />
       </Suspense>
     );
   }

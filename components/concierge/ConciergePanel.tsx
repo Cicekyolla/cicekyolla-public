@@ -10,9 +10,11 @@
  * • Sepete EKLEMEZ: kart müşterinin dilindeki ürün sayfasına gider ("Teslimat seç"); teslimat seçimi
  *   ve sepete ekleme oradaki mevcut akıştadır.
  * • Oturum belirteci yalnız sekme oturumunda (sessionStorage) saklanır; çerez yok.
+ * • Sohbet geçmişi başlatıcıda tutulur (state / dispatch prop'ları): panel kapanıp açılınca kaybolmaz.
+ * • Karta tıklanınca panel kapanır (ürün sayfasının üstünü örtmesin); geçmiş durduğu için geri dönülebilir.
  */
 
-import { useCallback, useEffect, useReducer, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import { MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { Price } from "@/components/Price";
@@ -20,8 +22,8 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { useCurrency } from "@/lib/currency";
 import type { DictKey } from "@/lib/i18n/dict/tr";
 import {
-  buildRequestBody, canSend, chatReducer, conciergeWhatsappUrl, INITIAL_CHAT, MAX_MESSAGE_CHARS, parseTurn, SESSION_STORAGE_KEY,
-  type CardTier, type ChatError, type ChatMessage, type ConciergeCard, type TurnOutcome,
+  buildRequestBody, canSend, conciergeWhatsappUrl, MAX_MESSAGE_CHARS, parseTurn, SESSION_STORAGE_KEY,
+  type CardTier, type ChatAction, type ChatError, type ChatMessage, type ChatState, type ConciergeCard, type TurnOutcome,
 } from "@/lib/concierge";
 
 type T = (key: DictKey, vars?: Record<string, string | number>) => string;
@@ -31,6 +33,9 @@ interface Props {
   dir: "ltr" | "rtl";
   t: T;
   pathname: string | null;
+  /** Sohbet durumu başlatıcıda yaşar → panel kapanıp açılınca geçmiş kaybolmaz. */
+  state: ChatState;
+  dispatch: Dispatch<ChatAction>;
   onClose: () => void;
   /** Asistan kapatıldı (bayrak) → başlatıcı da gizlenir. */
   onOff: () => void;
@@ -77,10 +82,15 @@ function writeToken(token: string) {
   try { window.sessionStorage.setItem(SESSION_STORAGE_KEY, token); } catch { /* depolama kapalıysa her mesaj yeni oturumdur */ }
 }
 
-function Card({ card, t }: { card: ConciergeCard; t: T }) {
+function Card({ card, t, onNavigate }: { card: ConciergeCard; t: T; onNavigate: () => void }) {
+  // Aynı sekmede ürün sayfasına gidilirken panel kapanır; yeni sekme / pencere tıklamalarında açık kalır.
+  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onNavigate();
+  };
   return (
     <Link
       href={card.path}
+      onClick={onClick}
       data-concierge-card={card.productId}
       className="flex gap-3 rounded-2xl border border-border bg-card p-2.5 text-start transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
     >
@@ -103,7 +113,7 @@ function Card({ card, t }: { card: ConciergeCard; t: T }) {
   );
 }
 
-function Bubble({ m, t, locale, foreign }: { m: ChatMessage; t: T; locale: string; foreign: boolean }) {
+function Bubble({ m, t, locale, foreign, onNavigate }: { m: ChatMessage; t: T; locale: string; foreign: boolean; onNavigate: () => void }) {
   if (m.role === "user") {
     return (
       <div className="ms-auto max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm leading-relaxed text-primary-foreground whitespace-pre-wrap break-words">
@@ -120,7 +130,7 @@ function Bubble({ m, t, locale, foreign }: { m: ChatMessage; t: T; locale: strin
       </div>
       {m.cards && m.cards.length > 0 ? (
         <div className="flex flex-col gap-2">
-          {m.cards.map((c) => <Card key={c.productId} card={c} t={t} />)}
+          {m.cards.map((c) => <Card key={c.productId} card={c} t={t} onNavigate={onNavigate} />)}
           {foreign ? <p className="px-1 text-[11px] leading-4 text-muted-foreground">{t("concierge.tryNote")}</p> : null}
         </div>
       ) : null}
@@ -140,9 +150,8 @@ function Bubble({ m, t, locale, foreign }: { m: ChatMessage; t: T; locale: strin
   );
 }
 
-export default function ConciergePanel({ locale, dir, t, pathname, onClose, onOff }: Props) {
+export default function ConciergePanel({ locale, dir, t, pathname, state, dispatch, onClose, onOff }: Props) {
   const lift = useCookieBandLift();
-  const [state, dispatch] = useReducer(chatReducer, INITIAL_CHAT);
   const [draft, setDraft] = useState("");
   const { isForeign } = useCurrency();
   const listRef = useRef<HTMLDivElement>(null);
@@ -150,9 +159,12 @@ export default function ConciergePanel({ locale, dir, t, pathname, onClose, onOf
   const busyRef = useRef(false);
   const closedRef = useRef(false);
   closedRef.current = state.closed;
+  // Panel yanıt beklenirken kapatılıp açılırsa busyRef sıfırlanır; süren tur state.pending'den bilinir.
+  const pendingRef = useRef(false);
+  pendingRef.current = state.pending;
 
   const send = useCallback(async (raw: string) => {
-    if (busyRef.current || !canSend(raw, false, closedRef.current)) return;
+    if (busyRef.current || pendingRef.current || !canSend(raw, false, closedRef.current)) return;
     busyRef.current = true;
     dispatch({ type: "send", text: raw });
     setDraft("");
@@ -173,7 +185,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, onClose, onOf
     if ((outcome.kind === "reply" || outcome.kind === "busy") && outcome.sessionToken) writeToken(outcome.sessionToken);
     busyRef.current = false;
     dispatch({ type: "outcome", outcome });
-  }, [locale, pathname]);
+  }, [locale, pathname, dispatch]);
 
   // Bayrak kapandıysa panel kapanır.
   useEffect(() => { if (state.off) onOff(); }, [state.off, onOff]);
@@ -241,7 +253,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, onClose, onOf
               ))}
             </div>
           ) : null}
-          {state.messages.map((m) => <Bubble key={m.id} m={m} t={t} locale={locale} foreign={isForeign} />)}
+          {state.messages.map((m) => <Bubble key={m.id} m={m} t={t} locale={locale} foreign={isForeign} onNavigate={onClose} />)}
           {state.pending ? (
             <div className="me-auto flex items-center gap-1 rounded-2xl bg-secondary px-3.5 py-3" data-concierge-typing="">
               <span className="sr-only">{t("concierge.typing")}</span>

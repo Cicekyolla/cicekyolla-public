@@ -2,7 +2,7 @@
 // Ağ / tarayıcı / model YOK. Çalıştırma: npm run test:unit
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
   buildRequestBody, canSend, cardPath, chatReducer, CONCIERGE_DICT_KEYS, CONCIERGE_HIDDEN_PREFIXES, conciergeVisibleOnPath, conciergeWhatsappUrl,
   INITIAL_CHAT, isSessionToken, LAUNCHER_SLOT_PX, launcherSlot, MAX_MESSAGE_CHARS, parseCards, parseTurn, readStatusCache, safeImageUrl,
@@ -394,4 +394,78 @@ test("bileşenler: HTML enjeksiyonu yok; tarayıcı API'ye doğrudan gitmez; sep
   assert.match(launcher, /lazy\(\(\) => import\("\.\/ConciergePanel"\)\)/, "panel ilk tıklamada yüklenir");
   assert.match(launcher, /if \(!enabled \|\| !ready \|\| !visibleHere\) return null;/, "bayrak kapalıyken hiçbir şey çizilmez");
   assert.match(launcher, /useState\(false\)/);
+});
+
+// ---------------------------------------------------------------------------
+// Son inceleme (PR #318): 14 dilde gizli yollar · kapat/aç'ta geçmiş · sözleşme
+// ---------------------------------------------------------------------------
+
+test("görünürlük: sepet / ödeme / giriş / üyelik 14 dilin HEPSİNDE gizli (yollar öneksiz ve ortak; önekli biçim de gizli)", () => {
+  const critical = ["/sepet", "/checkout", "/checkout/sonuc", "/odeme", "/hizli-siparis", "/giris", "/hesabim", "/hesabim/siparisler", "/sifre-belirle", "/sifremi-unuttum"];
+  // Görünürlük yalnız yola bakar (dil parametresi yok) → dil çerezi ne olursa olsun sonuç aynıdır.
+  assert.equal(conciergeVisibleOnPath.length, 1);
+  for (const p of critical) assert.equal(conciergeVisibleOnPath(p), false, p);
+  // Bu sayfalar dil öneki altında YOK: app/<dil>/ yalnız [[...path]] içerir; kritik rotalar kökte tek kopyadır.
+  for (const l of GLOBAL_LOCALES) {
+    assert.deepEqual(readdirSync(new URL(`../app/${l}`, import.meta.url)), ["[[...path]]"], `app/${l}`);
+  }
+  for (const d of ["sepet", "checkout", "giris", "hesabim", "sifre-belirle", "sifremi-unuttum", "hizli-siparis"]) {
+    assert.ok(existsSync(new URL(`../app/${d}`, import.meta.url)), `app/${d}`);
+  }
+  // Savunma: önekli biçim bir gün eklenirse de gizli; dilin kendi vitrin sayfaları görünür kalır.
+  for (const l of ["tr", ...GLOBAL_LOCALES]) {
+    for (const p of critical) assert.equal(conciergeVisibleOnPath(`/${l}${p}`), false, `/${l}${p}`);
+    assert.equal(conciergeVisibleOnPath(`/${l}`), true, `/${l}`);
+    assert.equal(conciergeVisibleOnPath(`/${l}/category/roses`), true);
+  }
+  assert.equal(conciergeVisibleOnPath("/english-roses"), true, "dil koduyla başlayan sıradan yol etkilenmez");
+});
+
+test("geçmiş: sohbet durumu başlatıcıda tutulur → panel kapanıp açılınca mesajlar ve kartlar durur", () => {
+  const launcher = src("../components/concierge/ConciergeLauncher.tsx");
+  const panel = src("../components/concierge/ConciergePanel.tsx");
+  assert.match(launcher, /useReducer\(chatReducer, INITIAL_CHAT\)/, "durum kök layout'ta yaşayan başlatıcıda");
+  assert.match(launcher, /state=\{chat\} dispatch=\{dispatch\}/);
+  assert.ok(!/useReducer/.test(panel), "panel kendi durumunu tutmaz (kapanınca silinmesin)");
+  assert.ok(!/setItem\([^)]*messages/.test(launcher + panel), "mesaj metni depolamaya yazılmaz");
+  // Panel kapalıyken gelen yanıt da işlenir: durum aynı reducer'da, panelden bağımsız.
+  let s = chatReducer(INITIAL_CHAT, { type: "send", text: "Merhaba" });
+  s = chatReducer(s, { type: "outcome", outcome: { kind: "reply", reply: "Üç seçenek", lang: "tr", cards: [], handoff: false, closed: false, sessionToken: null } });
+  assert.deepEqual(s.messages.map((m) => m.role), ["user", "assistant"]);
+  assert.equal(s.pending, false);
+  // Yanıt beklenirken yeniden açılan panel ikinci isteği göndermez.
+  assert.match(panel, /busyRef\.current \|\| pendingRef\.current/);
+  assert.equal(chatReducer(chatReducer(INITIAL_CHAT, { type: "send", text: "a" }), { type: "send", text: "b" }).messages.length, 1);
+  // Karta tıklanınca panel kapanır (ürün sayfasını örtmez); değiştirici tuşlu tıklamada açık kalır.
+  assert.match(panel, /onClick=\{onClick\}/);
+  assert.match(panel, /e\.button === 0 && !e\.metaKey && !e\.ctrlKey/);
+});
+
+test("sözleşme: Public istek / yanıt alanları API'ninkiyle aynı (webConcierge controller + coordinator)", () => {
+  // İstek: API şeması .strict() → yalnız bu dört alan; fazlası 422.
+  const body = buildRequestBody("x".repeat(900), "de", "/de/produkt/a?gclid=1#x", "A".repeat(43));
+  assert.deepEqual(Object.keys(body).sort(), ["lang", "path", "session_token", "text"]);
+  assert.ok(body.text.length <= 4000 && body.lang.length <= 8 && body.path.length <= 400 && body.session_token!.length <= 64);
+  assert.deepEqual(Object.keys(buildRequestBody("a", "tr", "/", null)).sort(), ["lang", "path", "text"]);
+  // Yanıt: API'nin döndürdüğü her durum arayüzde karşılanır.
+  const ok = { session_token: "B".repeat(43), reply: "Merhaba", lang: "en", handoff: null, remaining_messages: 5,
+    cards: [{ product_id: 7, tier: "recommended", name: "Rose", price_minor: 125000, currency: "TRY", url: "https://www.cicekyolla.com.tr/en/product/rose", image_url: "https://img.example/a.webp" }] };
+  const r = parseTurn(200, { data: { status: "ok", ...ok } });
+  assert.equal(r.kind, "reply");
+  if (r.kind === "reply") { assert.equal(r.cards[0].path, "/en/product/rose"); assert.equal(r.cards[0].priceMinor, 125000); assert.equal(r.closed, false); }
+  assert.equal(parseTurn(200, { data: { status: "limit", ...ok, cards: [], handoff: { reason: "session_limit" }, remaining_messages: 0 } }).kind, "reply");
+  assert.equal(parseTurn(200, { data: { status: "unavailable", ...ok, cards: [], handoff: { reason: "budget" } } }).kind, "reply");
+  assert.equal(parseTurn(409, { data: { status: "busy", session_token: "B".repeat(43) } }).kind, "busy");
+  assert.equal(parseTurn(422, { data: { status: "invalid", reason: "too_long" } }).kind, "error");
+  assert.equal(parseTurn(422, { ok: false, error: "Geçersiz istek." }).kind, "error");
+  assert.equal(parseTurn(429, { ok: false }, "30").kind, "rate");
+  assert.equal(parseTurn(503, { ok: false }).kind, "error");
+  assert.equal(parseTurn(404, { error: "Not found" }).kind, "off");
+  // İki bayrak: Public kapalıyken API'ye gidilmez; API kapalıyken 404 aynen iletilir → başlatıcı çizilmez.
+  for (const f of ["status", "message"]) {
+    const route = src(`../app/api/concierge/${f}/route.ts`);
+    const gate = route.indexOf('process.env.CONCIERGE_ENABLED !== "true"');
+    assert.ok(gate > 0 && gate < route.lastIndexOf("forwardToApi("), `${f}: bayrak kapısı iletmeden önce`);
+  }
+  assert.match(src("../components/concierge/ConciergeLauncher.tsx"), /on = res\.ok;/);
 });

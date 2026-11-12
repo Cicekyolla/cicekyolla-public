@@ -37,8 +37,15 @@ export const CONCIERGE_HIDDEN_PREFIXES = [
   "/giris", "/hesabim", "/sifre-belirle", "/sifremi-unuttum",
 ] as const;
 
+/**
+ * Sepet, ödeme, giriş ve üyelik sayfaları 14 dilin HEPSİNDE aynı öneksiz yoldadır (/sepet, /checkout, /giris,
+ * /hesabim …; dil çerezden gelir, app/<dil>/ altında böyle bir rota yoktur) → liste dilden bağımsız çalışır.
+ * Savunma: ileride /<dil>/sepet gibi önekli bir yol eklenirse de gizli kalsın diye dil öneki atılarak bakılır.
+ */
+const LOCALE_PREFIX = /^\/(?:tr|en|de|fr|nl|it|es|pt|az|ru|ar|zh|ja|ko)(?=\/|$)/;
+
 export function conciergeVisibleOnPath(pathname: string | null | undefined): boolean {
-  const p = String(pathname || "/");
+  const p = String(pathname || "/").replace(LOCALE_PREFIX, "") || "/";
   return !CONCIERGE_HIDDEN_PREFIXES.some((b) => p === b || p.startsWith(`${b}/`) || p.startsWith(`${b}?`));
 }
 
