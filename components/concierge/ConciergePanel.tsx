@@ -20,6 +20,7 @@ import { MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { Price } from "@/components/Price";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useCurrency } from "@/lib/currency";
+import { trackConcierge } from "@/lib/conciergeTracking";
 import type { DictKey } from "@/lib/i18n/dict/tr";
 import {
   buildRequestBody, canSend, conciergeWhatsappUrl, MAX_MESSAGE_CHARS, parseTurn, SESSION_STORAGE_KEY, tokenToSend,
@@ -85,12 +86,14 @@ function writeToken(token: string) {
 function Card({ card, t, onNavigate }: { card: ConciergeCard; t: T; onNavigate: () => void }) {
   // Aynı sekmede ürün sayfasına gidilirken panel kapanır; yeni sekme / pencere tıklamalarında açık kalır.
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    trackConcierge("card_click", card);
     if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onNavigate();
   };
   return (
     <Link
       href={card.path}
       onClick={onClick}
+      onAuxClick={(e) => { if (e.button === 1) trackConcierge("card_click", card); }}
       data-concierge-card={card.productId}
       className="flex gap-3 rounded-2xl border border-border bg-card p-2.5 text-start transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
     >
@@ -140,6 +143,7 @@ function Bubble({ m, t, locale, foreign, onNavigate }: { m: ChatMessage; t: T; l
           target="_blank"
           rel="nofollow noopener noreferrer"
           data-concierge-whatsapp=""
+          onClick={() => trackConcierge("whatsapp")}
           className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm font-semibold text-foreground transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
         >
           <MessageCircle className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -171,6 +175,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
     busyRef.current = true;
     dispatch({ type: "send", text: raw });
     setDraft("");
+    trackConcierge("message");
     let outcome: TurnOutcome;
     try {
       const res = await fetch("/api/concierge/message", {
@@ -283,6 +288,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
                   href={conciergeWhatsappUrl(locale)}
                   target="_blank"
                   rel="nofollow noopener noreferrer"
+                  onClick={() => trackConcierge("whatsapp")}
                   className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {t("concierge.whatsapp")}
