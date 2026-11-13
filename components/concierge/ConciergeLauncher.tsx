@@ -25,6 +25,7 @@ import { MessageCircle } from "lucide-react";
 import { acquireOverlay, releaseOverlay } from "@/components/consent/ConsentManager";
 import { useOverlayBusy } from "@/components/useOverlayBusy";
 import { useI18n } from "@/lib/i18n";
+import { trackConcierge } from "@/lib/conciergeTracking";
 import {
   chatReducer, conciergeVisibleOnPath, INITIAL_CHAT, launcherSlot, readStatusCache, STATUS_STORAGE_KEY, writeStatusCache, type LauncherSlot,
 } from "@/lib/concierge";
@@ -113,6 +114,7 @@ export function ConciergeLauncher() {
     // Kilit alınamazsa (yalnız çerez bandı açıkken olur) panel yine açılır; bandın üstünde durmayı panel kendi ölçer.
     setLocked(acquireOverlay(OVERLAY_ID));
     setOpen(true);
+    trackConcierge("open");
   };
 
   return (

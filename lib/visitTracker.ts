@@ -25,7 +25,9 @@ import {
 
 export type VisitEventType =
   | "page_view" | "view_item" | "add_to_cart" | "remove_from_cart" | "view_cart" | "begin_checkout"
-  | "checkout_step" | "add_payment_info" | "order_created" | "ping";
+  | "checkout_step" | "add_payment_info" | "order_created" | "ping"
+  // Web AI satış danışmanı (lib/conciergeTracking.ts). Mesaj metni ASLA gönderilmez.
+  | "concierge_open" | "concierge_message" | "concierge_card_click" | "concierge_whatsapp";
 
 export interface VisitEventInput {
   /** Ürün id (products.id). */
