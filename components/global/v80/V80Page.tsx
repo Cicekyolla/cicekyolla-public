@@ -20,10 +20,14 @@ import type { ReactNode } from "react";
  * GLOBAL BLOG MERKEZİ (ADDITIVE): `guide` = sayfanın en altındaki rehber bölümü (o dilin
  * yayındaki blog yazıları). Verilmezse / boşsa çıktı bugünküyle birebir aynı.
  */
-export function V80Page({ view, guide }: { view: V80View; guide?: ReactNode }) {
+export function V80Page({ view, guide, afterHero }: {
+  view: V80View; guide?: ReactNode;
+  /** EK (14 Kas 2026 — teslimat bilgi notu): hero'nun hemen altı; verilmezse çıktı bugünküyle aynı. */
+  afterHero?: ReactNode;
+}) {
   const render = (id: V80SectionId) => {
     switch (id) {
-      case "hero": return <V80Hero key={id} view={view} />;
+      case "hero": return afterHero ? [<V80Hero key={id} view={view} />, <div key={`${id}-after`} className="contents">{afterHero}</div>] : <V80Hero key={id} view={view} />;
       // Aktif + görselli banner yoksa bölüm HİÇ basılmaz (sarmalayıcı/başlık/boşluk yok; V80Banners da null döner).
       case "banners": return view.banners?.length ? <V80Banners key={id} view={view} /> : null;
       case "ticker": return <V80Ticker key={id} items={view.ticker} />;
