@@ -15,7 +15,7 @@ const DEFAULT_FEATURES = [
   { title: "İstanbul Aynı Gün", text: "İstanbul içi uygun adreslerde aynı gün teslim; kesin saat sipariş adımında görünür.", kind: "clock" },
   { title: "81 İl Kargo", text: "Türkiye'nin her ilçe ve beldesine yaygın ağ.", kind: "map" },
   { title: "Hasarsız Teslimat", text: "Çift katmanlı kutu ve su haznesi ile tam koruma.", kind: "shield" },
-  { title: "Canlı Takip", text: "SMS ve WhatsApp ile anlık kargo bildirimleri.", kind: "truck" },
+  { title: "Kargo Takibi", text: "Takip numaranız için WhatsApp'tan yazmanız yeterli.", kind: "truck" },
   { title: "Ücretsiz İade / Değişim", text: "Hasarlı ulaşan ürünü ücretsiz yeniliyoruz.", kind: "refresh" },
   { title: "Kurumsal Dağıtım", text: "Tek adresten binlerce noktaya eş zamanlı gönderim.", kind: "building" },
 ];

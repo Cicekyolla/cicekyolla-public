@@ -393,7 +393,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
             <div className="mt-7 grid overflow-hidden rounded-[22px] border border-white/10 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                ["🌸", "Taze Çiçek Garantisi", "7–10 gün taze kalma garantisi"],
+                ["🌸", "Atölyeden Taze", "Doğru bakımla çoğu aranjman yaklaşık 7–10 gün dayanır"],
                 ["⚡", "Aynı Gün Teslimat", "İstanbul içi uygun adreslerde bugün teslim"],
                 ["🔒", "Güvenli Ödeme", "256-bit SSL ile korunan ödeme"],
                 ["📦", "Özel Paketleme", "Özenli ve premium sunum"],
