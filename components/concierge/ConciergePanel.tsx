@@ -22,7 +22,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { useCurrency } from "@/lib/currency";
 import type { DictKey } from "@/lib/i18n/dict/tr";
 import {
-  buildRequestBody, canSend, conciergeWhatsappUrl, MAX_MESSAGE_CHARS, parseTurn, SESSION_STORAGE_KEY,
+  buildRequestBody, canSend, conciergeWhatsappUrl, MAX_MESSAGE_CHARS, parseTurn, SESSION_STORAGE_KEY, tokenToSend,
   type CardTier, type ChatAction, type ChatError, type ChatMessage, type ChatState, type ConciergeCard, type TurnOutcome,
 } from "@/lib/concierge";
 
@@ -160,6 +160,9 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
   const closedRef = useRef(false);
   closedRef.current = state.closed;
   // Panel yanıt beklenirken kapatılıp açılırsa busyRef sıfırlanır; süren tur state.pending'den bilinir.
+  // Ekranda görünen mesaj sayısı (gönderim anındaki değer): 0 ise belirteç gönderilmez → yeni oturum (lib/concierge.ts tokenToSend).
+  const visibleRef = useRef(0);
+  visibleRef.current = state.messages.length;
   const pendingRef = useRef(false);
   pendingRef.current = state.pending;
 
@@ -173,7 +176,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
       const res = await fetch("/api/concierge/message", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(buildRequestBody(raw, locale, pathname, readToken())),
+        body: JSON.stringify(buildRequestBody(raw, locale, pathname, tokenToSend(visibleRef.current, readToken()))),
         cache: "no-store",
       });
       let json: unknown = null;
