@@ -44,5 +44,7 @@ test("TR: kargo 'Canlı Takip/SMS', 'Taze Kalma Garantisi', 'Taptaze Garantisi' 
   const sss = oku("app/sik-sorulan-sorular/page.tsx");
   assert.match(sss, /Siparişim teslim edilemezse ne olur\?/);
   assert.match(sss, /iadenizi aynı gün başlatırız\. Kart iadesinin hesabınıza geçiş süresi bankanıza bağlıdır\./);
-  assert.match(sss, /havale\/EFT veya Western Union ile de ödeyebilirsiniz; bunun için WhatsApp'tan yazmanız yeterli/);
+  assert.match(sss, /ödeme adımında Havale \/ EFT seçeneğini de seçebilirsiniz/);
+  assert.match(sss, /Western Union ile ödemek isterseniz WhatsApp'tan yazmanız yeterli/);
+  assert.doesNotMatch(sss, /havale\/EFT veya Western Union ile de ödeyebilirsiniz; bunun için WhatsApp/);
 });

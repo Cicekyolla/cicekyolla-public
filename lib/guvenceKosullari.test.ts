@@ -1,6 +1,7 @@
 // lib/guvenceKosullari.test.ts — 12 Kas 2026 (ADDITIVE): sahip kararıyla güvence metinlerinin koşulları.
 // Kararlar: fotoğraf İSTEK ÜZERİNE; iade YALNIZ teslim edilemezse, AYNI GÜN BAŞLATILIR (hesaba geçiş bankaya bağlı);
-// Western Union / havale WhatsApp'tan ayarlanır. Hizmetler korunur, yalnız vaat koşula uyar.
+// Western Union WhatsApp'tan ayarlanır; havale / EFT ödeme adımında seçilir (13 Kas 2026: checkout'ta 14 dilde mevcut).
+// Hizmetler korunur, yalnız vaat koşula uyar.
 // Çalıştırma: node --test lib/guvenceKosullari.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -21,7 +22,7 @@ test("13 dil: üç madde var; Western Union korunur ve WhatsApp'a yönlendirilir
   for (const l of GLOBAL_LOCALES) {
     for (const k of ["pay", "photo", "refund"]) assert.ok(line(l, k).length > 20, `${l} ${k}`);
     assert.match(line(l, "pay"), wu, `${l}: Western Union korunur`);
-    assert.match(line(l, "pay"), wa, `${l}: WhatsApp'tan ayarlanır`);
+    assert.match(line(l, "pay"), wa, `${l}: Western Union WhatsApp'tan ayarlanır`);
     assert.match(line(l, "photo"), wa, `${l}: foto WhatsApp'tan`);
     assert.doesNotMatch(block(l), /iyzico/i, l);
   }
@@ -45,4 +46,19 @@ test("diğer dillerde eski koşulsuz ifadeler kalmadı (örnek: de/fr/ru/ja)", (
   assert.match(line("fr", "photo"), /Sur simple demande/);
   assert.doesNotMatch(line("ru", "refund"), /возникла проблема/);
   assert.match(line("ja", "photo"), /ご希望/);
+});
+
+
+test("13 dil: havale / EFT ödeme adımında seçilir; checkout etiketiyle aynı ad, WhatsApp'a gönderilmez", () => {
+  const label: Record<string, string> = {
+    en: "Bank Transfer", de: "Überweisung", fr: "Virement bancaire", nl: "Bankoverschrijving", it: "Bonifico bancario", es: "Transferencia bancaria",
+    pt: "Transferência bancária", az: "Bank köçürməsi", ru: "Банковский перевод", ar: "تحويل بنكي", zh: "银行转账", ja: "銀行振込", ko: "계좌이체",
+  };
+  for (const l of GLOBAL_LOCALES) {
+    const pay = line(l, "pay");
+    assert.ok(pay.includes(label[l]), `${l}: checkout etiketi geçer`);
+    const dict = readFileSync(new URL(`./i18n/dict/${l}.ts`, import.meta.url), "utf8");
+    assert.ok(dict.includes(`"co.pay.bank": "${label[l]}"`), `${l}: etiket checkout sözlüğüyle aynı`);
+  }
+  assert.doesNotMatch(line("en", "pay"), /bank transfer or Western Union\? Message us on WhatsApp/);
 });
