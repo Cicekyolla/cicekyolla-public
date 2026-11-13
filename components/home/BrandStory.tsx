@@ -8,7 +8,7 @@
 
 /**
  * §9 BRAND STORY — ZIP Homepage.tsx birebir port.
- * Sol: görsel + floating "7-10 Gün Taze Kalma Garantisi" kartı.
+ * Sol: görsel + floating "7–10 Gün / Doğru Bakımla Tazelik" kartı (12 Kas 2026: garanti dili kaldırıldı).
  * Sağ: "Hikayemiz" başlık + iki paragraf + 4 maddelik güven listesi + CTA.
  * Adaptasyon: react-router <Link><button> → next/link <Link> (buton stili). Görsel/etkileşim birebir.
  */
@@ -73,7 +73,7 @@ export function BrandStory() {
               <p style={{ fontFamily: "var(--font-display)", fontSize: "1.7rem", lineHeight: 1 }} className="font-semibold text-[#111827]">
                 7–10 Gün
               </p>
-              <p className="text-xs text-[#8B5CF6] font-semibold mt-1 tracking-wide">Taze Kalma Garantisi</p>
+              <p className="text-xs text-[#8B5CF6] font-semibold mt-1 tracking-wide">Doğru Bakımla Tazelik</p>
             </motion.div>
           </motion.div>
 

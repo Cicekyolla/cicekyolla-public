@@ -12,7 +12,7 @@ test("güven şeridi: iki yeni söz + mevcut ikisi korunur; 'büyük bölümüne
   const s = oku("../components/home/TrustBar.tsx");
   assert.ok(s.includes(`text: "İstanbul'un büyük bölümüne ücretsiz aynı gün teslimat"`));
   assert.ok(s.includes(`text: "İsterseniz teslimattan önce fotoğraf"`));
-  assert.ok(s.includes(`text: "Taptaze Garantisi"`) && s.includes(`text: "Güvenli Ödeme"`));
+  assert.ok(s.includes(`text: "Taptaze Hazırlık"`) && s.includes(`text: "Güvenli Ödeme"`));
   assert.doesNotMatch(s, /text: "[^"]*(Tüm İstanbul|her yere|garantili saat|\d+ ?dk)/i);
 });
 

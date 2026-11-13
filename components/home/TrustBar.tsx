@@ -19,7 +19,7 @@ const items = [
   { icon: Truck, text: "İstanbul'un büyük bölümüne ücretsiz aynı gün teslimat" },
   // 12 Kas 2026 (sahip kararı): fotoğraf İSTEK ÜZERİNE gönderilir — her siparişte otomatik değil.
   { icon: Camera, text: "İsterseniz teslimattan önce fotoğraf" },
-  { icon: Leaf, text: "Taptaze Garantisi" },
+  { icon: Leaf, text: "Taptaze Hazırlık" },
   { icon: Shield, text: "Güvenli Ödeme" },
 ];
 
