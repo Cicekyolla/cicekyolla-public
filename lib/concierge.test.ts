@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
-  buildRequestBody, canSend, cardPath, chatReducer, CONCIERGE_DICT_KEYS, CONCIERGE_HIDDEN_PREFIXES, conciergeVisibleOnPath, conciergeWhatsappUrl,
+  buildRequestBody, canSend, cardPath, chatReducer, CONCIERGE_DICT_KEYS, tokenToSend, CONCIERGE_HIDDEN_PREFIXES, conciergeVisibleOnPath, conciergeWhatsappUrl,
   INITIAL_CHAT, isSessionToken, LAUNCHER_SLOT_PX, launcherSlot, MAX_MESSAGE_CHARS, parseCards, parseTurn, readStatusCache, safeImageUrl,
   STATUS_TTL_MS, TR_WHATSAPP_URL, writeStatusCache, type ChatState, type TurnOutcome,
 } from "./concierge.ts";
@@ -485,4 +485,16 @@ test("katman: panel ve arka planı site başlıklarının ÜSTÜNDE, çerez band
   assert.ok(panelZ > globalHeader && panelZ > trHeader, `panel (${panelZ}) başlıkların üstünde`);
   assert.ok(backdropZ > globalHeader && backdropZ < panelZ, `arka plan (${backdropZ}) başlığın üstünde, panelin altında`);
   assert.ok(panelZ < bandZ, `panel (${panelZ}) çerez bandının (${bandZ}) altında; bant için ayrıca yukarı kayar`);
+});
+
+
+test("oturum: ekranda geçmiş yoksa (sayfa yenilendi / ilk mesaj) belirteç GÖNDERİLMEZ; geçmiş varken aynı oturum sürer", () => {
+  const tok = "T".repeat(43);
+  assert.equal(tokenToSend(0, tok), null, "yenileme sonrası boş ekran → yeni oturum");
+  assert.equal(tokenToSend(2, tok), tok, "sayfa içi gezinmede geçmiş görünür → aynı oturum");
+  assert.equal(tokenToSend(3, "bozuk"), null);
+  assert.equal(tokenToSend(3, null), null);
+  const panel = src("../components/concierge/ConciergePanel.tsx");
+  assert.match(panel, /tokenToSend\(visibleRef\.current, readToken\(\)\)/, "panel belirteci yalnız bu kuralla gönderir");
+  assert.ok(!/buildRequestBody\(raw, locale, pathname, readToken\(\)\)/.test(panel), "eski koşulsuz gönderim kalmadı");
 });

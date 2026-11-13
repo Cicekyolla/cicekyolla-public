@@ -104,6 +104,17 @@ export function isSessionToken(v: unknown): v is string {
   return typeof v === "string" && /^[A-Za-z0-9_-]{43}$/.test(v);
 }
 
+/**
+ * Sunucuya gönderilecek oturum belirteci. Ekranda GÖRÜNEN geçmiş yoksa (sayfa tam yenilendi, ilk mesaj)
+ * belirteç gönderilmez → yeni oturum açılır. Neden (13 Kas 2026 incelemesi): belirteç sekme deposunda
+ * yenilemeden sonra da kalıyor, ekrandaki geçmiş ise sıfırlanıyordu; asistan müşterinin göremediği eski
+ * konuşmaya atıf yapabiliyor ve 20 mesaj sınırı görünmeyen mesajlarla doluyordu. Sayfa içi gezinmede
+ * geçmiş ekranda kaldığı için oturum sürer.
+ */
+export function tokenToSend(visibleMessages: number, stored: unknown): string | null {
+  return visibleMessages > 0 && isSessionToken(stored) ? stored : null;
+}
+
 /** Saklanan durum değeri: "1:<zaman>" açık · "0:<zaman>" kapalı. Süresi dolmuş / bozuk → null (yeniden sor). */
 export function readStatusCache(raw: string | null | undefined, now: number): boolean | null {
   const m = /^([01]):(\d{10,16})$/.exec(String(raw ?? ""));
