@@ -15,7 +15,7 @@ test("footer: 'en prestijli' iddiası yok; gerçeğe dayalı atölye cümlesi va
 test("SSS: ödeme cevabı somut (PayTR, 3D Secure, havale/EFT, tek çekim); boş cevap kalktı", () => {
   const s = oku("../app/sik-sorulan-sorular/page.tsx");
   assert.ok(s.includes("PayTR güvenli ödeme altyapısı"));
-  assert.ok(s.includes("3D Secure") && s.includes("havale/EFT") && s.includes("tek çekimdir"));
+  assert.ok(s.includes("3D Secure") && /havale\s*\/\s*EFT/i.test(s) && s.includes("tek çekimdir"));
   assert.doesNotMatch(s, /Aktif ödeme yöntemleri ödeme adımında güvenli biçimde gösterilir/);
   assert.doesNotMatch(s, /taksit imkân|taksitle ödeyebilirsiniz/i);
 });
