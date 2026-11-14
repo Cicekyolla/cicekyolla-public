@@ -57,3 +57,16 @@ export function yakaBilgisi(districtSlug: string | null | undefined, motor: Moto
   if (!motorSaat || motorSaat < kural.siparisSonSaat) return null;
   return { yaka, ...kural };
 }
+
+/** İlçe slug'ı → Türkçe görünen ad (mahalle notu: "Caferağa, Kadıköy"). Sayfanın ad kaynağı slug'dan türetince
+ *  harfsiz kalıyordu ("Kadikoy"); not yalnız bu adı kullanır, sayfanın SEO metni değişmez. */
+export const ILCE_ADI: Record<string, string> = {
+  adalar: "Adalar", atasehir: "Ataşehir", beykoz: "Beykoz", cekmekoy: "Çekmeköy", kadikoy: "Kadıköy", kartal: "Kartal",
+  maltepe: "Maltepe", pendik: "Pendik", sancaktepe: "Sancaktepe", sultanbeyli: "Sultanbeyli", sile: "Şile", tuzla: "Tuzla",
+  umraniye: "Ümraniye", uskudar: "Üsküdar",
+  arnavutkoy: "Arnavutköy", avcilar: "Avcılar", bagcilar: "Bağcılar", bahcelievler: "Bahçelievler", bakirkoy: "Bakırköy",
+  basaksehir: "Başakşehir", bayrampasa: "Bayrampaşa", besiktas: "Beşiktaş", beylikduzu: "Beylikdüzü", beyoglu: "Beyoğlu",
+  buyukcekmece: "Büyükçekmece", catalca: "Çatalca", esenler: "Esenler", esenyurt: "Esenyurt", eyupsultan: "Eyüpsultan",
+  fatih: "Fatih", gaziosmanpasa: "Gaziosmanpaşa", gungoren: "Güngören", kagithane: "Kağıthane", kucukcekmece: "Küçükçekmece",
+  sariyer: "Sarıyer", silivri: "Silivri", sultangazi: "Sultangazi", sisli: "Şişli", zeytinburnu: "Zeytinburnu",
+};

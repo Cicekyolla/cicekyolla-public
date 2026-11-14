@@ -35,6 +35,7 @@ import { withMovedHtmlHrefs } from "@/lib/internalHref";
 import { fetchLocationLocaleVersions, fetchTrLocationPathCached } from "@/lib/hreflangSources";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
 import { DeliveryFactsNote } from "@/components/DeliveryFactsNote";
+import { ILCE_ADI } from "@/lib/istanbulYakaKurali";
 
 const DELIVERY_CITIES = new Set(["istanbul", "ankara", "izmir", "bursa"]);
 const DELIVERY_DATA: Record<string, { label: string; districts: Record<string, { label: string; time: string; cutoff: string; neighborhoods: string[]; description: string }> }> = {
@@ -639,7 +640,7 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
         {/* EK (14 Kas 2026 — teslimat bilgi notu): İstanbul ilçe ve mahalle sayfaları; işletme sahibinin yaka kuralı
             (lib/istanbulYakaKurali). Kargo / uzak / özel araç / belirsiz bölgede basılmaz → ödeme motoru geçerli. */}
         {isDistrictScope && parts[0] === "istanbul" && parts[1] && !cargoMode && !reachOut && !reachNeutral && sameDayFloorMinor == null
-          ? <DeliveryFactsNote locale="tr" variant="pillar" district={parts[1]} place={neighborhood ? `${neighborhood}, ${districtName}` : districtName} />
+          ? <DeliveryFactsNote locale="tr" variant="pillar" district={parts[1]} place={neighborhood ? `${neighborhood}, ${ILCE_ADI[parts[1]] ?? districtName}` : districtName} />
           : null}
         <div className="mt-12 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-[#8b5cf6] px-9 py-4 font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]">Koleksiyonu Keşfet</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-[#e8e1f0] bg-white px-9 py-4 font-bold text-[#141020]"><MessageCircle className="h-5 w-5" /> WhatsApp'tan Sipariş</Link></div>
       </div>

@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { ANADOLU_ILCELERI, AVRUPA_ILCELERI, YAKA_KURALI, yakaBilgisi, yakaOf } from "./istanbulYakaKurali.ts";
+import { ANADOLU_ILCELERI, AVRUPA_ILCELERI, ILCE_ADI, YAKA_KURALI, yakaBilgisi, yakaOf } from "./istanbulYakaKurali.ts";
 import { KOMSU_ILCELER } from "./istanbulKomsuIlceler.ts";
 
 test("işletme kuralı: Anadolu 18:00 / Avrupa 17:00 son sipariş, ikisinde de son teslimat 22:00", () => {
@@ -64,4 +64,13 @@ test("kapsam: TR İstanbul ilçe + mahalle sayfaları (kargo/uzak/belirsiz hari�
   assert.match(global, /loc\.district === "kadikoy"/);
   assert.match(global, /locale === "de" && row\.page_key === DESTINATION_ROOT/);
   assert.match(global, /afterHero=\{locale === "de" \?/);
+});
+
+test("mahalle notu ilçe adını Türkçe harflerle yazar (39 ilçe, slug'dan türetilmiş 'Kadikoy' değil)", () => {
+  assert.deepEqual(Object.keys(ILCE_ADI).sort(), [...ANADOLU_ILCELERI, ...AVRUPA_ILCELERI].sort());
+  assert.equal(ILCE_ADI.kadikoy, "Kadıköy");
+  assert.equal(ILCE_ADI.besiktas, "Beşiktaş");
+  assert.equal(ILCE_ADI.eyupsultan, "Eyüpsultan");
+  const slug = readFileSync(new URL("../app/[...slug]/page.tsx", import.meta.url), "utf8");
+  assert.match(slug, /\$\{neighborhood\}, \$\{ILCE_ADI\[parts\[1\]\] \?\? districtName\}/);
 });
