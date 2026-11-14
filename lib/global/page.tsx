@@ -129,6 +129,7 @@ import { loadV80, v80HeaderFromCatalog, v80Contact, v80FooterFromView, v80Footer
 import { mergedTexts } from "./v80/copy";
 import { V80Shell } from "@/components/global/v80/V80Shell";
 import { V80Page } from "@/components/global/v80/V80Page";
+import { DeliveryFactsNote } from "@/components/DeliveryFactsNote";
 
 // ---- TR mağaza ailesine köprü ---------------------------------------------
 // Kart rozetleri müşteri-dilinde (core badge TR üretir; burada locale karşılığı).
@@ -1241,6 +1242,13 @@ async function GlobalPageBody({ locale, row, catalog, source, sections, searchPa
         {!continuation && row.intro_html ? <div style={{ ...S.p, maxWidth: 720 }} dangerouslySetInnerHTML={{ __html: rewriteLocaleLocationHrefs(row.intro_html) }} /> : null}
         {/* RELEASE 3: niyet sayfasında girişten hemen sonra gerçek kesme saati şeridi (yalnız motor verisi varsa). */}
         {intent && cutoffs && cutoffs.length > 0 ? <CutoffStrip locale={locale} rows={cutoffs} /> : null}
+        {/* EK (14 Kas 2026 — teslimat bilgi notu): yalnız EN Kadıköy ilçe sayfası ve DE İstanbul sayfası; saat/ücret motordan (lib/deliveryFacts). */}
+        {!continuation && !cargoCity && !far && !neutral && locale === "en" && loc?.kind === "district" && loc.city === "istanbul" && loc.district === "kadikoy" && yerAdi
+          ? <DeliveryFactsNote locale="en" variant="global" district="kadikoy" place={yerAdi} />
+          : null}
+        {!continuation && locale === "de" && row.page_key === DESTINATION_ROOT
+          ? <DeliveryFactsNote locale="de" variant="global" abroad />
+          : null}
       </div>
       {/* C2 (5 Kas 2026): yalnız İstanbul ticari ana sayfasında, 1. sayfada — satış odaklı güvence bloğu (13 dil). */}
       {!continuation && row.page_key === DESTINATION_ROOT ? <GlobalAssuranceSection locale={locale} /> : null}
@@ -1291,7 +1299,8 @@ export async function LocalePage({ locale, path, searchParams }: {
       <V80Shell locale={locale} header={header} footer={v80FooterFromView(view, contact, intentPages)}>
         {/* Release 1: locale ana sayfada da işletme şeması (TR ana sayfa ile aynı kaynak/düğüm). */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLdText(localeHomeJsonLd(identity, locale)) }} />
-        <V80Page view={view} guide={<GlobalBlogRail locale={locale} posts={homepageBlogPosts(blogPosts)} />} />
+        <V80Page view={view} guide={<GlobalBlogRail locale={locale} posts={homepageBlogPosts(blogPosts)} />}
+          afterHero={locale === "de" ? <DeliveryFactsNote locale="de" variant="home" abroad /> : undefined} />
       </V80Shell>
     );
   }

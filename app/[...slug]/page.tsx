@@ -34,6 +34,7 @@ import { locationHreflangFamily, trLocationKeyCandidate, trLocationKeyOf } from 
 import { withMovedHtmlHrefs } from "@/lib/internalHref";
 import { fetchLocationLocaleVersions, fetchTrLocationPathCached } from "@/lib/hreflangSources";
 import { injectLinksIntoHtml } from "@/lib/linkInjector";
+import { DeliveryFactsNote } from "@/components/DeliveryFactsNote";
 
 const DELIVERY_CITIES = new Set(["istanbul", "ankara", "izmir", "bursa"]);
 const DELIVERY_DATA: Record<string, { label: string; districts: Record<string, { label: string; time: string; cutoff: string; neighborhoods: string[]; description: string }> }> = {
@@ -635,6 +636,10 @@ async function DeliveryLanding({ page, path, dyn, showcase, pageNumber = 1, self
           <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Clock3 className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{deliveryTime}</div><div className="mt-1 text-sm text-[#9b94a8]">Ortalama teslimat süresi</div></div></div>
           <div className="flex items-center gap-5 rounded-[22px] border border-[#ebe7f2] bg-white p-6 shadow-[0_14px_45px_rgba(45,22,72,.05)]"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#f5f0ff]"><Truck className="h-5 w-5 text-[#8b5cf6]" /></span><div><div className="font-bold text-[#111827]">{cargoMode || reachOut ? "Güvenli Kargo" : reachNeutral ? "Teslimat Seçenekleri" : "Hızlı Teslimat"}</div><div className="mt-1 text-sm text-[#9b94a8]">{cargoMode || reachOut ? "Özenli ve korumalı paketleme" : reachNeutral ? "Ödeme adımında adrese göre" : "Yalnız İstanbul içi"}</div></div></div>
         </div>
+        {/* EK (14 Kas 2026 — teslimat bilgi notu): yalnız Kadıköy ve Beşiktaş ilçe sayfası; saat/ücret motordan (lib/deliveryFacts). */}
+        {isDistrictSelf && parts[0] === "istanbul" && (parts[1] === "kadikoy" || parts[1] === "besiktas") && !cargoMode && !reachOut && !reachNeutral
+          ? <DeliveryFactsNote locale="tr" variant="pillar" district={parts[1] as "kadikoy" | "besiktas"} place={districtName} />
+          : null}
         <div className="mt-12 flex flex-wrap gap-4"><Link href="/kategori/cicekler" className="rounded-full bg-[#8b5cf6] px-9 py-4 font-bold text-white shadow-[0_18px_45px_rgba(139,92,246,.28)]">Koleksiyonu Keşfet</Link><Link href="https://wa.me/905458813450" className="inline-flex items-center gap-3 rounded-full border border-[#e8e1f0] bg-white px-9 py-4 font-bold text-[#141020]"><MessageCircle className="h-5 w-5" /> WhatsApp'tan Sipariş</Link></div>
       </div>
     </section>
