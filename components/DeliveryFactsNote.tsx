@@ -1,45 +1,41 @@
 // components/DeliveryFactsNote.tsx — TESLİMAT BİLGİ NOTU (14 Kas 2026, ADDITIVE).
-// Yalnız 6 sayfada kullanılır (bkz. lib/deliveryFacts.ts). Saat/ücret motordan; okunamazsa not basılmaz.
-import { fetchDeliveryRange, type DeliveryArea, type DeliveryRange } from "@/lib/deliveryFacts";
+// Saatler işletme sahibinin yaka kuralından (lib/istanbulYakaKurali.ts); ilçe notu yalnız motor
+// ilçeyi standart kurye kapsamında sayıyor ve daha erken kapatmıyorsa basılır (aksi: ödeme adımı geçerli).
+import { fetchMotorIlceKarari } from "@/lib/deliveryFacts";
+import { YAKA_KURALI, yakaBilgisi, type YakaBilgisi } from "@/lib/istanbulYakaKurali";
 
 type NoteLocale = "tr" | "en" | "de";
 type NoteVariant = "pillar" | "global" | "home";
 
-const span = (r: DeliveryRange) => (r.earliest === r.latest ? r.earliest : `${r.earliest}–${r.latest}`);
-const fee = (minor: number) => `₺${(minor / 100).toLocaleString("tr-TR")}`;
+const A = YAKA_KURALI.anadolu;
+const E = YAKA_KURALI.avrupa;
 
 const COPY = {
   tr: {
     districtTitle: (place: string) => `${place} için aynı gün teslimat`,
-    district: (place: string, r: DeliveryRange) =>
-      `${place} için son sipariş saati mahalleye göre ${span(r)} (İstanbul saati).` +
-      (r.feeMinor != null ? ` Teslimat ücreti: ${fee(r.feeMinor)}.` : "") +
-      " Kesin saat ve ücret, adres girildiğinde ödeme adımında gösterilir.",
+    cutoff: (b: YakaBilgisi) => `Aynı gün teslimat için son sipariş saati: ${b.siparisSonSaat} (${b.yaka === "anadolu" ? "Anadolu Yakası" : "Avrupa Yakası"}, İstanbul saati).`,
+    delivery: (b: { teslimatSonSaat: string }) => `Teslimatlar saat ${b.teslimatSonSaat}'ye kadar yapılabilir.`,
     cityTitle: "İstanbul içi aynı gün teslimat",
-    city: (m: DeliveryRange, k: DeliveryRange, b: DeliveryRange) =>
-      `Son sipariş saati adresin atölyemize uzaklığına göre değişir: Maltepe ${span(m)}, Kadıköy ${span(k)}, Beşiktaş ${span(b)} (İstanbul saati). Kesin saat ve teslimat ücreti, adres girildiğinde ödeme adımında gösterilir.`,
+    cityCutoff: `Aynı gün teslimat için son sipariş saati: Anadolu Yakası ${A.siparisSonSaat}, Avrupa Yakası ${E.siparisSonSaat} (İstanbul saati).`,
+    caveat: "Çok uzak adreslerde ve özel araç gerektiren teslimatlarda uygunluk, adres girildiğinde ödeme adımında belirlenir.",
     abroad: "Yurt dışından da sipariş verebilirsiniz: yurt dışında çıkarılmış Visa ve Mastercard kartlarla ödeme alınır, tahsilat Türk lirasıdır.",
   },
   en: {
     districtTitle: (place: string) => `Same-day delivery to ${place}`,
-    district: (place: string, r: DeliveryRange) =>
-      `Order by ${span(r)} Istanbul time (GMT+3) for same-day delivery in ${place}; the cut-off depends on the neighbourhood.` +
-      (r.feeMinor != null ? ` Delivery fee: ${fee(r.feeMinor)}.` : "") +
-      " The exact cut-off and fee for the address are shown at checkout.",
+    cutoff: (b: YakaBilgisi) => `Last order time for same-day delivery: ${b.siparisSonSaat} (${b.yaka === "anadolu" ? "Asian side" : "European side"}, Istanbul time).`,
+    delivery: (b: { teslimatSonSaat: string }) => `Deliveries can be made until ${b.teslimatSonSaat}.`,
     cityTitle: "Same-day delivery in Istanbul",
-    city: (m: DeliveryRange, k: DeliveryRange, b: DeliveryRange) =>
-      `The order cut-off depends on the address's distance from our atelier: Maltepe ${span(m)}, Kadıköy ${span(k)}, Beşiktaş ${span(b)} (Istanbul time, GMT+3). The exact cut-off and delivery fee for the address are shown at checkout.`,
+    cityCutoff: `Last order time for same-day delivery: Asian side ${A.siparisSonSaat}, European side ${E.siparisSonSaat} (Istanbul time).`,
+    caveat: "For very distant addresses and deliveries that need a special vehicle, availability is checked for the address at checkout.",
     abroad: "You can order from abroad: Visa and Mastercard cards issued outside Turkey are accepted, and payment is charged in Turkish lira.",
   },
   de: {
     districtTitle: (place: string) => `Taggleiche Lieferung nach ${place}`,
-    district: (place: string, r: DeliveryRange) =>
-      `Bestellschluss für ${place}: ${span(r)} Uhr Istanbuler Zeit (GMT+3), je nach Stadtteil.` +
-      (r.feeMinor != null ? ` Liefergebühr: ${fee(r.feeMinor)}.` : "") +
-      " Genaue Uhrzeit und Gebühr für die Adresse sehen Sie im Checkout.",
+    cutoff: (b: YakaBilgisi) => `Bestellschluss für die Lieferung am selben Tag: ${b.siparisSonSaat} Uhr (${b.yaka === "anadolu" ? "asiatische Seite" : "europäische Seite"}, Istanbuler Zeit).`,
+    delivery: (b: { teslimatSonSaat: string }) => `Zustellungen sind bis ${b.teslimatSonSaat} Uhr möglich.`,
     cityTitle: "Taggleiche Lieferung in Istanbul",
-    city: (m: DeliveryRange, k: DeliveryRange, b: DeliveryRange) =>
-      `Der Bestellschluss hängt von der Entfernung der Adresse zu unserem Atelier ab: Maltepe ${span(m)} Uhr, Kadıköy ${span(k)} Uhr, Beşiktaş ${span(b)} Uhr (Istanbuler Zeit, GMT+3). Genaue Uhrzeit und Liefergebühr für die Adresse sehen Sie im Checkout.`,
+    cityCutoff: `Bestellschluss für die Lieferung am selben Tag: asiatische Seite ${A.siparisSonSaat} Uhr, europäische Seite ${E.siparisSonSaat} Uhr (Istanbuler Zeit).`,
+    caveat: "Bei sehr weit entfernten Adressen und Lieferungen mit Sonderfahrzeug wird die Verfügbarkeit im Checkout für die Adresse geprüft.",
     abroad: "Sie können aus Deutschland und dem Ausland bestellen: Im Ausland ausgegebene Visa- und Mastercard-Karten werden akzeptiert, abgerechnet wird in Türkischer Lira.",
   },
 } as const;
@@ -56,30 +52,32 @@ const TITLE: Record<NoteVariant, string> = {
 };
 
 /**
- * district verilirse o ilçenin aralığı (ilçe sayfaları); verilmezse İstanbul özeti (Maltepe/Kadıköy/Beşiktaş örnekleri).
- * abroad: yurt dışından sipariş + yabancı kart cümlesi (TR ana sayfa ve iki DE sayfası).
+ * district verilirse o ilçenin yaka bilgisi (ilçe/mahalle sayfaları; motor kontrolü geçmezse null);
+ * verilmezse İstanbul özeti (iki yaka). abroad: yurt dışından sipariş + yabancı kart cümlesi.
  */
 export async function DeliveryFactsNote({ locale, variant, district, place, abroad = false }: {
-  locale: NoteLocale; variant: NoteVariant; district?: Exclude<DeliveryArea, "maltepe">; place?: string; abroad?: boolean;
+  locale: NoteLocale; variant: NoteVariant; district?: string; place?: string; abroad?: boolean;
 }) {
   const c = COPY[locale];
-  let title: string;
-  let body: string;
   if (district) {
-    const r = await fetchDeliveryRange(district);
-    if (!r || !place) return null;
-    title = c.districtTitle(place);
-    body = c.district(place, r);
-  } else {
-    const [m, k, b] = await Promise.all([fetchDeliveryRange("maltepe"), fetchDeliveryRange("kadikoy"), fetchDeliveryRange("besiktas")]);
-    if (!m || !k || !b) return abroad ? <aside className={BOX[variant]} data-delivery-facts="abroad"><p>{c.abroad}</p></aside> : null;
-    title = c.cityTitle;
-    body = c.city(m, k, b);
+    if (!place) return null;
+    const bilgi = yakaBilgisi(district, await fetchMotorIlceKarari(district));
+    if (!bilgi) return null;
+    return (
+      <aside className={BOX[variant]} data-delivery-facts={district} data-yaka={bilgi.yaka}>
+        <p className={TITLE[variant]}>{c.districtTitle(place)}</p>
+        <p className="mt-1">{c.cutoff(bilgi)}</p>
+        <p className="mt-1">{c.delivery(bilgi)}</p>
+        <p className="mt-1">{c.caveat}</p>
+      </aside>
+    );
   }
   return (
-    <aside className={BOX[variant]} data-delivery-facts={district ?? "istanbul"}>
-      <p className={TITLE[variant]}>{title}</p>
-      <p className="mt-1">{body}</p>
+    <aside className={BOX[variant]} data-delivery-facts="istanbul">
+      <p className={TITLE[variant]}>{c.cityTitle}</p>
+      <p className="mt-1">{c.cityCutoff}</p>
+      <p className="mt-1">{c.delivery(A)}</p>
+      <p className="mt-1">{c.caveat}</p>
       {abroad ? <p className="mt-1">{c.abroad}</p> : null}
     </aside>
   );
