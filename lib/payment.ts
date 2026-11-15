@@ -24,6 +24,8 @@ export interface PaytrStatus {
   total_amount_minor?: number;
   currency?: string;
   items?: PaidOrderItem[];
+  /** v1.2 (additive): sipariş test işaretliyse true → tarayıcı purchase event'i gönderilmez. Eski API'de yoktur. */
+  conversion_excluded?: boolean;
   /* ADDITIVE (4 Kas 2026) — yedek sağlayıcı. Yalnız sunucu DOĞRULANMIŞ başarısızlık
      gördüğünde dolu gelir; belirsiz (pending) durumda daima false/null. */
   retry_available?: boolean;

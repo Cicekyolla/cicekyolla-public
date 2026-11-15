@@ -2,6 +2,7 @@ import { pushEcommerceEvent } from "@/lib/analytics";
 import { metaTrack } from "@/lib/metaPixel";
 import type { PaytrStatus } from "@/lib/payment";
 import { takeCardPurchaseUserData, type HashedUserData } from "@/lib/enhancedConversionUserData";
+import { isTestPurchase, TEST_ORDER_SKIP_LOG } from "@/lib/testOrder";
 
 const memorySent = new Set<string>();
 const STORAGE_PREFIX = "cicekyolla:ga4-purchase:";
@@ -38,6 +39,12 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
 
   const transactionId = status.order_number;
   if (wasSent(transactionId)) return false;
+  // v1.2: TEST SİPARİŞİ gerçek satış değildir → GA4 / Google Ads / Meta Pixel'e purchase GÖNDERİLMEZ.
+  if (isTestPurchase(status.items, status.conversion_excluded)) {
+    // eslint-disable-next-line no-console
+    console.info(`[purchase] ${transactionId}: ${TEST_ORDER_SKIP_LOG}`);
+    return false;
+  }
   // Gelişmiş dönüşüm (Google Ads): kart akışında hash'ler checkout'ta saklandı;
   // burada TEK KEZ okunup silinir. Yoksa null → yalnız otomatik algılama kalır.
   const userData = takeCardPurchaseUserData(transactionId);
@@ -101,6 +108,8 @@ export function trackHavaleOrderPurchase(order: {
   items: Array<{ product_id?: number | null; product_name: string; unit_price_minor: number; quantity: number }>;
   /** Gelişmiş dönüşüm için hash'li e-posta/telefon (varsa). Ham değer ASLA. */
   userData?: HashedUserData | null;
+  /** v1.2: API "bu sipariş test" dediyse (ya da sepette test ürünü varsa) purchase gönderilmez. */
+  conversion_excluded?: boolean | null;
 }): boolean {
   if (!order.order_number) return false;
   if (typeof order.total_amount_minor !== "number" || !Number.isFinite(order.total_amount_minor)) return false;
@@ -108,6 +117,11 @@ export function trackHavaleOrderPurchase(order: {
 
   const transactionId = order.order_number;
   if (wasSent(transactionId)) return false;
+  if (isTestPurchase(order.items, order.conversion_excluded)) {
+    // eslint-disable-next-line no-console
+    console.info(`[purchase] ${transactionId}: ${TEST_ORDER_SKIP_LOG}`);
+    return false;
+  }
 
   const items = order.items.map((item) => {
     const itemId = validItemId(item.product_id);
