@@ -17,7 +17,7 @@ test("uzak bölge linki: İstanbul ilçesi müşterinin dilindeki ilçe sayfası
   assert.equal(foldTrSlug("Küçükçekmece"), "kucukcekmece");
   assert.equal(farZoneListingHref("tr", "İstanbul", "Esenyurt"), "/istanbul/esenyurt");
   // Ticari slug dil bayrağına bağlıdır; anahtar yolu (/en/istanbul/esenyurt) canlıda kanonik adrese 301 ile taşınır.
-  assert.match(String(farZoneListingHref("en", "İstanbul", "Esenyurt")), /^/en/.*esenyurt/);
+  assert.match(String(farZoneListingHref("en", "İstanbul", "Esenyurt")), /^\/en\/.*esenyurt/);
   assert.equal(farZoneListingHref("ar", "Istanbul", "Esenyurt"), "/ar/istanbul/esenyurt");
   assert.equal(farZoneListingHref("en", "Ankara", "Çankaya"), null);
   assert.equal(farZoneListingHref("en", "İstanbul", null), null);
