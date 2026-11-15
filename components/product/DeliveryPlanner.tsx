@@ -15,6 +15,7 @@ import { useCurrency } from "@/lib/currency";
 import { MapPin, Zap, Clock, Truck, CalendarDays, Check, Loader2, ChevronDown, PackageCheck, AlertCircle, Package } from "lucide-react";
 import AddressAutocomplete, { type AddressResult } from "@/components/delivery/AddressAutocomplete";
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
+import { farZoneListingHref } from "@/lib/farZoneListing";
 import { readPendingDelivery, hasPendingAddress, PENDING_ADDRESS_EVENT } from "@/lib/pendingDelivery";
 import { useI18n, Num } from "@/lib/i18n";
 import { localizeBandLabel } from "@/lib/deliveryBandLabel";
@@ -75,6 +76,9 @@ interface Props {
   product: { id: number; product_type?: string; same_day_available?: boolean; delivery_scope?: string; categoryId?: number | null };
   /** Seçim tamamlandığında dolu, adres/tarih değişip seçim GEÇERSİZLEŞTİĞİNDE null gönderilir. */
   onSelect?: (sel: SelectedDelivery | null) => void;
+  /** 15 Kas 2026: ürün bu adrese HİÇ gönderilemiyor ve sebep uzak bölge fiyat eşiğiyse dolu, aksi hâlde null.
+   *  Ürün sayfası "Teslimatı Planla" butonunun yanında sebebi ve gidebilen ürünlerin linkini gösterir. */
+  onBlocked?: (info: { amountText: string; href: string | null; district: string | null } | null) => void;
 }
 
 // --- Tarih yardımcıları -----------------------------------------------------
@@ -152,7 +156,7 @@ function hhmmToMin(v: string | null | undefined): number | null {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }
 
-export default function DeliveryPlanner({ product, onSelect }: Props) {
+export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props) {
   const { t, intl, locale } = useI18n();
   // DİL DEĞİŞİMİ = SUNUM: t kimliği değişince check/slot YENİDEN ÇALIŞMAZ (slot korunur). Hata metinleri ref ile.
   const tRef = useRef(t);
@@ -338,6 +342,15 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
     } else {
       onSelect?.(null); // satılamaz (fail closed)
     }
+    // Uzak bölge fiyat eşiği: kurye yok + kargo da yok → müşteri sebebi butonun yanında da görür.
+    const sdr = result.same_day;
+    const blockedByThreshold = !(sdr?.available && (sdr.slots?.length ?? 0) > 0) && !result.cargo?.available
+      && sdr?.reason === "below_price_threshold" && sdr.min_product_price_minor != null;
+    onBlocked?.(blockedByThreshold ? {
+      amountText: moneyTRY(Number(sdr!.min_product_price_minor)),
+      href: farZoneListingHref(locale, result.location?.city, result.location?.district),
+      district: result.location?.district ?? null,
+    } : null);
   }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPickSlot = (s: Slot) => {
@@ -459,13 +472,18 @@ export default function DeliveryPlanner({ product, onSelect }: Props) {
                 ? <p className="mb-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#6B7280]" data-threshold-note><AlertCircle className="w-3.5 h-3.5 mt-[1px] shrink-0 text-[#9CA3AF]" />{t("planner.thresholdNote", { amount: moneyTRY(sd.min_product_price_minor) })}</p>
                 : null;
               if (!showSameday && !showCargo) {
+                // 15 Kas 2026: kargo da yoksa eski not ("bu ürün için kargo seçeneği geçerlidir") YANLIŞ olur → gösterilmez;
+                // kart sebebi (fiyat eşiği) ve o adrese gidebilen ürünlerin linkini müşterinin dilinde kendisi söyler.
+                const blockedMinor = sd?.reason === "below_price_threshold" && sd.min_product_price_minor != null ? Number(sd.min_product_price_minor) : null;
                 return (
-                  <>{thresholdNote}<DeliveryAlternatives
+                  <DeliveryAlternatives
                     excludeId={product.id}
                     city={result.location?.city}
                     district={result.location?.district}
                     categoryId={product.categoryId}
-                  /></>
+                    thresholdText={blockedMinor != null ? moneyTRY(blockedMinor) : null}
+                    thresholdHref={blockedMinor != null ? farZoneListingHref(locale, result.location?.city, result.location?.district) : null}
+                  />
                 );
               }
               const cargoFree = (cargo?.fee_minor ?? 0) === 0;

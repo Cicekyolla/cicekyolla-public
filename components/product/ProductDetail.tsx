@@ -169,6 +169,8 @@ export function ProductDetail({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<"description" | "details" | "delivery">("description");
   const [deliverySelection, setDeliverySelection] = useState<PendingDelivery | null>(null);
+  // 15 Kas 2026: ürün uzak bölge fiyat eşiği yüzünden bu adrese gönderilemiyorsa sebep + link butonun yanında gösterilir.
+  const [deliveryBlocked, setDeliveryBlocked] = useState<{ amountText: string; href: string | null; district: string | null } | null>(null);
 
   const [variantId, setVariantId] = useState<number | null>(variants[0]?.id ?? null);
 
@@ -346,7 +348,7 @@ export function ProductDetail({
           {sizeProducts.length >= 3 && (
             <section aria-labelledby="auto-size-title" className="mt-7">
               <h2 id="auto-size-title" className="mb-3 text-[11px] font-bold uppercase tracking-[0.28em] text-[#8B5CF6]">
-                {t("pdp.sizeTitle")}
+                {t("pdp.similarTitle")}
               </h2>
               {/* MOBİL (< sm): görsel SOLDA, bilgiler SAĞDA — kompakt satır kartı.
                   Eskiden mobilde tek sütun + aspect-[4/3] tam genişlik görsel vardı;
@@ -355,17 +357,14 @@ export function ProductDetail({
                   seçenek görünür. MASAÜSTÜ (sm:) DÜZENİ BİREBİR AYNI KALDI. */}
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
                 {sizeProducts.slice(0, 3).map((item, index) => {
-                  const labels = [
-                    [t("pdp.size.small"), t("pdp.size.tier.standard")],
-                    [t("pdp.size.medium"), t("pdp.size.tier.premium")],
-                    [t("pdp.size.large"), t("pdp.size.tier.deluxe")],
-                  ] as const;
-                  const [label, tier] = labels[index];
+                  // 15 Kas 2026: bu kartlar AYNI ürünün boyutu DEĞİL, aynı kategoriden fiyatı yakın ayrı ürünlerdir. Eskiden
+                  // sırayla "Küçük / Orta / Büyük" diye etiketleniyordu → müşteri "Büyük seçince başka çiçek açılıyor"
+                  // diye şikâyet etti. Artık boyut etiketi yok; kartta ürünün kendi adı ve fiyatı yazar.
                   return (
                     <Link
                       key={item.id}
                       href={item.href ?? `/urun/${item.slug}`}
-                      aria-label={`${label}: ${item.name}, ${money(item.priceMinor ?? item.price * 100)}`}
+                      aria-label={`${item.name}, ${money(item.priceMinor ?? item.price * 100)}`}
                       className={`group flex items-center gap-3 overflow-hidden rounded-[18px] border bg-white p-2.5 transition duration-200 hover:-translate-y-0.5 hover:border-[#8B5CF6] hover:shadow-[0_10px_26px_rgba(124,58,237,0.12)] sm:block sm:p-0 ${
                         index === 1 ? "border-[#8B5CF6] bg-[#F8F5FF] shadow-[0_7px_20px_rgba(124,58,237,0.10)]" : "border-[#EDE9FE]"
                       }`}
@@ -382,19 +381,13 @@ export function ProductDetail({
                         />
                       </div>
                       <div className="min-w-0 flex-1 sm:border-t sm:border-[#F1EEFA] sm:px-3.5 sm:py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-[14px] font-bold text-[#111827]">{label}</p>
-                            <p className="text-[11px] text-[#9CA3AF]">{tier}</p>
-                          </div>
-                          <p className={`text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>{money(item.priceMinor ?? item.price * 100)}</p>
-                        </div>
                         <p
-                          className="mt-2 text-[11px] font-medium leading-[1.45] text-[#4B5563]"
+                          className="text-[13px] font-bold leading-[1.4] text-[#111827]"
                           style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
                         >
                           {item.name}
                         </p>
+                        <p className={`mt-1.5 text-[15px] font-bold ${index === 1 ? "text-[#7C3AED]" : "text-[#111827]"}`}>{money(item.priceMinor ?? item.price * 100)}</p>
                       </div>
                     </Link>
                   );
@@ -410,6 +403,7 @@ export function ProductDetail({
               id: mobil CTA kilitliyken buraya kaydırmak için çapa. */}
           <div id="cy-teslimat-planlayici" className="scroll-mt-24" />
           <DeliveryPlanner
+            onBlocked={setDeliveryBlocked}
             product={{
               id: product.id,
               product_type: product.product_type,
@@ -546,7 +540,18 @@ export function ProductDetail({
               <Heart className={`w-5 h-5 ${wish ? "fill-[#E11D48]" : ""}`} />
             </button>
           </div>
-          {!deliverySelection && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">{t("pdp.planFirst")}</p>}
+          {!deliverySelection && !deliveryBlocked && <p className="mt-3 text-[12.5px] font-semibold text-[#7C3AED]">{t("pdp.planFirst")}</p>}
+          {!deliverySelection && deliveryBlocked && (
+            <div role="alert" data-pdp-threshold-blocked className="mt-3 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3">
+              <p className="text-[13.5px] font-bold leading-snug text-[#92400E]">{t("alt.thresholdTitle", { amount: deliveryBlocked.amountText })}</p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-[#78350F]">{t("alt.thresholdDesc", { amount: deliveryBlocked.amountText })}</p>
+              {deliveryBlocked.href && (
+                <Link href={deliveryBlocked.href} className="mt-2 inline-flex items-center gap-1 text-[13px] font-bold text-[#7C3AED] underline underline-offset-2">
+                  {t("alt.thresholdCta", { district: deliveryBlocked.district ?? "" })} →
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* %100 ÇiçekYolla Garantisi — satın alma kararının hemen yanında, CTA ile
               güven ikonları arasında. Panel değil, tek satır: CTA'yı aşağı itmez,

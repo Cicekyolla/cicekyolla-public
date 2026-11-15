@@ -70,7 +70,10 @@ function fmtDate(d?: string, intl = "tr-TR"): string | null {
   if (isNaN(dt.getTime())) return d;
   return dt.toLocaleDateString(intl, { day: "numeric", month: "long", weekday: "long" });
 }
-function mapToSlot(start?: string, label?: string): string {
+// 15 Kas 2026: seçilen slotun GERÇEK penceresi (başlangıç–bitiş) varsa aynen gönderilir. Eskiden her slot başlangıç
+// saatine göre 4 sabit dilimden birine sokuluyordu → 09:00–18:00 seçimi siparişe 09:00–12:00 yazılıyordu.
+function mapToSlot(start?: string, label?: string, end?: string): string {
+  if (start && end && /^\d{2}:\d{2}/.test(start) && /^\d{2}:\d{2}/.test(end)) return `${start.slice(0, 5)}–${end.slice(0, 5)}`;
   if (label && SLOTS.includes(label)) return label;
   const h = start ? parseInt(start.slice(0, 2), 10) : NaN;
   if (h >= 9 && h < 12) return SLOTS[0];
@@ -410,7 +413,7 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         ...attemptField(attemptKey()),
         // KARGO = kurye slotu KESİNLİKLE yok (backend de siler; burada hiç gönderilmez).
         delivery_date: pd?.date || null,
-        delivery_time_slot: pd?.mode === "cargo" ? null : (pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel) : (slotStr || null)),
+        delivery_time_slot: pd?.mode === "cargo" ? null : (pd?.mode === "sameday" ? mapToSlot(pd?.slotStart, pd?.slotLabel, pd?.slotEnd) : (slotStr || null)),
         delivery_slot_id: pd?.mode === "cargo" ? null : (pd?.slotId ?? null),
         delivery_method: pd?.mode === "cargo" ? "cargo" : pd?.mode === "sameday" ? "courier" : null,
         // TUTAR KİLİDİ: müşterinin gördüğü toplam; sunucu kendi hesabıyla eşleşmezse sipariş yazmaz (409 total_changed).

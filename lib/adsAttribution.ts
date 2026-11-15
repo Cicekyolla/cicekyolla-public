@@ -28,7 +28,18 @@ function gclDegeri(ham: string | null): string | null {
   if (!ham) return null;
   const parcalar = ham.split(".");
   const deger = parcalar.length >= 3 ? parcalar.slice(2).join(".") : ham;
-  return deger ? deger.slice(0, 255) : null;
+  return gecerliTiklamaKimligi(deger);
+}
+
+/**
+ * 15 Kas 2026: canlı siparişe gclid="test123" yazıldı — değer hiç doğrulanmıyordu. Gerçek Google tıklama kimlikleri
+ * uzundur ve yalnız harf/rakam/'-'/'_'/'.' içerir; biçime uymayan değer (elle yazılmış test parametresi vb.) yok sayılır.
+ * API aynı kuralı ikinci kez uygular (ordersValidation.cleanAdsClickId).
+ */
+export function gecerliTiklamaKimligi(deger: string | null | undefined): string | null {
+  if (!deger) return null;
+  const v = deger.trim();
+  return /^[A-Za-z0-9._-]{20,255}$/.test(v) ? v : null;
 }
 
 export function readAdsAttribution(): AdsAttribution {
@@ -38,7 +49,7 @@ export function readAdsAttribution(): AdsAttribution {
     const url = new URLSearchParams(window.location.search);
     const urlDeger = (ad: string): string | null => {
       const v = url.get(ad);
-      return v ? v.slice(0, 255) : null;
+      return gecerliTiklamaKimligi(v);
     };
     return {
       gclid: gclDegeri(cerez("_gcl_aw")) ?? urlDeger("gclid"),

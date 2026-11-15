@@ -23,7 +23,10 @@ interface Props { productName: string; productId: number | null; priceMinor: num
 const SLOTS = ["09:00–12:00", "12:00–15:00", "15:00–18:00", "18:00–21:00"];
 
 // DeliveryPlanner slot'unu (backend saatleri) checkout'un 4 sabit dilimine eşler.
-function mapToSlot(start?: string, label?: string): string {
+// 15 Kas 2026: seçilen slotun GERÇEK penceresi (başlangıç–bitiş) varsa aynen gönderilir. Eskiden her slot başlangıç
+// saatine göre 4 sabit dilimden birine sokuluyordu → 09:00–18:00 seçimi siparişe 09:00–12:00 yazılıyordu.
+function mapToSlot(start?: string, label?: string, end?: string): string {
+  if (start && end && /^\d{2}:\d{2}/.test(start) && /^\d{2}:\d{2}/.test(end)) return `${start.slice(0, 5)}–${end.slice(0, 5)}`;
   if (label && SLOTS.includes(label)) return label;
   const h = start ? parseInt(start.slice(0, 2), 10) : NaN;
   if (h >= 9 && h < 12) return SLOTS[0];
@@ -56,7 +59,7 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
       delivery_address: p.address ?? prev.delivery_address,
       delivery_district: p.district ?? prev.delivery_district,
       delivery_date: p.date ?? prev.delivery_date,
-      delivery_time_slot: p.mode === "sameday" ? mapToSlot(p.slotStart, p.slotLabel) : prev.delivery_time_slot,
+      delivery_time_slot: p.mode === "sameday" ? mapToSlot(p.slotStart, p.slotLabel, p.slotEnd) : prev.delivery_time_slot,
     }));
     setPrefilled(p);
   }, [productSlug]);
