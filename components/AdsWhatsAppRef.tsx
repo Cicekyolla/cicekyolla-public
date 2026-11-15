@@ -30,7 +30,7 @@
  */
 
 import { useEffect } from "react";
-import { isWhatsAppHref, readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
+import { gecerliTiklamaKimligi, isWhatsAppHref, readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
 import { pushEvent } from "@/lib/analytics";
 import { withGlobalWaPrefill } from "@/lib/global/waPrefill";
 
@@ -55,7 +55,7 @@ export function AdsWhatsAppRef() {
       // sayfalarda (parametre kaybolduğunda) devreye girer.
       const urlGclid = new URLSearchParams(window.location.search).get("gclid");
       const attr = readAdsAttribution();
-      const ref = urlGclid?.slice(0, 255) || attr.gclid || attr.gbraid || attr.wbraid;
+      const ref = gecerliTiklamaKimligi(urlGclid) || attr.gclid || attr.gbraid || attr.wbraid;
 
       // C4 (5 Kas 2026): 13 global dil yolunda boş bağlantıya o dilde önmetin,
       // her bağlantıya aynı satırda sayfa etiketi [p: …]. TR yolunda null → aynen.

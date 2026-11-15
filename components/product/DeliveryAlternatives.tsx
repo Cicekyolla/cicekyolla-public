@@ -20,6 +20,10 @@ interface Props {
   city?: string | null;
   district?: string | null;
   categoryId?: number | null;
+  /** 15 Kas 2026 — uzak bölge fiyat eşiği: dolu ise kart "kargo" yerine GERÇEK sebebi (eşik) söyler. */
+  thresholdText?: string | null;
+  /** O adrese gidebilen (eşik üstü) ürünlerin listelendiği ilçe sayfası; yoksa mevcut kargo linki kalır. */
+  thresholdHref?: string | null;
 }
 
 function slugifyTr(s: string): string {
@@ -27,7 +31,7 @@ function slugifyTr(s: string): string {
   return s.split("").map((c) => map[c] ?? c).join("").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-export default function DeliveryAlternatives({ excludeId, city, district, categoryId }: Props) {
+export default function DeliveryAlternatives({ excludeId, city, district, categoryId, thresholdText, thresholdHref }: Props) {
   const { t, locale } = useI18n();
   // Şehir adı doğrulanmış adresten (delivery-check yanıtı location.city). Yoksa genel ifade.
   const cityName = (city && city.trim()) || "Bu adrese";
@@ -56,7 +60,9 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
   if (excludeId) q.set("from", String(excludeId));
   if (categoryId) q.set("cat", String(categoryId));
   if (city) q.set("il", city);
-  const href = `/teslimat/${citySlug}?${q.toString()}`;
+  const cargoHref = `/teslimat/${citySlug}?${q.toString()}`;
+  const byThreshold = !!thresholdText;
+  const href = byThreshold && thresholdHref ? thresholdHref : cargoHref;
   const addrLine = [district, city].filter(Boolean).join(" / ") || t("alt.selectedAddress");
 
   return (
@@ -70,11 +76,20 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
           <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#6D28D9]">
             <MapPin className="w-3.5 h-3.5" /> {t("alt.yourAddress")} · {addrLine}
           </div>
-          <p className="text-[13.5px] font-bold text-[#111827] mt-1">{isTr ? `Bu ürün ${toCity} aynı gün gönderilemiyor.` : t("alt.cannotSameDay", { city: cityArg })}</p>
-          <p className="text-[12.5px] text-[#6B7280] mt-1 leading-relaxed">
-            {isTr ? `Ancak ${toCity} kargoyla gönderebileceğimiz ürünlerimiz var.` : t("alt.butCargo", { city: cityArg })} {descText}
-          </p>
-          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#047857]">{t("alt.eta")}</p>
+          {byThreshold ? (
+            <div data-threshold-blocked role="alert">
+              <p className="text-[14px] font-bold text-[#B45309] mt-1 leading-snug">{t("alt.thresholdTitle", { amount: thresholdText ?? "" })}</p>
+              <p className="text-[13px] text-[#4B5563] mt-1 leading-relaxed">{t("alt.thresholdDesc", { amount: thresholdText ?? "" })}</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-[13.5px] font-bold text-[#111827] mt-1">{isTr ? `Bu ürün ${toCity} aynı gün gönderilemiyor.` : t("alt.cannotSameDay", { city: cityArg })}</p>
+              <p className="text-[12.5px] text-[#6B7280] mt-1 leading-relaxed">
+                {isTr ? `Ancak ${toCity} kargoyla gönderebileceğimiz ürünlerimiz var.` : t("alt.butCargo", { city: cityArg })} {descText}
+              </p>
+              <p className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#047857]">{t("alt.eta")}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -85,10 +100,10 @@ export default function DeliveryAlternatives({ excludeId, city, district, catego
         style={{ background: "linear-gradient(90deg, #7C3AED 0%, #6D28D9 100%)" }}
       >
         <Sparkles className="w-4 h-4" />
-        {ctaText}
+        {byThreshold && thresholdHref ? t("alt.thresholdCta", { district: (district && district.trim()) || cityArg }) : ctaText}
         <ChevronRight className="w-4 h-4" />
       </Link>
-      <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">{t("alt.footer")}</p>
+      {!(byThreshold && thresholdHref) && <p className="mt-2 text-center text-[11px] text-[#9CA3AF]">{t("alt.footer")}</p>}
     </div>
   );
 }

@@ -19,7 +19,8 @@
 //  - İç bağlantı zinciri locale ailesi İÇİNDE kalır (DE sayfadan TR yüzeyine düşme yok).
 // ============================================================================
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { PRODUCT_SLUG_RE, trToLocaleSlugMap } from "@/lib/i18n/productPath";
 import Link from "next/link";
 import { absoluteUrl, computeClosedRobots, SITE_INDEXABLE, SITE_URL } from "@/lib/site-config";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/productSchema";
@@ -1499,6 +1500,18 @@ export async function LocalePage({ locale, path, searchParams }: {
       const moved = await findRenamedLocaleSlug(locale, parsed.slug, async () =>
         (await fetchLocaleInventory(locale)).products.map((p) => p.slug));
       if (moved) permanentRedirect(withQuery(localeProductPath(locale, moved), searchParams as Record<string, string | string[] | undefined>));
+      // EK (15 Kas 2026 canlı olayı): adres TÜRKÇE slug'la kurulmuş (/en/product/pembe-beyaz-guller) → 404 veriyordu.
+      //  • Ürünün bu dilde yayında çevirisi varsa → o dilin KENDİ adresine kalıcı yönlendirme.
+      //  • Çevirisi yoksa ama ürün satışta → çalışan Türkçe ürün sayfasına GEÇİCİ yönlendirme (çeviri sonradan
+      //    yayınlanabilir; kalıcı yönlendirme önbelleğe yapışırdı).
+      // Yalnız 404 yolunda çalışır: sağlıklı sayfalara maliyeti yoktur, gerçek bir dil slug'ını gölgeleyemez.
+      if (PRODUCT_SLUG_RE.test(parsed.slug)) {
+        const q = searchParams as Record<string, string | string[] | undefined>;
+        const viaTr = trToLocaleSlugMap((await fetchLocaleInventory(locale).catch(() => null))?.products).get(parsed.slug);
+        if (viaTr) permanentRedirect(withQuery(localeProductPath(locale, viaTr), q));
+        const trProduct = await fetchProductBySlug(parsed.slug).catch(() => null);
+        if (trProduct?.product?.slug) redirect(withQuery(`/urun/${trProduct.product.slug}`, q));
+      }
       notFound();
     }
     const data = await fetchProductBySlug(surface.tr_slug);
