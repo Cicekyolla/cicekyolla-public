@@ -7,6 +7,7 @@
 //   title_tag, meta_description, h1, intro_html, body_blocks[], faq[], schema_jsonld } }
 // ---------------------------------------------------------------------------
 
+import { withoutTestProducts } from "./testProduct";
 import { seoPageTag } from "./revalidatePaths";
 import { mediaUrl, mediaUrlOrNull, mediaDerivatives } from "./media";
 import { formatMoney } from "./currency/format";
@@ -769,7 +770,8 @@ export async function fetchProductsPaged(params: PublicProductListParams & { pag
       if (!res.ok) continue;
       const json = (await res.json()) as ProductPage;
       const rawItems = Array.isArray(json?.items) ? json.items : Array.isArray((json as unknown as { data?: PublicProductListItem[] })?.data) ? (json as unknown as { data: PublicProductListItem[] }).data : [];
-      const items = rawItems.map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
+      // EK (TEST ÜRÜNÜ): test ürünü herkese açık liste / arama / ürün akışında gösterilmez (lib/testProduct.ts).
+      const items = withoutTestProducts(rawItems).map((it) => ({ ...it, cover_image_url: mediaUrlOrNull(it.cover_image_url), cover_derivatives: mediaDerivatives(it.cover_derivatives) }));
       // EK (KATEGORİ YASASI): `answered` yalnız sayfalama bilgisi yanıttan geldiyse true (yedek sayfa taşımaz).
       return json?.pagination ? { items, pagination: json.pagination, answered: true } : { items, pagination: empty.pagination };
     } catch {
