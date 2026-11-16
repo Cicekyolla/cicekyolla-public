@@ -69,7 +69,10 @@ test("API sözleşmesi: üretilen değer backend (7–30) ve PayTR user_phone (�
     assert.match(v, /^\+[1-9]\d{7,14}$/);
   }
   // En uzun izinli (15 hane) bile ≤ 20 karakter.
-  assert.equal(senderPhoneForApi("+123 456 789 012 345").length, 16);
+  // 17 Kas 2026: "+123 456 789 012 345" artık geçersiz (+1 ulusal numarası 10 hanedir);
+  // 15 hane yalnız tabloda olmayan ülke kodunda mümkündür.
+  assert.equal(senderPhoneForApi("+290 123 456 789 012").length, 16);
+  assert.equal(isValidSenderPhone("+123 456 789 012 345"), false);
 });
 
 test("Checkout bağlantısı: gönderen kontrolü ve sipariş gövdesi yeni kuralı kullanır; alıcı telefonu değişmedi", () => {
@@ -79,4 +82,40 @@ test("Checkout bağlantısı: gönderen kontrolü ve sipariş gövdesi yeni kura
   assert.match(src, /customer_phone: senderPhoneForApi\(senderPhone\)/);
   assert.match(src, /recipient_phone: recipientPhone \|\| null/, "alıcı telefonu olduğu gibi gider");
   assert.match(src, /placeholder=\{t\("co\.phonePh"\)\}/);
+});
+
+/* --------------------------------------------------------------------------
+ * 17 Kas 2026 — CY-20261117-218913: gonderen "+971545464667646" (BAE, 3 hane
+ * fazla) ve alici "+90637388383883" (TR, 2 hane fazla) checkout'tan gecti.
+ * Uzunluk artik ULKEYE GORE denetlenir (lib/phoneRules).
+ * ------------------------------------------------------------------------ */
+import { isValidRecipientPhone } from "./senderPhone.ts";
+import { analyzePhone } from "./phoneRules.ts";
+
+test("OLAY: +971545464667646 gonderen olarak REDDEDILIR; dogru BAE numarasi gecer", () => {
+  assert.equal(isValidSenderPhone("+971545464667646"), false);
+  assert.equal(normalizeInternationalPhone("+971545464667646"), null);
+  assert.equal(analyzePhone("+971545464667646").reason, "too_long");
+  assert.equal(senderPhoneForApi("+971 54 546 4667"), "+971545464667");
+});
+
+test("Ulke uzunlugu: fazla/eksik haneli yurt disi gonderen reddedilir", () => {
+  for (const bad of ["+1 212 555 01000", "+1 212 555 010", "+44 7700 9001234567", "+7 916 123-45-6", "+966 50 123 45678", "+33 6 12 34 56 7"]) {
+    assert.equal(isValidSenderPhone(bad), false, bad);
+  }
+});
+
+test("Alici telefonu: bos gecerli; doluysa ulkesinin uzunluguna uymali", () => {
+  for (const ok of ["", "   ", "0532 123 45 67", "5321234567", "+90 532 123 45 67", "905321234567", "0212 555 00 00", "+971 50 123 4567", "+49 1512 3456789", "0044 7700 900123"]) {
+    assert.equal(isValidRecipientPhone(ok), true, ok);
+  }
+  for (const bad of ["+90637388383883", "0532 123 45", "0532 123 45 678", "+971545464667646", "532 123", "abc", "0532 123 45 67 dahili 5", "+0 123 456 789"]) {
+    assert.equal(isValidRecipientPhone(bad), false, bad);
+  }
+});
+
+test("Kaynak nobeti: checkout alici telefonunu adimda ve gonderimde denetler", () => {
+  const src = readFileSync(new URL("../components/checkout/CheckoutWizard.tsx", import.meta.url), "utf8");
+  assert.match(src, /stepKey === "alici"\) return recipientName\.trim\(\)\.length > 0 && isValidRecipientPhone\(recipientPhone\)/);
+  assert.match(src, /if \(!isValidRecipientPhone\(recipientPhone\)\) \{\s*setError\(t\("co\.recipientPhoneErr"\)\)/);
 });

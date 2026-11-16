@@ -284,6 +284,7 @@ const az: Dict = {
   "co.fullNamePh": "Adınız Soyadınız",
   "co.phone": "Telefon *",
   "co.phoneErr": "Ölkə kodu ilə etibarlı telefon nömrəsi daxil edin (məs. +994 50 123 45 67).",
+  "co.recipientPhoneErr": "Alıcının telefon nömrəsi yanlış görünür. Nömrəni yoxlayın (məs. +90 5xx xxx xx xx və ya başqa ölkə kodu ilə, məs. +994 50 123 45 67) və ya xananı boş saxlayın.",
   "co.phonePh": "+994 50 123 45 67",
   "co.email": "E-poçt *",
   "co.emailErr": "Etibarlı e-poçt ünvanı daxil edin (sifariş təsdiqi üçün lazımdır).",

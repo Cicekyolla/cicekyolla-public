@@ -36,7 +36,7 @@ import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
 import { cartTotalMinor, deliveryMethodLabel } from "@/lib/deliveryFee";
 import { clearPendingCoupon, readPendingCoupon, savePendingCoupon } from "@/lib/pendingCoupon";
 import { attemptField, newAttemptKey } from "@/lib/checkoutAttempt";
-import { isValidSenderPhone, senderPhoneForApi } from "@/lib/senderPhone";
+import { isValidRecipientPhone, isValidSenderPhone, senderPhoneForApi } from "@/lib/senderPhone";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
@@ -333,13 +333,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   // Ziyaretçi ölçümü: ödeme sayfasının hangi adımına gelindi (terk analizi).
   useEffect(() => { if (stepKey !== "urun") trackVisit("checkout_step", { s: stepKey }); }, [stepKey]);
   const canNext = useMemo(() => {
-    if (stepKey === "alici") return recipientName.trim().length > 0;
+    if (stepKey === "alici") return recipientName.trim().length > 0 && isValidRecipientPhone(recipientPhone);
     if (stepKey === "gonderen")
       return senderName.trim().length > 0
         && isValidSenderPhone(senderPhone)
         && isValidEmail(senderEmail);
     return true;
-  }, [stepKey, recipientName, senderName, senderPhone, senderEmail]);
+  }, [stepKey, recipientName, recipientPhone, senderName, senderPhone, senderEmail]);
 
   const go = (dir: 1 | -1) => {
     setError(null);
@@ -357,6 +357,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
     }
     if (!isValidSenderPhone(senderPhone)) {
       setError(t("co.err.phone")); return;
+    }
+    if (!isValidRecipientPhone(recipientPhone)) {
+      setError(t("co.recipientPhoneErr")); return;
     }
     if (!isValidEmail(senderEmail)) {
       setError(t("co.err.email")); return;
@@ -902,12 +905,16 @@ function StepAlici(p: {
   regionLabel: string;
 }) {
   const { t } = useI18n();
+  // Alıcı telefonu isteğe bağlı; doluysa ülkesine göre uzunluk denetlenir. Hata alan terk edilince görünür.
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const recipientPhoneErr = phoneTouched && !isValidRecipientPhone(p.recipientPhone);
+  const errInputCls = "w-full px-4 py-3.5 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] text-[15px] text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#F87171] focus:bg-white focus:ring-4 focus:ring-[#FEE2E2] transition-all";
   return (
     <div>
       <Card title={t("co.recipientTitle")} subtitle={t("co.recipientDesc")}>
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className={labelCls}>{t("co.recipientName")}</label><input className={inputCls} value={p.recipientName} onChange={(e) => p.setRecipientName(e.target.value)} placeholder={t("co.recipientNamePh")} /></div>
-          <div><label className={labelCls}>{t("co.recipientPhone")}</label><input className={inputCls} value={p.recipientPhone} onChange={(e) => p.setRecipientPhone(e.target.value)} placeholder="+90 5xx xxx xx xx" /></div>
+          <div><label className={labelCls}>{t("co.recipientPhone")}</label><input className={recipientPhoneErr ? errInputCls : inputCls} value={p.recipientPhone} inputMode="tel" aria-invalid={recipientPhoneErr || undefined} onChange={(e) => p.setRecipientPhone(e.target.value)} onBlur={() => setPhoneTouched(true)} placeholder="+90 5xx xxx xx xx" />{recipientPhoneErr && <p data-recipient-phone-error className="mt-1.5 text-[12px] font-medium text-[#DC2626]">{t("co.recipientPhoneErr")}</p>}</div>
         </div>
       </Card>
 

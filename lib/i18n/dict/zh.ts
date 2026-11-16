@@ -284,6 +284,7 @@ const zh: Dict = {
   "co.fullNamePh": "您的姓名",
   "co.phone": "电话 *",
   "co.phoneErr": "请输入带国家区号的有效电话号码（例如 +86 138 0013 8000）。",
+  "co.recipientPhoneErr": "收件人电话号码似乎无效。请检查号码（例如 +90 5xx xxx xx xx，或带其他国家区号，如 +86 138 0013 8000），或将此栏留空。",
   "co.phonePh": "+86 138 0013 8000",
   "co.email": "电子邮箱 *",
   "co.emailErr": "请输入有效的电子邮箱（订单确认所需）。",

@@ -284,6 +284,7 @@ const pt: Dict = {
   "co.fullNamePh": "O seu nome completo",
   "co.phone": "Telefone *",
   "co.phoneErr": "Introduza um telefone válido com indicativo do país (ex. +351 912 345 678).",
+  "co.recipientPhoneErr": "O telefone do destinatário parece inválido. Verifique-o (ex. +90 5xx xxx xx xx ou com outro indicativo, ex. +351 912 345 678) ou deixe o campo vazio.",
   "co.phonePh": "+351 912 345 678",
   "co.email": "E-mail *",
   "co.emailErr": "Introduza um e-mail válido (necessário para a confirmação).",

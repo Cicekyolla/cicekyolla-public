@@ -284,6 +284,7 @@ const it: Dict = {
   "co.fullNamePh": "Il tuo nome completo",
   "co.phone": "Telefono *",
   "co.phoneErr": "Inserisci un telefono valido con prefisso internazionale (es. +39 312 345 6789).",
+  "co.recipientPhoneErr": "Il numero di telefono del destinatario sembra non valido. Controllalo (es. +90 5xx xxx xx xx o con un altro prefisso, es. +39 312 345 6789) oppure lascia il campo vuoto.",
   "co.phonePh": "+39 312 345 6789",
   "co.email": "Email *",
   "co.emailErr": "Inserisci un'email valida (necessaria per la conferma).",

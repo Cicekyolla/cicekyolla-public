@@ -295,6 +295,7 @@ const tr = {
   "co.fullNamePh": "Adınız Soyadınız",
   "co.phone": "Telefon *",
   "co.phoneErr": "Geçerli bir telefon numarası girin (05xx xxx xx xx veya ülke koduyla +49 …).",
+  "co.recipientPhoneErr": "Alıcı telefonu geçersiz görünüyor. Numarayı kontrol edin (örn. 05xx xxx xx xx; yurt dışı numaralar ülke koduyla, örn. +49 1512 3456789) ya da alanı boş bırakın.",
   "co.phonePh": "05xx xxx xx xx veya +49 1512 3456789",
   "co.email": "E-posta *",
   "co.emailErr": "Geçerli bir e-posta adresi girin (sipariş onayı için gereklidir).",

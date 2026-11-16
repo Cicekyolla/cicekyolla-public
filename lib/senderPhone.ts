@@ -15,6 +15,8 @@
 // Alıcı telefonu bu dosyanın KAPSAMI DIŞINDADIR (kurye kuralları değişmez).
 // ============================================================================
 
+import { analyzePhone } from "./phoneRules.ts";
+
 export const phoneDigits = (v: string) => v.replace(/\D/g, "");
 
 /** Eski checkout kuralı — birebir korunur. */
@@ -37,7 +39,10 @@ export function normalizeInternationalPhone(v: string): string | null {
   if (d.length < 8 || d.length > 15) return null;
   if (d.startsWith("0")) return null; // ülke kodu 0 ile başlamaz
   if (d.startsWith("90")) return null; // TR numarası TR kuralından geçmeli
-  return `+${d}`;
+  // 17 Kas 2026: uzunluk ÜLKEYE GÖRE denetlenir ("+971545464667646" 15 hane
+  // olduğu için geçiyordu; BAE ulusal numarası 8–9 hanedir). Tablo: lib/phoneRules.
+  const c = analyzePhone(`+${d}`);
+  return c.valid && !c.isTR ? c.e164 : null;
 }
 
 /** Gönderen telefonu geçerli mi (TR veya uluslararası)? */
@@ -50,4 +55,18 @@ export const isValidSenderPhone = (v: string) => isValidTRPhone(v) || normalizeI
 export function senderPhoneForApi(v: string): string {
   if (isValidTRPhone(v)) return v;
   return normalizeInternationalPhone(v) ?? v;
+}
+
+/**
+ * ALICI telefonu (17 Kas 2026 — CY-20261117-218913'te alıcı "+90637388383883"
+ * hiç denetlenmeden kaydedildi). Alan İSTEĞE BAĞLIDIR: boşsa geçerli. Doluysa
+ * ülkesinin uzunluk kuralına uymalı: Türk yazımları (05xx / 5xx / 0212… / +90…)
+ * ya da "+ülke kodu" ile yurt dışı. Yalnız rakam ve ayraç kabul edilir.
+ */
+const RECIPIENT_SHAPE = /^\+?[0-9\s().\-/]+$/;
+export function isValidRecipientPhone(v: string): boolean {
+  const s = (v ?? "").trim();
+  if (!s) return true;
+  if (!RECIPIENT_SHAPE.test(s)) return false;
+  return analyzePhone(s).valid;
 }

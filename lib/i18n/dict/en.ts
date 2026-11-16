@@ -284,6 +284,7 @@ const en: Dict = {
   "co.fullNamePh": "Your full name",
   "co.phone": "Phone *",
   "co.phoneErr": "Enter a valid phone number with country code (e.g. +44 7700 900123).",
+  "co.recipientPhoneErr": "The recipient's phone number looks invalid. Please check it (e.g. +90 5xx xxx xx xx, or another country code such as +44 7700 900123) or leave the field empty.",
   "co.phonePh": "+44 7700 900123",
   "co.email": "Email *",
   "co.emailErr": "Enter a valid email address (required for order confirmation).",
