@@ -284,6 +284,7 @@ const de: Dict = {
   "co.fullNamePh": "Ihr vollständiger Name",
   "co.phone": "Telefon *",
   "co.phoneErr": "Geben Sie eine gültige Telefonnummer mit Ländervorwahl ein (z. B. +49 1512 3456789).",
+  "co.recipientPhoneErr": "Die Telefonnummer des Empfängers scheint ungültig zu sein. Bitte prüfen Sie sie (z. B. +90 5xx xxx xx xx oder mit anderer Ländervorwahl, z. B. +49 1512 3456789) oder lassen Sie das Feld leer.",
   "co.phonePh": "+49 1512 3456789",
   "co.email": "E-Mail *",
   "co.emailErr": "Geben Sie eine gültige E-Mail-Adresse ein (für die Bestellbestätigung erforderlich).",

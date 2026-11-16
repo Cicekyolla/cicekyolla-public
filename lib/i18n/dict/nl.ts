@@ -284,6 +284,7 @@ const nl: Dict = {
   "co.fullNamePh": "Uw volledige naam",
   "co.phone": "Telefoon *",
   "co.phoneErr": "Voer een geldig telefoonnummer met landcode in (bijv. +31 6 12345678).",
+  "co.recipientPhoneErr": "Het telefoonnummer van de ontvanger lijkt ongeldig. Controleer het (bijv. +90 5xx xxx xx xx of met een andere landcode, bijv. +31 6 12345678) of laat het veld leeg.",
   "co.phonePh": "+31 6 12345678",
   "co.email": "E-mail *",
   "co.emailErr": "Voer een geldig e-mailadres in (nodig voor de bevestiging).",

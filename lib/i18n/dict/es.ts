@@ -284,6 +284,7 @@ const es: Dict = {
   "co.fullNamePh": "Su nombre completo",
   "co.phone": "Teléfono *",
   "co.phoneErr": "Introduzca un teléfono válido con prefijo del país (ej. +34 612 34 56 78).",
+  "co.recipientPhoneErr": "El teléfono del destinatario parece no ser válido. Compruébelo (ej. +90 5xx xxx xx xx o con otro prefijo, ej. +34 612 34 56 78) o deje el campo vacío.",
   "co.phonePh": "+34 612 34 56 78",
   "co.email": "Correo electrónico *",
   "co.emailErr": "Introduzca un correo válido (necesario para la confirmación).",
