@@ -44,7 +44,7 @@ import { orderNumberFromOid, trackVisit } from "@/lib/visitTracker";
 import { pushEcommerceEvent } from "@/lib/analytics";
 import { paymentTypeFor } from "@/lib/analyticsContext";
 import { stashCardPurchaseUserData } from "@/lib/enhancedConversionUserData";
-import { readAdsAttribution } from "@/lib/adsAttribution";
+import { readAdsAttribution, readGaClientIdField } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
 import { useProductName } from "@/lib/i18n/content";
@@ -463,6 +463,9 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         ads_gclid: adsAttr.gclid,
         ads_gbraid: adsAttr.gbraid,
         ads_wbraid: adsAttr.wbraid,
+        // GA istemci kimliği: yalnız analitik onayı varsa eklenir (yoksa alan hiç gitmez).
+        // Havale onayındaki çevrimdışı GA4 satın alması bu kimlikle oturuma bağlanır.
+        ...readGaClientIdField(),
         // C5 (126): siparişi verenin alışveriş dili — ölçüm + operatör bilgisi. Opsiyonel;
         // API bilinmeyen değeri null'a indirir, kolon yoksa yazmaz (sipariş akışı değişmez).
         sender_locale: locale,
