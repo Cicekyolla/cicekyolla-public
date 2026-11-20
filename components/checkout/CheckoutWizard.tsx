@@ -42,6 +42,8 @@ import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
 import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
 import { orderNumberFromOid, trackVisit } from "@/lib/visitTracker";
+import { pushEcommerceEvent } from "@/lib/analytics";
+import { paymentTypeFor } from "@/lib/analyticsContext";
 import { buildHashedUserData, stashCardPurchaseUserData } from "@/lib/enhancedConversionUserData";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
@@ -342,6 +344,33 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const stepKey = steps[stepIdx].key;
   // Ziyaretçi ölçümü: ödeme sayfasının hangi adımına gelindi (terk analizi).
   useEffect(() => { if (stepKey !== "urun") trackVisit("checkout_step", { s: stepKey }); }, [stepKey]);
+  // GA4 add_payment_info (20 Kas 2026): eski izleyici sayfada üç Türkçe metni
+  // arıyordu; "Siparişi Oluştur" metni kaldırıldığından olay HİÇ tetiklenmiyordu
+  // (huni: ödeme bilgisi = 0) ve 13 dilde zaten çalışamazdı. Artık metne değil
+  // ADIMA bağlı: müşteri ödeme adımına geldiğinde, GERÇEK seçili yöntemle bir kez;
+  // yöntemi değiştirirse yeni yöntemle bir kez daha. Ödeme mantığına dokunmaz.
+  const paymentInfoSent = useRef<string | null>(null);
+  useEffect(() => {
+    if (stepKey !== "odeme") { paymentInfoSent.current = null; return; }
+    if (productId == null || paymentInfoSent.current === paymentMethod) return;
+    paymentInfoSent.current = paymentMethod;
+    try {
+      pushEcommerceEvent("add_payment_info", {
+        // Tahsilat birimi her zaman TL; değer begin_checkout ile aynı tanım (ara toplam).
+        currency: "TRY",
+        value: subtotal / 100,
+        payment_type: paymentTypeFor(paymentMethod),
+        items: [
+          { item_id: String(productId), item_name: productName, item_brand: "ÇiçekYolla", price: priceMinor / 100, quantity: qty },
+          ...addons
+            .filter((a) => (addonQty[a.id] || 0) > 0)
+            .map((a) => ({ item_id: String(a.productId ?? a.id), item_name: a.name, item_brand: "ÇiçekYolla", price: a.priceMinor / 100, quantity: addonQty[a.id] })),
+        ],
+      });
+    } catch { /* ölçüm hatası ödeme akışını durdurmaz */ }
+    // Yalnız adım ve yöntem değişiminde tetiklenir; sepet içeriği o andaki değerdir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepKey, paymentMethod]);
   const canNext = useMemo(() => {
     if (stepKey === "alici") return recipientName.trim().length > 0 && isValidRecipientPhone(recipientPhone);
     if (stepKey === "gonderen")

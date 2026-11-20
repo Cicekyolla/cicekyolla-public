@@ -1,63 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
-import { pushEcommerceEvent } from "@/lib/analytics";
-import { useCart } from "@/lib/cart";
-
-const PAYMENT_MARKERS = ["Havale / EFT", "Ödeme Yöntemi", "Siparişi Oluştur"];
-
+/**
+ * EcommercePaymentInfoTracker — DEVRE DIŞI (20 Kas 2026).
+ * ---------------------------------------------------------------------------
+ * Bu bileşen `add_payment_info` olayını sayfada üç Türkçe metnin ("Havale / EFT",
+ * "Ödeme Yöntemi", "Siparişi Oluştur") birlikte görünmesine bağlıyordu.
+ * "Siparişi Oluştur" metni arayüzden kaldırıldığı için olay hiç tetiklenmiyordu
+ * (GA4 hunisinde "ödeme bilgisi" = 0); 13 dilde ise metinler çevrildiğinden
+ * zaten çalışamazdı. Ayrıca ödeme türünü sabit "havale" gönderiyordu.
+ *
+ * Olay artık ödeme adımının kendisinden, gerçek seçili yöntemle gönderilir:
+ * components/checkout/CheckoutWizard.tsx. Çift sayım olmasın diye bu bileşen
+ * hiçbir şey yapmaz. Dosya ve dışa aktarım, app/layout.tsx içe aktarımı
+ * bozulmasın diye yerinde bırakıldı (yeniden adlandırma / silme yok).
+ */
 export function EcommercePaymentInfoTracker() {
-  const pathname = usePathname();
-  const { items, subtotalMinor, hydrated } = useCart();
-  const trackedVisit = useRef(false);
-
-  useEffect(() => {
-    if (pathname !== "/checkout") {
-      trackedVisit.current = false;
-      return;
-    }
-
-    if (!hydrated || items.length === 0 || trackedVisit.current) return;
-
-    const trackWhenPaymentStepIsVisible = () => {
-      if (trackedVisit.current) return;
-
-      const pageText = document.body.innerText;
-      const paymentStepVisible = PAYMENT_MARKERS.every((marker) =>
-        pageText.includes(marker),
-      );
-
-      if (!paymentStepVisible) return;
-
-      pushEcommerceEvent("add_payment_info", {
-        currency: "TRY",
-        value: subtotalMinor / 100,
-        payment_type: "havale",
-        items: items.map((item) => ({
-          item_id: String(item.productId),
-          item_name: item.name,
-          item_brand: "ÇiçekYolla",
-          item_variant: item.variantTitle || undefined,
-          price: item.unitPriceMinor / 100,
-          quantity: item.quantity,
-        })),
-      });
-
-      trackedVisit.current = true;
-    };
-
-    trackWhenPaymentStepIsVisible();
-
-    const observer = new MutationObserver(trackWhenPaymentStepIsVisible);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-
-    return () => observer.disconnect();
-  }, [hydrated, items, pathname, subtotalMinor]);
-
   return null;
 }
