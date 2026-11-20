@@ -40,11 +40,10 @@ import { attemptField, newAttemptKey } from "@/lib/checkoutAttempt";
 import { isValidRecipientPhone, isValidSenderPhone, senderPhoneForApi } from "@/lib/senderPhone";
 import { BankAccountCard } from "@/components/checkout/BankAccountCard";
 import { PaytrFrame } from "@/components/checkout/PaytrFrame";
-import { trackHavaleOrderPurchase } from "@/lib/purchaseAnalytics";
 import { orderNumberFromOid, trackVisit } from "@/lib/visitTracker";
 import { pushEcommerceEvent } from "@/lib/analytics";
 import { paymentTypeFor } from "@/lib/analyticsContext";
-import { buildHashedUserData, stashCardPurchaseUserData } from "@/lib/enhancedConversionUserData";
+import { stashCardPurchaseUserData } from "@/lib/enhancedConversionUserData";
 import { readAdsAttribution } from "@/lib/adsAttribution";
 import { readMetaAttribution } from "@/lib/metaPixel";
 import { useI18n, Num, type DictKey } from "@/lib/i18n";
@@ -487,18 +486,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Havale: sipariş 'ödeme bekliyor' oluşur; dönen numara = havale referansı.
         const r = await createHavaleOrder(orderBody);
         trackVisit("order_created", { o: r.order_number, m: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total });
-        // GA4 purchase — YALNIZ backend gerçek order_number döndürdükten sonra.
-        // Hata olsaydı createHavaleOrder throw ederdi ve buraya hiç gelinmezdi.
-        // Tutar backend'in yetkili toplamı (kupon/fiyat sunucuda yeniden hesaplanır).
-        // Mükerrer koruması purchaseAnalytics içinde (memory + localStorage).
-        // Gelişmiş dönüşüm: yalnız hash'li e-posta/telefon (≤300 ms, asla fırlatmaz).
-        const userData = await buildHashedUserData(senderEmail, senderPhone);
-        trackHavaleOrderPurchase({
-          order_number: r.order_number,
-          total_amount_minor: typeof r.total_amount_minor === "number" ? r.total_amount_minor : total,
-          items,
-          userData,
-        });
+        // GA4/Ads `purchase` olayı burada ATILMAZ (20 Kas 2026). Havale siparişi
+        // oluştuğunda para henüz gelmemiştir; ödenmeyen her havale siparişi Google
+        // Ads / GA4'te "satın alma" sayılıyordu. Satın alma artık yalnız ödeme
+        // panelden onaylanınca, sunucudan (Google Ads çevrimdışı dönüşüm + Meta
+        // CAPI) bildirilir. Kart yolu değişmedi: purchase sonuç sayfasında, sunucu
+        // "paid" dediğinde atılır. Panelin kendi ziyaret ölçümü (order_created)
+        // yukarıda aynen durur.
         // Başarı ekranında yazacak tutar SUNUCUNUN yetkili toplamıdır: sunucu
         // fiyatı/indirimi yeniden hesaplar ve para kıskacını uygular, bu yüzden
         // istemci toplamı ayrışabilir (baseline S). Müşteri bankaya yatıracağı

@@ -92,6 +92,14 @@ export function trackPaidPurchase(status: PaytrStatus): boolean {
 }
 
 /**
+ * ARTIK ÇAĞRILMIYOR (20 Kas 2026) — bilerek dosyada bırakıldı.
+ * Havale siparişi oluştuğunda para henüz gelmemiştir; bu fonksiyon her
+ * ödenmemiş havale siparişini Google Ads / GA4'e "satın alma" olarak
+ * bildiriyordu. CheckoutWizard havale dalındaki çağrı kaldırıldı. Havalede
+ * satın alma artık yalnız ödeme panelden onaylanınca SUNUCUDAN bildirilir
+ * (Google Ads çevrimdışı dönüşüm yüklemesi + Meta CAPI). Yeniden bağlamadan
+ * önce lib/havalePurchase.test.ts nöbetini oku.
+ *
  * Havale/EFT ile OLUŞTURULMUŞ sipariş için purchase.
  * ---------------------------------------------------------------------------
  * Kart akışı ödeme onayını PayTR webhook'undan bekler ve trackPaidPurchase ile
