@@ -18,7 +18,7 @@ import { interp } from "./text.ts";
 /** Mevcut gerçek sosyal hesaplar (components/Footer.tsx ile aynı). */
 export const V80_SOCIAL = [
   { key: "instagram", label: "Instagram", href: "https://www.instagram.com/cicekyolla/" },
-  { key: "facebook", label: "Facebook", href: "https://www.facebook.com/cicekyolla" },
+  { key: "facebook", label: "Facebook", href: "https://www.facebook.com/cicekyolla.com.tr" },
 ] as const;
 
 export interface V80FooterInput {
