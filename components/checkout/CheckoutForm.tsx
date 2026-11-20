@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { readMetaAttribution } from "@/lib/metaPixel";
-import { readAdsAttribution } from "@/lib/adsAttribution";
+import { readAdsAttribution, readGaClientIdField } from "@/lib/adsAttribution";
 import Link from "next/link";
 import { readPendingDelivery, clearPendingDelivery, type PendingDelivery } from "@/lib/pendingDelivery";
 import { useCurrency } from "@/lib/currency";
@@ -95,6 +95,7 @@ export function CheckoutForm({ productName, productId, priceMinor, productSlug }
           card_message: f.card_message || null, source: "web",
           meta_fbc: metaAttr.fbc, meta_fbp: metaAttr.fbp,
           ads_gclid: adsAttr.gclid, ads_gbraid: adsAttr.gbraid, ads_wbraid: adsAttr.wbraid,
+          ...readGaClientIdField(),
          items: [{ product_id: productId != null ? Number(productId) : null, product_name: productName, quantity: qty, unit_price_minor: Math.round(Number(priceMinor)) }],
         }),
       });

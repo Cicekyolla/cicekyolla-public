@@ -30,12 +30,17 @@
  */
 
 import { useEffect } from "react";
-import { gecerliTiklamaKimligi, isWhatsAppHref, readAdsAttribution, withWhatsAppRef } from "@/lib/adsAttribution";
+import { captureAdsClickFromUrl, isWhatsAppHref, readAdsAttribution, whatsAppRefFor, withWhatsAppRef } from "@/lib/adsAttribution";
 import { pushEvent } from "@/lib/analytics";
 import { withGlobalWaPrefill } from "@/lib/global/waPrefill";
 
 export function AdsWhatsAppRef() {
   useEffect(() => {
+    // Reklamdan inilen sayfada URL'deki gbraid / wbraid oturum boyunca saklanır
+    // (yalnız pazarlama onayı varsa; yoksa hiçbir şey yazılmaz). Onay bu sayfada
+    // sonradan verilirse ConsentManager aynı çağrıyı o anda yapar.
+    captureAdsClickFromUrl();
+
     const isle = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
@@ -55,7 +60,8 @@ export function AdsWhatsAppRef() {
       // sayfalarda (parametre kaybolduğunda) devreye girer.
       const urlGclid = new URLSearchParams(window.location.search).get("gclid");
       const attr = readAdsAttribution();
-      const ref = gecerliTiklamaKimligi(urlGclid) || attr.gclid || attr.gbraid || attr.wbraid;
+      // gclid öneksiz; gbraid "gb.", wbraid "wb." önekiyle gider (API türü ayırır).
+      const ref = whatsAppRefFor(attr, urlGclid);
 
       // C4 (5 Kas 2026): 13 global dil yolunda boş bağlantıya o dilde önmetin,
       // her bağlantıya aynı satırda sayfa etiketi [p: …]. TR yolunda null → aynen.
