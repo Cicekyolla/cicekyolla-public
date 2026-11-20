@@ -497,6 +497,11 @@ const az: Dict = {
   "paytr.redirecting": "Təhlükəsiz ödəniş səhifəsinə yönləndirilirsiniz…",
   "paytr.openFull": "Ödəniş forması açılmadısa, təhlükəsiz səhifədə davam edin",
   "paytr.scrollNote": "Ödəniş forması öz pəncərəsində sürüşdürülə bilər.",
+  "paytr.openFullButton": "Tam səhifədə aç",
+  "payres.threeDText": "Bankınızın təsdiqləmə addımı (3D Secure) tamamlanmadı. Kartınızdan vəsait çıxılmadı.",
+  "payres.optionsTitle": "Necə davam etmək istəyirsiniz?",
+  "payres.tryAnotherCard": "Başqa kartla yenidən cəhd et",
+  "payres.payByTransfer": "Bank köçürməsi ilə ödə",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Bunlarla davam et",
   "co.favSaved": "Sevimlilərdə",

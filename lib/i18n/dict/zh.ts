@@ -497,6 +497,11 @@ const zh: Dict = {
   "paytr.redirecting": "正在跳转到安全支付页面…",
   "paytr.openFull": "如果付款表单没有打开，请在安全页面继续",
   "paytr.scrollNote": "付款表单可在其自身窗口内滚动。",
+  "paytr.openFullButton": "在整页中打开",
+  "payres.threeDText": "银行验证步骤（3D Secure）未完成，您的银行卡未被扣款。",
+  "payres.optionsTitle": "您希望如何继续？",
+  "payres.tryAnotherCard": "换一张卡重试",
+  "payres.payByTransfer": "通过银行转账付款",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "加购并继续",
   "co.favSaved": "已收藏",

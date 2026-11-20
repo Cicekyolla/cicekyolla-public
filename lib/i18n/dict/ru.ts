@@ -497,6 +497,11 @@ const ru: Dict = {
   "paytr.redirecting": "Перенаправляем на защищённую страницу оплаты…",
   "paytr.openFull": "Если платёжная форма не открылась, продолжите на защищённой странице",
   "paytr.scrollNote": "Платёжную форму можно прокручивать в её собственном окне.",
+  "paytr.openFullButton": "Открыть на всю страницу",
+  "payres.threeDText": "Проверка вашего банка (3D Secure) не была завершена. Средства с карты не списаны.",
+  "payres.optionsTitle": "Как вы хотите продолжить?",
+  "payres.tryAnotherCard": "Попробовать другую карту",
+  "payres.payByTransfer": "Оплатить банковским переводом",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Продолжить с ними",
   "co.favSaved": "В избранном",

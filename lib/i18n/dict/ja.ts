@@ -497,6 +497,11 @@ const ja: Dict = {
   "paytr.redirecting": "安全な決済ページに移動しています…",
   "paytr.openFull": "決済フォームが開かない場合は、安全なページで続行してください",
   "paytr.scrollNote": "決済フォームはフォーム内でスクロールできます。",
+  "paytr.openFullButton": "全画面で開く",
+  "payres.threeDText": "銀行の本人認証（3Dセキュア）が完了しませんでした。カードへの請求は行われていません。",
+  "payres.optionsTitle": "どのように続けますか？",
+  "payres.tryAnotherCard": "別のカードで再試行",
+  "payres.payByTransfer": "銀行振込で支払う",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "これで次へ",
   "co.favSaved": "お気に入り済み",

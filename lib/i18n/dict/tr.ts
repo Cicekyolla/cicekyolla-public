@@ -510,6 +510,11 @@ const tr = {
   "paytr.redirecting": "Güvenli ödeme sayfasına yönlendiriliyorsunuz…",
   "paytr.openFull": "Ödeme formu açılmadıysa güvenli sayfada devam edin",
   "paytr.scrollNote": "Ödeme formu kendi penceresinde kaydırılabilir.",
+  "paytr.openFullButton": "Tam sayfada aç",
+  "payres.threeDText": "Bankanızın doğrulama (3D Secure) adımı tamamlanmadı. Kartınızdan çekim yapılmadı.",
+  "payres.optionsTitle": "Nasıl devam etmek istersiniz?",
+  "payres.tryAnotherCard": "Başka kartla tekrar dene",
+  "payres.payByTransfer": "Havale / EFT ile öde",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Bunlarla Devam Et",
   "co.favSaved": "Favorilerde",
