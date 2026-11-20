@@ -1,4 +1,5 @@
 import { trackFromEcommerce } from "./visitTracker.ts";
+import { readAnalyticsContext } from "./analyticsContext.ts";
 
 export type EcommerceItem = {
   item_id: string;
@@ -24,9 +25,12 @@ export function pushEcommerceEvent(
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ ecommerce: null });
-  // `extra` yalnız purchase'ta verilir (hash'li kullanıcı verisi); diğer
-  // olayların gövdesi birebir aynı kalır.
-  window.dataLayer.push(extra ? { event, ecommerce, ...extra } : { event, ecommerce });
+  // `extra` yalnız purchase'ta verilir (hash'li kullanıcı verisi); `ecommerce`
+  // gövdesi birebir aynı kalır (currency = tahsilat birimi, "TRY").
+  // 20 Kas 2026 (ADDITIVE): her olaya sayfa dili ve GÖSTERİM para birimi eklenir
+  // (site_language, display_currency) — GA4'te dil / yurt dışı kırılımı için.
+  const ctx = readAnalyticsContext();
+  window.dataLayer.push(extra ? { event, ecommerce, ...ctx, ...extra } : { event, ecommerce, ...ctx });
   // Panelin kendi ziyaretçi ölçümü (migration 118) — GA4 gövdesi değişmez.
   trackFromEcommerce(event, ecommerce);
 }
@@ -63,6 +67,9 @@ export function pushEvent(
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
     event,
+    // 20 Kas 2026 (ADDITIVE): sayfa dili + gösterim para birimi; çağıranın
+    // verdiği aynı adlı alan varsa o geçerlidir.
+    ...readAnalyticsContext(),
     ...params,
     ...(onDone ? { eventCallback: birKez, eventTimeout: timeoutMs } : {}),
   });
