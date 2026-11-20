@@ -170,17 +170,18 @@ export function PaytrFrame({
         {/* HER ZAMAN görünür kaçış yolu: çerçeve boş kalır ya da banka 3D
             Secure sayfası çerçeveyi reddederse müşteri kilitlenmez; aynı resmi
             PayTR adresine tam sayfa gider (bugünkü çalışan akış). */}
-        <div className="mt-3 text-center">
+        <div className="mt-4 rounded-2xl border border-border bg-secondary px-4 py-3 text-center">
+          <p className="text-[12px] text-muted-foreground">{t("paytr.openFull")}</p>
           <button
             type="button"
             onClick={goToRedirectFlow}
             disabled={fellBack}
-            className="text-[11.5px] font-semibold text-[#9CA3AF] underline decoration-dotted underline-offset-4 transition-colors hover:text-[#7C3AED] disabled:opacity-60"
+            className="mt-2 inline-flex items-center justify-center rounded-2xl border border-primary bg-background px-5 py-2.5 text-[13.5px] font-bold text-accent-foreground transition-colors hover:bg-accent disabled:opacity-60"
           >
-            {fellBack ? t("paytr.redirecting") : t("paytr.openFull")}
+            {fellBack ? t("paytr.redirecting") : t("paytr.openFullButton")}
           </button>
           {resizerFailed && !fellBack && (
-            <p className="mt-1.5 text-[11px] text-[#C4B5FD]">{t("paytr.scrollNote")}</p>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">{t("paytr.scrollNote")}</p>
           )}
         </div>
       </div>

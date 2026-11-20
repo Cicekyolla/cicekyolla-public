@@ -498,6 +498,11 @@ const ar: Dict = {
   "paytr.redirecting": "جارٍ تحويلك إلى صفحة الدفع الآمنة…",
   "paytr.openFull": "إذا لم يُفتح نموذج الدفع، تابع على الصفحة الآمنة",
   "paytr.scrollNote": "يمكن تمرير نموذج الدفع داخل نافذته الخاصة.",
+  "paytr.openFullButton": "فتح في صفحة كاملة",
+  "payres.threeDText": "لم تكتمل خطوة التحقق من البنك (3D Secure). لم يتم خصم أي مبلغ من بطاقتك.",
+  "payres.optionsTitle": "كيف تود المتابعة؟",
+  "payres.tryAnotherCard": "جرّب بطاقة أخرى",
+  "payres.payByTransfer": "الدفع بالتحويل البنكي",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "المتابعة مع هذه الإضافات",
   "co.favSaved": "في المفضلة",

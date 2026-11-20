@@ -497,6 +497,11 @@ const it: Dict = {
   "paytr.redirecting": "Ti stiamo reindirizzando alla pagina di pagamento sicura…",
   "paytr.openFull": "Se il modulo di pagamento non si è aperto, continua sulla pagina sicura",
   "paytr.scrollNote": "Il modulo di pagamento può essere scorso nella propria finestra.",
+  "paytr.openFullButton": "Apri a pagina intera",
+  "payres.threeDText": "La verifica della tua banca (3D Secure) non è stata completata. Nessun addebito sulla tua carta.",
+  "payres.optionsTitle": "Come vuoi continuare?",
+  "payres.tryAnotherCard": "Prova un'altra carta",
+  "payres.payByTransfer": "Paga con bonifico bancario",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Continua con questi",
   "co.favSaved": "Nei preferiti",

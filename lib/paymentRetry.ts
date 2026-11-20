@@ -24,6 +24,9 @@ export interface ServerPaymentStatus {
   retry_needs_email?: boolean;
   order_id?: number | null;
   payment_failed?: boolean;
+  failure_class?: string;
+  retry_same_provider?: boolean;
+  retry_same_provider_id?: PaymentProviderId | null;
 }
 
 /** Sonuç ekranı görünümleri — müşteriye ham enum/kod GÖSTERİLMEZ. */
@@ -44,6 +47,23 @@ export function resolveResultView(s: ServerPaymentStatus | null, pendingTooLong:
     return s.retry_available && s.retry_provider && canRetryHere ? "retry" : "failed";
   }
   return pendingTooLong ? "uncertain" : "checking";
+}
+
+/**
+ * 20 Kas 2026 (ADDITIVE) — "Ödemeniz alınamadı" ekranında AYNI sağlayıcıda
+ * "başka kartla tekrar dene" sunulur mu? Yalnız sunucu doğrulanmış başarısızlık
+ * + izin verdiyse VE bu sekmede yeniden deneme anahtarı varsa. Sipariş "ödeme
+ * başarısız" (tüm yollar tükendi) ise sunulmaz. Çift çekim kalkanı sunucudadır.
+ */
+export function sameProviderRetry(s: ServerPaymentStatus | null, canRetryHere: boolean): PaymentProviderId | null {
+  if (!s || s.paid || s.status !== "failed" || s.payment_failed || !canRetryHere) return null;
+  if (!s.retry_same_provider) return null;
+  return s.retry_same_provider_id === "paytr" || s.retry_same_provider_id === "iyzico" ? s.retry_same_provider_id : null;
+}
+
+/** Başarısızlık açıklamasının sözlük anahtarı: 3D Secure'da takılana ayrı metin. */
+export function failedTextKey(s: ServerPaymentStatus | null): "payres.threeDText" | "payres.failedText" {
+  return s?.failure_class === "three_d_secure" ? "payres.threeDText" : "payres.failedText";
 }
 
 /** Müşteriye gösterilen yedek buton metni (sağlayıcı adı müşteriye açık bir markadır). */

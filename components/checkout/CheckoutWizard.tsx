@@ -30,6 +30,7 @@ import { suggestMessages, TONES, type Tone, type Lang } from "@/lib/cardMessages
 import type { CheckoutAddon, CheckoutBundle } from "./CheckoutFlow";
 import { fetchBankAccounts, createHavaleOrder, initPaytr, initIyzicoPrimary, fetchPrimaryProvider, SUPPORT_WHATSAPP, PAYTR_EMBED_ENABLED, CheckoutApiError, type BankAccountPublic } from "@/lib/payment";
 import { saveRetryInfo } from "@/lib/paymentRetry";
+import { paytrDisplayMode, readPaytrDisplayEnv } from "@/lib/paytrDisplayMode";
 import { tabStorage } from "@/lib/cardCheckoutSettle";
 import { buildCouponRequestBody, buildOrderRegionFields, readCouponPreview, readServerTotalMinor } from "@/lib/couponState";
 import { classifyCheckoutFailure, blockingItemNames } from "@/lib/couponErrors";
@@ -129,6 +130,15 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
   const [draftDelivery, setDraftDelivery] = useState<PendingDelivery | null>(null);
   // Ödeme yöntemi (Kart = PayTR iframe · Havale = IBAN, "ödeme bekliyor").
   const [paymentMethod, setPaymentMethod] = useState<"card" | "havale">(CARD_ENABLED ? "card" : "havale");
+  // 20 Kas 2026 (ADDITIVE): kart ödemesi başarısız olan müşteri sonuç sayfasındaki
+  // "Havale / EFT ile öde" seçeneğiyle geldiyse havale ÖN SEÇİLİ gelir. Yalnız
+  // gösterim: sipariş, tutar ve ödeme mantığı değişmez; müşteri yine değiştirebilir.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (new URLSearchParams(window.location.search).get("odeme") === "havale") setPaymentMethod("havale");
+    } catch { /* yok say */ }
+  }, []);
   const [bankAccounts, setBankAccounts] = useState<BankAccountPublic[]>([]);
   useEffect(() => { fetchBankAccounts().then(setBankAccounts).catch(() => { /* yok say */ }); }, []);
 
@@ -499,6 +509,13 @@ export default function CheckoutWizard({ productName, productId, variantId, pric
         // Aynı resmi PayTR adresi: bayrak açıksa site içinde <iframe>, kapalıysa
         // bugünkü gibi tam sayfa yönlendirme. Token/hash/callback DEĞİŞMEDİ.
         if (PAYTR_EMBED_ENABLED) {
+          // 20 Kas 2026 (ADDITIVE): mobilde ve Türkçe dışı dillerde banka 3D Secure
+          // sayfası çerçevede takılabildiği için AYNI adres tam sayfada açılır.
+          // Masaüstü + Türkçe akış aynen çerçevede kalır (lib/paytrDisplayMode.ts).
+          if (paytrDisplayMode({ embedEnabled: PAYTR_EMBED_ENABLED, locale, ...readPaytrDisplayEnv() }) === "fullpage") {
+            window.location.href = r.iframe_url;
+            return;
+          }
           // Çerçevenin üstündeki tutar da SUNUCUDAN: PayTR'nin tahsil edeceği
           // tutar sunucunun hesabıdır, istemcinin değil (baseline S).
           setPaytrAmountMinor(readServerTotalMinor(r.total_amount_minor, total).minor);

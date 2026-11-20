@@ -34,6 +34,12 @@ export interface PaytrStatus {
   order_id?: number | null;
   /** Ana ve yedek altyapı da başarısız → sipariş "ödeme başarısız". */
   payment_failed?: boolean;
+  /* ADDITIVE (20 Kas 2026) — yalnız DOĞRULANMIŞ başarısız denemede gelir.
+     failure_class ayrıntısız sınıftır (ham banka/sağlayıcı mesajı dönmez). */
+  failure_class?: "three_d_secure" | "abandoned" | "no_result" | "start_failed" | "other";
+  /** Aynı sağlayıcıda başka kartla tekrar denenebilir mi (sunucu kararı). */
+  retry_same_provider?: boolean;
+  retry_same_provider_id?: "paytr" | "iyzico" | null;
 }
 
 export const SUPPORT_WHATSAPP = "https://wa.me/905458813450";

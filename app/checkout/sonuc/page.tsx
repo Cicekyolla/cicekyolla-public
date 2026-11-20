@@ -3,14 +3,14 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, X, Loader2, MessageCircle, Clock, CreditCard } from "lucide-react";
+import { Check, X, Loader2, MessageCircle, Clock, CreditCard, Landmark } from "lucide-react";
 import { paytrStatus, initProviderRetry, CheckoutApiError, SUPPORT_WHATSAPP, type PaytrStatus } from "@/lib/payment";
 import { trackPaidPurchase } from "@/lib/purchaseAnalytics";
 import { useCart } from "@/lib/cart";
 import { clearPendingDelivery } from "@/lib/pendingDelivery";
 import { clearPendingCoupon } from "@/lib/pendingCoupon";
 import { dropCardCheckout, readCardCheckout, settleCardCheckout, stashCardCheckout, tabStorage } from "@/lib/cardCheckoutSettle";
-import { resolveResultView, retryErrorView, retryErrorMessageKey, providerBrand, readRetryInfo, saveRetryInfo, isEmailLike, type ResultView } from "@/lib/paymentRetry";
+import { resolveResultView, retryErrorView, retryErrorMessageKey, providerBrand, readRetryInfo, saveRetryInfo, isEmailLike, sameProviderRetry, failedTextKey, type ResultView } from "@/lib/paymentRetry";
 import { useI18n } from "@/lib/i18n";
 import type { DictKey } from "@/lib/i18n/dict/tr";
 
@@ -108,29 +108,35 @@ function Sonuc() {
   }, [oid, pollKey]);
 
   const provider = status?.retry_provider ?? null;
+  // 20 Kas 2026: aynı sağlayıcıda "başka kartla tekrar dene" (yalnız sunucu izin verdiyse + bu sekmede anahtar varsa).
+  const sameProvider = sameProviderRetry(status, readRetryInfo(tabStorage(), oid) !== null);
   const needsEmail = Boolean(status?.retry_needs_email);
 
-  const startRetry = async () => {
-    if (!provider || retryBusy) return;
+  // `target` verilirse AYNI sağlayıcıda yeni deneme (başka kart); verilmezse yedek sağlayıcı.
+  const startRetry = async (target?: "paytr" | "iyzico") => {
+    const chosen = target ?? provider;
+    const emailNeeded = !target && needsEmail;
+    if (!chosen || retryBusy) return;
     const storage = tabStorage();
     const info = readRetryInfo(storage, oid);
     if (!info) { setView("failed"); return; }
-    if (needsEmail && !isEmailLike(email)) { setRetryMsg("payres.emailInvalid"); return; }
+    if (emailNeeded && !isEmailLike(email)) { setRetryMsg("payres.emailInvalid"); return; }
     setRetryBusy(true);
     setRetryMsg(null);
     try {
-      const r = await initProviderRetry(provider, {
+      const r = await initProviderRetry(chosen, {
         // §31: ödeme formu sayfa dilinde (API: TR → tr, 13 dil → en).
         order_id: info.order_id, retry_key: info.retry_key, payment_locale: locale,
-        ...(needsEmail ? { email: email.trim() } : {}),
+        ...(emailNeeded ? { email: email.trim() } : {}),
       });
       // Yeni deneme referansı için bu sekmenin notları taşınır (sepet yalnız onaydan sonra düşer).
       saveRetryInfo(storage, { oid: r.merchant_oid, order_id: r.order_id, retry_key: r.retry_key });
       const stash = readCardCheckout(storage, oid);
       if (stash) stashCardCheckout(storage, { oid: r.merchant_oid, cartKeys: stash.cartKeys, draftKey: stash.draftKey });
-      const target = r.payment_page_url || r.iframe_url;
-      if (!target) throw new CheckoutApiError(502, "unavailable");
-      window.location.href = target;
+      const nextUrl = r.payment_page_url || r.iframe_url;
+      if (!nextUrl) throw new CheckoutApiError(502, "unavailable");
+      // Yeniden deneme HER ZAMAN tam sayfada açılır (banka 3D Secure sayfası çerçevede takılmasın).
+      window.location.href = nextUrl;
     } catch (failure) {
       const apiError = failure instanceof CheckoutApiError ? failure.apiError : null;
       const code = failure instanceof CheckoutApiError ? failure.status : 0;
@@ -138,7 +144,8 @@ function Sonuc() {
       setRetryMsg(retryErrorMessageKey(apiError, code));
       setRetryBusy(false);
       if (next.view === "checking" || next.view === "uncertain") { setView(next.view); setPollKey((k) => k + 1); return; }
-      setView(next.view);
+      // Aynı sağlayıcıda deneme başlatılamadıysa müşteri seçenek ekranında kalır (yedek ekranına düşmez).
+      setView(target && next.view === "retry" ? "failed" : next.view);
     }
   };
 
@@ -202,7 +209,7 @@ function Sonuc() {
           )}
           {retryMsg && <p className="text-destructive text-sm mt-4" role="alert">{t(retryMsg)}</p>}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
-            <button type="button" onClick={startRetry} disabled={retryBusy}
+            <button type="button" onClick={() => startRetry()} disabled={retryBusy}
               className="inline-flex items-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors disabled:opacity-60">
               {retryBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
               {t("payres.payWith", { provider: providerBrand(provider) })}
@@ -220,16 +227,34 @@ function Sonuc() {
             <X className="w-8 h-8 text-destructive" />
           </div>
           <h1 className="font-display text-2xl font-bold text-foreground">{t("payres.failedTitle")}</h1>
-          <p className="text-muted-foreground mt-2">{t("payres.failedText")}</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
-            <Link href="/checkout" className="rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors">
-              {t("payres.otherMethod")}
+          <p className="text-muted-foreground mt-2">{t(failedTextKey(status))}</p>
+          {/* 20 Kas 2026 (ADDITIVE): müşteri tek yola sıkışmasın — üç seçenek.
+              "Başka kart" yalnız sunucu izin verdiyse görünür; havale sepeti dolu
+              hâlde ödeme adımına götürür; WhatsApp her zaman açık. */}
+          <p className="text-sm font-semibold text-foreground mt-7">{t("payres.optionsTitle")}</p>
+          {retryMsg && <p className="text-destructive text-sm mt-3" role="alert">{t(retryMsg)}</p>}
+          <div className="flex flex-col items-stretch gap-3 mt-4 max-w-sm mx-auto">
+            {sameProvider && (
+              <button type="button" onClick={() => startRetry(sameProvider)} disabled={retryBusy}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors disabled:opacity-60">
+                {retryBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                {t("payres.tryAnotherCard")}
+              </button>
+            )}
+            <Link href="/checkout?odeme=havale"
+              className={sameProvider
+                ? "inline-flex items-center justify-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors"
+                : "inline-flex items-center justify-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold px-7 py-3.5 hover:bg-accent-foreground transition-colors"}>
+              <Landmark className="w-4 h-4" /> {t("payres.payByTransfer")}
             </Link>
             <a href={SUPPORT_WHATSAPP} target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
+               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border text-foreground font-bold px-7 py-3.5 hover:bg-secondary transition-colors">
               <MessageCircle className="w-4 h-4" /> {t("payres.whatsapp")}
             </a>
           </div>
+          <Link href="/checkout" className="inline-block mt-5 text-sm font-semibold text-muted-foreground underline underline-offset-4 hover:text-accent-foreground">
+            {t("payres.otherMethod")}
+          </Link>
         </>
       )}
     </main>

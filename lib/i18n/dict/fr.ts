@@ -497,6 +497,11 @@ const fr: Dict = {
   "paytr.redirecting": "Redirection vers la page de paiement sécurisée…",
   "paytr.openFull": "Si le formulaire de paiement ne s'est pas ouvert, continuez sur la page sécurisée",
   "paytr.scrollNote": "Le formulaire de paiement peut défiler dans sa propre fenêtre.",
+  "paytr.openFullButton": "Ouvrir en pleine page",
+  "payres.threeDText": "La vérification de votre banque (3D Secure) n'a pas été finalisée. Votre carte n'a pas été débitée.",
+  "payres.optionsTitle": "Comment souhaitez-vous continuer ?",
+  "payres.tryAnotherCard": "Essayer une autre carte",
+  "payres.payByTransfer": "Payer par virement bancaire",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Continuer avec ces ajouts",
   "co.favSaved": "Dans vos favoris",

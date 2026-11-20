@@ -92,3 +92,25 @@ test("checkout: ödeme ekranı oluşmadıysa yalnız sunucu yedeği onaylarsa so
   const proxy = src("app/api/payment/iyzico-init/route.ts");
   assert.match(proxy, /\/api\/public\/payment\/iyzico\/init/);
 });
+
+// ── 20 Kas 2026: aynı sağlayıcıda "başka kartla dene" + 3D Secure açıklaması ──
+import { sameProviderRetry, failedTextKey } from "./paymentRetry.ts";
+
+test("başka kartla dene: yalnız doğrulanmış başarısızlık + sunucu izni + bu sekmede anahtar", () => {
+  const ok = { paid: false, status: "failed", order_number: null, retry_same_provider: true, retry_same_provider_id: "paytr" as const };
+  assert.equal(sameProviderRetry(ok, true), "paytr");
+  assert.equal(sameProviderRetry(ok, false), null, "bu sekmede anahtar yok");
+  assert.equal(sameProviderRetry({ ...ok, status: "pending" }, true), null, "belirsiz durumda ASLA");
+  assert.equal(sameProviderRetry({ ...ok, payment_failed: true }, true), null, "tüm yollar tükendi");
+  assert.equal(sameProviderRetry({ ...ok, retry_same_provider: false }, true), null);
+  assert.equal(sameProviderRetry({ ...ok, retry_same_provider_id: null }, true), null);
+  assert.equal(sameProviderRetry({ ...ok, paid: true }, true), null);
+  assert.equal(sameProviderRetry(null, true), null);
+});
+
+test("3D Secure'da takılana ayrı açıklama; diğerlerinde bugünkü metin", () => {
+  assert.equal(failedTextKey({ paid: false, status: "failed", order_number: null, failure_class: "three_d_secure" }), "payres.threeDText");
+  assert.equal(failedTextKey({ paid: false, status: "failed", order_number: null, failure_class: "abandoned" }), "payres.failedText");
+  assert.equal(failedTextKey({ paid: false, status: "failed", order_number: null }), "payres.failedText");
+  assert.equal(failedTextKey(null), "payres.failedText");
+});

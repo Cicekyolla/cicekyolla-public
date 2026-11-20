@@ -497,6 +497,11 @@ const ko: Dict = {
   "paytr.redirecting": "안전한 결제 페이지로 이동 중입니다…",
   "paytr.openFull": "결제 양식이 열리지 않았다면 안전한 페이지에서 계속하세요",
   "paytr.scrollNote": "결제 양식은 자체 창 안에서 스크롤할 수 있습니다.",
+  "paytr.openFullButton": "전체 페이지로 열기",
+  "payres.threeDText": "은행 본인 인증(3D Secure) 단계가 완료되지 않았습니다. 카드에서 결제되지 않았습니다.",
+  "payres.optionsTitle": "어떻게 계속하시겠습니까?",
+  "payres.tryAnotherCard": "다른 카드로 다시 시도",
+  "payres.payByTransfer": "계좌 이체로 결제",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "선택 항목으로 계속",
   "co.favSaved": "즐겨찾기됨",

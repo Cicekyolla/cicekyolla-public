@@ -497,6 +497,11 @@ const nl: Dict = {
   "paytr.redirecting": "U wordt doorgestuurd naar de beveiligde betaalpagina…",
   "paytr.openFull": "Is het betaalformulier niet geopend? Ga verder op de beveiligde pagina",
   "paytr.scrollNote": "Het betaalformulier kan in zijn eigen venster worden gescrold.",
+  "paytr.openFullButton": "Openen op volledige pagina",
+  "payres.threeDText": "De verificatie van uw bank (3D Secure) is niet voltooid. Uw kaart is niet belast.",
+  "payres.optionsTitle": "Hoe wilt u verdergaan?",
+  "payres.tryAnotherCard": "Andere kaart proberen",
+  "payres.payByTransfer": "Betalen via bankoverschrijving",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Doorgaan met deze",
   "co.favSaved": "In favorieten",

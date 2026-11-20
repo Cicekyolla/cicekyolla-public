@@ -497,6 +497,11 @@ const de: Dict = {
   "paytr.redirecting": "Sie werden zur sicheren Zahlungsseite weitergeleitet…",
   "paytr.openFull": "Falls sich das Zahlungsformular nicht geöffnet hat, fahren Sie auf der sicheren Seite fort",
   "paytr.scrollNote": "Das Zahlungsformular lässt sich in seinem eigenen Fenster scrollen.",
+  "paytr.openFullButton": "In voller Seite öffnen",
+  "payres.threeDText": "Die Bestätigung Ihrer Bank (3D Secure) wurde nicht abgeschlossen. Ihre Karte wurde nicht belastet.",
+  "payres.optionsTitle": "Wie möchten Sie fortfahren?",
+  "payres.tryAnotherCard": "Andere Karte versuchen",
+  "payres.payByTransfer": "Per Banküberweisung zahlen",
   // Paket E — Global sipariş yolu (sepet/checkout/üst menü/e-bülten/teslimat bandı görüntü adı)
   "co.continueWithAddons": "Mit diesen weiter",
   "co.favSaved": "In Favoriten",

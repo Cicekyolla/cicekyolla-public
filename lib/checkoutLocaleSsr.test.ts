@@ -9,8 +9,9 @@ import { retryErrorMessageKey, retryErrorView, retryButtonLabel, providerBrand }
 const oku = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const C7_KEYS = Object.keys(tr).filter((k) => k === "co.pageTitle" || k.startsWith("payres.") || k.startsWith("paytr.")) as Array<keyof typeof tr>;
 
-test("29 yeni anahtar 14 sözlüğün hepsinde dolu; {provider} değişkeni korunur", () => {
-  assert.equal(C7_KEYS.length, 29);
+// 20 Kas 2026: +5 anahtar (3D Secure açıklaması, seçenek başlığı, başka kart, havale, tam sayfa düğmesi) → 34.
+test("34 anahtar 14 sözlüğün hepsinde dolu; {provider} değişkeni korunur", () => {
+  assert.equal(C7_KEYS.length, 34);
   for (const [loc, d] of Object.entries(GLOBAL_DICTS)) {
     for (const k of C7_KEYS) {
       assert.ok(typeof d[k] === "string" && d[k].trim().length > 0, `${loc}.${k}`);
