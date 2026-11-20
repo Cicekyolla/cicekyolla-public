@@ -6,6 +6,15 @@ import { servedProductImageUrl } from "@/lib/productImageUrl";
 export const runtime = "nodejs";
 export const revalidate = 3600;
 
+// 20 Kas 2026 (ADDITIVE): bu feed'den gelen her ürün sabit bir kaynak etiketi taşır.
+// NEDEN: Google, sitedeki 13 dilin ürün sayfalarını kendiliğinden Merchant Center'a
+// ekliyor ("Google tarafından bulundu") ve o ürünler de "TR" feed etiketini taşıyor;
+// Alışveriş / Performance Max kampanyaları Türkiye'deki kullanıcıya yabancı dil ürün
+// kartı gösteriyordu. Otomatik bulunan ürünlerde bu alan OLMAZ → kampanyalarda
+// "custom_label_2 = tr_feed" süzgeci yalnız kendi Türkçe kataloğumuzu bırakır.
+// custom_label_0 (teslimat kapsamı) ve custom_label_1 (aynı gün) DEĞİŞMEDİ.
+const FEED_SOURCE_LABEL = "tr_feed";
+
 const PAGE_SIZE = 100;
 const MAX_PAGES = 100;
 
@@ -80,6 +89,7 @@ function toItem(product: PublicProductListItem): string | null {
       <g:google_product_category>${esc(googleCategory(product.product_type))}</g:google_product_category>
       <g:custom_label_0>${esc(product.delivery_scope || "standard")}</g:custom_label_0>
       <g:custom_label_1>${product.same_day_available ? "same_day" : "standard_delivery"}</g:custom_label_1>
+      <g:custom_label_2>${FEED_SOURCE_LABEL}</g:custom_label_2>
     </item>`;
 }
 
