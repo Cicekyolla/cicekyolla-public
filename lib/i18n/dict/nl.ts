@@ -578,6 +578,15 @@ const nl: Dict = {
   "concierge.errorBusy": "Uw vorige bericht wordt nog beantwoord. Probeer het over enkele seconden opnieuw.",
   "concierge.retry": "Opnieuw versturen",
   "concierge.privacy": "U chat met een digitale assistent. Typ geen kaartgegevens; uw berichten worden verwerkt om antwoorden te maken.",
+  "concierge.continueCta": "Doorgaan met dit product",
+  "concierge.trackOrder": "Bestelling volgen",
+  "concierge.waIntro": "Hallo, ik heb met de assistent op uw website gechat. Samenvatting:",
+  "concierge.waDistrict": "Bezorgplaats",
+  "concierge.waDate": "Datum",
+  "concierge.waTime": "Tijdvak",
+  "concierge.waOccasion": "Gelegenheid",
+  "concierge.waBudget": "Budget",
+  "concierge.waProducts": "Bekeken producten",
 };
 
 export default nl;

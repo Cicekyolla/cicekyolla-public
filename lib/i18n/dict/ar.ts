@@ -579,6 +579,15 @@ const ar: Dict = {
   "concierge.errorBusy": "ما زلنا نرد على رسالتك السابقة. يرجى المحاولة بعد بضع ثوانٍ.",
   "concierge.retry": "إعادة الإرسال",
   "concierge.privacy": "أنت تتحدث مع مساعد رقمي. لا تكتب بيانات بطاقتك؛ تتم معالجة رسائلك لإعداد الردود.",
+  "concierge.continueCta": "متابعة مع هذا المنتج",
+  "concierge.trackOrder": "تتبع طلبي",
+  "concierge.waIntro": "مرحبًا، تحدثت مع المساعد على موقعكم. الملخص:",
+  "concierge.waDistrict": "مكان التوصيل",
+  "concierge.waDate": "التاريخ",
+  "concierge.waTime": "الفترة الزمنية",
+  "concierge.waOccasion": "المناسبة",
+  "concierge.waBudget": "الميزانية",
+  "concierge.waProducts": "المنتجات التي شاهدتها",
 };
 
 export default ar;

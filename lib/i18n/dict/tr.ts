@@ -591,6 +591,15 @@ const tr = {
   "concierge.errorBusy": "Önceki mesajınız hâlâ yanıtlanıyor. Lütfen birkaç saniye sonra yeniden deneyin.",
   "concierge.retry": "Yeniden gönder",
   "concierge.privacy": "Dijital asistanla yazışıyorsunuz. Kart bilgisi yazmayın; mesajlarınız yanıt üretmek için işlenir.",
+  "concierge.continueCta": "Bu ürünle devam et",
+  "concierge.trackOrder": "Sipariş takibi",
+  "concierge.waIntro": "Merhaba, sitedeki asistanla konuştum. Özet:",
+  "concierge.waDistrict": "Teslimat yeri",
+  "concierge.waDate": "Tarih",
+  "concierge.waTime": "Saat aralığı",
+  "concierge.waOccasion": "Vesile",
+  "concierge.waBudget": "Bütçe",
+  "concierge.waProducts": "Baktığım ürünler",
 };
 
 export type Dict = typeof tr;

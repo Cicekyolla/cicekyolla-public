@@ -17,6 +17,7 @@ import AddressAutocomplete, { type AddressResult } from "@/components/delivery/A
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
 import { farZoneListingHref } from "@/lib/farZoneListing";
 import { readPendingDelivery, hasPendingAddress, PENDING_ADDRESS_EVENT } from "@/lib/pendingDelivery";
+import { consumeConciergeSeed, dayOffsetFor, normalizeSlotLabel } from "@/lib/conciergeSeed";
 import { useI18n, Num } from "@/lib/i18n";
 import { localizeBandLabel } from "@/lib/deliveryBandLabel";
 
@@ -179,6 +180,21 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
   const [mode, setMode] = useState<"sameday" | "cargo">("sameday");
   const reqSeq = useRef(0);
   const passedRef = useRef(false);
+  // Web AI asistanı → "Bu ürünle devam et" (22 Kas 2026): tek seferlik gün / saat / semt ön-doldurma.
+  // Kayıt yoksa davranış AYNEN eskisi gibi. Adres yine müşteri tarafından seçilir (semt yalnız arama metni).
+  const rootRef = useRef<HTMLDivElement>(null);
+  const seedDayRef = useRef<number | null>(null);
+  const seedSlotRef = useRef<string | null>(null);
+  const [seedPlace, setSeedPlace] = useState<string | null>(null);
+  useEffect(() => {
+    const seed = consumeConciergeSeed(window.location.pathname);
+    if (!seed) return;
+    const off = dayOffsetFor(seed.date, new Date());
+    if (off != null) { seedDayRef.current = off; setDayOffset(off); }
+    seedSlotRef.current = seed.time;
+    if (seed.place) setSeedPlace(seed.place);
+    if (seed.focus) window.setTimeout(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
+  }, []);
 
   const days = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ offset: i, ...labelOf(i) })), [labelOf]);
 
@@ -353,6 +369,16 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
     } : null);
   }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Asistandan gelen saat aralığı: sonuç gelince YALNIZ eşleşen, dolu olmayan ve saati geçmemiş slot seçilir (bir kez).
+  useEffect(() => {
+    const want = seedSlotRef.current;
+    const slots = result?.same_day?.available ? result.same_day.slots ?? [] : [];
+    if (!want || slots.length === 0) return;
+    seedSlotRef.current = null;
+    const s = slots.find((x) => normalizeSlotLabel(x.label) === normalizeSlotLabel(want) && x.remaining > 0 && !slotCutoffPassed(x, Date.now()));
+    if (s) onPickSlot(s);
+  }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onPickSlot = (s: Slot) => {
     setSlotId(s.id);
     if (address) onSelect?.({ date: isoOf(dayOffset), mode: "sameday", slot: s, band: result?.same_day.band, feeMinor: Number(result?.same_day?.fee_minor ?? 0) + Number(s.extra_fee_minor ?? 0), address });
@@ -362,7 +388,7 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
   const cargo = result?.cargo;
 
   return (
-    <div className="mt-6 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFE] p-4 md:p-5">
+    <div ref={rootRef} className="mt-6 rounded-2xl border border-[#EDE9FE] bg-[#FBFAFE] p-4 md:p-5">
       {/* Başlık */}
       <div className="flex items-center gap-2 text-[13px] font-semibold text-[#4B5563]">
         <MapPin className="w-4 h-4 text-[#7C3AED]" />
@@ -377,13 +403,14 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
       {/* Adres seçici */}
       <div className="mt-3">
         <AddressAutocomplete
+          key={seedPlace ?? "address"}
           placeholder={t("planner.placeholder")}
-          defaultValue={address?.formattedAddress ?? ""}
+          defaultValue={address?.formattedAddress ?? seedPlace ?? ""}
           onSelect={(r) => {
             // ADRES DEĞİŞTİ → eski teslimat seçimi (İstanbul slotu dahil) GEÇERSİZ:
             // pending temizlenir, CTA kilitlenir; karar yeni adresle yeniden hesaplanır.
             onSelect?.(null);
-            setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(0);
+            setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(seedDayRef.current ?? 0); seedDayRef.current = null;
           }}
         />
       </div>

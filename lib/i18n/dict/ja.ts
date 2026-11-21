@@ -578,6 +578,15 @@ const ja: Dict = {
   "concierge.errorBusy": "前のメッセージに返信中です。数秒後にもう一度お試しください。",
   "concierge.retry": "再送信",
   "concierge.privacy": "デジタルアシスタントとのチャットです。カード情報は入力しないでください。メッセージは返信の作成のために処理されます。",
+  "concierge.continueCta": "この商品で進む",
+  "concierge.trackOrder": "注文を追跡",
+  "concierge.waIntro": "こんにちは。サイトのアシスタントと相談しました。概要：",
+  "concierge.waDistrict": "お届け先エリア",
+  "concierge.waDate": "日付",
+  "concierge.waTime": "時間帯",
+  "concierge.waOccasion": "用途",
+  "concierge.waBudget": "ご予算",
+  "concierge.waProducts": "見た商品",
 };
 
 export default ja;

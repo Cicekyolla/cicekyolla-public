@@ -578,6 +578,15 @@ const az: Dict = {
   "concierge.errorBusy": "Əvvəlki mesajınız hələ cavablandırılır. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin.",
   "concierge.retry": "Yenidən göndər",
   "concierge.privacy": "Rəqəmsal köməkçi ilə yazışırsınız. Kart məlumatı yazmayın; mesajlarınız cavab hazırlamaq üçün emal olunur.",
+  "concierge.continueCta": "Bu məhsulla davam et",
+  "concierge.trackOrder": "Sifarişi izlə",
+  "concierge.waIntro": "Salam, saytınızdakı assistentlə danışdım. Xülasə:",
+  "concierge.waDistrict": "Çatdırılma yeri",
+  "concierge.waDate": "Tarix",
+  "concierge.waTime": "Saat aralığı",
+  "concierge.waOccasion": "Münasibət",
+  "concierge.waBudget": "Büdcə",
+  "concierge.waProducts": "Baxdığım məhsullar",
 };
 
 export default az;

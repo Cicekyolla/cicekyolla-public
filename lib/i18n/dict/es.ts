@@ -578,6 +578,15 @@ const es: Dict = {
   "concierge.errorBusy": "Su mensaje anterior todavía se está respondiendo. Inténtelo de nuevo en unos segundos.",
   "concierge.retry": "Enviar de nuevo",
   "concierge.privacy": "Está hablando con un asistente digital. No escriba los datos de su tarjeta; sus mensajes se procesan para generar las respuestas.",
+  "concierge.continueCta": "Continuar con este producto",
+  "concierge.trackOrder": "Seguir mi pedido",
+  "concierge.waIntro": "Hola, he hablado con el asistente de su web. Resumen:",
+  "concierge.waDistrict": "Lugar de entrega",
+  "concierge.waDate": "Fecha",
+  "concierge.waTime": "Franja horaria",
+  "concierge.waOccasion": "Ocasión",
+  "concierge.waBudget": "Presupuesto",
+  "concierge.waProducts": "Productos vistos",
 };
 
 export default es;

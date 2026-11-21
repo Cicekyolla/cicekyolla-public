@@ -7,6 +7,7 @@ import {
   buildRequestBody, canSend, cardPath, chatReducer, CONCIERGE_DICT_KEYS, tokenToSend, CONCIERGE_HIDDEN_PREFIXES, conciergeVisibleOnPath, conciergeWhatsappUrl,
   INITIAL_CHAT, isSessionToken, LAUNCHER_SLOT_PX, launcherSlot, MAX_MESSAGE_CHARS, parseCards, parseTurn, readStatusCache, safeImageUrl,
   STATUS_TTL_MS, TR_WHATSAPP_URL, writeStatusCache, type ChatState, type TurnOutcome,
+  conciergeWhatsappHref, parseSummary, whatsappSummaryText, ORDER_TRACKING_PATH,
 } from "./concierge.ts";
 import { GLOBAL_WHATSAPP_URL } from "./telegramContact.ts";
 import { GLOBAL_LOCALES } from "./global/config.ts";
@@ -309,7 +310,7 @@ test("durum: kartlar ve devir bilgisi asistan mesajına bağlanır", () => {
 // 14 dil sözlüğü
 // ============================================================================
 test("14 dil: sohbet anahtarlarının tamamı her sözlükte dolu; değerler dile özgü", async () => {
-  assert.equal(CONCIERGE_DICT_KEYS.length, 21);
+  assert.equal(CONCIERGE_DICT_KEYS.length, 30);
   const dicts: Record<string, Record<string, string>> = {};
   for (const l of LANGS) dicts[l] = (await import(`./i18n/dict/${l}.ts`)).default as Record<string, string>;
   for (const l of LANGS) {
@@ -497,4 +498,64 @@ test("oturum: ekranda geçmiş yoksa (sayfa yenilendi / ilk mesaj) belirteç GÖ
   const panel = src("../components/concierge/ConciergePanel.tsx");
   assert.match(panel, /tokenToSend\(visibleRef\.current, readToken\(\)\)/, "panel belirteci yalnız bu kuralla gönderir");
   assert.ok(!/buildRequestBody\(raw, locale, pathname, readToken\(\)\)/.test(panel), "eski koşulsuz gönderim kalmadı");
+});
+
+// ============================================================================
+// Satış hunisi (22 Kas 2026): özet, özetli WhatsApp, ürünle devam, sipariş takibi
+// ============================================================================
+const TR_T = (k: string) => (({
+  "concierge.waIntro": "Merhaba, sitedeki asistanla konuştum. Özet:", "concierge.waDistrict": "Teslimat yeri", "concierge.waDate": "Tarih",
+  "concierge.waTime": "Saat aralığı", "concierge.waOccasion": "Vesile", "concierge.waBudget": "Bütçe", "concierge.waProducts": "Baktığım ürünler",
+}) as Record<string, string>)[k] ?? k;
+
+test("özet: izin listesi + ikinci süzgeç (telefon / e-posta / HTML düşer)", () => {
+  const s = parseSummary({ district: "Kadıköy", city: "İstanbul", date: "2026-11-23", time: "12:00-15:00", occasion: "doğum günü", budget_try: 2000, products: ["Pembe Güller", 5, "<b>x</b>"], phone: "05321234567", address: "Bağdat Cd. 5" });
+  assert.deepEqual(s, { district: "Kadıköy", city: "İstanbul", date: "2026-11-23", time: "12:00-15:00", occasion: "doğum günü", budgetTry: 2000, products: ["Pembe Güller", " b x /b"].map((x) => x.trim()) });
+  assert.equal(parseSummary({ occasion: "0532 123 45 67" }), null);
+  assert.equal(parseSummary({ district: "a@b.com" }), null);
+  assert.equal(parseSummary(null), null);
+  assert.equal(parseSummary({}), null);
+});
+
+test("WhatsApp: özet varsa aynı numaraya ön-yazılı metin; yoksa mevcut sabit bağlantı", () => {
+  const s = parseSummary({ district: "Esenyurt", city: "İstanbul", date: "2026-11-23", budget_try: 1500, products: ["Kutuda Güller"] });
+  const text = whatsappSummaryText(s, TR_T)!;
+  assert.match(text, /^Merhaba, sitedeki asistanla konuştum\. Özet:\nTeslimat yeri: Esenyurt, İstanbul\nTarih: 2026-11-23\nBütçe: 1\.500 TL\nBaktığım ürünler: Kutuda Güller$/);
+  const href = conciergeWhatsappHref("tr", s, TR_T);
+  assert.ok(href.startsWith("https://wa.me/905458813450?text="));
+  assert.equal(decodeURIComponent(href.split("?text=")[1]), text);
+  assert.equal(conciergeWhatsappHref("tr", null, TR_T), TR_WHATSAPP_URL);
+  assert.equal(conciergeWhatsappHref("en", null, TR_T), GLOBAL_WHATSAPP_URL);
+  assert.ok(conciergeWhatsappHref("de", s, TR_T).startsWith(`${GLOBAL_WHATSAPP_URL}?text=`));
+});
+
+test("parseTurn: devir sebebi, özet, devam ürünü ve bağlam ayrıştırılır; bozuk değer yok sayılır", () => {
+  const o = parseTurn(200, { data: { status: "ok", reply: "Tamam", lang: "tr", cards: [], session_token: "a".repeat(43), remaining_messages: 30,
+    handoff: { reason: "order_status", summary: { district: "Kadıköy" } }, continue_product_id: 12, context: { date: "2026-11-23" } } });
+  assert.ok(o.kind === "reply");
+  if (o.kind !== "reply") return;
+  assert.equal(o.handoffReason, "order_status");
+  assert.equal(o.summary?.district, "Kadıköy");
+  assert.equal(o.continueProductId, 12);
+  assert.equal(o.context?.date, "2026-11-23");
+  const bad = parseTurn(200, { data: { status: "ok", reply: "x", lang: "tr", handoff: { reason: "<script>" }, continue_product_id: "abc" } });
+  assert.ok(bad.kind === "reply" && bad.handoffReason === null && bad.continueProductId === null);
+  assert.equal(ORDER_TRACKING_PATH, "/siparis-takip");
+});
+
+test("reducer: bağlam saklanır, mesaja devam ürünü ve özet yazılır", () => {
+  let s: ChatState = chatReducer(INITIAL_CHAT, { type: "send", text: "alıyorum" });
+  s = chatReducer(s, { type: "outcome", outcome: { kind: "reply", reply: "Harika", lang: "tr", cards: [], handoff: false, closed: false, sessionToken: null, continueProductId: 7, context: parseSummary({ district: "Kadıköy" }) } });
+  assert.equal(s.context?.district, "Kadıköy");
+  assert.equal(s.messages[1].continueProductId, 7);
+});
+
+test("kaynak: panel özetli WhatsApp bağlantısı + devam butonu + ön-doldurma kaydı kullanır", () => {
+  const panel = src("../components/concierge/ConciergePanel.tsx");
+  assert.ok(panel.includes("conciergeWhatsappHref(locale"));
+  assert.ok(!panel.includes("conciergeWhatsappUrl(locale)"), "sabit bağlantı yerine özetli bağlantı");
+  assert.ok(panel.includes("writeConciergeSeed(buildSeed(card.path"));
+  assert.ok(panel.includes('t("concierge.continueCta")'));
+  const planner = src("../components/product/DeliveryPlanner.tsx");
+  assert.ok(planner.includes("consumeConciergeSeed(window.location.pathname)"));
 });
