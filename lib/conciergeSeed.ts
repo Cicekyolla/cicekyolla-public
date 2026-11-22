@@ -20,6 +20,8 @@ export interface ConciergeSeed {
   time: string | null;
   /** Adres kutusuna arama metni (ör. "Esenyurt, İstanbul"). */
   place: string | null;
+  /** Sohbette konuşulan ilçe (kayıtlı adresle karşılaştırma için; Paket 2). */
+  district?: string | null;
   /** true → planlayıcı görünür alana kaydırılır ("Bu ürünle devam et"). */
   focus: boolean;
   ts: number;
@@ -41,7 +43,7 @@ export function buildSeed(
   const city = ctx?.city && !/\d/.test(ctx.city) ? ctx.city.slice(0, 40) : null;
   const place = district ? `${district}, ${city ?? "İstanbul"}` : null;
   if (!date && !time && !place && !focus) return null;
-  return { path, date, time, place, focus, ts: now };
+  return { path, date, time, place, district, focus, ts: now };
 }
 
 /** Kayıt yalnız aynı ürün yolunda ve süresi içinde geçerlidir; bozuk / başka ürün → null. */
@@ -54,7 +56,8 @@ export function readSeed(raw: string | null | undefined, pathname: string, now: 
     return {
       path: s.path, date: typeof s.date === "string" && ISO.test(s.date) ? s.date : null,
       time: typeof s.time === "string" ? s.time.slice(0, 20) : null,
-      place: typeof s.place === "string" ? s.place.slice(0, 90) : null, focus: s.focus === true, ts: s.ts,
+      place: typeof s.place === "string" ? s.place.slice(0, 90) : null,
+      district: typeof s.district === "string" ? s.district.slice(0, 40) : null, focus: s.focus === true, ts: s.ts,
     };
   } catch { return null; }
 }
@@ -67,6 +70,17 @@ export function dayOffsetFor(date: string | null, today: Date): number | null {
   const base = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   const diff = Math.round((target - base) / 86_400_000);
   return diff >= 0 && diff <= 29 ? diff : null;
+}
+
+/** İlçe adları karşılaştırması (büyük/küçük harf ve Türkçe karakter farkı yok sayılır). */
+export function sameArea(a: string | null | undefined, b: string | null | undefined): boolean {
+  const n = (v: string) => v.toLocaleLowerCase("tr").replace(/ı/g, "i").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+  return !!a && !!b && n(a) === n(b);
+}
+
+/** Sohbetteki ilçe kayıtlı adresin ilçesinden FARKLI mı (ikisi de biliniyorsa). */
+export function areaConflict(chatDistrict: string | null | undefined, savedDistrict: string | null | undefined): boolean {
+  return !!chatDistrict && !!savedDistrict && !sameArea(chatDistrict, savedDistrict);
 }
 
 /** "12:00 - 15:00", "12.00-15.00", "12:00–15:00" → "12:00-15:00" (karşılaştırma için). */

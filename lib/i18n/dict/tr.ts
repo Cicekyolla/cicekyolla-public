@@ -98,6 +98,7 @@ const tr = {
   "planner.thresholdNote": "Bu adrese kurye teslimatı {amount} ve üzeri ürünlerde sunulur; bu ürün için kargo seçeneği geçerlidir.",
   "planner.placeholder": "Teslimat adresini yazın (mahalle / cadde / AVM)",
   "planner.hint": "Adresinizi seçin; bölgenize uygun teslimat günü ve saatlerini anında gösterelim.",
+  "planner.chatDistrict": "Sohbette {chat} için konuştuk, kayıtlı adresiniz ise {saved}. Çiçeğin gideceği adresi aşağıdan seçin.",
   "planner.closed": "Kapandı",
   "planner.calendar": "Takvimden gün seç (30 gün)",
   "planner.selected": "Seçili: {day}, {date}",

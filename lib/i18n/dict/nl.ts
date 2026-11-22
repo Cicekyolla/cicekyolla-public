@@ -91,6 +91,7 @@ const nl: Dict = {
   "planner.thresholdNote": "Persoonlijke bezorging op dit adres is er voor artikelen vanaf {amount}; voor dit artikel geldt verzending per koerier.",
   "planner.placeholder": "Typ het bezorgadres (wijk / straat / winkelcentrum)",
   "planner.hint": "Kies uw adres; we tonen direct bezorgdagen en tijdvakken voor uw gebied.",
+  "planner.chatDistrict": "In de chat ging het over {chat}, maar uw opgeslagen adres is {saved}. Kies hieronder het bezorgadres.",
   "planner.closed": "Gesloten",
   "planner.calendar": "Kies een dag in de kalender (30 dagen)",
   "planner.selected": "Geselecteerd: {day}, {date}",

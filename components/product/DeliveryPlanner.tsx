@@ -17,7 +17,7 @@ import AddressAutocomplete, { type AddressResult } from "@/components/delivery/A
 import DeliveryAlternatives from "@/components/product/DeliveryAlternatives";
 import { farZoneListingHref } from "@/lib/farZoneListing";
 import { readPendingDelivery, hasPendingAddress, PENDING_ADDRESS_EVENT } from "@/lib/pendingDelivery";
-import { consumeConciergeSeed, dayOffsetFor, normalizeSlotLabel } from "@/lib/conciergeSeed";
+import { areaConflict, consumeConciergeSeed, dayOffsetFor, normalizeSlotLabel } from "@/lib/conciergeSeed";
 import { useI18n, Num } from "@/lib/i18n";
 import { localizeBandLabel } from "@/lib/deliveryBandLabel";
 
@@ -186,12 +186,20 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
   const seedDayRef = useRef<number | null>(null);
   const seedSlotRef = useRef<string | null>(null);
   const [seedPlace, setSeedPlace] = useState<string | null>(null);
+  // Paket 2: sohbetteki ilçe kayıtlı adresten farklıysa kayıtlı adres OTOMATİK kullanılmaz; müşteri seçer.
+  const overrideSavedRef = useRef(false);
+  const [areaNote, setAreaNote] = useState<{ chat: string; saved: string } | null>(null);
   useEffect(() => {
     const seed = consumeConciergeSeed(window.location.pathname);
     if (!seed) return;
     const off = dayOffsetFor(seed.date, new Date());
     if (off != null) { seedDayRef.current = off; setDayOffset(off); }
     seedSlotRef.current = seed.time;
+    const saved = readPendingDelivery();
+    if (areaConflict(seed.district, saved?.district)) {
+      overrideSavedRef.current = true;
+      setAreaNote({ chat: seed.district as string, saved: saved?.district as string });
+    }
     if (seed.place) setSeedPlace(seed.place);
     if (seed.focus) window.setTimeout(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
   }, []);
@@ -202,7 +210,8 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
   // adres tekrar sorulmaz; aynı delivery-check motoru bu adresle çalışır. Slot/mode TAŞINMAZ
   // (ürün bazlı karar her PDP'de yeniden hesaplanır — state sızması yok).
   useEffect(() => {
-    const seed = () => {
+    const seed = (force = false) => {
+      if (!force && overrideSavedRef.current) return; // sohbetteki semt farklı → kayıtlı adres sessizce kullanılmaz
       const p = readPendingDelivery();
       if (!hasPendingAddress(p) || !p.address) return;
       setAddress({
@@ -211,9 +220,10 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
       });
     };
     seed();
-    // Popup aynı sayfada (PDP) adres yazarsa planlayıcı canlı güncellenir.
-    window.addEventListener(PENDING_ADDRESS_EVENT, seed);
-    return () => window.removeEventListener(PENDING_ADDRESS_EVENT, seed);
+    // Popup aynı sayfada (PDP) adres yazarsa planlayıcı canlı güncellenir (müşterinin kendi seçimi → her zaman uygulanır).
+    const onPicked = () => { setAreaNote(null); seed(true); };
+    window.addEventListener(PENDING_ADDRESS_EVENT, onPicked);
+    return () => window.removeEventListener(PENDING_ADDRESS_EVENT, onPicked);
   }, []);
   const quickDays = days.slice(0, 3);
 
@@ -410,10 +420,17 @@ export default function DeliveryPlanner({ product, onSelect, onBlocked }: Props)
             // ADRES DEĞİŞTİ → eski teslimat seçimi (İstanbul slotu dahil) GEÇERSİZ:
             // pending temizlenir, CTA kilitlenir; karar yeni adresle yeniden hesaplanır.
             onSelect?.(null);
-            setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(seedDayRef.current ?? 0); seedDayRef.current = null;
+            setAddress(r); setResult(null); setTodayClosed(false); passedRef.current = false; setDayOffset(seedDayRef.current ?? 0); seedDayRef.current = null; setAreaNote(null);
           }}
         />
       </div>
+
+      {areaNote && !address && (
+        <p role="status" className="mt-3 flex items-start gap-1.5 rounded-xl bg-[#FFFBEB] px-3 py-2 text-[12px] leading-relaxed text-[#92400E]">
+          <AlertCircle className="w-3.5 h-3.5 mt-[1px] shrink-0" />
+          {t("planner.chatDistrict", { chat: areaNote.chat, saved: areaNote.saved })}
+        </p>
+      )}
 
       {/* Adres seçilmeden önce ipucu */}
       {!address && (

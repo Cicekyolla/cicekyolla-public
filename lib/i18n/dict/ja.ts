@@ -91,6 +91,7 @@ const ja: Dict = {
   "planner.thresholdNote": "この住所への手渡し配達は{amount}以上の商品が対象です。この商品は宅配便でのお届けとなります。",
   "planner.placeholder": "お届け先住所を入力（地区 / 通り / モール）",
   "planner.hint": "住所を選ぶと、お住まいの地域の配達日と時間帯をすぐに表示します。",
+  "planner.chatDistrict": "チャットでは{chat}についてお話ししましたが、保存済みの住所は{saved}です。下でお届け先住所を選択してください。",
   "planner.closed": "受付終了",
   "planner.calendar": "カレンダーから日付を選ぶ（30日間）",
   "planner.selected": "選択中：{day}、{date}",

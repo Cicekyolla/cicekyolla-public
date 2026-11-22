@@ -7,7 +7,7 @@ const NOW = Date.UTC(2026, 10, 22, 9, 0);
 
 test("kayıt: yalnız gün / saat / semt; rakamlı semt ve geçersiz tarih düşer", () => {
   const s = buildSeed("/urun/pembe-guller", { date: "2026-11-23", time: "12:00 - 15:00", district: "Kadıköy", city: "İstanbul" }, true, NOW)!;
-  assert.deepEqual(s, { path: "/urun/pembe-guller", date: "2026-11-23", time: "12:00 - 15:00", place: "Kadıköy, İstanbul", focus: true, ts: NOW });
+  assert.deepEqual(s, { path: "/urun/pembe-guller", date: "2026-11-23", time: "12:00 - 15:00", place: "Kadıköy, İstanbul", district: "Kadıköy", focus: true, ts: NOW });
   const b = buildSeed("/urun/x", { date: "yarın", time: "öğleden sonra", district: "Bağdat Cd 12" }, false, NOW);
   assert.equal(b, null, "kullanılabilir alan yoksa ve odak yoksa kayıt yazılmaz");
   assert.equal(buildSeed("https://evil.example/x", { date: "2026-11-23" }, true, NOW), null);
@@ -33,4 +33,27 @@ test("gün farkı 0-29; geçmiş / çok ileri null", () => {
 test("slot etiketi biçim farkına dayanıklı", () => {
   assert.equal(normalizeSlotLabel("12:00 - 15:00"), normalizeSlotLabel("12.00–15.00"));
   assert.equal(normalizeSlotLabel("9:00-12:00"), "09:00-12:00");
+});
+
+// Paket 2 (22 Kas 2026): sohbetteki semt ≠ kayıtlı adres
+import { areaConflict, sameArea } from "./conciergeSeed.ts";
+import { readFileSync } from "node:fs";
+
+test("semt karşılaştırma: harf / Türkçe karakter farkı aynı sayılır; farklı ilçe çakışmadır", () => {
+  assert.ok(sameArea("Kadıköy", "kadikoy"));
+  assert.ok(sameArea("ESENYURT", "Esenyurt"));
+  assert.equal(areaConflict("Kadıköy", "Esenyurt"), true);
+  assert.equal(areaConflict("Kadıköy", "KADIKÖY"), false);
+  assert.equal(areaConflict(null, "Esenyurt"), false, "sohbette semt yoksa kayıtlı adres kullanılır");
+  assert.equal(areaConflict("Kadıköy", null), false, "kayıtlı adres yoksa çakışma yok");
+});
+
+test("kayıt sohbet ilçesini taşır; planlayıcı çakışmada kayıtlı adresi sessizce kullanmaz", () => {
+  const s = buildSeed("/urun/x", { date: "2026-11-23", district: "Kadıköy", city: "İstanbul" }, true, NOW)!;
+  assert.equal(s.district, "Kadıköy");
+  assert.equal(readSeed(JSON.stringify(s), "/urun/x", NOW)?.district, "Kadıköy");
+  const planner = readFileSync(new URL("../components/product/DeliveryPlanner.tsx", import.meta.url), "utf8");
+  assert.ok(planner.includes("areaConflict(seed.district, saved?.district)"));
+  assert.ok(planner.includes("if (!force && overrideSavedRef.current) return;"));
+  assert.ok(planner.includes('t("planner.chatDistrict"'));
 });
