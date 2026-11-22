@@ -578,6 +578,15 @@ const fr: Dict = {
   "concierge.errorBusy": "Votre message précédent est encore en cours de traitement. Veuillez réessayer dans quelques secondes.",
   "concierge.retry": "Renvoyer",
   "concierge.privacy": "Vous échangez avec un assistant numérique. N’indiquez pas vos données de carte ; vos messages sont traités pour générer les réponses.",
+  "concierge.continueCta": "Continuer avec ce produit",
+  "concierge.trackOrder": "Suivre ma commande",
+  "concierge.waIntro": "Bonjour, j'ai échangé avec l'assistant de votre site. Résumé :",
+  "concierge.waDistrict": "Lieu de livraison",
+  "concierge.waDate": "Date",
+  "concierge.waTime": "Créneau",
+  "concierge.waOccasion": "Occasion",
+  "concierge.waBudget": "Budget",
+  "concierge.waProducts": "Produits consultés",
 };
 
 export default fr;

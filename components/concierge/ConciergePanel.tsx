@@ -9,6 +9,9 @@
  *   lib/concierge.ts → parseCards ile doğrulanır; bağlantı yalnız site içi yoldur.
  * • Sepete EKLEMEZ: kart müşterinin dilindeki ürün sayfasına gider ("Teslimat seç"); teslimat seçimi
  *   ve sepete ekleme oradaki mevcut akıştadır.
+ * • Satış hunisi (22 Kas 2026): ziyaretçi karar verince kartta "Bu ürünle devam et" çıkar; ürün sayfası
+ *   sohbetten bilinen gün / saat / semtle tek seferlik ön-doldurulur (lib/conciergeSeed.ts). WhatsApp
+ *   düğmeleri sohbet özetini önceden yazılmış mesaj olarak açar (aynı numara).
  * • Oturum belirteci yalnız sekme oturumunda (sessionStorage) saklanır; çerez yok.
  * • Sohbet geçmişi başlatıcıda tutulur (state / dispatch prop'ları): panel kapanıp açılınca kaybolmaz.
  * • Karta tıklanınca panel kapanır (ürün sayfasının üstünü örtmesin); geçmiş durduğu için geri dönülebilir.
@@ -21,10 +24,11 @@ import { Price } from "@/components/Price";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useCurrency } from "@/lib/currency";
 import { trackConcierge } from "@/lib/conciergeTracking";
+import { buildSeed, writeConciergeSeed } from "@/lib/conciergeSeed";
 import type { DictKey } from "@/lib/i18n/dict/tr";
 import {
-  buildRequestBody, canSend, conciergeWhatsappUrl, MAX_MESSAGE_CHARS, parseTurn, SESSION_STORAGE_KEY, tokenToSend,
-  type CardTier, type ChatAction, type ChatError, type ChatMessage, type ChatState, type ConciergeCard, type TurnOutcome,
+  buildRequestBody, canSend, conciergeWhatsappHref, MAX_MESSAGE_CHARS, ORDER_TRACKING_PATH, parseTurn, SESSION_STORAGE_KEY, tokenToSend,
+  type CardTier, type ChatAction, type ChatError, type ChatMessage, type ChatState, type ChatSummary, type ConciergeCard, type TurnOutcome,
 } from "@/lib/concierge";
 
 type T = (key: DictKey, vars?: Record<string, string | number>) => string;
@@ -83,10 +87,12 @@ function writeToken(token: string) {
   try { window.sessionStorage.setItem(SESSION_STORAGE_KEY, token); } catch { /* depolama kapalıysa her mesaj yeni oturumdur */ }
 }
 
-function Card({ card, t, onNavigate }: { card: ConciergeCard; t: T; onNavigate: () => void }) {
+function Card({ card, t, onNavigate, cont = false, context = null }: { card: ConciergeCard; t: T; onNavigate: () => void; cont?: boolean; context?: ChatSummary | null }) {
   // Aynı sekmede ürün sayfasına gidilirken panel kapanır; yeni sekme / pencere tıklamalarında açık kalır.
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     trackConcierge("card_click", card);
+    // Ürün sayfası sohbetten bilinen gün / saat / semtle açılır (tek seferlik; "devam"da planlayıcıya kaydırılır).
+    writeConciergeSeed(buildSeed(card.path, context, cont, Date.now()));
     if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) onNavigate();
   };
   return (
@@ -95,7 +101,8 @@ function Card({ card, t, onNavigate }: { card: ConciergeCard; t: T; onNavigate: 
       onClick={onClick}
       onAuxClick={(e) => { if (e.button === 1) trackConcierge("card_click", card); }}
       data-concierge-card={card.productId}
-      className="flex gap-3 rounded-2xl border border-border bg-card p-2.5 text-start transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+      data-concierge-continue={cont ? "" : undefined}
+      className={`flex gap-3 rounded-2xl border ${cont ? "border-primary ring-2 ring-primary/30" : "border-border"} bg-card p-2.5 text-start transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none`}
     >
       <span className="relative block h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-card">
         <ProductImage src={card.imageUrl} alt={card.name} padding="0px" sizes="64px" avifMedia={false} />
@@ -109,14 +116,23 @@ function Card({ card, t, onNavigate }: { card: ConciergeCard; t: T; onNavigate: 
         </span>
         <span className="flex items-center justify-between gap-2">
           <Price minor={card.priceMinor} className="text-sm font-semibold text-foreground" />
-          <span className="text-xs font-semibold text-primary">{t("concierge.cardCta")}</span>
+          {cont ? (
+            <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{t("concierge.continueCta")}</span>
+          ) : (
+            <span className="text-xs font-semibold text-primary">{t("concierge.cardCta")}</span>
+          )}
         </span>
       </span>
     </Link>
   );
 }
 
-function Bubble({ m, t, locale, foreign, onNavigate }: { m: ChatMessage; t: T; locale: string; foreign: boolean; onNavigate: () => void }) {
+function Bubble({ m, t, locale, foreign, onNavigate, context, continueCard }: {
+  m: ChatMessage; t: T; locale: string; foreign: boolean; onNavigate: () => void;
+  context: ChatSummary | null;
+  /** Karar verilen ürün bu mesajda kart olarak yoksa (önceki mesajdaydı) burada yeniden gösterilir. */
+  continueCard: ConciergeCard | null;
+}) {
   if (m.role === "user") {
     return (
       <div className="ms-auto max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm leading-relaxed text-primary-foreground whitespace-pre-wrap break-words">
@@ -133,13 +149,23 @@ function Bubble({ m, t, locale, foreign, onNavigate }: { m: ChatMessage; t: T; l
       </div>
       {m.cards && m.cards.length > 0 ? (
         <div className="flex flex-col gap-2">
-          {m.cards.map((c) => <Card key={c.productId} card={c} t={t} onNavigate={onNavigate} />)}
+          {m.cards.map((c) => <Card key={c.productId} card={c} t={t} onNavigate={onNavigate} cont={c.productId === m.continueProductId} context={context} />)}
           {foreign ? <p className="px-1 text-[11px] leading-4 text-muted-foreground">{t("concierge.tryNote")}</p> : null}
         </div>
       ) : null}
+      {continueCard ? <Card card={continueCard} t={t} onNavigate={onNavigate} cont context={context} /> : null}
+      {m.handoffReason === "order_status" ? (
+        <Link
+          href={ORDER_TRACKING_PATH}
+          onClick={onNavigate}
+          className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm font-semibold text-foreground transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+        >
+          {t("concierge.trackOrder")}
+        </Link>
+      ) : null}
       {m.handoff ? (
         <a
-          href={conciergeWhatsappUrl(locale)}
+          href={conciergeWhatsappHref(locale, m.summary ?? context, t)}
           target="_blank"
           rel="nofollow noopener noreferrer"
           data-concierge-whatsapp=""
@@ -261,7 +287,13 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
               ))}
             </div>
           ) : null}
-          {state.messages.map((m) => <Bubble key={m.id} m={m} t={t} locale={locale} foreign={isForeign} onNavigate={onClose} />)}
+          {state.messages.map((m) => {
+            const inThis = m.cards?.some((c) => c.productId === m.continueProductId);
+            const continueCard = m.continueProductId && !inThis
+              ? [...state.messages].reverse().flatMap((x) => x.cards ?? []).find((c) => c.productId === m.continueProductId) ?? null
+              : null;
+            return <Bubble key={m.id} m={m} t={t} locale={locale} foreign={isForeign} onNavigate={onClose} context={state.context ?? null} continueCard={continueCard} />;
+          })}
           {state.pending ? (
             <div className="me-auto flex items-center gap-1 rounded-2xl bg-secondary px-3.5 py-3" data-concierge-typing="">
               <span className="sr-only">{t("concierge.typing")}</span>
@@ -285,7 +317,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
                   </button>
                 ) : null}
                 <a
-                  href={conciergeWhatsappUrl(locale)}
+                  href={conciergeWhatsappHref(locale, state.context ?? null, t)}
                   target="_blank"
                   rel="nofollow noopener noreferrer"
                   onClick={() => trackConcierge("whatsapp")}

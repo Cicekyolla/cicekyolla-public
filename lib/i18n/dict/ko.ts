@@ -578,6 +578,15 @@ const ko: Dict = {
   "concierge.errorBusy": "이전 메시지에 아직 답변 중입니다. 몇 초 후 다시 시도해 주세요.",
   "concierge.retry": "다시 보내기",
   "concierge.privacy": "디지털 도우미와 대화 중입니다. 카드 정보는 입력하지 마세요. 메시지는 답변 작성을 위해 처리됩니다.",
+  "concierge.continueCta": "이 상품으로 계속하기",
+  "concierge.trackOrder": "주문 조회",
+  "concierge.waIntro": "안녕하세요, 사이트의 어시스턴트와 상담했습니다. 요약:",
+  "concierge.waDistrict": "배송 지역",
+  "concierge.waDate": "날짜",
+  "concierge.waTime": "시간대",
+  "concierge.waOccasion": "용도",
+  "concierge.waBudget": "예산",
+  "concierge.waProducts": "살펴본 상품",
 };
 
 export default ko;

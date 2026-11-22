@@ -21,6 +21,10 @@ export const CONCIERGE_DICT_KEYS = [
   "concierge.cardCta", "concierge.whatsapp", "concierge.tryNote",
   "concierge.errorNetwork", "concierge.errorRate", "concierge.errorBusy", "concierge.retry",
   "concierge.privacy",
+  // Satış hunisi (22 Kas 2026): ürünle devam, sipariş takibi, WhatsApp özet satırları.
+  "concierge.continueCta", "concierge.trackOrder",
+  "concierge.waIntro", "concierge.waDistrict", "concierge.waDate", "concierge.waTime",
+  "concierge.waOccasion", "concierge.waBudget", "concierge.waProducts",
 ] as const;
 export type ConciergeDictKey = (typeof CONCIERGE_DICT_KEYS)[number];
 
@@ -89,6 +93,70 @@ export const TR_WHATSAPP_URL = "https://wa.me/905458813450?text=Merhaba%2C%20sip
 export function conciergeWhatsappUrl(locale: string | null | undefined): string {
   return locale && locale !== "tr" ? GLOBAL_WHATSAPP_URL : TR_WHATSAPP_URL;
 }
+
+/**
+ * Sohbet özeti (API izin listesi: semt, il, tarih, saat aralığı, vesile, bütçe, bakılan ürün adları).
+ * Telefon / açık adres / alıcı adı / kart notu API'den GELMEZ; burada da ikinci kez süzülür.
+ */
+export interface ChatSummary {
+  district: string | null;
+  city: string | null;
+  date: string | null;
+  time: string | null;
+  occasion: string | null;
+  budgetTry: number | null;
+  products: string[];
+}
+
+const PHONEISH = /\d[\d\s().-]{6,}\d/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+function summaryText(v: unknown, max: number): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim();
+  if (!s || s.includes("@") || (!ISO_DATE.test(s) && PHONEISH.test(s))) return null;
+  return s.slice(0, max);
+}
+
+export function parseSummary(raw: unknown): ChatSummary | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const budget = Number(r.budget_try);
+  const products = Array.isArray(r.products) ? r.products.map((p) => summaryText(p, 80)).filter((p): p is string => !!p).slice(0, 3) : [];
+  const s: ChatSummary = {
+    district: summaryText(r.district, 40), city: summaryText(r.city, 40), date: summaryText(r.date, 24),
+    time: summaryText(r.time, 20), occasion: summaryText(r.occasion, 40),
+    budgetTry: Number.isFinite(budget) && budget > 0 && budget < 1_000_000 ? Math.round(budget) : null, products,
+  };
+  return s.district || s.city || s.date || s.time || s.occasion || s.budgetTry || s.products.length ? s : null;
+}
+
+type Translate = (key: ConciergeDictKey) => string;
+
+/** WhatsApp'a önceden yazılmış mesaj (müşterinin dilinde). Özet yoksa null → mevcut sabit bağlantı. */
+export function whatsappSummaryText(summary: ChatSummary | null, t: Translate): string | null {
+  if (!summary) return null;
+  const lines = [t("concierge.waIntro")];
+  const place = [summary.district, summary.city].filter(Boolean).join(", ");
+  if (place) lines.push(`${t("concierge.waDistrict")}: ${place}`);
+  if (summary.date) lines.push(`${t("concierge.waDate")}: ${summary.date}`);
+  if (summary.time) lines.push(`${t("concierge.waTime")}: ${summary.time}`);
+  if (summary.occasion) lines.push(`${t("concierge.waOccasion")}: ${summary.occasion}`);
+  if (summary.budgetTry) lines.push(`${t("concierge.waBudget")}: ${summary.budgetTry.toLocaleString("tr-TR")} TL`);
+  if (summary.products.length) lines.push(`${t("concierge.waProducts")}: ${summary.products.join(", ")}`);
+  return lines.length > 1 ? lines.join("\n") : null;
+}
+
+/** Özetli WhatsApp bağlantısı: AYNI numara (mevcut bağlantıdan), yalnız ön-yazılı metin değişir. */
+export function conciergeWhatsappHref(locale: string | null | undefined, summary: ChatSummary | null, t: Translate): string {
+  const base = conciergeWhatsappUrl(locale);
+  const text = whatsappSummaryText(summary, t);
+  if (!text) return base;
+  const u = new URL(base);
+  return `${u.origin}${u.pathname}?text=${encodeURIComponent(text.slice(0, 900))}`;
+}
+
+/** Sipariş takip sayfası (öneksiz yol; dil çerezden gelir). */
+export const ORDER_TRACKING_PATH = "/siparis-takip";
 
 // ---------------------------------------------------------------------------
 // Oturum belirteci (yalnız sekme oturumunda saklanır)
@@ -221,7 +289,11 @@ export function parseCards(raw: unknown): ConciergeCard[] {
 }
 
 export type TurnOutcome =
-  | { kind: "reply"; reply: string; lang: string; cards: ConciergeCard[]; handoff: boolean; closed: boolean; sessionToken: string | null }
+  | {
+    kind: "reply"; reply: string; lang: string; cards: ConciergeCard[]; handoff: boolean; closed: boolean; sessionToken: string | null;
+    /** Satış hunisi: devir sebebi (ör. order_status → takip bağlantısı da gösterilir), WhatsApp özeti, ürünle devam, ön-doldurma. */
+    handoffReason?: string | null; summary?: ChatSummary | null; continueProductId?: number | null; context?: ChatSummary | null;
+  }
   /** Asistan meşgul (aynı oturumda süren tur) → kısa süre sonra yeniden dene. */
   | { kind: "busy"; sessionToken: string | null }
   /** Hız sınırı (429). */
@@ -251,10 +323,17 @@ export function parseTurn(httpStatus: number, json: unknown, retryAfterHeader?: 
   if (!reply) return { kind: "error" };
   const lang = typeof data.lang === "string" && LANGS.has(data.lang) ? data.lang : "tr";
   const remaining = Number(data.remaining_messages);
+  const ho = data.handoff != null && typeof data.handoff === "object" ? (data.handoff as Record<string, unknown>) : null;
+  const cards = status === "ok" ? parseCards(data.cards) : [];
+  const cont = Number(data.continue_product_id);
   return {
     kind: "reply", reply, lang,
-    cards: status === "ok" ? parseCards(data.cards) : [],
-    handoff: data.handoff != null && typeof data.handoff === "object",
+    cards,
+    handoff: ho != null,
+    handoffReason: ho && typeof ho.reason === "string" && /^[a-z_]{1,40}$/.test(ho.reason) ? ho.reason : null,
+    summary: ho ? parseSummary(ho.summary) : null,
+    continueProductId: Number.isInteger(cont) && cont > 0 ? cont : null,
+    context: parseSummary(data.context),
     // Oturum sınırı doldu ya da asistan bugün için kapalı → yeni mesaj yazılamaz, WhatsApp'a yönlendirilir.
     closed: status !== "ok" || (Number.isFinite(remaining) && remaining <= 0),
     sessionToken: token,
@@ -272,6 +351,10 @@ export interface ChatMessage {
   lang?: string;
   cards?: ConciergeCard[];
   handoff?: boolean;
+  handoffReason?: string | null;
+  summary?: ChatSummary | null;
+  /** Bu üründe "Bu ürünle devam et" gösterilir (ürün kartı bu mesajda ya da önceki bir mesajda). */
+  continueProductId?: number | null;
 }
 
 export type ChatError = "network" | "rate" | "busy";
@@ -287,9 +370,11 @@ export interface ChatState {
   /** Bayrak kapandı → panel kapatılmalı. */
   off: boolean;
   seq: number;
+  /** Son bilinen sohbet bağlamı (ürün sayfası ön-doldurma + genel WhatsApp bağlantısı). */
+  context?: ChatSummary | null;
 }
 
-export const INITIAL_CHAT: ChatState = { messages: [], pending: false, failedText: null, error: null, closed: false, off: false, seq: 0 };
+export const INITIAL_CHAT: ChatState = { messages: [], pending: false, failedText: null, error: null, closed: false, off: false, seq: 0, context: null };
 
 export type ChatAction =
   | { type: "send"; text: string }
@@ -314,7 +399,11 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     const seq = state.seq + 1;
     return {
       ...state, seq, pending: false, error: null, failedText: null, closed: o.closed,
-      messages: [...state.messages, { id: seq, role: "assistant", text: o.reply, lang: o.lang, cards: o.cards, handoff: o.handoff || o.closed }],
+      context: o.context ?? o.summary ?? state.context ?? null,
+      messages: [...state.messages, {
+        id: seq, role: "assistant", text: o.reply, lang: o.lang, cards: o.cards, handoff: o.handoff || o.closed,
+        handoffReason: o.handoffReason ?? null, summary: o.summary ?? null, continueProductId: o.continueProductId ?? null,
+      }],
     };
   }
   if (o.kind === "off") return { ...state, pending: false, off: true };

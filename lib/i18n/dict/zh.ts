@@ -578,6 +578,15 @@ const zh: Dict = {
   "concierge.errorBusy": "您的上一条消息仍在回复中，请几秒后再试。",
   "concierge.retry": "重新发送",
   "concierge.privacy": "您正在与数字助手交流。请勿填写银行卡信息；您的消息将被处理以生成回复。",
+  "concierge.continueCta": "选择此商品继续",
+  "concierge.trackOrder": "查询订单",
+  "concierge.waIntro": "您好，我在网站上与助手聊过。摘要：",
+  "concierge.waDistrict": "配送地点",
+  "concierge.waDate": "日期",
+  "concierge.waTime": "时段",
+  "concierge.waOccasion": "场合",
+  "concierge.waBudget": "预算",
+  "concierge.waProducts": "看过的商品",
 };
 
 export default zh;

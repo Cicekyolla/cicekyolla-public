@@ -578,6 +578,15 @@ const ru: Dict = {
   "concierge.errorBusy": "Мы ещё отвечаем на ваше предыдущее сообщение. Пожалуйста, попробуйте через несколько секунд.",
   "concierge.retry": "Отправить ещё раз",
   "concierge.privacy": "Вы переписываетесь с цифровым помощником. Не указывайте данные карты; ваши сообщения обрабатываются для подготовки ответов.",
+  "concierge.continueCta": "Продолжить с этим товаром",
+  "concierge.trackOrder": "Отследить заказ",
+  "concierge.waIntro": "Здравствуйте! Итог моего чата с ассистентом на вашем сайте:",
+  "concierge.waDistrict": "Место доставки",
+  "concierge.waDate": "Дата",
+  "concierge.waTime": "Время доставки",
+  "concierge.waOccasion": "Повод",
+  "concierge.waBudget": "Бюджет",
+  "concierge.waProducts": "Просмотренные товары",
 };
 
 export default ru;

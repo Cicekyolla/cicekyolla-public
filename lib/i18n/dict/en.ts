@@ -578,6 +578,15 @@ const en: Dict = {
   "concierge.errorBusy": "Your previous message is still being answered. Please try again in a few seconds.",
   "concierge.retry": "Send again",
   "concierge.privacy": "You are chatting with a digital assistant. Do not type card details; your messages are processed to generate replies.",
+  "concierge.continueCta": "Continue with this product",
+  "concierge.trackOrder": "Track my order",
+  "concierge.waIntro": "Hello, I chatted with the assistant on your website. Summary:",
+  "concierge.waDistrict": "Delivery area",
+  "concierge.waDate": "Date",
+  "concierge.waTime": "Time window",
+  "concierge.waOccasion": "Occasion",
+  "concierge.waBudget": "Budget",
+  "concierge.waProducts": "Products I looked at",
 };
 
 export default en;
