@@ -559,3 +559,16 @@ test("kaynak: panel özetli WhatsApp bağlantısı + devam butonu + ön-doldurma
   const planner = src("../components/product/DeliveryPlanner.tsx");
   assert.ok(planner.includes("consumeConciergeSeed(window.location.pathname)"));
 });
+
+test("Paket 2: istek gövdesine kayıtlı ilçe / il YALNIZ ad olarak eklenir", async () => {
+  const { siteAreaName } = await import("./concierge.ts");
+  const b = buildRequestBody("merhaba", "tr", "/", null, { district: "Esenyurt", city: "İstanbul" });
+  assert.equal(b.site_district, "Esenyurt");
+  assert.equal(b.site_city, "İstanbul");
+  const bad = buildRequestBody("merhaba", "tr", "/", null, { district: "Atatürk Cd. No 5", city: "İstanbul" });
+  assert.equal(bad.site_district, undefined, "açık adres gönderilmez");
+  assert.equal(bad.site_city, undefined);
+  assert.equal(buildRequestBody("x", "tr", "/", null).site_district, undefined);
+  assert.equal(siteAreaName("a@b.com"), null);
+  assert.ok(src("../components/concierge/ConciergePanel.tsx").includes("savedArea())"));
+});

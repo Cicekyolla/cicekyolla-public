@@ -202,13 +202,29 @@ export function writeStatusCache(on: boolean, now: number): string {
 /** API'nin mesaj karakter tavanı (webConcierge/config.ts → maxMessageChars varsayılanı). */
 export const MAX_MESSAGE_CHARS = 600;
 
-export interface ConciergeRequestBody { text: string; lang: string; path: string; session_token?: string }
+export interface ConciergeRequestBody { text: string; lang: string; path: string; session_token?: string; site_district?: string; site_city?: string }
+
+/** Paket 2: sitede kayıtlı teslimat ilçesi / ili — YALNIZ ad (rakam, e-posta, uzun metin = açık adres → gönderilmez). */
+export function siteAreaName(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.replace(/\s+/g, " ").trim();
+  return s && s.length <= 40 && !/[\d@<>]/.test(s) ? s : null;
+}
 
 /** Gönderilecek gövde. Yol yalnız pathname'dir (sorgu dizesi / parça gitmez → utm, gclid, kişisel veri sızmaz). */
-export function buildRequestBody(text: string, locale: string, pathname: string | null | undefined, token: unknown): ConciergeRequestBody {
+export function buildRequestBody(
+  text: string, locale: string, pathname: string | null | undefined, token: unknown,
+  site?: { district?: unknown; city?: unknown } | null,
+): ConciergeRequestBody {
   const path = String(pathname || "/").split(/[?#]/)[0].slice(0, 200) || "/";
   const body: ConciergeRequestBody = { text: text.trim().slice(0, MAX_MESSAGE_CHARS), lang: locale, path };
   if (isSessionToken(token)) body.session_token = token;
+  const d = siteAreaName(site?.district);
+  if (d) {
+    body.site_district = d;
+    const c = siteAreaName(site?.city);
+    if (c) body.site_city = c;
+  }
   return body;
 }
 

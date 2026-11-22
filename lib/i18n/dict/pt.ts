@@ -91,6 +91,7 @@ const pt: Dict = {
   "planner.thresholdNote": "A entrega em mão nesta morada está disponível para artigos a partir de {amount}; para este artigo aplica-se o envio por transportadora.",
   "planner.placeholder": "Escreva a morada de entrega (bairro / rua / centro comercial)",
   "planner.hint": "Selecione a morada; mostraremos de imediato os dias e horários de entrega da sua zona.",
+  "planner.chatDistrict": "No chat falámos de {chat}, mas o seu endereço guardado é {saved}. Escolha abaixo o endereço de entrega.",
   "planner.closed": "Fechado",
   "planner.calendar": "Escolher dia no calendário (30 dias)",
   "planner.selected": "Selecionado: {day}, {date}",

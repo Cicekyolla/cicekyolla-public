@@ -25,6 +25,7 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { useCurrency } from "@/lib/currency";
 import { trackConcierge } from "@/lib/conciergeTracking";
 import { buildSeed, writeConciergeSeed } from "@/lib/conciergeSeed";
+import { readPendingDelivery } from "@/lib/pendingDelivery";
 import type { DictKey } from "@/lib/i18n/dict/tr";
 import {
   buildRequestBody, canSend, conciergeWhatsappHref, MAX_MESSAGE_CHARS, ORDER_TRACKING_PATH, parseTurn, SESSION_STORAGE_KEY, tokenToSend,
@@ -78,6 +79,11 @@ function useCookieBandLift(): number {
     return () => { clearInterval(timer); window.removeEventListener("resize", measure); };
   }, []);
   return lift;
+}
+
+/** Kayıtlı teslimat bölgesi (yalnız ilçe / il adı; açık adres gönderilmez). */
+function savedArea(): { district?: string; city?: string } | null {
+  try { const p = readPendingDelivery(); return p ? { district: p.district, city: p.city } : null; } catch { return null; }
 }
 
 function readToken(): string | null {
@@ -207,7 +213,8 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
       const res = await fetch("/api/concierge/message", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(buildRequestBody(raw, locale, pathname, tokenToSend(visibleRef.current, readToken()))),
+        // Paket 2: sitede kayıtlı teslimat ilçesi / ili (yalnız ad) — asistan farklı semtte bir kez sorar.
+        body: JSON.stringify(buildRequestBody(raw, locale, pathname, tokenToSend(visibleRef.current, readToken()), savedArea())),
         cache: "no-store",
       });
       let json: unknown = null;

@@ -91,6 +91,7 @@ const ko: Dict = {
   "planner.thresholdNote": "이 주소로의 직접 배송은 {amount} 이상 상품에 제공됩니다. 이 상품은 택배 배송이 적용됩니다.",
   "planner.placeholder": "배송 주소 입력 (동네 / 거리 / 쇼핑몰)",
   "planner.hint": "주소를 선택하면 해당 지역의 배송 날짜와 시간대를 바로 보여드립니다.",
+  "planner.chatDistrict": "채팅에서는 {chat}에 대해 이야기했지만 저장된 주소는 {saved}입니다. 아래에서 배송 주소를 선택해 주세요.",
   "planner.closed": "마감",
   "planner.calendar": "달력에서 날짜 선택 (30일)",
   "planner.selected": "선택: {day}, {date}",

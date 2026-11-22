@@ -91,6 +91,7 @@ const de: Dict = {
   "planner.thresholdNote": "Die persönliche Zustellung an diese Adresse gibt es für Artikel ab {amount}; für diesen Artikel gilt der Versand per Kurier.",
   "planner.placeholder": "Lieferadresse eingeben (Stadtteil / Straße / Einkaufszentrum)",
   "planner.hint": "Wählen Sie Ihre Adresse; wir zeigen sofort Liefertage und Zeitfenster für Ihr Gebiet.",
+  "planner.chatDistrict": "Im Chat ging es um {chat}, Ihre gespeicherte Adresse ist aber {saved}. Bitte wählen Sie unten die Lieferadresse.",
   "planner.closed": "Geschlossen",
   "planner.calendar": "Tag im Kalender wählen (30 Tage)",
   "planner.selected": "Ausgewählt: {day}, {date}",

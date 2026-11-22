@@ -91,6 +91,7 @@ const zh: Dict = {
   "planner.thresholdNote": "本地址的专人配送仅适用于售价{amount}及以上的商品；本商品适用快递寄送。",
   "planner.placeholder": "输入配送地址（街区 / 街道 / 商场）",
   "planner.hint": "选择地址后，我们会立即显示您所在区域的配送日期和时段。",
+  "planner.chatDistrict": "聊天中我们说的是{chat}，但您保存的地址是{saved}。请在下方选择配送地址。",
   "planner.closed": "已关闭",
   "planner.calendar": "从日历选择日期（30 天）",
   "planner.selected": "已选：{day}，{date}",

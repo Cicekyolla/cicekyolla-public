@@ -91,6 +91,7 @@ const en: Dict = {
   "planner.thresholdNote": "Hand delivery to this address is offered for items priced {amount} and above; for this item the courier shipping option applies.",
   "planner.placeholder": "Type the delivery address (neighborhood / street / mall)",
   "planner.hint": "Select your address; we'll instantly show delivery days and time slots for your area.",
+  "planner.chatDistrict": "In the chat we talked about {chat}, but your saved address is {saved}. Please choose the delivery address below.",
   "planner.closed": "Closed",
   "planner.calendar": "Pick a day from the calendar (30 days)",
   "planner.selected": "Selected: {day}, {date}",

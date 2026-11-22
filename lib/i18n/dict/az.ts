@@ -91,6 +91,7 @@ const az: Dict = {
   "planner.thresholdNote": "Bu ünvana əldən çatdırılma {amount} və yuxarı qiymətli məhsullar üçün təklif olunur; bu məhsul üçün kuryer göndərişi keçərlidir.",
   "planner.placeholder": "Çatdırılma ünvanını yazın (məhəllə / küçə / ticarət mərkəzi)",
   "planner.hint": "Ünvanınızı seçin; bölgənizə uyğun çatdırılma günü və saatlarını dərhal göstərək.",
+  "planner.chatDistrict": "Söhbətdə {chat} barədə danışdıq, yadda saxlanmış ünvanınız isə {saved}. Çatdırılma ünvanını aşağıdan seçin.",
   "planner.closed": "Bağlandı",
   "planner.calendar": "Təqvimdən gün seç (30 gün)",
   "planner.selected": "Seçilib: {day}, {date}",
