@@ -45,6 +45,8 @@ interface Props {
   onClose: () => void;
   /** Asistan kapatıldı (bayrak) → başlatıcı da gizlenir. */
   onOff: () => void;
+  /** Masaüstünde pencerenin açıldığı taraf — başlatıcının durduğu taraf (Telegram pasifken sağ). */
+  side?: "left" | "right";
 }
 
 const TIER_KEY: Record<CardTier, DictKey> = {
@@ -186,7 +188,7 @@ function Bubble({ m, t, locale, foreign, onNavigate, context, continueCard }: {
   );
 }
 
-export default function ConciergePanel({ locale, dir, t, pathname, state, dispatch, onClose, onOff }: Props) {
+export default function ConciergePanel({ locale, dir, t, pathname, state, dispatch, onClose, onOff, side = "left" }: Props) {
   const lift = useCookieBandLift();
   const [draft, setDraft] = useState("");
   const { isForeign } = useCurrency();
@@ -259,7 +261,7 @@ export default function ConciergePanel({ locale, dir, t, pathname, state, dispat
         data-concierge-panel=""
         // Çerez bandı açıkken panel bandın üstüne çıkar; üstten taşmaması için yükseklik de o kadar kısalır.
         style={lift ? { marginBottom: lift, maxHeight: `calc(100dvh - ${lift + 24}px)` } : undefined}
-        className="fixed inset-x-0 bottom-0 z-[9990] flex h-[88dvh] flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl lg:inset-x-auto lg:bottom-6 lg:left-6 lg:h-[640px] lg:max-h-[calc(100dvh-48px)] lg:w-[400px] lg:rounded-3xl"
+        className={`fixed inset-x-0 bottom-0 z-[9990] flex h-[88dvh] flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl lg:inset-x-auto lg:bottom-6 ${side === "right" ? "lg:right-6" : "lg:left-6"} lg:h-[640px] lg:max-h-[calc(100dvh-48px)] lg:w-[400px] lg:rounded-3xl`}
       >
         <header className="flex items-center justify-between gap-3 border-b border-border bg-secondary px-4 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
