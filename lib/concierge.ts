@@ -75,6 +75,18 @@ export function launcherSlot(pathname: string | null | undefined): LauncherSlot 
   return product ? "tr-product" : "tr";
 }
 
+/**
+ * TARAF (24 Kas 2026): Telegram düğmesi Admin'den PASİF ise sağ sütunda WhatsApp'ın üstündeki Telegram yuvası
+ * boşalır → başlatıcı o yuvaya (sağ, WhatsApp'ın ÜSTÜ) geçer. Telegram aktifken eski yerinde (sol alt) kalır;
+ * böylece ikisi hiçbir zaman üst üste binmez. WhatsApp düğmesine dokunulmaz.
+ */
+export type LauncherSide = "left" | "right";
+export function launcherSide(telegramEnabled: boolean | null | undefined): LauncherSide {
+  return telegramEnabled === false ? "right" : "left";
+}
+/** Sağ yuva = Telegram düğmesinin yuvası (components/TelegramButton.tsx ile birebir; testle kilitli). */
+export const LAUNCHER_RIGHT_PX = { mobile: 84, desktop: 92 } as const;
+
 /** Yuvaların alt ofseti (px, güvenli alan hariç) — test ve dokümantasyon için tek kaynak. */
 export const LAUNCHER_SLOT_PX: Record<LauncherSlot, { mobile: number; desktop: number }> = {
   tr: { mobile: 80, desktop: 88 },

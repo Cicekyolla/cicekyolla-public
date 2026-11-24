@@ -7,7 +7,9 @@
  * WEB_AI_ENABLED birlikte açık olmalı). Sunucuda ve ilk istemci render'ında null döner → SSR HTML'ine
  * metin / bağlantı girmez (SEO ve hydration etkilenmez).
  *
- * YERLEŞİM: SOL alt. Sağ sütun (WhatsApp, Telegram, yukarı çık) doludur ve o bileşenlere dokunulmaz.
+ * YERLEŞİM: Telegram AKTİFKEN sol alt (sağ sütun WhatsApp + Telegram + yukarı çık ile doludur). Telegram Admin'den
+ * PASİF ise sağ sütunda boşalan Telegram yuvasına, WhatsApp'ın ÜSTÜNE geçer (lib/concierge.ts → launcherSide).
+ * O bileşenlere dokunulmaz.
  * Yuva lib/concierge.ts → launcherSlot ile seçilir (TR'de hoş geldin teklifinin, ürün sayfasında mobil
  * "Sipariş Ver" çubuğunun üstü). Fiziksel `left` kullanılır: Arapçada (RTL) sağdaki WhatsApp düğmesiyle
  * çakışmaması için konum dile göre çevrilmez.
@@ -27,8 +29,9 @@ import { useOverlayBusy } from "@/components/useOverlayBusy";
 import { useI18n } from "@/lib/i18n";
 import { trackConcierge } from "@/lib/conciergeTracking";
 import {
-  chatReducer, conciergeVisibleOnPath, INITIAL_CHAT, launcherSlot, readStatusCache, STATUS_STORAGE_KEY, writeStatusCache, type LauncherSlot,
+  chatReducer, conciergeVisibleOnPath, INITIAL_CHAT, launcherSide, launcherSlot, readStatusCache, STATUS_STORAGE_KEY, writeStatusCache, type LauncherSlot,
 } from "@/lib/concierge";
+import { isProductPagePath } from "@/lib/telegramContact";
 
 const ConciergePanel = lazy(() => import("./ConciergePanel"));
 
@@ -44,6 +47,15 @@ const SLOT_CLASS: Record<LauncherSlot, string> = {
   "global-product": "bottom-[calc(92px+env(safe-area-inset-bottom))] lg:bottom-6",
 };
 
+/** Sol yuva (Telegram aktif): yatay konum. */
+const LEFT_CLASS = "left-4 sm:left-6";
+/** Sağ yuva (Telegram pasif): Telegram düğmesinin yeri — yüzen WhatsApp düğmesinin üstü, onunla aynı sağ hat. */
+const RIGHT_CLASS = "right-6";
+const RIGHT_SLOT_CLASS = {
+  page: "bottom-[84px] lg:bottom-[92px]",
+  product: "bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-[92px]",
+} as const;
+
 function readSession(key: string): string | null {
   try { return window.sessionStorage.getItem(key); } catch { return null; }
 }
@@ -51,7 +63,8 @@ function writeSession(key: string, value: string) {
   try { window.sessionStorage.setItem(key, value); } catch { /* depolama kapalıysa her sayfada yeniden sorulur */ }
 }
 
-export function ConciergeLauncher() {
+export function ConciergeLauncher({ telegramEnabled = true }: { telegramEnabled?: boolean }) {
+  const side = launcherSide(telegramEnabled);
   const pathname = usePathname();
   const overlay = useOverlayBusy();
   const { locale, dir, t, ready } = useI18n();
@@ -102,7 +115,7 @@ export function ConciergeLauncher() {
   if (open) {
     return (
       <Suspense fallback={null}>
-        <ConciergePanel locale={locale} dir={dir} t={t} pathname={pathname} state={chat} dispatch={dispatch} onClose={close} onOff={turnOff} />
+        <ConciergePanel side={side} locale={locale} dir={dir} t={t} pathname={pathname} state={chat} dispatch={dispatch} onClose={close} onOff={turnOff} />
       </Suspense>
     );
   }
@@ -125,7 +138,7 @@ export function ConciergeLauncher() {
       aria-haspopup="dialog"
       data-concierge-launcher=""
       style={{ marginBottom: overlay.lift || undefined }}
-      className={`fixed left-4 z-50 flex h-12 items-center gap-2 rounded-full bg-primary px-3.5 text-primary-foreground shadow-lg shadow-primary/30 transition-[box-shadow,transform] duration-200 ease-out hover:shadow-xl hover:shadow-primary/40 hover:ring-4 hover:ring-primary/20 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/40 active:scale-95 motion-reduce:transition-none sm:left-6 lg:px-4 ${SLOT_CLASS[launcherSlot(pathname)]}`}
+      className={`fixed z-50 flex h-12 items-center gap-2 rounded-full bg-primary px-3.5 text-primary-foreground shadow-lg shadow-primary/30 transition-[box-shadow,transform] duration-200 ease-out hover:shadow-xl hover:shadow-primary/40 hover:ring-4 hover:ring-primary/20 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/40 active:scale-95 motion-reduce:transition-none lg:px-4 ${side === "right" ? `${RIGHT_CLASS} ${RIGHT_SLOT_CLASS[isProductPagePath(pathname) ? "product" : "page"]}` : `${LEFT_CLASS} ${SLOT_CLASS[launcherSlot(pathname)]}`}`}
     >
       <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
       <span className="hidden text-sm font-semibold whitespace-nowrap lg:inline">{t("concierge.launcher")}</span>

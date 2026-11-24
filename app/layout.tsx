@@ -268,8 +268,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <TelegramButton {...telegram} />
         {/* "Yukarı çık": Telegram'ın üstünde, ~600px kaydırınca belirir (TR + 13 dil). */}
         <ScrollToTopButton />
-        {/* Web AI Satış Danışmanı: SOL altta; bayrak kapalıyken (varsayılan) hiçbir şey çizmez, SSR'da null. */}
-        <ConciergeLauncher />
+        {/* Web AI Satış Danışmanı: Telegram aktifken SOL altta, pasifken sağda WhatsApp'ın üstünde; bayrak kapalıyken (varsayılan) hiçbir şey çizmez, SSR'da null. */}
+        <ConciergeLauncher telegramEnabled={telegram.enabled} />
         {/* Görünmez: reklamdan gelen ziyaretçide wa.me bağlantılarına tıklama kimliğini ekler. */}
         <AdsWhatsAppRef />
         <ConsentManager />

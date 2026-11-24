@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
   buildRequestBody, canSend, cardPath, chatReducer, CONCIERGE_DICT_KEYS, tokenToSend, CONCIERGE_HIDDEN_PREFIXES, conciergeVisibleOnPath, conciergeWhatsappUrl,
-  INITIAL_CHAT, isSessionToken, LAUNCHER_SLOT_PX, launcherSlot, MAX_MESSAGE_CHARS, parseCards, parseTurn, readStatusCache, safeImageUrl,
+  INITIAL_CHAT, isSessionToken, LAUNCHER_RIGHT_PX, LAUNCHER_SLOT_PX, launcherSide, launcherSlot, MAX_MESSAGE_CHARS, parseCards, parseTurn, readStatusCache, safeImageUrl,
   STATUS_TTL_MS, TR_WHATSAPP_URL, writeStatusCache, type ChatState, type TurnOutcome,
   conciergeWhatsappHref, parseSummary, whatsappSummaryText, ORDER_TRACKING_PATH,
 } from "./concierge.ts";
@@ -90,9 +90,36 @@ test("yerleşim: bileşendeki sınıflar LAUNCHER_SLOT_PX ile aynı ofsetleri ta
   assert.ok(l.includes(`global: "bottom-[calc(${px.global.mobile}px+env(safe-area-inset-bottom))] sm:bottom-6"`));
   assert.ok(l.includes(`"global-product": "bottom-[calc(${px["global-product"].mobile}px+env(safe-area-inset-bottom))] lg:bottom-6"`));
   assert.equal(px.global.desktop, 24);
-  assert.match(l, /fixed left-4 z-50[^"`]*sm:left-6/);
-  // RTL'de sağa geçmemeli: mantıksal (start/end) ya da right konumu kullanılmaz.
-  assert.ok(!/\b(right-\d|start-\d|end-\d|inset-inline)/.test(l));
+  assert.ok(l.includes('const LEFT_CLASS = "left-4 sm:left-6";'));
+  // RTL'de taraf değiştirmemeli: mantıksal (start/end) konum kullanılmaz; fiziksel sağ YALNIZ Telegram pasifken (sağ yuva).
+  assert.ok(!/\b(start-\d|end-\d|inset-inline)/.test(l));
+  assert.equal((l.match(/\bright-\d/g) ?? []).length, 1);
+  assert.ok(l.includes('const RIGHT_CLASS = "right-6";'));
+});
+
+test("taraf: Telegram pasifken başlatıcı sağda WhatsApp'ın üstündeki Telegram yuvasına geçer; aktifken solda kalır", () => {
+  assert.equal(launcherSide(true), "left");
+  assert.equal(launcherSide(undefined), "left");
+  assert.equal(launcherSide(null), "left");
+  assert.equal(launcherSide(false), "right");
+  const l = src("../components/concierge/ConciergeLauncher.tsx");
+  const tg = src("../components/TelegramButton.tsx");
+  const wa = src("../components/WhatsAppButton.tsx");
+  const up = src("../components/ScrollToTopButton.tsx");
+  const { mobile, desktop } = LAUNCHER_RIGHT_PX;
+  // Sağ yuva = Telegram düğmesinin yuvası (ürün sayfasında mobil "Sipariş Ver" çubuğunun üstü dahil).
+  const page = `bottom-[${mobile}px] lg:bottom-[${desktop}px]`;
+  const product = `bottom-[calc(${mobile}px+env(safe-area-inset-bottom))] lg:bottom-[${desktop}px]`;
+  for (const file of [l, tg]) { assert.ok(file.includes(page)); assert.ok(file.includes(product)); }
+  assert.ok(tg.includes("fixed ${position} right-6 z-50"));
+  // WhatsApp (bottom-6, en fazla 56 px) altta; yukarı çık (152 / 168 px) üstte — 48 px'lik başlatıcı arada, çakışma yok.
+  assert.ok(wa.includes("fixed bottom-6 right-6 z-50"));
+  assert.ok(mobile >= 24 + 48 + 12 && desktop >= 24 + 56 + 12);
+  assert.ok(up.includes("bottom-[calc(152px+env(safe-area-inset-bottom))] lg:bottom-[calc(168px+env(safe-area-inset-bottom))]"));
+  assert.ok(mobile + 48 <= 152 && desktop + 48 <= 168);
+  // Kök layout Admin'deki Telegram ayarını aynen iletir; pencere masaüstünde başlatıcının tarafında açılır.
+  assert.ok(src("../app/layout.tsx").includes("<ConciergeLauncher telegramEnabled={telegram.enabled} />"));
+  assert.ok(src("../components/concierge/ConciergePanel.tsx").includes('side === "right" ? "lg:right-6" : "lg:left-6"'));
 });
 
 // ============================================================================
@@ -344,14 +371,14 @@ test("14 dil: sohbet anahtarlarının tamamı her sözlükte dolu; değerler dil
 // ============================================================================
 test("layout: başlatıcı TEK kez ve yüzen düğmelerden SONRA; mevcut düğme satırları değişmedi", () => {
   const layout = src("../app/layout.tsx");
-  assert.equal((layout.match(/<ConciergeLauncher \/>/g) ?? []).length, 1);
+  assert.equal((layout.match(/<ConciergeLauncher [^>]*\/>/g) ?? []).length, 1);
   assert.equal((layout.match(/import \{ ConciergeLauncher \} from "@\/components\/concierge\/ConciergeLauncher";/g) ?? []).length, 1);
   assert.match(layout, /\n\s*<WhatsAppButton \/>\n\s*<TelegramButton \{\.\.\.telegram\} \/>\n/);
-  assert.match(layout, /\n\s*<ScrollToTopButton \/>\n[^\n]*\n\s*<ConciergeLauncher \/>\n/);
-  assert.ok(layout.indexOf("<ConciergeLauncher />") > layout.indexOf("<ScrollToTopButton />"));
+  assert.match(layout, /\n\s*<ScrollToTopButton \/>\n[^\n]*\n\s*<ConciergeLauncher telegramEnabled=\{telegram\.enabled\} \/>\n/);
+  assert.ok(layout.indexOf("<ConciergeLauncher telegramEnabled={telegram.enabled} />") > layout.indexOf("<ScrollToTopButton />"));
   // Sağlayıcıların içinde (dil + para birimi), ConsentManager'dan önce.
-  assert.ok(layout.indexOf("<ConciergeLauncher />") < layout.indexOf("</CurrencyProvider>"));
-  assert.ok(layout.indexOf("<ConciergeLauncher />") < layout.indexOf("</I18nProvider>"));
+  assert.ok(layout.indexOf("<ConciergeLauncher telegramEnabled={telegram.enabled} />") < layout.indexOf("</CurrencyProvider>"));
+  assert.ok(layout.indexOf("<ConciergeLauncher telegramEnabled={telegram.enabled} />") < layout.indexOf("</I18nProvider>"));
 });
 
 test("mevcut yüzen düğmelere DOKUNULMADI (konum sınıfları aynen)", () => {
