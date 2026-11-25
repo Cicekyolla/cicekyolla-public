@@ -11,6 +11,11 @@ test("ürün sayfası: Avrupa yakası son alım 17:00 (16:00 değil)", () => {
   assert.ok(!planner.includes("avrupa: 16 * 60"));
 });
 
+test("ürün sayfası: Anadolu yakası son alım 18:00 (19:00 değil) — API ile aynı", () => {
+  assert.ok(planner.includes("{ anadolu: 18 * 60, avrupa: 17 * 60 }"));
+  assert.ok(!planner.includes("anadolu: 19 * 60"));
+});
+
 test("ürün sayfası: dilim yine başlangıcından 1 saat önce kapanır; DB kesimi yalnız daraltır", () => {
   assert.ok(planner.includes("const PREP_LEAD_MIN = 60;"));
   assert.ok(planner.includes("Math.min(SIDE_LAST_PICKUP_MIN[side], slotStartMin - PREP_LEAD_MIN)"));
