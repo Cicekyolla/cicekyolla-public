@@ -111,7 +111,9 @@ function feeTextFor(minor: number | undefined, free: string, money: (m: number) 
 }
 
 // --- Yaka (Anadolu/Avrupa) tespiti + aynı gün son alım kuralı ----------------
-// İş kuralı (kullanıcı onaylı): Anadolu son alım 19:00, Avrupa son alım 16:00.
+// İş kuralı (kullanıcı onaylı): Anadolu son alım 19:00, Avrupa son alım 17:00.
+// (25 Kas 2026: Avrupa 16:00 → 17:00 — API yaka kuralıyla (istanbulYakaKurali: Avrupa 17:00) eşitlendi; sayfa
+// "Son alım 17:00" sayacını gösterirken bütün dilimleri 16:00'da "Süresi geçti" yapıyordu.)
 // Her slot ayrıca başlangıcından 1 saat önce kapanır (hazırlık/dağıtım payı).
 // Slot kapanır: now >= min(yaka son alımı, slot başlangıcı − 1 saat).
 // Backend `side` alanı DÖNMÜYOR; yaka adresten (ilçe → boylam fallback) çıkarılır.
@@ -147,7 +149,7 @@ function sideOf(addr: AddressResult | null): Side {
   return "anadolu"; // en gevşek varsayım; başlangıç−1s kuralı geçmişi yine de kapatır
 }
 
-const SIDE_LAST_PICKUP_MIN: Record<Side, number> = { anadolu: 19 * 60, avrupa: 16 * 60 };
+const SIDE_LAST_PICKUP_MIN: Record<Side, number> = { anadolu: 19 * 60, avrupa: 17 * 60 };
 const PREP_LEAD_MIN = 60; // slot başlangıcından önce kapanma payı (dakika)
 
 // 'HH:MM...' -> günün dakikası (null/eşleşmezse null).
