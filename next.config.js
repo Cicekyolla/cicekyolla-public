@@ -21,6 +21,9 @@ const CANONICAL_HOST = "www.cicekyolla.com.tr";
 const CANONICAL_HOST_RE = "www\\.cicekyolla\\.com\\.tr";
 const APEX_HOST_RE = "cicekyolla\\.com\\.tr";
 
+// Eski yılbaşı / kokina ".html" ürün adresleri → ilgili kategori (lib/legacySeasonHtmlRedirects.js).
+const { LEGACY_SEASON_HTML_REDIRECTS } = require("./lib/legacySeasonHtmlRedirects.js");
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -131,7 +134,15 @@ const nextConfig = {
       // ÜRÜN: /52604-Renkli-Lavantali.html → /urun/renkli-lavantali
       // Burada KALIR: middleware matcher noktalı yolları (.*\..*) dışladığı için
       // ".html" adresleri middleware'e hiç ulaşmaz.
+      // EK (28 Kas 2026): eski yılbaşı / kokina ".html" adresleri genel kuraldan ÖNCE ilgili kategoriye
+      // tek adımda gider (önceden 308 → /urun/… → 404). Kapsam ve gerekçe: lib/legacySeasonHtmlRedirects.js.
+      ...LEGACY_SEASON_HTML_REDIRECTS,
       { source: '/:id(\\d+)-:slug(.+)\\.html', destination: '/urun/:slug', permanent: true },
+
+      // EK (28 Kas 2026): /yeni-yil-cicek-siparisi eski konum kalıbına takılıp ana sayfaya 301 veriyordu
+      // ("yeni-yil" bir konum ya da kategori değil). Doğru hedef Yılbaşı ana sayfası. Statik kural güvenli:
+      // bu adres için yönetilen (DB) 301 kaydı yok, operatör onaylı bir yönlendirmeyi gölgelemez.
+      { source: '/yeni-yil-cicek-siparisi', destination: '/kategori/yilbasi', permanent: true },
 
       // EK (10 Eyl 2026): /urunler hiç var olmayan bir rota — ana sayfa CTA'sı ve
       // Google'da indeksli eski URL 404'e düşüyordu (GSC 90g: 116 gösterim / 6 tık).
